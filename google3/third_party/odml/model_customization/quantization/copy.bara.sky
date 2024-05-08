@@ -1,0 +1,26 @@
+"""Rewrite rules for open sourcing quantization toolkit to a Github repo."""
+
+load("//devtools/copybara/library/workflow", "piper_sot_to_github")
+
+origin_files = glob(
+    include = [
+        "google3/third_party/odml/model_customization/quantization/**",
+    ],
+    exclude = [
+        "google3/third_party/odml/model_customization/quantization/METADATA",
+        "google3/third_party/odml/model_customization/quantization/algorithms/mojax/**",
+        # TODO(b/339503827): Remove below exclusions after the tests are migrated.
+        "google3/third_party/odml/model_customization/quantization/*_test.py",
+        "google3/third_party/odml/model_customization/quantization/**/*_test.py",
+    ],
+)
+
+piper_sot_to_github(
+    google3_files = origin_files,
+    contact_email = "odml-developer+copybara@google.com",
+    default_author = "Google AI Edge <noreply@google.com>",
+    github_use_app = True,
+    url = "https://github.com/google-edge-ai/quantization-toolkit",
+    branch = "main",
+    owner_mdb = "odml-developer-sphinx",
+)
