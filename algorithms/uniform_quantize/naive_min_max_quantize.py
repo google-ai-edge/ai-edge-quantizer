@@ -54,6 +54,19 @@ def materialize_batch_matmul(
   )
 
 
+def materialize_embedding_lookup(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.embedding_lookup."""
+  return utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+  )
+
+
 def materialize_reshape(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,

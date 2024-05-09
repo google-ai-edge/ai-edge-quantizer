@@ -20,6 +20,7 @@ class TFLOperationName(str, enum.Enum):
   AVERAGE_POOL_2D = 'AVERAGE_POOL_2D'
   RESHAPE = 'RESHAPE'
   CUSTOM_OP = 'CUSTOM_OP'
+  EMBEDDING_LOOKUP = 'EMBEDDING_LOOKUP'
 
 
 # Use same code number as MOJAX for compatibility

@@ -25,6 +25,25 @@ py_strict_test(
     ],
 )
 
+py_strict_test(
+    name = "embedding_lookup_test",
+    srcs = ["embedding_lookup_test.py"],
+    data = [
+        "//third_party/odml/model_customization/quantization/test_models:test_tfl_models",
+    ],
+    deps = [
+        ":test_utils",
+        "//testing/pybase",
+        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization/algorithms/uniform_quantize:naive_min_max_quantize",
+        "//third_party/odml/model_customization/quantization/algorithms/uniform_quantize:uniform_quantize_tensor",
+        "//third_party/odml/model_customization/quantization/utils:test_utils",
+        "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
+        "//third_party/py/absl/testing:parameterized",
+        "//third_party/py/numpy",
+    ],
+)
+
 pytype_strict_library(
     name = "test_utils",
     srcs = ["test_utils.py"],
