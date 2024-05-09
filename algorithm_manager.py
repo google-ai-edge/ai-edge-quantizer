@@ -14,9 +14,15 @@ _alg_manager_instance = algorithm_manager_api.AlgorithmManagerApi()
 get_quantization_func = _alg_manager_instance.get_quantization_func
 get_supported_ops = _alg_manager_instance.get_supported_ops
 get_init_qsv_func = _alg_manager_instance.get_init_qsv_func
+register_op_quant_config_validation_func = (
+    _alg_manager_instance.register_op_quant_config_validation_func
+)
 register_quantized_op = _alg_manager_instance.register_quantized_op
 is_op_registered = _alg_manager_instance.is_op_registered
 is_algorithm_registered = _alg_manager_instance.is_algorithm_registered
+check_op_quantization_config = (
+    _alg_manager_instance.check_op_quantization_config
+)
 
 # Common Quantization algorithms.
 NO_QUANT = "NO_QUANT"
@@ -27,7 +33,10 @@ moving_average_update_qsv = (
     uniform_quantize_tensor.update_tensor_qsv_moving_average
 )
 
-# Register supported ops for PTQ algorithm.
+# Register PTQ algorithm.
+register_op_quant_config_validation_func(
+    PTQ, naive_min_max_quantize.check_op_quantization_config
+)
 for op_name, materialize_func in zip(
     (
         _TFLOpName.FULLY_CONNECTED,

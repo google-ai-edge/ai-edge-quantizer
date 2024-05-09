@@ -23,13 +23,21 @@ class QuantizationAlgorithmInfo:
   quantized_ops: dict[qtyping.TFLOperationName, QuantizedOperationInfo]
 
 
-# TODO: b/335254997 - Add a new method to check if an op quantization config is
-# supported.
 class AlgorithmManagerApi:
   """Toolkit API client to manage quantization configs and functions."""
 
   def __init__(self):
     self._algorithm_registry = dict()
+    # check if an op quantization config is supported for a given algorithm.
+    self._config_check_registry = dict()
+
+  def register_op_quant_config_validation_func(
+      self,
+      algorithm_key: str,
+      config_check_func: Callable[..., Any],
+  ):
+    """Register functions to check if an op quantization config is supported."""
+    self._config_check_registry[algorithm_key] = config_check_func
 
   def register_quantized_op(
       self,
@@ -99,6 +107,39 @@ class AlgorithmManagerApi:
       True if the given algorithm is registered, false otherwise.
     """
     return quantization_algorithm in self._algorithm_registry
+
+  def check_op_quantization_config(
+      self,
+      quantization_algorithm: str,
+      tfl_op_name: qtyping.TFLOperationName,
+      op_quantization_config: qtyping.OpQuantizationConfig,
+  ) -> None:
+    """Checks if the given op quantization config is valid.
+
+    Args:
+      quantization_algorithm: Target quantization algorithm.
+      tfl_op_name: TFL operation name.
+      op_quantization_config: Op quantization config to be checked.
+
+    Raises:
+      ValueError if the given op is not registered for the given algorithm, or
+      the given algorithm is not registered.
+    """
+    if not self.is_op_registered(quantization_algorithm, tfl_op_name):
+      raise ValueError(
+          f"Unsupported operation {tfl_op_name} for Algorithm:"
+          f" {quantization_algorithm}."
+      )
+    if quantization_algorithm not in self._config_check_registry:
+      raise ValueError(
+          f"Config checking function for  algorithm {quantization_algorithm} is"
+          " not registered. Please use"
+          " `register_op_quant_config_validation_func` to register the"
+          " validation function."
+      )
+    self._config_check_registry[quantization_algorithm](
+        tfl_op_name, op_quantization_config
+    )
 
   def get_supported_ops(self, alg_key: str) -> list[qtyping.TFLOperationName]:
     """Returns the list of supported ops for the given algorithm.
