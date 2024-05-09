@@ -110,15 +110,9 @@ class RecipeManager:
       self._scope_configs[regex] = [config]
       return
 
-    if (
-        algorithm_key != algorithm_manager.NO_QUANT
-        and not algorithm_manager.is_op_registered(
-            algorithm_key, operation_name
-        )
-    ):
-      raise ValueError(
-          f'Unsupported operation {operation_name} for algorithm'
-          f' {algorithm_key}. Please check and update algorithm manager.'
+    if algorithm_key != algorithm_manager.NO_QUANT:
+      algorithm_manager.check_op_quantization_config(
+          algorithm_key, operation_name, op_config
       )
 
     if regex not in self._scope_configs:
