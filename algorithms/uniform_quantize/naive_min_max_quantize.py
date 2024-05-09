@@ -12,6 +12,33 @@ ALGORITHM_KEY = "ptq"
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation
 _OpQuantConstraint = utils.OpQuantConstraint
+_OpExecutionMode = qtyping.OpExecutionMode
+
+
+def check_op_quantization_config(
+    op_name: _TFLOpName,
+    op_quant_config: qtyping.OpQuantizationConfig,
+) -> None:
+  """Checks the op quantization config.
+
+  Args:
+    op_name: the name of the op.
+    op_quant_config: the quantization config for the op.
+
+  Raises:
+    ValueError: if the op quantization config is invalid.
+  """
+  if op_quant_config.weight_tensor_config.dtype != qtyping.TensorDataType.INT:
+    raise ValueError(
+        "Weights need to have integer type for naive min/max quantization."
+    )
+  execution_mode = op_quant_config.execution_mode
+  if execution_mode == _OpExecutionMode.WEIGHT_ONLY:
+    utils.check_weight_only_config(op_name)
+  if execution_mode == _OpExecutionMode.DRQ:
+    utils.check_drq_config(op_name, op_quant_config)
+  if execution_mode == _OpExecutionMode.SRQ:
+    utils.check_srq_config(op_name, op_quant_config)
 
 
 def materialize_batch_matmul(

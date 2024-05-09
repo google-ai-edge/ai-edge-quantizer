@@ -18,6 +18,71 @@ SUPPORTED_WEIGHT_QUANT_OPS = frozenset([
     _TFLOpName.BATCH_MATMUL,
 ])
 
+_SUPPORTED_WEIGHT_ONLY_OPS = frozenset([
+    _TFLOpName.FULLY_CONNECTED,
+    _TFLOpName.CONV_2D,
+])
+
+_SUPPORTED_DRQ_OPS = frozenset([
+    _TFLOpName.FULLY_CONNECTED,
+    _TFLOpName.CONV_2D,
+])
+
+_SUPPORTED_SRQ_OPS = frozenset([
+    _TFLOpName.FULLY_CONNECTED,
+    _TFLOpName.CONV_2D,
+    _TFLOpName.AVERAGE_POOL_2D,
+    _TFLOpName.RESHAPE,
+])
+
+
+def check_weight_only_config(op_name: _TFLOpName):
+  """Checks the op quantization config for weight-only quantization."""
+  if op_name not in _SUPPORTED_WEIGHT_ONLY_OPS:
+    raise ValueError(f"Unsupported op for weight-only quantization: {op_name}.")
+
+
+def check_drq_config(
+    op_name: _TFLOpName, op_quant_config: qtyping.OpQuantizationConfig
+):
+  """Checks the op quantization config for dynamic range quantization."""
+  weight_config = op_quant_config.weight_tensor_config
+  if op_name not in _SUPPORTED_DRQ_OPS:
+    raise ValueError(
+        f"Unsupported op for dynamic range quantization: {op_name} "
+    )
+  if weight_config.num_bits not in (4, 8) or not weight_config.symmetric:
+    raise ValueError(
+        f"Only int4/int8 symmetric DRQ is supported for op {op_name}"
+    )
+
+
+def check_srq_config(
+    op_name: _TFLOpName, op_quant_config: qtyping.OpQuantizationConfig
+):
+  """Checks the op quantization config for static range quantization."""
+  act_config = op_quant_config.activation_tensor_config
+  weight_config = op_quant_config.weight_tensor_config
+  if op_name not in _SUPPORTED_SRQ_OPS:
+    raise ValueError(
+        f"Unsupported op for static range quantization: {op_name}."
+    )
+  if act_config is None:
+    raise ValueError("activation_tensor_config is required for SRQ.")
+  if act_config.num_bits not in (8, 16):
+    raise ValueError(
+        f"Only int8/int16 activation SRQ is supported for op {op_name}."
+    )
+  if act_config.num_bits == 16 and not act_config.symmetric:
+    raise ValueError(
+        "Int16 activation SRQ requires symmetric activation quantization."
+    )
+  if weight_config.num_bits not in (4, 8) or not weight_config.symmetric:
+    raise ValueError(
+        "Currently only int4/int8 symmetric weight are supported for op"
+        f" {op_name}."
+    )
+
 
 class OpQuantConstraint(enum.Enum):
   """Quantization constraint for an op."""
