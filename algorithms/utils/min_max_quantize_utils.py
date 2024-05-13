@@ -14,7 +14,6 @@ _QuantTransformation = qtyping.QuantTransformation
 SUPPORTED_WEIGHT_QUANT_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
     _TFLOpName.CONV_2D,
-    _TFLOpName.DEPTHWISE_CONV_2D,
     _TFLOpName.BATCH_MATMUL,
     _TFLOpName.EMBEDDING_LOOKUP,
 ])
@@ -22,11 +21,15 @@ SUPPORTED_WEIGHT_QUANT_OPS = frozenset([
 _SUPPORTED_WEIGHT_ONLY_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
     _TFLOpName.CONV_2D,
+    _TFLOpName.BATCH_MATMUL,
+    _TFLOpName.EMBEDDING_LOOKUP,
 ])
 
 _SUPPORTED_DRQ_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
     _TFLOpName.CONV_2D,
+    _TFLOpName.BATCH_MATMUL,
+    _TFLOpName.EMBEDDING_LOOKUP,
 ])
 
 _SUPPORTED_SRQ_OPS = frozenset([
