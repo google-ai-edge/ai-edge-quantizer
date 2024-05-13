@@ -4,7 +4,7 @@ from collections.abc import Callable
 import dataclasses
 import functools
 from typing import Any
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
+from quantization_toolkit import typing as qtyping
 
 
 @dataclasses.dataclass

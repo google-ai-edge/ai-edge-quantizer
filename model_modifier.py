@@ -4,12 +4,12 @@ import copy
 
 import numpy as np
 
-from google3.third_party.odml.model_customization.quantization import transformation_instruction_generator
-from google3.third_party.odml.model_customization.quantization import transformation_performer
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
-from google3.third_party.odml.model_customization.quantization.utils import tfl_flatbuffer_utils
-from google3.third_party.tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
-from google3.third_party.tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
+from quantization_toolkit import transformation_instruction_generator
+from quantization_toolkit import transformation_performer
+from quantization_toolkit import typing as qtyping
+from quantization_toolkit.utils import tfl_flatbuffer_utils
+from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
+from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
 
 
 class ModelModifier:

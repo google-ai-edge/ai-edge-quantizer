@@ -6,9 +6,9 @@ import immutabledict
 import numpy as np
 
 from google3.pyglib import gfile
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
-from google3.third_party.tensorflow.lite.python import schema_py_generated  # pylint:disable=g-direct-tensorflow-import
-from google3.third_party.tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
+from quantization_toolkit import typing as qtyping
+from tensorflow.lite.python import schema_py_generated  # pylint:disable=g-direct-tensorflow-import
+from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
 
 _TFLOpName = qtyping.TFLOperationName
 

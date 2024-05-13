@@ -4,9 +4,9 @@ Inserts dequantize node after the given tensor to enable float execution of
 the tensor consumer
 """
 
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
-from google3.third_party.odml.model_customization.quantization.transformations import quantize_tensor
-from google3.third_party.tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
+from quantization_toolkit import typing as qtyping
+from quantization_toolkit.transformations import quantize_tensor
+from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 def insert_dequant(

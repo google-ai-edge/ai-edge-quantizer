@@ -2,7 +2,7 @@
 
 import dataclasses
 import numpy as np
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
+from quantization_toolkit import typing as qtyping
 
 
 @dataclasses.dataclass(frozen=True)

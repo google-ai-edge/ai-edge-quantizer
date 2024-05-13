@@ -8,7 +8,7 @@ from typing import Any
 import numpy as np
 
 from google3.pyglib import resources as _resources
-from google3.third_party.odml.model_customization.quantization.utils import tfl_interpreter_utils
+from quantization_toolkit.utils import tfl_interpreter_utils
 
 
 def get_path_to_datafile(path):

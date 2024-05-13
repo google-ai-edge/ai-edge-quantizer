@@ -2,8 +2,8 @@
 
 from typing import Any
 import numpy as np
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
-from google3.third_party.odml.model_customization.quantization.utils import tfl_flatbuffer_utils
+from quantization_toolkit import typing as qtyping
+from quantization_toolkit.utils import tfl_flatbuffer_utils
 
 ALGORITHM_KEY = "fp16_quantize"
 _TFLOpName = qtyping.TFLOperationName

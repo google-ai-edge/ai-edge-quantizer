@@ -6,14 +6,14 @@ import json
 import os
 from typing import Any, Optional
 from google3.pyglib import gfile
-from google3.third_party.odml.model_customization.quantization import algorithm_manager
-from google3.third_party.odml.model_customization.quantization import model_modifier
-from google3.third_party.odml.model_customization.quantization import model_validator
-from google3.third_party.odml.model_customization.quantization import params_generator
-from google3.third_party.odml.model_customization.quantization import recipe_manager
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
-from google3.third_party.odml.model_customization.quantization.utils import test_utils
-from google3.third_party.odml.model_customization.quantization.utils import validation_utils
+from quantization_toolkit import algorithm_manager
+from quantization_toolkit import model_modifier
+from quantization_toolkit import model_validator
+from quantization_toolkit import params_generator
+from quantization_toolkit import recipe_manager
+from quantization_toolkit import typing as qtyping
+from quantization_toolkit.utils import test_utils
+from quantization_toolkit.utils import validation_utils
 
 
 _QuantRecipe = recipe_manager.ModelQuantizationRecipe

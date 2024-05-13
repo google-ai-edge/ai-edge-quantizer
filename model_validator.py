@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from google3.third_party.odml.model_customization.quantization.utils import tfl_interpreter_utils
+from quantization_toolkit.utils import tfl_interpreter_utils
 
 
 # TODO(b/331655892): have this function automatically detect the input tensor

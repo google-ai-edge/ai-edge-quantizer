@@ -16,10 +16,10 @@ import numpy as np
 from PIL import Image
 import tensorflow as tf
 
-from google3.third_party.odml.model_customization.quantization import quantization_toolkit
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
-from google3.third_party.odml.model_customization.quantization.utils import test_utils
-from google3.third_party.odml.model_customization.quantization.utils import tfl_interpreter_utils
+from quantization_toolkit import quantization_toolkit
+from quantization_toolkit import typing as qtyping
+from quantization_toolkit.utils import test_utils
+from quantization_toolkit.utils import tfl_interpreter_utils
 
 _OpExecutionMode = qtyping.OpExecutionMode
 _OpName = qtyping.TFLOperationName

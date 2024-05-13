@@ -5,11 +5,11 @@ from typing import Any
 
 from absl import logging
 
-from google3.third_party.odml.model_customization.quantization import algorithm_manager
-from google3.third_party.odml.model_customization.quantization import recipe_manager
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
-from google3.third_party.odml.model_customization.quantization.utils import tfl_flatbuffer_utils
-from google3.third_party.odml.model_customization.quantization.utils import tfl_interpreter_utils
+from quantization_toolkit import algorithm_manager
+from quantization_toolkit import recipe_manager
+from quantization_toolkit import typing as qtyping
+from quantization_toolkit.utils import tfl_flatbuffer_utils
+from quantization_toolkit.utils import tfl_interpreter_utils
 
 
 class Calibrator:

@@ -5,8 +5,8 @@ import dataclasses
 import re
 from typing import Any, Optional
 from absl import logging
-from google3.third_party.odml.model_customization.quantization import algorithm_manager
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
+from quantization_toolkit import algorithm_manager
+from quantization_toolkit import typing as qtyping
 
 # A collection of quantization configuration.
 # Key: scope regex.

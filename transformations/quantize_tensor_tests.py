@@ -3,10 +3,10 @@
 import os
 import numpy as np
 from google3.testing.pybase import googletest
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
-from google3.third_party.odml.model_customization.quantization.transformations import quantize_tensor
-from google3.third_party.odml.model_customization.quantization.utils import test_utils
-from google3.third_party.odml.model_customization.quantization.utils import tfl_flatbuffer_utils
+from quantization_toolkit import typing as qtyping
+from quantization_toolkit.transformations import quantize_tensor
+from quantization_toolkit.utils import test_utils
+from quantization_toolkit.utils import tfl_flatbuffer_utils
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("..")
 

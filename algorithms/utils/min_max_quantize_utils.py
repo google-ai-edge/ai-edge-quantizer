@@ -3,9 +3,9 @@
 import enum
 from typing import Any, Optional
 import numpy as np
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
-from google3.third_party.odml.model_customization.quantization.algorithms.uniform_quantize import uniform_quantize_tensor
-from google3.third_party.odml.model_customization.quantization.utils import tfl_flatbuffer_utils
+from quantization_toolkit import typing as qtyping
+from quantization_toolkit.algorithms.uniform_quantize import uniform_quantize_tensor
+from quantization_toolkit.utils import tfl_flatbuffer_utils
 
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation

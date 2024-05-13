@@ -6,9 +6,9 @@ can then be used by transformation_performer. Includes necessary optimizations
 
 from collections.abc import Iterator
 import dataclasses
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
-from google3.third_party.odml.model_customization.quantization.utils import tfl_flatbuffer_utils
-from google3.third_party.tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
+from quantization_toolkit import typing as qtyping
+from quantization_toolkit.utils import tfl_flatbuffer_utils
+from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 # When a tensor has no producer, we'll assign -1 to the producer field

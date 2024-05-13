@@ -2,8 +2,8 @@
 
 from typing import cast
 import numpy as np
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
-from google3.third_party.tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
+from quantization_toolkit import typing as qtyping
+from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 # TODO(b/335014051): support distinguishing INT, FLOAT & UINT, BFLOAT

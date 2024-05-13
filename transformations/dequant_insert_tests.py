@@ -3,11 +3,11 @@
 import os
 import numpy as np
 from google3.testing.pybase import googletest
-from google3.third_party.odml.model_customization.quantization import typing as qtyping
-from google3.third_party.odml.model_customization.quantization.transformations import dequant_insert
-from google3.third_party.odml.model_customization.quantization.utils import test_utils
-from google3.third_party.odml.model_customization.quantization.utils import tfl_flatbuffer_utils
-from google3.third_party.tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
+from quantization_toolkit import typing as qtyping
+from quantization_toolkit.transformations import dequant_insert
+from quantization_toolkit.utils import test_utils
+from quantization_toolkit.utils import tfl_flatbuffer_utils
+from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("..")
 
