@@ -19,7 +19,6 @@ pytype_strict_binary(
         "//third_party/odml/model_customization/quantization/test_models:test_tfl_models",
     ],
     deps = [
-        "//pyglib:gfile",
         "//testing/pybase",
         "//third_party/odml/model_customization/quantization:quantization_toolkit",
         "//third_party/odml/model_customization/quantization:typing",

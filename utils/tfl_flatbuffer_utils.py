@@ -5,10 +5,10 @@ from typing import Any
 import immutabledict
 import numpy as np
 
-from google3.pyglib import gfile
 from quantization_toolkit import typing as qtyping
 from tensorflow.lite.python import schema_py_generated  # pylint:disable=g-direct-tensorflow-import
 from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
+from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 
 _TFLOpName = qtyping.TFLOperationName
 

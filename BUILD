@@ -17,10 +17,10 @@ pytype_strict_library(
         ":params_generator",
         ":recipe_manager",
         ":typing",
-        "//pyglib:gfile",
         "//testing/pybase",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
         "//third_party/odml/model_customization/quantization/utils:validation_utils",
+        "//third_party/tensorflow/python/platform:gfile",
     ],
 )
 
@@ -34,7 +34,6 @@ py_strict_test(
     deps = [
         ":quantization_toolkit",
         ":typing",
-        "//pyglib:gfile",
         "//testing/pybase",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
     ],
@@ -283,7 +282,6 @@ py_strict_test(
     deps = [
         ":quantization_toolkit",
         ":typing",
-        "//pyglib:gfile",
         "//testing/pybase",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
         "//third_party/py/absl/testing:parameterized",

@@ -21,12 +21,12 @@ pytype_strict_library(
     srcs = ["tfl_flatbuffer_utils.py"],
     srcs_version = "PY3",
     deps = [
-        "//pyglib:gfile",
         "//third_party/odml/model_customization/quantization:typing",
         "//third_party/py/immutabledict",
         "//third_party/py/numpy",
         "//third_party/tensorflow/lite/python:schema_py",
         "//third_party/tensorflow/lite/tools:flatbuffer_utils",
+        "//third_party/tensorflow/python/platform:gfile",
     ],
 )
 
@@ -50,7 +50,6 @@ pytype_strict_library(
     srcs = ["tfl_interpreter_utils.py"],
     srcs_version = "PY3",
     deps = [
-        "//pyglib:gfile",
         "//third_party/odml/model_customization/quantization:typing",
         "//third_party/odml/model_customization/quantization/algorithms/uniform_quantize:uniform_quantize_tensor",
         "//third_party/py/numpy",
