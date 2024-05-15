@@ -53,6 +53,9 @@ class QuantTransformation(enum.Enum):
   ADD_DEQUANTIZE = 2
   # Quantize the float tensor: float_tensor -> quantized_tensor.
   QUANTIZE_TENSOR = 3
+  # create pattern for emulated subchannel quantization, only support fully
+  # connected op.
+  EMULATED_SUBCHANNEL = 4
 
 
 @dataclasses.dataclass(frozen=True)
@@ -325,6 +328,16 @@ class OpInfo:
 # TODO(b/335530570): this needs to support more than one parameters
 @dataclasses.dataclass
 class TransformationInst:
+  """Transformation instruction for a tensor.
+
+  Attributes:
+    transformation: The transformation to be applied to the tensor.
+    tensor_id: The id of the tensor.
+    producer: The id of the producer op.
+    consumers: The ids of the consumer ops.
+    parameters: The quantization parameters for the tensor.
+  """
+
   transformation: QuantTransformation
   tensor_id: int
   producer: Optional[int]
@@ -334,6 +347,14 @@ class TransformationInst:
 
 @dataclasses.dataclass
 class TensorTransformationInsts:
+  """Transformation instructions for a tensor.
+
+  Attributes:
+    tensor_name: The name of the tensor.
+    subgraph_id: The id of the subgraph.
+    instructions: The transformation instructions for the tensor.
+  """
+
   tensor_name: str
   subgraph_id: int
   instructions: list[TransformationInst] | None
@@ -341,6 +362,14 @@ class TensorTransformationInsts:
 
 @dataclasses.dataclass(frozen=True)
 class TransformationInfo:
+  """Transformation information for an op.
+
+  Attributes:
+    op_id: The id where op replacement/insertion begins.
+    num_ops_added: The number of ops added during the transformation.
+    output_tensor_id: The id of the output tensor.
+  """
+
   op_id: int
   num_ops_added: int
   output_tensor_id: int

@@ -201,6 +201,7 @@ pytype_strict_library(
     deps = [
         ":typing",
         "//third_party/odml/model_customization/quantization/transformations:dequant_insert",
+        "//third_party/odml/model_customization/quantization/transformations:emulated_subchannel",
         "//third_party/odml/model_customization/quantization/transformations:quantize_tensor",
         "//third_party/py/numpy",
         "//third_party/tensorflow/lite/python:schema_py",

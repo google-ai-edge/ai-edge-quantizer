@@ -8,6 +8,66 @@ package(
 )
 
 pytype_strict_library(
+    name = "transformation_utils",
+    srcs = ["transformation_utils.py"],
+    srcs_version = "PY3",
+    deps = [
+        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/py/numpy",
+        "//third_party/tensorflow/lite/python:schema_py",
+    ],
+)
+
+pytype_strict_contrib_test(
+    name = "transformation_utils_test",
+    srcs = ["transformation_utils_test.py"],
+    data = [
+        "//third_party/odml/model_customization/quantization/test_models:test_tfl_models",
+    ],
+    srcs_version = "PY3",
+    deps = [
+        ":transformation_utils",
+        "//testing/pybase",
+        "//testing/pybase:parameterized",
+        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization/utils:test_utils",
+        "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
+        "//third_party/py/numpy",
+        "//third_party/tensorflow/lite/python:schema_py",
+    ],
+)
+
+pytype_strict_library(
+    name = "emulated_subchannel",
+    srcs = ["emulated_subchannel.py"],
+    srcs_version = "PY3",
+    deps = [
+        ":transformation_utils",
+        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/py/numpy",
+        "//third_party/tensorflow/lite/python:schema_py",
+    ],
+)
+
+pytype_strict_contrib_test(
+    name = "emulated_subchannel_test",
+    srcs = ["emulated_subchannel_test.py"],
+    data = [
+        "//third_party/odml/model_customization/quantization/test_models:test_tfl_models",
+    ],
+    srcs_version = "PY3",
+    deps = [
+        ":emulated_subchannel",
+        "//testing/pybase",
+        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization/utils:test_utils",
+        "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
+        "//third_party/py/numpy",
+        "//third_party/tensorflow/lite/python:schema_py",
+    ],
+)
+
+pytype_strict_library(
     name = "dequant_insert",
     srcs = ["dequant_insert.py"],
     srcs_version = "PY3",
@@ -19,8 +79,8 @@ pytype_strict_library(
 )
 
 pytype_strict_contrib_test(
-    name = "dequant_insert_tests",
-    srcs = ["dequant_insert_tests.py"],
+    name = "dequant_insert_test",
+    srcs = ["dequant_insert_test.py"],
     data = [
         "//third_party/odml/model_customization/quantization/test_models:test_tfl_models",
     ],
@@ -48,8 +108,8 @@ pytype_strict_library(
 )
 
 pytype_strict_contrib_test(
-    name = "quantize_tensor_tests",
-    srcs = ["quantize_tensor_tests.py"],
+    name = "quantize_tensor_test",
+    srcs = ["quantize_tensor_test.py"],
     data = [
         "//third_party/odml/model_customization/quantization/test_models:test_tfl_models",
     ],

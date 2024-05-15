@@ -3,6 +3,7 @@
 import numpy as np
 from quantization_toolkit import typing as qtyping
 from quantization_toolkit.transformations import dequant_insert
+from quantization_toolkit.transformations import emulated_subchannel
 from quantization_toolkit.transformations import quantize_tensor
 from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
@@ -46,6 +47,9 @@ class TransformationPerformer:
         qtyping.QuantTransformation.QUANTIZE_TENSOR: (
             quantize_tensor.quantize_tensor
         ),
+        qtyping.QuantTransformation.EMULATED_SUBCHANNEL: (
+            emulated_subchannel.emulated_subchannel
+        ),
     }
     # transformations are seprated in two categories:
     # op_insertion_transformations are transformations that only insert ops
@@ -55,7 +59,9 @@ class TransformationPerformer:
         qtyping.QuantTransformation.ADD_DEQUANTIZE,
         qtyping.QuantTransformation.QUANTIZE_TENSOR,
     ])
-    self._op_replacement_transformations = set()
+    self._op_replacement_transformations = set(
+        [qtyping.QuantTransformation.EMULATED_SUBCHANNEL]
+    )
     self._original_op_id_map = []
     self._added_op_id_map = []
 
