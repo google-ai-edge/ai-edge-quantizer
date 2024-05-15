@@ -16,7 +16,7 @@ class TransformationInput:
   subgraph: schema_py_generated.SubGraphT
   producer: int
   consumers: list[int]
-  quant_params: qtyping.UniformQuantParams
+  quant_params: qtyping.UniformQuantParams | qtyping.NonLinearQuantParams
 
 
 def add_op_code(

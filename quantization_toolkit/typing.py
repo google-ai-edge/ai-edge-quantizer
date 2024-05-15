@@ -342,7 +342,7 @@ class TransformationInst:
   tensor_id: int
   producer: Optional[int]
   consumers: list[int]
-  parameters: Optional[UniformQuantParams] = None
+  parameters: Optional[UniformQuantParams | NonLinearQuantParams] = None
 
 
 @dataclasses.dataclass

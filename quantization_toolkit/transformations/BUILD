@@ -121,5 +121,6 @@ pytype_strict_contrib_test(
         "//third_party/odml/model_customization/quantization/utils:test_utils",
         "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
         "//third_party/py/numpy",
+        "//third_party/tensorflow/lite/python:schema_py",
     ],
 )

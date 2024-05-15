@@ -16,7 +16,7 @@ def insert_dequant(
     subgraph: schema_py_generated.SubGraphT,
     producer: int,
     consumers: list[int],
-    quant_params: qtyping.UniformQuantParams,
+    quant_params: qtyping.UniformQuantParams | qtyping.NonLinearQuantParams,
 ) -> qtyping.TransformationInfo:
   """Insert dequant op after the given tensor in the subgraph.
 

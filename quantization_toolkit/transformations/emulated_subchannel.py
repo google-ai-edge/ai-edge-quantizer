@@ -14,7 +14,7 @@ def emulated_subchannel(
     subgraph: schema_py_generated.SubGraphT,
     producer: int,
     consumers: list[int],
-    quant_params: qtyping.UniformQuantParams,
+    quant_params: qtyping.UniformQuantParams | qtyping.NonLinearQuantParams,
 ) -> qtyping.TransformationInfo:
   """Emulated subchannel quantization for fully_connected op.
 
@@ -38,6 +38,10 @@ def emulated_subchannel(
   # only apply to a single fully_connected op
   if len(consumers) > 1:
     raise ValueError('Emulated Subchannel transformation only support one op')
+  if isinstance(quant_params, qtyping.NonLinearQuantParams):
+    raise ValueError(
+        'Emulated Subchannel transformation only support uniform quantization'
+    )
   if (
       op_codes[subgraph.operators[consumers[0]].opcodeIndex].builtinCode
       != schema_py_generated.BuiltinOperator.FULLY_CONNECTED
