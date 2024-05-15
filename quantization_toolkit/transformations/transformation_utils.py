@@ -10,6 +10,19 @@ from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-dire
 
 @dataclasses.dataclass
 class TransformationInput:
+  """Standard input for a graph transformation.
+
+  Attributes:
+    tensor_id: the tensor index to insert dequant op after
+    op_codes: list of operatorCode in the model, if dequantize op doesn't exist,
+      we need to insert the op code into the list
+    buffers: list of buffer in the original TFlite model for buffer quantization
+    subgraph: flatbuffer subgraph object which the tensor resides.
+    producer: op id for the producer of the tensor.
+    consumers: op ids for consumers of the new dequant op.
+    quant_params: quantization parameters to be applied on the orignal tensor
+  """
+
   tensor_id: int
   op_codes: list[schema_py_generated.OperatorCodeT]
   buffers: list[schema_py_generated.BufferT]

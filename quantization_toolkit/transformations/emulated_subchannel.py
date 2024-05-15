@@ -8,13 +8,7 @@ from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-dire
 
 
 def emulated_subchannel(
-    tensor_id: int,
-    op_codes: list[schema_py_generated.OperatorCodeT],
-    buffers: list[schema_py_generated.BufferT],
-    subgraph: schema_py_generated.SubGraphT,
-    producer: int,
-    consumers: list[int],
-    quant_params: qtyping.UniformQuantParams | qtyping.NonLinearQuantParams,
+    transformation_input: transformation_utils.TransformationInput,
 ) -> qtyping.TransformationInfo:
   """Emulated subchannel quantization for fully_connected op.
 
@@ -24,54 +18,58 @@ def emulated_subchannel(
   reshape -> batch_matmul -> mul -> sum -> add (if bias is present)
 
   Args:
-    tensor_id: the tensor id of the weight tensor
-    op_codes: the op code list of the model
-    buffers: the buffer list of the model
-    subgraph: the subgraph of the model
-    producer: the producer of the weight tensor
-    consumers: the consumers of the weight tensor
-    quant_params: the quantization parameters of the weight tensor
+    transformation_input: input structure that contains all information needed
+      for the transformation.
 
   Returns:
     The transformation info.
   """
   # only apply to a single fully_connected op
-  if len(consumers) > 1:
+  if len(transformation_input.consumers) > 1:
     raise ValueError('Emulated Subchannel transformation only support one op')
-  if isinstance(quant_params, qtyping.NonLinearQuantParams):
+  if isinstance(
+      transformation_input.quant_params, qtyping.NonLinearQuantParams
+  ):
     raise ValueError(
         'Emulated Subchannel transformation only support uniform quantization'
     )
   if (
-      op_codes[subgraph.operators[consumers[0]].opcodeIndex].builtinCode
+      transformation_input.op_codes[
+          transformation_input.subgraph.operators[
+              transformation_input.consumers[0]
+          ].opcodeIndex
+      ].builtinCode
       != schema_py_generated.BuiltinOperator.FULLY_CONNECTED
   ):
     raise ValueError(
         'Emulated Subchannel transformation only support fully_connected op'
     )
-  if producer != -1:
+  if transformation_input.producer != -1:
     raise ValueError(
         'Emulated Subchannel transformation only support constant tensor'
     )
 
   # insert all tne necessary op codes into the model
   reshape_op_code_idx = transformation_utils.add_op_code(
-      schema_py_generated.BuiltinOperator.RESHAPE, op_codes
+      schema_py_generated.BuiltinOperator.RESHAPE, transformation_input.op_codes
   )
   bmm_op_code_idx = transformation_utils.add_op_code(
-      schema_py_generated.BuiltinOperator.BATCH_MATMUL, op_codes
+      schema_py_generated.BuiltinOperator.BATCH_MATMUL,
+      transformation_input.op_codes,
   )
   mul_op_code_idx = transformation_utils.add_op_code(
-      schema_py_generated.BuiltinOperator.MUL, op_codes
+      schema_py_generated.BuiltinOperator.MUL, transformation_input.op_codes
   )
   sum_op_code_idx = transformation_utils.add_op_code(
-      schema_py_generated.BuiltinOperator.SUM, op_codes
+      schema_py_generated.BuiltinOperator.SUM, transformation_input.op_codes
   )
 
-  original_fc_op_idx = consumers[0]
+  original_fc_op_idx = transformation_input.consumers[0]
   if cast(
       schema_py_generated.FullyConnectedOptionsT,
-      subgraph.operators[original_fc_op_idx].builtinOptions,
+      transformation_input.subgraph.operators[
+          original_fc_op_idx
+      ].builtinOptions,
   ).fusedActivationFunction != (
       schema_py_generated.ActivationFunctionType.NONE
   ):
@@ -80,20 +78,27 @@ def emulated_subchannel(
         ' fusedActivationFunction NONE for now'
     )
 
-  weight_tensor = subgraph.tensors[tensor_id]
+  weight_tensor = transformation_input.subgraph.tensors[
+      transformation_input.tensor_id
+  ]
 
   # modify the weight tensor with the correct quantization parameters
-  buffers[weight_tensor.buffer].data = np.frombuffer(
-      cast(np.ndarray, quant_params.quantized_data).tobytes(), dtype=np.uint8
+  transformation_input.buffers[weight_tensor.buffer].data = np.frombuffer(
+      cast(
+          np.ndarray, transformation_input.quant_params.quantized_data
+      ).tobytes(),
+      dtype=np.uint8,
   )
-  weight_tensor.shape = cast(np.ndarray, quant_params.quantized_data).shape
+  weight_tensor.shape = cast(
+      np.ndarray, transformation_input.quant_params.quantized_data
+  ).shape
   weight_tensor.quantization.scale = np.ones(shape=[1], dtype=np.float32)
   weight_tensor.quantization.zeroPoint = np.zeros(
       shape=[1], dtype=np.int64
   ).flatten()
 
   # assuming zero point is 0, so no need to add a zero point tensor
-  for val in quant_params.zero_point.flatten():
+  for val in transformation_input.quant_params.zero_point.flatten():
     if val != 0:
       raise ValueError(
           'Emulated Subchannel transformation only support zero point 0 for now'
@@ -101,10 +106,10 @@ def emulated_subchannel(
 
   scale_tensor_id = transformation_utils.add_new_constant_tensor(
       weight_tensor.name + b'_scale',
-      quant_params.scale,
+      transformation_input.quant_params.scale,
       schema_py_generated.TensorType.FLOAT32,
-      subgraph,
-      buffers,
+      transformation_input.subgraph,
+      transformation_input.buffers,
   )
 
   # for fully connected op, the reduce axis is always 1
@@ -113,15 +118,21 @@ def emulated_subchannel(
       weight_tensor.name + b'_reduce_axes',
       reduce_axes_data,
       schema_py_generated.TensorType.INT32,
-      subgraph,
-      buffers,
+      transformation_input.subgraph,
+      transformation_input.buffers,
   )
 
   # find the input and output tensor of the fully connected op
-  activation_input_id = subgraph.operators[original_fc_op_idx].inputs[0]
-  activation_output_id = subgraph.operators[original_fc_op_idx].outputs[0]
-  activation_input = subgraph.tensors[activation_input_id]
-  activation_output = subgraph.tensors[activation_output_id]
+  activation_input_id = transformation_input.subgraph.operators[
+      transformation_input.consumers[0]
+  ].inputs[0]
+  activation_output_id = transformation_input.subgraph.operators[
+      transformation_input.consumers[0]
+  ].outputs[0]
+  activation_input = transformation_input.subgraph.tensors[activation_input_id]
+  activation_output = transformation_input.subgraph.tensors[
+      activation_output_id
+  ]
 
   if len(activation_input.shape) != 3:
     raise ValueError(
@@ -151,15 +162,15 @@ def emulated_subchannel(
       activation_output.name + b'_reshape_op1_shape',
       np.array(bmm_input_shape, dtype=np.int32),
       schema_py_generated.TensorType.INT32,
-      subgraph,
-      buffers,
+      transformation_input.subgraph,
+      transformation_input.buffers,
   )
   reshape2_shape_id = transformation_utils.add_new_constant_tensor(
       activation_output.name + b'_reshape_op2_shape',
       np.array(activation_output.shape, dtype=np.int32),
       schema_py_generated.TensorType.INT32,
-      subgraph,
-      buffers,
+      transformation_input.subgraph,
+      transformation_input.buffers,
   )
 
   # create all intermediate tensors
@@ -167,25 +178,25 @@ def emulated_subchannel(
       activation_output.name + b'_bmm_input',
       bmm_input_shape,
       schema_py_generated.TensorType.FLOAT32,
-      subgraph,
+      transformation_input.subgraph,
   )
   mul_input_id = transformation_utils.add_new_activation_tensor(
       activation_output.name + b'_mul_input',
       intermediate_tensor_shape,
       schema_py_generated.TensorType.FLOAT32,
-      subgraph,
+      transformation_input.subgraph,
   )
   sum_input_id = transformation_utils.add_new_activation_tensor(
       activation_output.name + b'_reduce_sum_input',
       intermediate_tensor_shape,
       schema_py_generated.TensorType.FLOAT32,
-      subgraph,
+      transformation_input.subgraph,
   )
   reshape_op2_input_id = transformation_utils.add_new_activation_tensor(
       activation_output.name + b'_reshape_op2_input',
       sum_output_shape,
       schema_py_generated.TensorType.FLOAT32,
-      subgraph,
+      transformation_input.subgraph,
   )
 
   # reshape
@@ -203,7 +214,7 @@ def emulated_subchannel(
   # batch_matmul
   bmm_op = schema_py_generated.OperatorT()
   bmm_op.opcodeIndex = bmm_op_code_idx
-  bmm_op.inputs = [bmm_input_id, tensor_id]
+  bmm_op.inputs = [bmm_input_id, transformation_input.tensor_id]
   bmm_op.outputs = [mul_input_id]
   bmm_op.builtinOptionsType = (
       schema_py_generated.BuiltinOptions.BatchMatMulOptions
@@ -243,25 +254,36 @@ def emulated_subchannel(
   )
   reshape_op2.builtinOptions = reshape_op2_option
 
-  subgraph.operators.insert(original_fc_op_idx, reshape_op1)
-  subgraph.operators.insert(original_fc_op_idx + 1, bmm_op)
-  subgraph.operators.insert(original_fc_op_idx + 2, mul_op)
-  subgraph.operators.insert(original_fc_op_idx + 3, sum_op)
-  subgraph.operators.insert(original_fc_op_idx + 4, reshape_op2)
+  transformation_input.subgraph.operators.insert(
+      original_fc_op_idx, reshape_op1
+  )
+  transformation_input.subgraph.operators.insert(original_fc_op_idx + 1, bmm_op)
+  transformation_input.subgraph.operators.insert(original_fc_op_idx + 2, mul_op)
+  transformation_input.subgraph.operators.insert(original_fc_op_idx + 3, sum_op)
+  transformation_input.subgraph.operators.insert(
+      original_fc_op_idx + 4, reshape_op2
+  )
 
   # if there is a bias tensor, we need an add to process it
+
   if (
-      len(subgraph.operators[original_fc_op_idx + 5].inputs) > 2
-      and subgraph.operators[original_fc_op_idx + 5].inputs[2] != -1
+      len(
+          transformation_input.subgraph.operators[original_fc_op_idx + 5].inputs
+      )
+      > 2
+      and transformation_input.subgraph.operators[
+          original_fc_op_idx + 5
+      ].inputs[2]
+      != -1
   ):
     add_op_code_idx = transformation_utils.add_op_code(
-        schema_py_generated.BuiltinOperator.ADD, op_codes
+        schema_py_generated.BuiltinOperator.ADD, transformation_input.op_codes
     )
     reshape_op2_output_id = transformation_utils.add_new_activation_tensor(
         activation_output.name + b'_reshape_op2_output',
         activation_output.shape,
         schema_py_generated.TensorType.FLOAT32,
-        subgraph,
+        transformation_input.subgraph,
     )
     reshape_op2.outputs = [reshape_op2_output_id]
     add_op = schema_py_generated.OperatorT()
@@ -271,16 +293,20 @@ def emulated_subchannel(
     add_op.builtinOptions = add_option
     add_op.inputs = [
         reshape_op2_output_id,
-        subgraph.operators[original_fc_op_idx + 5].inputs[2],
+        transformation_input.subgraph.operators[original_fc_op_idx + 5].inputs[
+            2
+        ],
     ]
     add_op.outputs = [activation_output_id]
-    subgraph.operators.insert(original_fc_op_idx + 5, add_op)
-    del subgraph.operators[original_fc_op_idx + 6]
+    transformation_input.subgraph.operators.insert(
+        original_fc_op_idx + 5, add_op
+    )
+    del transformation_input.subgraph.operators[original_fc_op_idx + 6]
     return qtyping.TransformationInfo(
         original_fc_op_idx, 6, activation_output_id
     )
   else:
-    del subgraph.operators[original_fc_op_idx + 5]
+    del transformation_input.subgraph.operators[original_fc_op_idx + 5]
     return qtyping.TransformationInfo(
         original_fc_op_idx, 5, activation_output_id
     )

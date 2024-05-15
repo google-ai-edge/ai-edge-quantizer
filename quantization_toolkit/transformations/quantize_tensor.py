@@ -3,6 +3,7 @@
 from typing import cast
 import numpy as np
 from quantization_toolkit import typing as qtyping
+from quantization_toolkit.transformations import transformation_utils
 from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
@@ -51,25 +52,13 @@ def nonlinear_quant_params_to_tflite_type(
 
 # TODO(b/333797939): add INT4 packing
 def quantize_tensor(
-    tensor_id: int,
-    op_codes: list[schema_py_generated.OperatorCodeT],
-    buffers: list[schema_py_generated.BufferT],
-    subgraph: schema_py_generated.SubGraphT,
-    producer: int,
-    consumers: list[int],
-    quant_params: qtyping.UniformQuantParams | qtyping.NonLinearQuantParams,
+    transformation_input: transformation_utils.TransformationInput,
 ) -> qtyping.TransformationInfo:
   """Quantize the tensor at the tensor_id in the given subgraph.
 
   Args:
-    tensor_id: the tensor index for tensor to be quantized
-    op_codes: list of operatorCode in the model, not used in the function but is
-      needed for api purpose
-    buffers: list of buffer in the original TFlite model for buffer quantization
-    subgraph: flatbuffer subgraph object which the tensor resides.
-    producer: op id for the producer of the tensor.
-    consumers: op ids for consumers of the tensor.
-    quant_params: quantization parameters to be applied on the orignal tensor
+    transformation_input: input structure that contains all information needed
+      for the transformation.
 
   Returns:
     TransformationInfo:
@@ -77,34 +66,48 @@ def quantize_tensor(
       num_ops_added: the total number of ops inserted by this operation, which
         is 0
   """
-  del op_codes, consumers, producer
-  tensor = subgraph.tensors[tensor_id]
+  tensor = transformation_input.subgraph.tensors[transformation_input.tensor_id]
   # TODO(b/336385820): suppport quantize buffer directly when quantized_data
   # is not provided
   if tensor.buffer:
-    if quant_params.quantized_data is not None:
-      buffers[tensor.buffer].data = np.frombuffer(
-          cast(np.ndarray, quant_params.quantized_data).tobytes(),
+    if transformation_input.quant_params.quantized_data is not None:
+      transformation_input.buffers[tensor.buffer].data = np.frombuffer(
+          cast(
+              np.ndarray, transformation_input.quant_params.quantized_data
+          ).tobytes(),
           dtype=np.uint8,
       ).flatten()
-  if isinstance(quant_params, qtyping.UniformQuantParams):
+  if isinstance(transformation_input.quant_params, qtyping.UniformQuantParams):
     flatbuffer_quantization = schema_py_generated.QuantizationParametersT()
     flatbuffer_quantization.scale = list(
-        quant_params.scale.flatten().astype(np.float32)
+        transformation_input.quant_params.scale.flatten().astype(np.float32)
     )  # flatbuffer requires scale as list[float]
     flatbuffer_quantization.zeroPoint = list(
-        quant_params.zero_point.flatten().astype(np.int64)
+        transformation_input.quant_params.zero_point.flatten().astype(np.int64)
     )  # flatbuffer requires zeroPoint as list[int64]
-    if quant_params.quantized_dimension is not None:
+    if transformation_input.quant_params.quantized_dimension is not None:
       flatbuffer_quantization.quantizedDimension = (
-          quant_params.quantized_dimension
+          transformation_input.quant_params.quantized_dimension
       )
     tensor.quantization = flatbuffer_quantization
-    tensor.type = quant_params_to_tflite_type(quant_params.num_bits)
+    tensor.type = quant_params_to_tflite_type(
+        transformation_input.quant_params.num_bits
+    )
 
-  if isinstance(quant_params, qtyping.NonLinearQuantParams):
-    tensor.type = nonlinear_quant_params_to_tflite_type(quant_params.num_bits)
+  if isinstance(
+      transformation_input.quant_params, qtyping.NonLinearQuantParams
+  ):
+    tensor.type = nonlinear_quant_params_to_tflite_type(
+        transformation_input.quant_params.num_bits
+    )
+
+  if isinstance(
+      transformation_input.quant_params, qtyping.NonLinearQuantParams
+  ):
+    tensor.type = nonlinear_quant_params_to_tflite_type(
+        transformation_input.quant_params.num_bits
+    )
 
   return qtyping.TransformationInfo(
-      0, num_ops_added=0, output_tensor_id=tensor_id
+      0, num_ops_added=0, output_tensor_id=transformation_input.tensor_id
   )

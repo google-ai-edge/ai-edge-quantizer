@@ -5,6 +5,7 @@ from quantization_toolkit import typing as qtyping
 from quantization_toolkit.transformations import dequant_insert
 from quantization_toolkit.transformations import emulated_subchannel
 from quantization_toolkit.transformations import quantize_tensor
+from quantization_toolkit.transformations import transformation_utils
 from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
@@ -183,13 +184,15 @@ class TransformationPerformer:
     # TODO(b/335523694): since all transformation use the same input format,
     # we can have a dedicated data structure for it
     trans_info = self._transformation_registration[instruction.transformation](
-        instruction.tensor_id,
-        tflite_model.operatorCodes,
-        tflite_model.buffers,
-        tflite_model.subgraphs[transformation_inst.subgraph_id],
-        producer,
-        consumers,
-        instruction.parameters,
+        transformation_utils.TransformationInput(
+            instruction.tensor_id,
+            tflite_model.operatorCodes,
+            tflite_model.buffers,
+            tflite_model.subgraphs[transformation_inst.subgraph_id],
+            producer,
+            consumers,
+            instruction.parameters,
+        )
     )
     self._update_instructions(
         transformation_index,

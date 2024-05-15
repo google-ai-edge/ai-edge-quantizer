@@ -108,7 +108,7 @@ pytype_strict_library(
     srcs = ["algorithm_manager_api.py"],
     srcs_version = "PY3",
     deps = [
-        "//third_party/odml/model_customization/quantization:typing",
+        ":typing",
         "//third_party/py/absl/logging",
         "//third_party/py/immutabledict",
     ],
@@ -119,8 +119,8 @@ pytype_strict_contrib_test(
     srcs = ["algorithm_manager_api_test.py"],
     deps = [
         ":algorithm_manager_api",
+        ":typing",
         "//testing/pybase",
-        "//third_party/odml/model_customization/quantization:typing",
         "//third_party/py/absl/testing:parameterized",
         "//third_party/py/jax",
     ],
@@ -132,7 +132,7 @@ pytype_strict_library(
     srcs_version = "PY3",
     deps = [
         ":algorithm_manager_api",
-        "//third_party/odml/model_customization/quantization:typing",
+        ":typing",
         "//third_party/odml/model_customization/quantization/algorithms/uniform_quantize:naive_min_max_quantize",
         "//third_party/odml/model_customization/quantization/algorithms/uniform_quantize:uniform_quantize_tensor",
     ],
@@ -203,6 +203,7 @@ pytype_strict_library(
         "//third_party/odml/model_customization/quantization/transformations:dequant_insert",
         "//third_party/odml/model_customization/quantization/transformations:emulated_subchannel",
         "//third_party/odml/model_customization/quantization/transformations:quantize_tensor",
+        "//third_party/odml/model_customization/quantization/transformations:transformation_utils",
         "//third_party/py/numpy",
         "//third_party/tensorflow/lite/python:schema_py",
     ],
