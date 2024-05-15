@@ -1,1 +1,0 @@
-[{"regex": ".*", "operation": "FULLY_CONNECTED", "algorithm_key": "ptq", "op_config": {"weight_tensor_config": {"num_bits": 8, "symmetric": true, "channel_wise": true, "dtype": "INT"}, "execution_mode": "DRQ"}, "override_algorithm": true}]
