@@ -7,7 +7,6 @@ from typing import Any
 
 import numpy as np
 
-from google3.pyglib import resources as _resources
 from quantization_toolkit.utils import tfl_interpreter_utils
 
 
@@ -29,12 +28,7 @@ def get_path_to_datafile(path):
   data_files_path = _os_path.dirname(_inspect.getfile(_sys._getframe(1)))  # pylint: disable=protected-access
   path = _os_path.join(data_files_path, path)
   path = _os_path.normpath(path)
-  try:
-    # We might be in a PAR file, so assume so.
-    return _resources.GetResourceFilename(path)
-  except IOError:
-    # We weren't in a PAR so proceed as normal.
-    return path
+  return path
 
 
 def create_random_normal_dataset(

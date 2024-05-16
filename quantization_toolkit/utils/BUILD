@@ -11,7 +11,6 @@ pytype_strict_library(
     srcs_version = "PY3",
     deps = [
         ":tfl_interpreter_utils",
-        "//pyglib:resources",
         "//third_party/py/numpy",
     ],
 )
