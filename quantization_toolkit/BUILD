@@ -7,16 +7,16 @@ package(
 )
 
 pytype_strict_library(
-    name = "quantization_toolkit",
-    srcs = ["quantization_toolkit.py"],
+    name = "quant_toolkit",
+    srcs = ["quant_toolkit.py"],
     srcs_version = "PY3",
     deps = [
         ":algorithm_manager",
         ":model_modifier",
         ":model_validator",
         ":params_generator",
+        ":qtyping",
         ":recipe_manager",
-        ":typing",
         "//testing/pybase",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
         "//third_party/odml/model_customization/quantization/utils:validation_utils",
@@ -25,15 +25,15 @@ pytype_strict_library(
 )
 
 py_strict_test(
-    name = "quantization_toolkit_test",
-    srcs = ["quantization_toolkit_test.py"],
+    name = "quant_toolkit_test",
+    srcs = ["quant_toolkit_test.py"],
     data = [
         "//third_party/odml/model_customization/quantization/test_models:test_recipes",
         "//third_party/odml/model_customization/quantization/test_models:test_tfl_models",
     ],
     deps = [
-        ":quantization_toolkit",
-        ":typing",
+        ":qtyping",
+        ":quant_toolkit",
         "//testing/pybase",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
     ],
@@ -45,7 +45,7 @@ pytype_strict_library(
     srcs_version = "PY3",
     deps = [
         ":algorithm_manager",
-        ":typing",
+        ":qtyping",
         "//third_party/py/absl/logging",
     ],
 )
@@ -55,8 +55,8 @@ pytype_strict_contrib_test(
     srcs = ["recipe_manager_test.py"],
     deps = [
         ":algorithm_manager",
+        ":qtyping",
         ":recipe_manager",
-        ":typing",
         "//testing/pybase",
         "//third_party/py/absl/testing:parameterized",
     ],
@@ -68,11 +68,9 @@ pytype_strict_library(
     srcs_version = "PY3",
     deps = [
         ":algorithm_manager",
+        ":qtyping",
         ":recipe_manager",
-        ":typing",
         "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
-        "//third_party/py/absl/logging",
-        "//third_party/tensorflow/lite/tools:flatbuffer_utils",
     ],
 )
 
@@ -85,8 +83,8 @@ py_strict_test(
     deps = [
         ":calibrator",
         ":params_generator",
+        ":qtyping",
         ":recipe_manager",
-        ":typing",
         "//testing/pybase",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
         "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
@@ -96,8 +94,8 @@ py_strict_test(
 )
 
 pytype_strict_library(
-    name = "typing",
-    srcs = ["typing.py"],
+    name = "qtyping",
+    srcs = ["qtyping.py"],
     srcs_version = "PY3",
     # Need for type annotation only
     deps = ["//third_party/py/numpy"],
@@ -107,11 +105,7 @@ pytype_strict_library(
     name = "algorithm_manager_api",
     srcs = ["algorithm_manager_api.py"],
     srcs_version = "PY3",
-    deps = [
-        ":typing",
-        "//third_party/py/absl/logging",
-        "//third_party/py/immutabledict",
-    ],
+    deps = [":qtyping"],
 )
 
 pytype_strict_contrib_test(
@@ -119,10 +113,9 @@ pytype_strict_contrib_test(
     srcs = ["algorithm_manager_api_test.py"],
     deps = [
         ":algorithm_manager_api",
-        ":typing",
+        ":qtyping",
         "//testing/pybase",
         "//third_party/py/absl/testing:parameterized",
-        "//third_party/py/jax",
     ],
 )
 
@@ -132,7 +125,7 @@ pytype_strict_library(
     srcs_version = "PY3",
     deps = [
         ":algorithm_manager_api",
-        ":typing",
+        ":qtyping",
         "//third_party/odml/model_customization/quantization/algorithms/uniform_quantize:naive_min_max_quantize",
         "//third_party/odml/model_customization/quantization/algorithms/uniform_quantize:uniform_quantize_tensor",
     ],
@@ -144,8 +137,8 @@ pytype_strict_library(
     srcs_version = "PY3",
     deps = [
         ":algorithm_manager",
+        ":qtyping",
         ":recipe_manager",
-        ":typing",
         "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
         "//third_party/odml/model_customization/quantization/utils:tfl_interpreter_utils",
         "//third_party/py/absl/logging",
@@ -160,11 +153,10 @@ pytype_strict_contrib_test(
     ],
     deps = [
         ":calibrator",
+        ":qtyping",
         ":recipe_manager",
-        ":typing",
         "//testing/pybase",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
-        "//third_party/odml/model_customization/quantization/utils:tfl_interpreter_utils",
         "//third_party/py/numpy",
     ],
 )
@@ -173,7 +165,7 @@ pytype_strict_library(
     name = "transformation_instruction_generator",
     srcs = ["transformation_instruction_generator.py"],
     deps = [
-        ":typing",
+        ":qtyping",
         "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
         "//third_party/tensorflow/lite/python:schema_py",
     ],
@@ -186,8 +178,8 @@ pytype_strict_contrib_test(
         "//third_party/odml/model_customization/quantization/test_models:test_tfl_models",
     ],
     deps = [
+        ":qtyping",
         ":transformation_instruction_generator",
-        ":typing",
         "//testing/pybase",
         "//testing/pybase:parameterized",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
@@ -199,7 +191,7 @@ pytype_strict_library(
     name = "transformation_performer",
     srcs = ["transformation_performer.py"],
     deps = [
-        ":typing",
+        ":qtyping",
         "//third_party/odml/model_customization/quantization/transformations:dequant_insert",
         "//third_party/odml/model_customization/quantization/transformations:emulated_subchannel",
         "//third_party/odml/model_customization/quantization/transformations:quantize_tensor",
@@ -214,8 +206,8 @@ pytype_strict_contrib_test(
     srcs = ["transformation_performer_test.py"],
     data = ["//third_party/odml/model_customization/quantization/test_models:test_tfl_models"],
     deps = [
+        ":qtyping",
         ":transformation_performer",
-        ":typing",
         "//testing/pybase",
         "//testing/pybase:parameterized",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
@@ -228,9 +220,9 @@ pytype_strict_library(
     name = "model_modifier",
     srcs = ["model_modifier.py"],
     deps = [
+        ":qtyping",
         ":transformation_instruction_generator",
         ":transformation_performer",
-        ":typing",
         "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
         "//third_party/py/numpy",
         "//third_party/tensorflow/lite/python:schema_py",
@@ -245,8 +237,8 @@ pytype_strict_contrib_test(
     deps = [
         ":model_modifier",
         ":params_generator",
+        ":qtyping",
         ":recipe_manager",
-        ":typing",
         "//testing/pybase",
         "//testing/pybase:parameterized",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
@@ -282,8 +274,8 @@ py_strict_test(
     srcs = ["end_to_end_test.py"],
     data = ["//third_party/odml/model_customization/quantization/test_models:test_tfl_models"],
     deps = [
-        ":quantization_toolkit",
-        ":typing",
+        ":qtyping",
+        ":quant_toolkit",
         "//testing/pybase",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
         "//third_party/py/absl/testing:parameterized",

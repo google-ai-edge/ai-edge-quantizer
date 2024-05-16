@@ -12,7 +12,7 @@ pytype_strict_library(
     srcs = ["transformation_utils.py"],
     srcs_version = "PY3",
     deps = [
-        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization:qtyping",
         "//third_party/py/numpy",
         "//third_party/tensorflow/lite/python:schema_py",
     ],
@@ -42,7 +42,7 @@ pytype_strict_library(
     srcs_version = "PY3",
     deps = [
         ":transformation_utils",
-        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization:qtyping",
         "//third_party/py/numpy",
         "//third_party/tensorflow/lite/python:schema_py",
     ],
@@ -59,7 +59,7 @@ pytype_strict_contrib_test(
         ":emulated_subchannel",
         ":transformation_utils",
         "//testing/pybase",
-        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization:qtyping",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
         "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
         "//third_party/py/numpy",
@@ -74,7 +74,7 @@ pytype_strict_library(
     deps = [
         ":quantize_tensor",
         ":transformation_utils",
-        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization:qtyping",
         "//third_party/tensorflow/lite/python:schema_py",
     ],
 )
@@ -90,7 +90,7 @@ pytype_strict_contrib_test(
         ":dequant_insert",
         ":transformation_utils",
         "//testing/pybase",
-        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization:qtyping",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
         "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
         "//third_party/py/numpy",
@@ -104,7 +104,7 @@ pytype_strict_library(
     srcs_version = "PY3",
     deps = [
         ":transformation_utils",
-        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization:qtyping",
         "//third_party/py/numpy",
         "//third_party/tensorflow/lite/python:schema_py",
     ],
@@ -121,7 +121,7 @@ pytype_strict_contrib_test(
         ":quantize_tensor",
         ":transformation_utils",
         "//testing/pybase",
-        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization:qtyping",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
         "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
         "//third_party/py/numpy",

@@ -1,7 +1,7 @@
 """Quantization Toolkit Algorithm Manager Interface."""
 
 from quantization_toolkit import algorithm_manager_api
-from quantization_toolkit import typing as qtyping
+from quantization_toolkit import qtyping
 from quantization_toolkit.algorithms.uniform_quantize import naive_min_max_quantize
 from quantization_toolkit.algorithms.uniform_quantize import uniform_quantize_tensor
 

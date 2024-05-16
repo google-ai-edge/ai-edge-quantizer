@@ -6,7 +6,7 @@ can then be used by transformation_performer. Includes necessary optimizations
 
 from collections.abc import Iterator
 import dataclasses
-from quantization_toolkit import typing as qtyping
+from quantization_toolkit import qtyping
 from quantization_toolkit.utils import tfl_flatbuffer_utils
 from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 

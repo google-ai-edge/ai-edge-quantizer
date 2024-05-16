@@ -20,8 +20,8 @@ pytype_strict_binary(
     ],
     deps = [
         "//testing/pybase",
-        "//third_party/odml/model_customization/quantization:quantization_toolkit",
-        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization:qtyping",
+        "//third_party/odml/model_customization/quantization:quant_toolkit",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
         "//third_party/odml/model_customization/quantization/utils:tfl_interpreter_utils",
         "//third_party/py/PIL:pil",

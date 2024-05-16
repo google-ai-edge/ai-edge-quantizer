@@ -10,10 +10,9 @@ pytype_strict_library(
     srcs = ["min_max_quantize_utils.py"],
     srcs_version = "PY3",
     deps = [
-        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization:qtyping",
         "//third_party/odml/model_customization/quantization/algorithms/uniform_quantize:uniform_quantize_tensor",
         "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
-        "//third_party/py/jax",
         "//third_party/py/numpy",
     ],
 )
@@ -27,11 +26,7 @@ pytype_strict_contrib_test(
     deps = [
         ":min_max_quantize_utils",
         "//testing/pybase",
-        "//third_party/odml/model_customization/quantization:typing",
-        "//third_party/odml/model_customization/quantization/algorithms/uniform_quantize:uniform_quantize_tensor",
-        "//third_party/odml/model_customization/quantization/utils:test_utils",
-        "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
+        "//third_party/odml/model_customization/quantization:qtyping",
         "//third_party/py/absl/testing:parameterized",
-        "//third_party/py/numpy",
     ],
 )

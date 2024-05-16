@@ -6,7 +6,7 @@ import re
 from typing import Any, Optional
 from absl import logging
 from quantization_toolkit import algorithm_manager
-from quantization_toolkit import typing as qtyping
+from quantization_toolkit import qtyping
 
 # A collection of quantization configuration.
 # Key: scope regex.

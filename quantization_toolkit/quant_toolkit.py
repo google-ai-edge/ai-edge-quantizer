@@ -9,8 +9,8 @@ from quantization_toolkit import algorithm_manager
 from quantization_toolkit import model_modifier
 from quantization_toolkit import model_validator
 from quantization_toolkit import params_generator
+from quantization_toolkit import qtyping
 from quantization_toolkit import recipe_manager
-from quantization_toolkit import typing as qtyping
 from quantization_toolkit.utils import test_utils
 from quantization_toolkit.utils import validation_utils
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import

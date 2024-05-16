@@ -3,7 +3,7 @@
 
 from typing import Any, Optional
 import numpy as np
-from quantization_toolkit import typing as qtyping
+from quantization_toolkit import qtyping
 from quantization_toolkit.algorithms.uniform_quantize import uniform_quantize_tensor
 from quantization_toolkit.algorithms.utils import min_max_quantize_utils as utils
 from quantization_toolkit.utils import tfl_flatbuffer_utils

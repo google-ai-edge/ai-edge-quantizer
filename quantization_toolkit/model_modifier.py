@@ -4,9 +4,9 @@ import copy
 
 import numpy as np
 
+from quantization_toolkit import qtyping
 from quantization_toolkit import transformation_instruction_generator
 from quantization_toolkit import transformation_performer
-from quantization_toolkit import typing as qtyping
 from quantization_toolkit.utils import tfl_flatbuffer_utils
 from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import

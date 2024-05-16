@@ -4,7 +4,7 @@ import dataclasses
 
 import numpy as np
 
-from quantization_toolkit import typing as qtyping
+from quantization_toolkit import qtyping
 from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 

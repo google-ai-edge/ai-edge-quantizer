@@ -1,7 +1,7 @@
 """Python manager for transformations to be applied to TFlite models."""
 
 import numpy as np
-from quantization_toolkit import typing as qtyping
+from quantization_toolkit import qtyping
 from quantization_toolkit.transformations import dequant_insert
 from quantization_toolkit.transformations import emulated_subchannel
 from quantization_toolkit.transformations import quantize_tensor

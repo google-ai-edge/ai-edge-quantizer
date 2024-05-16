@@ -2,7 +2,7 @@
 
 import dataclasses
 import numpy as np
-from quantization_toolkit import typing as qtyping
+from quantization_toolkit import qtyping
 
 
 @dataclasses.dataclass(frozen=True)

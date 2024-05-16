@@ -16,8 +16,8 @@ import numpy as np
 from PIL import Image
 import tensorflow as tf
 
-from quantization_toolkit import quantization_toolkit
-from quantization_toolkit import typing as qtyping
+from quantization_toolkit import qtyping
+from quantization_toolkit import quant_toolkit
 from quantization_toolkit.utils import test_utils
 from quantization_toolkit.utils import tfl_interpreter_utils
 
@@ -68,7 +68,7 @@ def read_img(img_path: str):
 def quantize(
     float_model_path: str,
     execution_mode: _OpExecutionMode = _OpExecutionMode.WEIGHT_ONLY,
-) -> quantization_toolkit.QuantizationResult:
+) -> quant_toolkit.QuantizationResult:
   """Quantize the float model.
 
   Args:
@@ -78,7 +78,7 @@ def quantize(
   Returns:
       QuantResult: quantization result
   """
-  qt = quantization_toolkit.QuantToolkit(float_model_path)
+  qt = quant_toolkit.QuantToolkit(float_model_path)
   qt.update_quantization_recipe(
       regex='.*',
       operation_name=_OpName.FULLY_CONNECTED,

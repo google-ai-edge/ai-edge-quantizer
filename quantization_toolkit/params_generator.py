@@ -3,8 +3,8 @@ import copy
 from typing import Any, Optional
 
 from quantization_toolkit import algorithm_manager
+from quantization_toolkit import qtyping
 from quantization_toolkit import recipe_manager
-from quantization_toolkit import typing as qtyping
 from quantization_toolkit.utils import tfl_flatbuffer_utils
 
 

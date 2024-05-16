@@ -4,7 +4,7 @@ Inserts dequantize node after the given tensor to enable float execution of
 the tensor consumer
 """
 
-from quantization_toolkit import typing as qtyping
+from quantization_toolkit import qtyping
 from quantization_toolkit.transformations import quantize_tensor
 from quantization_toolkit.transformations import transformation_utils
 from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import

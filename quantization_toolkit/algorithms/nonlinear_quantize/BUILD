@@ -10,7 +10,7 @@ pytype_strict_library(
     srcs = ["fp16_quantize.py"],
     srcs_version = "PY3",
     deps = [
-        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization:qtyping",
         "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
         "//third_party/py/numpy",
     ],
@@ -25,7 +25,7 @@ pytype_strict_contrib_test(
     deps = [
         ":fp16_quantize",
         "//testing/pybase",
-        "//third_party/odml/model_customization/quantization:typing",
+        "//third_party/odml/model_customization/quantization:qtyping",
         "//third_party/odml/model_customization/quantization/utils:test_utils",
         "//third_party/odml/model_customization/quantization/utils:tfl_flatbuffer_utils",
         "//third_party/py/absl/testing:parameterized",
