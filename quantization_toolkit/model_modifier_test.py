@@ -2,7 +2,7 @@
 
 import os
 from tensorflow.python.platform import googletest
-from google3.testing.pybase import parameterized
+from absl.testing import parameterized
 from quantization_toolkit import model_modifier
 from quantization_toolkit import params_generator
 from quantization_toolkit import qtyping

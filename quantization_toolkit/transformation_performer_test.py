@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 from tensorflow.python.platform import googletest
-from google3.testing.pybase import parameterized
+from absl.testing import parameterized
 from quantization_toolkit import qtyping
 from quantization_toolkit import transformation_performer
 from quantization_toolkit.utils import test_utils

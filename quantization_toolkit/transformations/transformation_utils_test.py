@@ -3,7 +3,7 @@
 import os
 import numpy as np
 from tensorflow.python.platform import googletest
-from google3.testing.pybase import parameterized
+from absl.testing import parameterized
 from quantization_toolkit.transformations import transformation_utils
 from quantization_toolkit.utils import test_utils
 from quantization_toolkit.utils import tfl_flatbuffer_utils
