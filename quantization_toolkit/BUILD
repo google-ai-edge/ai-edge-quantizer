@@ -98,7 +98,10 @@ pytype_strict_library(
     srcs = ["qtyping.py"],
     srcs_version = "PY3",
     # Need for type annotation only
-    deps = ["//third_party/py/numpy"],
+    deps = [
+        "//third_party/py/numpy",
+        "//third_party/py/typing_extensions",
+    ],
 )
 
 pytype_strict_library(

@@ -4,8 +4,11 @@ from collections.abc import MutableMapping
 import copy
 import dataclasses
 import enum
-from typing import Any, Optional, TypeAlias
+from typing import Any, Optional
+
 import numpy as np
+from typing_extensions import TypeAlias
+
 
 QSV: TypeAlias = MutableMapping[str, Any]
 
