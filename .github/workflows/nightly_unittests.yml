@@ -1,0 +1,17 @@
+# Helpful YAML parser to clarify YAML syntax:
+# https://yaml-online-parser.appspot.com/
+
+name: Unit Tests (nightly)
+
+on:
+  schedule:
+    - cron: "0 10 * * *" # 10am UTC (3am PST)
+
+  workflow_dispatch:  # Allow manual triggers
+
+jobs:
+  run-unittests-python:
+    name: Unit Tests Python
+    uses: ./.github/workflows/unittests_python.yml
+    with:
+      trigger-sha: ${{ github.sha }}
