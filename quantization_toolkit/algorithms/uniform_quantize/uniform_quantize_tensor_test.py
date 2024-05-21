@@ -9,7 +9,7 @@ from quantization_toolkit.algorithms.uniform_quantize import uniform_quantize_te
 _IntType = uniform_quantize_tensor.IntType
 
 
-class TensorUtilsTest(googletest.TestCase, parameterized.TestCase):
+class TensorUtilsTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()

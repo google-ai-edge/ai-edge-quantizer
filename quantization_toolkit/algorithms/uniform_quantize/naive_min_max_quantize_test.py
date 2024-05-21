@@ -14,7 +14,7 @@ _TFLOpName = qtyping.TFLOperationName
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 
 
-class NaiveMinMaxQuantizeTest(googletest.TestCase, parameterized.TestCase):
+class NaiveMinMaxQuantizeTest(parameterized.TestCase):
   """Tests for general functions innaive min-max quantize algorithm.
 
   See naive_min_max_quantize_op_tests for op specific tests.
