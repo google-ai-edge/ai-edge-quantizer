@@ -44,6 +44,6 @@ setuptools.setup(
     install_requires=[
         "immutabledict",
         "numpy",
-        "tf-nightly",
+        "tf-nightly==2.17.0.dev20240509",
     ],
 )
