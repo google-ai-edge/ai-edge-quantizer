@@ -4,7 +4,7 @@ from collections.abc import MutableMapping
 import copy
 import dataclasses
 import enum
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 from typing_extensions import TypeAlias
@@ -75,7 +75,7 @@ class UniformQuantParams:
   """
 
   num_bits: int
-  quantized_dimension: int | None
+  quantized_dimension: Optional[int]
   scale: np.ndarray
   zero_point: np.ndarray
   symmetric: bool = True
@@ -151,7 +151,7 @@ class OpToTensorParams:
 
   subgraph_op_id: int
   transformations: list[QuantTransformation]
-  parameters: Optional[UniformQuantParams | NonLinearQuantParams] = None
+  parameters: Union[None, UniformQuantParams, NonLinearQuantParams] = None
 
 
 @dataclasses.dataclass
@@ -230,7 +230,7 @@ class OpQuantizationConfig:
   """
 
   # Quant config for activation tensors in the op (i.e., runtime tensors).
-  activation_tensor_config: TensorQuantizationConfig | None = None
+  activation_tensor_config: Optional[TensorQuantizationConfig] = None
 
   # Quantization config for weight tensor in the op.
   # Bias tensor quantization is deduced from activation/weight config.
@@ -345,7 +345,7 @@ class TransformationInst:
   tensor_id: int
   producer: Optional[int]
   consumers: list[int]
-  parameters: Optional[UniformQuantParams | NonLinearQuantParams] = None
+  parameters: Union[None, UniformQuantParams, NonLinearQuantParams] = None
 
 
 @dataclasses.dataclass
@@ -360,7 +360,7 @@ class TensorTransformationInsts:
 
   tensor_name: str
   subgraph_id: int
-  instructions: list[TransformationInst] | None
+  instructions: Optional[list[TransformationInst]]
 
 
 @dataclasses.dataclass(frozen=True)
