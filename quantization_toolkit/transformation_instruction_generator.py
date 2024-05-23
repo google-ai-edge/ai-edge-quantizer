@@ -454,8 +454,49 @@ class TransformationInstructionsGenerator:
     # Adding other consumers rules
     transformations += other_consumer_transformations
     tensor_trans_insts.instructions = transformations
+    # Check the generated transformation instructions are valid, the function
+    # will raise an error if the instructions are not valid
+    self._check_tensor_transformation_instructions_valid(tensor_trans_insts)
 
     return tensor_trans_insts
+
+  def _check_tensor_transformation_instructions_valid(
+      self, instructions: qtyping.TensorTransformationInsts
+  ):
+    """Check if the tensor transformation instructions are valid.
+
+    Args:
+      instructions: Transformation instructions for a tensor.
+
+    Raises:
+      ValueError: If the instructions are not valid.
+    """
+    is_tensor_unquantized = False
+    is_tensor_quantized = False
+    is_operator_emulated = False
+    for instruction in instructions.instructions:
+      transform_type = instruction.transformation
+      if transform_type == qtyping.QuantTransformation.NO_QUANTIZE:
+        is_tensor_unquantized = True
+      elif (
+          transform_type == qtyping.QuantTransformation.ADD_QUANTIZE
+          or transform_type == qtyping.QuantTransformation.QUANTIZE_TENSOR
+          or transform_type == qtyping.QuantTransformation.ADD_DEQUANTIZE
+      ):
+        is_tensor_quantized = True
+      elif transform_type == qtyping.QuantTransformation.EMULATED_SUBCHANNEL:
+        is_operator_emulated = True
+    if is_tensor_unquantized and is_tensor_quantized:
+      raise ValueError(
+          "Tensor %s can not be both quantized and unquantized"
+          % instructions.tensor_name
+      )
+    if is_operator_emulated and len(instructions.instructions) > 1:
+      raise ValueError(
+          "Tensor %s : op replacement transformation can not be combined with"
+          " other transformations."
+          % instructions.tensor_name
+      )
 
   def quant_params_to_transformation_insts(
       self,
