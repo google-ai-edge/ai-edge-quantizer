@@ -226,11 +226,14 @@ def has_same_quantization(tensor1: Any, tensor2: Any) -> bool:
       val = []
     return tuple(val)
 
+  same_type = tensor1.type == tensor2.type
+
   # Return True if both tensors are not quantized.
+  if tensor1.quantization is None and tensor2.quantization is None:
+    return True
   if tensor1.quantization.scale is None and tensor2.quantization.scale is None:
     return True
 
-  same_type = tensor1.type == tensor2.type
   same_scale = to_tuple(tensor1.quantization.scale) == to_tuple(
       tensor2.quantization.scale
   )
