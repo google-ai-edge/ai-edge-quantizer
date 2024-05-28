@@ -331,7 +331,7 @@ def get_tensor_transformation_params(
     tensor_name: str,
     op_info: qtyping.OpInfo,
     is_inbounding_tensor: bool,
-    quant_params: qtyping.UniformQuantParams | None = None,
+    quant_params: Optional[qtyping.UniformQuantParams] = None,
     is_constant: bool = False,
 ) -> qtyping.TensorTransformationParams:
   """Transformation params for the op's tensor.
@@ -428,9 +428,9 @@ def _get_tensor_quant_params(
 
 
 def _get_reduce_dims(
-    quantized_dim: int | None,
+    quantized_dim: Optional[int],
     tensor_shape: list[int],
-) -> tuple[int, ...] | None:
+) -> Optional[tuple[int, ...]]:
   """Get the reduce dims of a tensor for the given quantized dimension."""
   if quantized_dim is None:
     return None

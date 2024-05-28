@@ -1,6 +1,6 @@
 """quantize a given tensor."""
 
-from typing import cast
+from typing import Optional, cast
 import numpy as np
 from quantization_toolkit import qtyping
 from quantization_toolkit.transformations import transformation_utils
@@ -10,7 +10,7 @@ from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-dire
 # TODO(b/335014051): support distinguishing INT, FLOAT & UINT, BFLOAT
 def quant_params_to_tflite_type(
     bitwidth: int,
-) -> schema_py_generated.TensorType | None:
+) -> Optional[schema_py_generated.TensorType]:
   """Given specifications from quant param return the corresponding tflite dtype.
 
   Args:
@@ -33,7 +33,7 @@ def quant_params_to_tflite_type(
 
 def nonlinear_quant_params_to_tflite_type(
     bitwidth: int,
-) -> schema_py_generated.TensorType | None:
+) -> Optional[schema_py_generated.TensorType]:
   """Given specifications from quant param return the corresponding tflite dtype.
 
   Args:

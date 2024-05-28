@@ -3,7 +3,7 @@
 import inspect as _inspect
 import os.path as _os_path
 import sys as _sys
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 
@@ -34,7 +34,7 @@ def get_path_to_datafile(path):
 def create_random_normal_dataset(
     input_details: list[Any],
     num_samples: int,
-    random_seed: int | np._typing.ArrayLike,
+    random_seed: Union[int, np._typing.ArrayLike],
 ) -> list[list[np._typing.ArrayLike]]:
   """create random dataset following random distribution.
 

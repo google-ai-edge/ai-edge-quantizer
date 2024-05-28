@@ -1,6 +1,7 @@
 """Utility functions for graph transformations."""
 
 import dataclasses
+from typing import Union
 
 import numpy as np
 
@@ -29,7 +30,7 @@ class TransformationInput:
   subgraph: schema_py_generated.SubGraphT
   producer: int
   consumers: list[int]
-  quant_params: qtyping.UniformQuantParams | qtyping.NonLinearQuantParams
+  quant_params: Union[qtyping.UniformQuantParams, qtyping.NonLinearQuantParams]
 
 
 def add_op_code(

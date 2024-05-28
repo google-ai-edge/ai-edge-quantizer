@@ -1,6 +1,6 @@
 """flatbuffer utils for the Quant Toolkit."""
 
-from typing import Any
+from typing import Any, Optional
 
 import immutabledict
 import numpy as np
@@ -184,7 +184,7 @@ def get_tensor_name(tensor: Any) -> str:
 # TODO(b/325123193): better ways to access buffer data for large model.
 def get_tensor_data(
     tensor: Any, buffers: list[Any], model_buffer: bytearray
-) -> np.ndarray | None:
+) -> Optional[np.ndarray]:
   """Get the tensor data.
 
   Args:

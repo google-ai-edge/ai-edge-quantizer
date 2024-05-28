@@ -3,7 +3,7 @@
 from collections.abc import Callable, Iterable
 import json
 import math
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 
@@ -86,7 +86,7 @@ def compare_model(
 
 
 def create_json_for_model_explorer(
-    data: dict[str, float], threshold: list[int | float]
+    data: dict[str, float], threshold: list[Union[int, float]]
 ) -> str:
   """create a dict type that can be exported as json for model_explorer to use.
 
