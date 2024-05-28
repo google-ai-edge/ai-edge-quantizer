@@ -10,14 +10,6 @@ from quantization_toolkit.utils import tfl_flatbuffer_utils
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation
 
-# Ops that support weight quantization config (e.g., support DRQ/Weight-only).
-SUPPORTED_WEIGHT_QUANT_OPS = frozenset([
-    _TFLOpName.FULLY_CONNECTED,
-    _TFLOpName.CONV_2D,
-    _TFLOpName.BATCH_MATMUL,
-    _TFLOpName.EMBEDDING_LOOKUP,
-])
-
 _SUPPORTED_WEIGHT_ONLY_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
     _TFLOpName.CONV_2D,
@@ -165,7 +157,9 @@ def materialize_standard_op(
   """
   inputs_to_ignore = inputs_to_ignore or []
   outputs_to_ignore = outputs_to_ignore or []
-  if op_info.op_name not in SUPPORTED_WEIGHT_QUANT_OPS:
+  if op_info.op_name not in frozenset.union(
+      _SUPPORTED_WEIGHT_ONLY_OPS, _SUPPORTED_DRQ_OPS
+  ):
     if op_info.op_quant_config.execution_mode != qtyping.OpExecutionMode.SRQ:
       raise ValueError(f"Only SRQ is supported for op {op_info.op_name}.")
 
@@ -180,7 +174,9 @@ def materialize_standard_op(
     tensor_quant_config = op_info.op_quant_config.activation_tensor_config
     is_constant = tensor_data is not None
     # Use weight configuration if it is supported.
-    if is_constant and op_info.op_name in SUPPORTED_WEIGHT_QUANT_OPS:
+    if is_constant and op_info.op_name in frozenset.union(
+        _SUPPORTED_WEIGHT_ONLY_OPS, _SUPPORTED_DRQ_OPS
+    ):
       tensor_quant_config = op_info.op_quant_config.weight_tensor_config
     # Get quant params.
     if quant_params is None and tensor_quant_config is not None:
