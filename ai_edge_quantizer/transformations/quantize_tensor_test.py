@@ -119,6 +119,89 @@ class QuantizeTensorTest(googletest.TestCase):
         subgraph.tensors[4].type, schema_py_generated.TensorType.FLOAT16
     )
 
+  def test_int4_constant_packed_correctly(self):
+    subgraph = self._model.subgraphs[0]
+    model = self._model
+    data = np.array(
+        [
+            0x0,
+            0x1,
+            0x2,
+            0x3,
+            0x4,
+            0x5,
+            0x6,
+            0x7,
+            0x8,
+            0x9,
+            0xA,
+            0xB,
+            0xC,
+            0xD,
+            0xE,
+        ],
+        dtype=np.int8,
+    )
+    expected = np.array([0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC, 0x0E])
+    ret = quantize_tensor.quantize_tensor(
+        transformation_utils.TransformationInput(
+            tensor_id=7,
+            op_codes=model.operatorCodes,
+            buffers=model.buffers,
+            subgraph=subgraph,
+            producer=-1,
+            consumers=[4],
+            quant_params=qtyping.UniformQuantParams(
+                4, None, np.ones(1), np.ones(1), True, data
+            ),
+        )
+    )
+    self.assertEqual(ret.op_id, 0)
+    self.assertEqual(ret.num_ops_added, 0)
+    np.testing.assert_array_equal(model.buffers[8].data, expected)
+    quant_param = subgraph.tensors[7].quantization
+    np.testing.assert_array_equal(quant_param.scale, [1])
+    np.testing.assert_array_equal(quant_param.zeroPoint, [1])
+    self.assertEqual(quant_param.quantizedDimension, 0)
+
+  def test_int5_constant_not_packed(self):
+    subgraph = self._model.subgraphs[0]
+    model = self._model
+    data = np.array(
+        [
+            0x0,
+            0x1,
+            0x2,
+            0x3,
+            0x4,
+            0x5,
+            0x6,
+            0x7,
+        ],
+        dtype=np.int8,
+    )
+    expected = np.array([0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7])
+    ret = quantize_tensor.quantize_tensor(
+        transformation_utils.TransformationInput(
+            tensor_id=7,
+            op_codes=model.operatorCodes,
+            buffers=model.buffers,
+            subgraph=subgraph,
+            producer=-1,
+            consumers=[4],
+            quant_params=qtyping.UniformQuantParams(
+                5, None, np.ones(1), np.ones(1), True, data
+            ),
+        )
+    )
+    self.assertEqual(ret.op_id, 0)
+    self.assertEqual(ret.num_ops_added, 0)
+    np.testing.assert_array_equal(model.buffers[8].data, expected)
+    quant_param = subgraph.tensors[7].quantization
+    np.testing.assert_array_equal(quant_param.scale, [1])
+    np.testing.assert_array_equal(quant_param.zeroPoint, [1])
+    self.assertEqual(quant_param.quantizedDimension, 0)
+
 
 if __name__ == "__main__":
   googletest.main()

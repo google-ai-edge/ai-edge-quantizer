@@ -19,13 +19,15 @@ def quant_params_to_tflite_type(
   Returns:
     the corresponding tflite tensortype
   """
-  if bitwidth <= 8:
+  if bitwidth <= 4:
+    return schema_py_generated.TensorType.INT4
+  elif bitwidth <= 8:
     return schema_py_generated.TensorType.INT8
-  elif bitwidth == 16:
+  elif bitwidth <= 16:
     return schema_py_generated.TensorType.INT16
-  elif bitwidth == 32:
+  elif bitwidth <= 32:
     return schema_py_generated.TensorType.INT32
-  elif bitwidth == 64:
+  elif bitwidth <= 64:
     return schema_py_generated.TensorType.INT64
   else:
     raise ValueError(f"Unsupported quant params: {bitwidth}")
@@ -42,7 +44,7 @@ def nonlinear_quant_params_to_tflite_type(
   Returns:
     the corresponding tflite tensortype
   """
-  if bitwidth <= 16:
+  if bitwidth == 16:
     return schema_py_generated.TensorType.FLOAT16
   elif bitwidth == 32:
     return schema_py_generated.TensorType.FLOAT32
@@ -50,7 +52,29 @@ def nonlinear_quant_params_to_tflite_type(
     raise ValueError(f"Unsupported nonlinear params: {bitwidth}")
 
 
-# TODO(b/333797939): add INT4 packing
+def _pack_data(bitwidth: int, flattened_data: np.ndarray) -> np.ndarray:
+  """Pack the data to the corresponding bitwidth.
+
+  If no packing is needed, the original data is returned. Any bitwidth equal or
+  less than 4 bits will be packed to 4 bits.
+
+  Args:
+    bitwidth: Bitwidth from NonLinearQuantParams.
+    flattened_data: The data to be packed.
+
+  Returns:
+    Packed data.
+  """
+  if bitwidth <= 4:
+    even_data = flattened_data[::2] & 0x0F
+    odd_data = np.left_shift(flattened_data[1::2], 4).astype(np.uint8)
+    if odd_data.shape[0] == even_data.shape[0] - 1:
+      odd_data = np.pad(odd_data, (0, 1), constant_values=0)
+    return np.bitwise_or(even_data, odd_data)
+  else:
+    return flattened_data
+
+
 def quantize_tensor(
     transformation_input: transformation_utils.TransformationInput,
 ) -> qtyping.TransformationInfo:
@@ -71,12 +95,16 @@ def quantize_tensor(
   # is not provided
   if tensor.buffer:
     if transformation_input.quant_params.quantized_data is not None:
-      transformation_input.buffers[tensor.buffer].data = np.frombuffer(
-          cast(
-              np.ndarray, transformation_input.quant_params.quantized_data
-          ).tobytes(),
-          dtype=np.uint8,
-      ).flatten()
+      transformation_input.buffers[tensor.buffer].data = _pack_data(
+          transformation_input.quant_params.num_bits,
+          np.frombuffer(
+              cast(
+                  np.ndarray, transformation_input.quant_params.quantized_data
+              ).tobytes(),
+              dtype=np.uint8,
+          ).flatten(),
+      )
+
   if isinstance(transformation_input.quant_params, qtyping.UniformQuantParams):
     flatbuffer_quantization = schema_py_generated.QuantizationParametersT()
     flatbuffer_quantization.scale = list(

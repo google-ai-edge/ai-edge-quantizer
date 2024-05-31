@@ -19,7 +19,7 @@ jobs:
   test:
     strategy:
       matrix:
-        runner: [ubuntu-latest, macos-latest, macos-13]
+        runner: [ubuntu-latest, macos-13]
         python-version: ["3.9", "3.10", "3.11"]
     runs-on: ${{ matrix.runner }}
     steps:
