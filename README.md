@@ -1,6 +1,6 @@
-# ODML Quantization Toolkit
+# ODML Quantizer
 
-A toolkit for advanced developers to quantize converted ODML models. It aims to
+A quantizer for advanced developers to quantize converted ODML models. It aims to
 facilitate advanced users to strive for optimal performance on resource
 demanding models (e.g., GenAI models).
 
@@ -8,8 +8,8 @@ demanding models (e.g., GenAI models).
 
 Build Type         |    Status     |
 -----------        | --------------|
-Unit Tests (Linux) | [![](https://github.com/google-ai-edge/quantization-toolkit/actions/workflows/nightly_unittests.yml/badge.svg?branch=main)](https://github.com/google-ai-edge/quantization-toolkit/actions/workflows/nightly_unittests.yml) |
-PyPi Package       | [![](https://github.com/google-ai-edge/quantization-toolkit/actions/workflows/build_release.yml/badge.svg?branch=main)](https://github.com/google-ai-edge/quantization-toolkit/actions/workflows/build_release.yml) |
+Unit Tests (Linux) | [![](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_unittests.yml/badge.svg?branch=main)](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_unittests.yml) |
+PyPi Package       | [![](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/build_release.yml/badge.svg?branch=main)](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/build_release.yml) |
 
 ## Development Manual
 
@@ -24,7 +24,7 @@ PyPi Package       | [![](https://github.com/google-ai-edge/quantization-toolkit
 Set up a Python virtualenv:
 
 ```bash
-python -m venv --prompt quantization-toolkit venv
+python -m venv --prompt ai-edge-quantizer venv
 source venv/bin/activate
 ```
 
@@ -35,11 +35,11 @@ pip install wheel
 python setup.py bdist_wheel
 ```
 
-It will build a PyPi package `quantization_toolkit-0.0.1-py3-none-any.whl` unde
+It will build a PyPi package `ai_edge_quantizer-0.0.1-py3-none-any.whl` unde
 the `dist` folder, which you could install at local using command:
 
 ```bash
-pip install dist/quantization_toolkit-0.0.1-py3-none-any.whl
+pip install dist/ai_edge_quantizer-0.0.1-py3-none-any.whl
 ```
 
 ### Run Unit Tests

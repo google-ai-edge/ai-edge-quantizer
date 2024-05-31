@@ -1,4 +1,4 @@
-"""A toolkit for advanced developers to quantize converted ODML models.
+"""A quantizer for advanced developers to quantize converted ODML models.
 
 It aims to facilitate advanced users to strive for optimal performance on
 resource demanding models (e.g., GenAI models).
@@ -12,12 +12,12 @@ here = pathlib.Path(__file__).parent.resolve()
 DOCLINES = __doc__.split("\n")
 
 setuptools.setup(
-    name="quantization-toolkit",
+    name="ai-edge-quantizer",
     version="0.0.1",
     description=DOCLINES[0],
     long_description="\n".join(DOCLINES[2:]),
     long_description_content_type="text/markdown",
-    url="https://github.com/google-ai-edge/quantization-toolkit",
+    url="https://github.com/google-ai-edge/ai-edge-quantizer",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -38,7 +38,7 @@ setuptools.setup(
     ],
     keywords="On-Device ML, AI, Google, TFLite, Quantization, LLMs, GenAI",
     packages=setuptools.find_packages(
-        include=["quantization_toolkit*"],
+        include=["ai_edge_quantizer*"],
     ),
     python_requires=">=3.9, <3.12",
     install_requires=[

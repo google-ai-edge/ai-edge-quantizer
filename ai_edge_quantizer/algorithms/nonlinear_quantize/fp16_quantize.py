@@ -1,0 +1,156 @@
+"""Performs float 32 to float 16 quantization."""
+
+from typing import Any
+import numpy as np
+from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.utils import tfl_flatbuffer_utils
+
+ALGORITHM_KEY = "fp16_quantize"
+_TFLOpName = qtyping.TFLOperationName
+_QuantTransformation = qtyping.QuantTransformation
+
+# Ops that support weight quantization config (e.g., support Weight-only).
+SUPPORTED_WEIGHT_QUANT_OPS = frozenset([
+    _TFLOpName.FULLY_CONNECTED,
+    _TFLOpName.CONV_2D,
+    _TFLOpName.DEPTHWISE_CONV_2D,
+])
+
+
+def materialize_fc_conv(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    _: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in fully_connected, conv_2d and depthwise_conv_2d ops.
+
+  This function is called by the quantization pipeline to materialize
+  quantization parameters for the weight tensor of the op.
+
+  Args:
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    _: A map of tensor name to quantization parameters (unused).
+
+  Returns:
+    Quantization configuration for the weight tensor of the op.
+
+  Raises:
+    ValueError: If the op is not supported or the execution mode is not
+      WEIGHT_ONLY.
+  """
+  _check_valid_fp16_config(op_info)
+
+  input_tensor, weight_tensor, bias_tensor, output_tensor = (
+      tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
+          op_info.op, graph_info.subgraph_tensors
+      )
+  )
+  op_tensor_params = []
+  # Input tensor.
+  input_quant_params = _config_no_quantize_tensor(
+      op_info, input_tensor, is_inbounding_tensor=True
+  )
+  op_tensor_params.append(input_quant_params)
+  # Weight tensor.
+  weight_content = tfl_flatbuffer_utils.get_tensor_data(
+      weight_tensor,
+      graph_info.buffers,
+      graph_info.whole_model_buffer,
+  )
+  quant_params = qtyping.NonLinearQuantParams(
+      num_bits=16, quantized_data=weight_content.astype(np.float16)  # pytype: disable=attribute-error
+  )
+  op2weight_params = qtyping.OpToTensorParams(
+      subgraph_op_id=op_info.subgraph_op_index,
+      parameters=quant_params,
+      transformations=[_QuantTransformation.ADD_DEQUANTIZE],
+  )
+  op_tensor_params.append(
+      qtyping.TensorTransformationParams(
+          tensor_name=tfl_flatbuffer_utils.get_tensor_name(weight_tensor),
+          consumers=[op2weight_params],
+      )
+  )
+  # Output tensor.
+  output_quant_params = _config_no_quantize_tensor(
+      op_info, output_tensor, is_inbounding_tensor=False
+  )
+  op_tensor_params.append(output_quant_params)
+  # Bias tensor.
+  if bias_tensor is not None:
+    bias_quant_params = _config_no_quantize_tensor(
+        op_info, bias_tensor, is_inbounding_tensor=True
+    )
+    op_tensor_params.append(bias_quant_params)
+  return op_tensor_params
+
+
+def _config_no_quantize_tensor(
+    op_info: qtyping.OpInfo,
+    tensor: Any,
+    is_inbounding_tensor: bool,
+) -> qtyping.TensorTransformationParams:
+  """Configures a tensor to be not quantized.
+
+  Args:
+    op_info: Aggregated information about the op (e.g., quantization config).
+    tensor: The tensor to be configured.
+    is_inbounding_tensor: Whether the tensor is an inbounding tensor.
+
+  Returns:
+    TensorTransformationParams for the tensor.
+  """
+  tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
+  op2tensor_params = qtyping.OpToTensorParams(
+      subgraph_op_id=op_info.subgraph_op_index,
+      transformations=[_QuantTransformation.NO_QUANTIZE],
+  )
+  if is_inbounding_tensor:
+    return qtyping.TensorTransformationParams(
+        tensor_name=tensor_name,
+        consumers=[op2tensor_params],
+    )
+  return qtyping.TensorTransformationParams(
+      tensor_name=tensor_name, producer=op2tensor_params
+  )
+
+
+def _check_valid_fp16_config(op_info: qtyping.OpInfo) -> None:
+  """Checks if the op is valid for fp16 quantization.
+
+  Args:
+    op_info: Aggregated information about the op (e.g., quantization config).
+
+  Raises:
+    ValueError: If the op is not supported or the execution mode is not
+      WEIGHT_ONLY.
+  """
+  if (
+      op_info.op_quant_config.execution_mode
+      != qtyping.OpExecutionMode.WEIGHT_ONLY
+  ):
+    raise ValueError(
+        "Currently, only Weight-Only is supported for fp16 quantization. Got"
+        " unsupported execution mode:"
+        f" {op_info.op_quant_config.execution_mode} for op: {op_info.op_name}"
+    )
+  if op_info.op_quant_config.activation_tensor_config is not None:
+    raise ValueError(
+        "Activation tensor quantization is not supported for fp16 quantization."
+    )
+  if op_info.op_name not in SUPPORTED_WEIGHT_QUANT_OPS:
+    raise ValueError(
+        f"Unsupported op: {op_info.op_name} for fp16 quantization."
+    )
+  if (
+      op_info.op_quant_config.weight_tensor_config.num_bits != 16
+      or op_info.op_quant_config.weight_tensor_config.dtype
+      != qtyping.TensorDataType.FLOAT
+  ):
+    raise ValueError(
+        "fp16 quantization requires number of bits to be set as 16, dtype as"
+        " float, got"
+        f" {op_info.op_quant_config.weight_tensor_config.num_bits} and"
+        f" {op_info.op_quant_config.weight_tensor_config.dtype} ."
+    )

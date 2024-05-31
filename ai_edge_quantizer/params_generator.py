@@ -1,0 +1,237 @@
+"""Generate model tensor level quantization config."""
+import copy
+from typing import Any, Optional
+
+from ai_edge_quantizer import algorithm_manager
+from ai_edge_quantizer import qtyping
+from ai_edge_quantizer import recipe_manager
+from ai_edge_quantizer.utils import tfl_flatbuffer_utils
+
+
+class ParamsGenerator:
+  """Generate model tensor level quantization parameters."""
+
+  def __init__(self, float_tflite_path):
+    self._float_tflite_path = float_tflite_path
+    self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite_path)
+    self.model_buffer: bytearray = tfl_flatbuffer_utils.get_model_buffer(
+        float_tflite_path
+    )
+    self.buffer_to_tensors: dict[int, list[Any]] = (
+        tfl_flatbuffer_utils.buffer_to_tensors(self.flatbuffer_model)
+    )
+    self.model_quant_results: dict[str, qtyping.TensorTransformationParams] = {}
+
+  def generate_quantization_parameters(
+      self,
+      model_recipe_manager: recipe_manager.RecipeManager,
+      model_qsvs: Optional[dict[str, qtyping.QSV]] = None,
+  ) -> dict[str, qtyping.TensorTransformationParams]:
+    """Generate the quantization parameters for the model.
+
+    Args:
+      model_recipe_manager: the recipe manager for the model.
+      model_qsvs: quantization statistics values (qsvs) for the model. This is
+        obtained through calibration process.
+
+    Returns:
+      model_quant_results: the quantization parameters for tensors in the model.
+
+    Raises:
+      RuntimeError: if the calibration dataset is required but not provided.
+    """
+    if self._need_calibration(model_recipe_manager) and not model_qsvs:
+      raise RuntimeError(
+          'Model quantization statistics values (QSVs) are required for the'
+          ' input recipe. This can be obtained by running calibration on sample'
+          ' dataset.'
+      )
+
+    if model_qsvs is None:
+      model_qsvs = {}
+
+    op_codes = self.flatbuffer_model.operatorCodes
+    for subgraph in self.flatbuffer_model.subgraphs:
+      graph_info = qtyping.GraphInfo(
+          subgraph.tensors, self.flatbuffer_model.buffers, self.model_buffer
+      )
+      for subgraph_op_id, op in enumerate(subgraph.operators):
+        op_code = op_codes[op.opcodeIndex].builtinCode
+        # Do not quantize unknown ops.
+        if op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME:
+          op_quant_results = self._get_params_for_no_quant_op(
+              subgraph_op_id, op, subgraph.tensors
+          )
+        else:
+          op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
+          # Step1: query the quantization_recipe to get op config.
+          op_scope = self._get_op_scope(op, subgraph.tensors)
+          algorithm_name, op_quant_config = (
+              model_recipe_manager.get_quantization_configs(op_key, op_scope)
+          )
+          if algorithm_name == algorithm_manager.NO_QUANT:
+            op_quant_results = self._get_params_for_no_quant_op(
+                subgraph_op_id, op, subgraph.tensors
+            )
+          else:
+            op_info = qtyping.OpInfo(
+                op, op_key, subgraph_op_id, op_quant_config
+            )
+            # Step2: query algorithm_manager to get/call the related function.
+            materialize_func = algorithm_manager.get_quantization_func(
+                algorithm_name,
+                op_key,
+                qtyping.QuantizeMode.MATERIALIZE,
+            )
+            op_quant_results = materialize_func(
+                op_info,
+                graph_info,
+                model_qsvs,
+            )
+        # Step3: update the results.
+        self._update_model_quant_results(op_quant_results)
+
+    self._validate_results()
+    return self.model_quant_results
+
+  def _validate_results(self) -> None:
+    """Validate the quantization results.
+
+    Raises:
+      RuntimeError: if the tensors sharing the same buffer have different
+      quantization settings.
+    """
+    for tensors in self.buffer_to_tensors.values():
+      first_tensor = tensors[0]
+      for tensor in tensors[1:]:
+        if not tfl_flatbuffer_utils.has_same_quantization(first_tensor, tensor):
+          raise RuntimeError(
+              f'The tensors {first_tensor.name} and {tensor.name} do not have'
+              ' the same quantization setting even though they share the same'
+              ' buffer.'
+          )
+
+  def _update_model_quant_results(
+      self,
+      op_tensor_results: list[qtyping.TensorTransformationParams],
+  ) -> None:
+    """Update the op quantization results to the final output.
+
+    Args:
+      op_tensor_results: list of tensor level quantization params for the op.
+
+    Raises:
+      RuntimeError: if the same tensor has multiple quantization configs.
+    """
+
+    for op_tensor_result in op_tensor_results:
+      tensor_name = op_tensor_result.tensor_name
+      if tensor_name not in self.model_quant_results:
+        self.model_quant_results[tensor_name] = copy.deepcopy(op_tensor_result)
+      else:
+        tensor_params = self.model_quant_results[tensor_name]
+        # Set source op.
+        if op_tensor_result.producer is not None:
+          # src params must be unique (a tensor can only be produced by one op).
+          if tensor_params.producer is not None:
+            raise RuntimeError(
+                'Tensor %s received multiple quantization parameters from the'
+                ' source op, which should not happen as every tensor should'
+                ' have only one source op.' % tensor_name
+            )
+          tensor_params.producer = copy.deepcopy(op_tensor_result.producer)
+        # Set target op, which can be multiple (a tensor can be consumed by
+        # multiple ops).
+        if op_tensor_result.consumers is not None:
+          if tensor_params.consumers is None:
+            tensor_params.consumers = copy.deepcopy(op_tensor_result.consumers)
+          else:
+            tensor_params.consumers += copy.deepcopy(op_tensor_result.consumers)
+        self.model_quant_results[tensor_name] = tensor_params
+
+  def _get_op_scope(self, op: Any, subgraph_tensors: list[Any]) -> str:
+    """Get the op scope.
+
+    Op scope is defined by the output tensor names (following the Model
+    Explorer).
+
+    Args:
+      op: the op that need to be parsed.
+      subgraph_tensors: list of tensors in the subgraph.
+
+    Returns:
+      scope: scope for the op.
+    """
+    scope = ''
+    # Op scope is determined by output tensors.
+    for output_tensor_idx in op.outputs:
+      if output_tensor_idx != -1:
+        scope += tfl_flatbuffer_utils.get_tensor_name(
+            subgraph_tensors[output_tensor_idx]
+        )
+        scope += ';'  # split names
+    return scope
+
+  def _need_calibration(
+      self, model_recipe_manager: recipe_manager.RecipeManager
+  ) -> bool:
+    """Check if the model requires calibration.
+
+    Args:
+      model_recipe_manager: the recipe manager for the model.
+
+    Returns:
+      True if the model requires calibration.
+    """
+    recipe = model_recipe_manager.get_quantization_recipe()
+    # At the moment, only SRQ requires calibration.
+    for op_quant_config in recipe:
+      if (
+          op_quant_config['op_config']['execution_mode']
+          == qtyping.OpExecutionMode.SRQ
+      ):
+        return True
+    return False
+
+  def _get_params_for_no_quant_op(
+      self,
+      subgraph_op_id: int,
+      op: Any,
+      subgraph_tensors: list[Any],
+  ) -> list[qtyping.TensorTransformationParams]:
+    """Get the quantization parameters for ops require no quantization.
+
+    Args:
+      subgraph_op_id: the op id in the subgraph.
+      op: the op that need to be parsed.
+      subgraph_tensors: list of tensors in the subgraph.
+
+    Returns:
+      tensor_params: list of tensor level quantization params for the op.
+    """
+
+    def no_quant_tensor_params():
+      return qtyping.OpToTensorParams(
+          subgraph_op_id=subgraph_op_id,
+          transformations=[qtyping.QuantTransformation.NO_QUANTIZE],
+      )
+
+    tensor_params = []
+    for input_tensor_idx in op.inputs:
+      if input_tensor_idx != -1:
+        tensor = subgraph_tensors[input_tensor_idx]
+        input_tensor_params = qtyping.TensorTransformationParams(
+            tensor_name=tfl_flatbuffer_utils.get_tensor_name(tensor),
+            consumers=[no_quant_tensor_params()],
+        )
+        tensor_params.append(input_tensor_params)
+
+    for output_tensor_idx in op.outputs:
+      if output_tensor_idx != -1:
+        tensor = subgraph_tensors[output_tensor_idx]
+        output_tensor_params = qtyping.TensorTransformationParams(
+            tensor_name=tfl_flatbuffer_utils.get_tensor_name(tensor),
+            producer=no_quant_tensor_params(),
+        )
+        tensor_params.append(output_tensor_params)
+    return tensor_params
