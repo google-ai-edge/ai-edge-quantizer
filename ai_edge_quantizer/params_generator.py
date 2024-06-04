@@ -91,25 +91,20 @@ class ParamsGenerator:
         # Step3: update the results.
         self._update_model_quant_results(op_quant_results)
 
-    self._validate_results()
+    self._post_process_results()
     return self.model_quant_results
 
-  def _validate_results(self) -> None:
-    """Validate the quantization results.
+  def _post_process_results(self) -> None:
+    """Post process the quantization results.
 
     Raises:
       RuntimeError: if the tensors sharing the same buffer have different
       quantization settings.
     """
-    for tensors in self.buffer_to_tensors.values():
-      first_tensor = tensors[0]
-      for tensor in tensors[1:]:
-        if not tfl_flatbuffer_utils.has_same_quantization(first_tensor, tensor):
-          raise RuntimeError(
-              f'The tensors {first_tensor.name} and {tensor.name} do not have'
-              ' the same quantization setting even though they share the same'
-              ' buffer.'
-          )
+    self._check_buffer_sharing()
+    # Modify quantization tensor for I/O tensors.
+    for _, tensor_params in self.model_quant_results.items():
+      self._modify_io_tensor_transformations(tensor_params)
 
   def _update_model_quant_results(
       self,
@@ -235,3 +230,64 @@ class ParamsGenerator:
         )
         tensor_params.append(output_tensor_params)
     return tensor_params
+
+  def _check_buffer_sharing(self) -> None:
+    """Check if tensors sharing the same buffer have the same quantization.
+
+    Raises:
+      RuntimeError: if the tensors sharing the same buffer have different
+      quantization settings.
+    """
+    for tensors in self.buffer_to_tensors.values():
+      first_tensor = tensors[0]
+      for tensor in tensors[1:]:
+        if not tfl_flatbuffer_utils.has_same_quantization(first_tensor, tensor):
+          raise RuntimeError(
+              f'The tensors {first_tensor.name} and {tensor.name} do not have'
+              ' the same quantization setting even though they share the same'
+              ' buffer.'
+          )
+
+  def _modify_io_tensor_transformations(
+      self,
+      tensor_params: qtyping.TensorTransformationParams,
+  ) -> None:
+    """Modify quantization information for I/O tensors.
+
+    This will not be trigged by weight-only/drq because they do not quantize
+    activation tensors.
+    Selective srq & emulated srq will be okay because only the I/O tensors will
+    be left as quantized, if applicable. This is the intended behavior if user
+    choose to SRQ ops contain I/O tensors.
+
+    Args:
+      tensor_params: tensor level quantization params for the tensor.
+    """
+    # Change ADD_QUANTIZE to QUANTIZE_TENSOR for unique input/constant tensors.
+    if (
+        tensor_params.producer is None
+        and tensor_params.consumers is not None
+        and len(tensor_params.consumers) == 1
+        and tensor_params.consumers[0].transformations
+        == [qtyping.QuantTransformation.ADD_QUANTIZE]
+    ):
+      tensor_params.consumers = [
+          qtyping.OpToTensorParams(
+              subgraph_op_id=consumer.subgraph_op_id,
+              transformations=[qtyping.QuantTransformation.QUANTIZE_TENSOR],
+              parameters=consumer.parameters,
+          )
+          for consumer in tensor_params.consumers
+      ]
+    # Change ADD_DEQUANTIZE to QUANTIZE_TENSOR for output tensors.
+    elif (
+        tensor_params.consumers is None
+        and tensor_params.producer is not None
+        and tensor_params.producer.transformations
+        == [qtyping.QuantTransformation.ADD_DEQUANTIZE]
+    ):
+      tensor_params.producer = qtyping.OpToTensorParams(
+          subgraph_op_id=tensor_params.producer.subgraph_op_id,
+          transformations=[qtyping.QuantTransformation.QUANTIZE_TENSOR],
+          parameters=tensor_params.producer.parameters,
+      )
