@@ -17,7 +17,7 @@ PyPi Package       | [![](https://github.com/google-ai-edge/ai-edge-quantizer/ac
 
  * Python versions:  3.9, 3.10, 3.11
  * Operating system: Linux, MacOS
- * TensorFlow: [![tf-nightly](https://img.shields.io/badge/tf--nightly-2.17.0.dev20240509-blue)](https://pypi.org/project/tf-nightly/)
+ * TensorFlow: [![tf-nightly](https://img.shields.io/badge/tf--nightly-latest-blue)](https://pypi.org/project/tf-nightly/)
 
 ### Python Virtual Env
 
