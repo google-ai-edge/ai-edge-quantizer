@@ -69,7 +69,9 @@ def extend_quantization_params_dimensions(
   Returns:
     quantization_params with broadcasted scales and zero_points.
   """
-  tensor_dims = list(range(len(tensor_data.shape)))
+  if tensor_data.ndim == quantization_params.scale.ndim:
+    return quantization_params
+  tensor_dims = list(range(tensor_data.ndim))
   dims = [
       dim
       for dim in tensor_dims
@@ -116,6 +118,11 @@ def uniform_quantize(
   Returns:
     The quantized tensor.
   """
+  # quant params in flatbuffer is flattened, expand the rank to be the same
+  # as the tensor rank to avoid ambiguous broadcasting.
+  quantization_params = extend_quantization_params_dimensions(
+      tensor_data, quantization_params
+  )
   _is_valid_quantization_params(tensor_data, quantization_params)
   scales, zero_points = (
       quantization_params.scale,
@@ -151,6 +158,11 @@ def uniform_dequantize(
   Returns:
     The dequantized tensor.
   """
+  # quant params in flatbuffer is flattened, expand the rank to be the same
+  # as the tensor rank to avoid ambiguous broadcasting.
+  quantization_params = extend_quantization_params_dimensions(
+      tensor_data, quantization_params
+  )
   _is_valid_quantization_params(tensor_data, quantization_params)
   return np.multiply(
       tensor_data - quantization_params.zero_point, quantization_params.scale

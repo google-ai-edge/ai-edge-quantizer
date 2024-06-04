@@ -84,12 +84,24 @@ class UniformQuantParams:
 
   @classmethod
   def from_tfl_tensor_details(cls, tensor_detail) -> 'UniformQuantParams':
+    """Creates UniformQuantParams from TFLite tensor details.
+
+    Args:
+      tensor_detail: The tensor details from TFLite.
+
+    Returns:
+      UniformQuantParams.
+    """
     quant_params = tensor_detail['quantization_parameters']
     data_type = tensor_detail['dtype']
     if data_type == np.int8:
       num_bits = 8
     elif data_type == np.int16:
       num_bits = 16
+    elif data_type == np.int32:
+      num_bits = 32
+    elif data_type == np.int64:
+      num_bits = 64
     else:
       raise ValueError(f'Unsupported data type: {data_type}')
     symmetric = sum(abs(quant_params['zero_points'])) == 0

@@ -91,13 +91,6 @@ def get_tensor_data(
     quant_params = qtyping.UniformQuantParams.from_tfl_tensor_details(
         tensor_detail
     )
-    # quant params in flatbuffer is flattened, expand the rank to be the same
-    # as the tensor rank to avoid ambiguous broadcasting.
-    quant_params = (
-        uniform_quantize_tensor.extend_quantization_params_dimensions(
-            tensor_data, quant_params
-        )
-    )
     tensor_data = uniform_quantize_tensor.uniform_dequantize(
         tensor_data,
         quant_params,
