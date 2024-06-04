@@ -260,6 +260,13 @@ def materialize_standard_op(
         is_inbounding_tensor=False,
         quant_params=input_tensor_params.consumers[0].parameters,
     )
+    # Change output qsv to be the same as input qsv. This is safe since TFL
+    # subgraph is acyclic.
+    input_tensor_qsv = tensor_name_to_qsv[input_tensor_params.tensor_name]
+    for output_tensor in output_tensors:
+      tensor_name_to_qsv[
+          tfl_flatbuffer_utils.get_tensor_name(output_tensor)
+      ] = input_tensor_qsv
 
   elif constraint == OpQuantConstraint.SAME_AS_OUTPUT_SCALE:
     # Must be a single output to avoid ambiguity.
