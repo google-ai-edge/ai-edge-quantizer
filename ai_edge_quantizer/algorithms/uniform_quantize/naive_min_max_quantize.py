@@ -41,12 +41,52 @@ def check_op_quantization_config(
     utils.check_srq_config(op_name, op_quant_config)
 
 
+def materialize_softmax(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.softmax."""
+  input_tensor_params, output_tensor_params = utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+  )
+  # Explicitly set output scale and zero point for the output tensor when doing
+  # SRQ.
+  activation_tensor_config = op_info.op_quant_config.activation_tensor_config
+  if (
+      activation_tensor_config is not None
+      and output_tensor_params.producer is not None
+  ):
+    act_num_bits = activation_tensor_config.num_bits
+    # Hard code scales and zp values as they are hard coded in TFL kernels.
+    # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/kernels/activations.cc#L548
+    scales, zp, symmetric = 1.0 / 256, -128, False
+    if act_num_bits == 16:
+      scales, zp, symmetric = 1.0 / 32768, 0, True
+    output_quant_params = qtyping.UniformQuantParams(
+        num_bits=act_num_bits,
+        quantized_dimension=None,
+        scale=np.array(scales),
+        zero_point=np.array(zp),
+        symmetric=symmetric,
+    )
+    op_tensor_params = qtyping.OpToTensorParams(
+        subgraph_op_id=output_tensor_params.producer.subgraph_op_id,
+        transformations=output_tensor_params.producer.transformations,
+        parameters=output_quant_params,
+    )
+    output_tensor_params.producer = op_tensor_params
+  return [input_tensor_params, output_tensor_params]
+
+
 def materialize_batch_matmul(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
 ) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.reshape."""
+  """Materialize tensors in tfl.batch_matmul."""
   return utils.materialize_standard_op(
       op_info,
       graph_info,
@@ -111,10 +151,6 @@ def materialize_fc_conv(
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
     weights, bias).
-
-  Raises:
-    ValueError: if the op is not one of tfl.fully_connected, tfl.batch_matmul,
-    tfl.conv_2d and tfl.depthwise_conv_2d.
   """
   op_tensor_params = utils.materialize_standard_op(
       op_info,

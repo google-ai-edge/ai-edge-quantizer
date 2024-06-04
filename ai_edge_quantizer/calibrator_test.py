@@ -125,7 +125,7 @@ class CalibratorTest(googletest.TestCase):
     self.assertEqual(output_qsv["min"], [0])
     self.assertEqual(output_qsv["max"], np.array(6.0))
 
-  def test_calibrate_single_fc(self):
+  def test_calibrate_single_fc_success(self):
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
     self._calibrator.calibrate(
         self._representative_dataset, self._recipe_manager
@@ -159,10 +159,10 @@ class CalibratorTest(googletest.TestCase):
     # Relu, only check the min
     self.assertSequenceAlmostEqual(output_qsv["min"].flatten(), [0])
 
-  def test_calibrate_unsupported_ops(self):
-    # Many ops in the following model are not supported currently
+  def test_calibrate_unsupported_ops_fails(self):
+    # Many ops in the following model are not supported currently.
     test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "test_models/conv_fc_mnist.tflite"
+        TEST_DATA_PREFIX_PATH, "test_models/branching_conv_fc.tflite"
     )
     test_calibrator = calibrator.Calibrator(test_model_path)
 

@@ -27,6 +27,11 @@ TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
     _TFLOpName.EMBEDDING_LOOKUP: (
         schema_py_generated.BuiltinOperator.EMBEDDING_LOOKUP
     ),
+    _TFLOpName.SOFTMAX: schema_py_generated.BuiltinOperator.SOFTMAX,
+    _TFLOpName.AVERAGE_POOL_2D: (
+        schema_py_generated.BuiltinOperator.AVERAGE_POOL_2D
+    ),
+    _TFLOpName.RESHAPE: schema_py_generated.BuiltinOperator.RESHAPE,
 })
 
 TFL_OP_CODE_TO_NAME = immutabledict.immutabledict(
