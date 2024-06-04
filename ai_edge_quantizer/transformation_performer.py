@@ -4,6 +4,7 @@ import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import dequant_insert
 from ai_edge_quantizer.transformations import emulated_subchannel
+from ai_edge_quantizer.transformations import quant_insert
 from ai_edge_quantizer.transformations import quantize_tensor
 from ai_edge_quantizer.transformations import transformation_utils
 from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
@@ -51,6 +52,9 @@ class TransformationPerformer:
         qtyping.QuantTransformation.EMULATED_SUBCHANNEL: (
             emulated_subchannel.emulated_subchannel
         ),
+        qtyping.QuantTransformation.ADD_QUANTIZE: (
+            quant_insert.insert_quant
+        ),
     }
     # transformations are seprated in two categories:
     # op_insertion_transformations are transformations that only insert ops
@@ -59,6 +63,7 @@ class TransformationPerformer:
     self._op_insertion_transformations = set([
         qtyping.QuantTransformation.ADD_DEQUANTIZE,
         qtyping.QuantTransformation.QUANTIZE_TENSOR,
+        qtyping.QuantTransformation.ADD_QUANTIZE,
     ])
     self._op_replacement_transformations = set(
         [qtyping.QuantTransformation.EMULATED_SUBCHANNEL]

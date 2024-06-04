@@ -10,10 +10,10 @@ from ai_edge_quantizer.transformations import transformation_utils
 from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
-def insert_dequant(
+def insert_quant(
     transformation_input: transformation_utils.TransformationInput,
 ) -> qtyping.TransformationInfo:
-  """Insert dequant op after the given tensor in the subgraph.
+  """Insert quant op after the given tensor in the subgraph.
 
   Args:
     transformation_input: input structure that contains all information needed
@@ -25,27 +25,40 @@ def insert_dequant(
       num_ops_added: the total number of ops inserted by this operation, which
         is 1
   """
-  dequant_op_code_idx = transformation_utils.add_op_code(
-      schema_py_generated.BuiltinOperator.DEQUANTIZE,
+  quant_op_code_idx = transformation_utils.add_op_code(
+      schema_py_generated.BuiltinOperator.QUANTIZE,
       transformation_input.op_codes,
   )
-  # create output tensor for the dequant op
+
+  # create output tensor for the quantize op
   tensor = transformation_input.subgraph.tensors[transformation_input.tensor_id]
   new_tensor_id = transformation_utils.add_new_activation_tensor(
-      tensor.name + b'_dequant',
+      tensor.name + b'_quantized',
       tensor.shape,
       schema_py_generated.TensorType.FLOAT32,
       transformation_input.subgraph,
   )
 
-  # create dequantize_op
-  dequant_op = schema_py_generated.OperatorT()
-  dequant_op.opcodeIndex = dequant_op_code_idx
-  dequant_op.outputs = [new_tensor_id]
-  dequant_op.inputs = [transformation_input.tensor_id]
+  # quantize the output tensor
+  ## we need a new transformation input because we don't want to modify the
+  ## original input
+  quantize_tensor.quantize_tensor(
+      transformation_utils.TransformationInput(
+          new_tensor_id,
+          transformation_input.op_codes,
+          transformation_input.buffers,
+          transformation_input.subgraph,
+          transformation_input.producer,
+          transformation_input.consumers,
+          transformation_input.quant_params,
+      )
+  )
 
-  # quantize the source tensor
-  quantize_tensor.quantize_tensor(transformation_input)
+  # create quantize_op
+  quant_op = schema_py_generated.OperatorT()
+  quant_op.opcodeIndex = quant_op_code_idx
+  quant_op.outputs = [new_tensor_id]
+  quant_op.inputs = [transformation_input.tensor_id]
 
   # update the original consumers of the op to take the dequant op,
   # and find the first consumer of the new tensor
@@ -58,7 +71,7 @@ def insert_dequant(
 
   # add dequant into the subgraph op list,
   # must insert the op right before it's first consumer
-  transformation_input.subgraph.operators.insert(first_consumer_id, dequant_op)
+  transformation_input.subgraph.operators.insert(first_consumer_id, quant_op)
   return qtyping.TransformationInfo(
       op_id=first_consumer_id, num_ops_added=1, output_tensor_id=new_tensor_id
   )
