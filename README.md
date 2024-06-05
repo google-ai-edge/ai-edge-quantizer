@@ -9,7 +9,7 @@ demanding models (e.g., GenAI models).
 Build Type         |    Status     |
 -----------        | --------------|
 Unit Tests (Linux) | [![](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_unittests.yml/badge.svg?branch=main)](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_unittests.yml) |
-PyPi Package       | [![](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/build_release.yml/badge.svg?branch=main)](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/build_release.yml) |
+Nightly Release    | [![](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_release.yml/badge.svg?branch=main)](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_release.yml) |
 
 ## Development Manual
 

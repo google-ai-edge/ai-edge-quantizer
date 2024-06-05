@@ -4,6 +4,7 @@ It aims to facilitate advanced users to strive for optimal performance on
 resource demanding models (e.g., GenAI models).
 """
 
+import os
 import pathlib
 import setuptools
 
@@ -11,9 +12,16 @@ here = pathlib.Path(__file__).parent.resolve()
 
 DOCLINES = __doc__.split("\n")
 
+name = "ai-edge-quantizer"
+version = "0.0.1"
+if nightly_release_datetime := os.environ.get("NIGHTLY_RELEASE_DATETIME"):
+  name += "-nightly"
+  version += ".dev" + nightly_release_datetime
+
+
 setuptools.setup(
-    name="ai-edge-quantizer",
-    version="0.0.1",
+    name=name,
+    version=version,
     description=DOCLINES[0],
     long_description="\n".join(DOCLINES[2:]),
     long_description_content_type="text/markdown",
