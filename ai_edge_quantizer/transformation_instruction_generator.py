@@ -475,7 +475,10 @@ class TransformationInstructionsGenerator:
       transform_type = instruction.transformation
       if transform_type == qtyping.QuantTransformation.NO_QUANTIZE:
         is_tensor_unquantized = True
-      elif transform_type == qtyping.QuantTransformation.QUANTIZE_TENSOR:
+      elif (
+          transform_type == qtyping.QuantTransformation.QUANTIZE_TENSOR
+          or transform_type == qtyping.QuantTransformation.ADD_DEQUANTIZE
+      ):
         is_tensor_quantized = True
       elif transform_type == qtyping.QuantTransformation.EMULATED_SUBCHANNEL:
         is_operator_emulated = True
