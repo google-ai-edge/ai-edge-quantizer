@@ -56,9 +56,17 @@ def insert_dequant(
       if op.inputs[input_idx] == transformation_input.tensor_id:
         op.inputs[input_idx] = new_tensor_id
 
+  # if the output is also an output to the graph, we need to update that as well
+  for output_idx, output in enumerate(transformation_input.subgraph.outputs):
+    if output == transformation_input.tensor_id:
+      transformation_input.subgraph.outputs[output_idx] = new_tensor_id
+
   # add dequant into the subgraph op list,
   # must insert the op right before it's first consumer
-  transformation_input.subgraph.operators.insert(first_consumer_id, dequant_op)
+  # in the case of output goes to graph output, we need to ensure the dequant
+  # op is inserted after the producer
+  op_id = max(transformation_input.producer + 1, first_consumer_id)
+  transformation_input.subgraph.operators.insert(op_id, dequant_op)
   return qtyping.TransformationInfo(
-      op_id=first_consumer_id, num_ops_added=1, output_tensor_id=new_tensor_id
+      op_id=op_id, num_ops_added=1, output_tensor_id=new_tensor_id
   )

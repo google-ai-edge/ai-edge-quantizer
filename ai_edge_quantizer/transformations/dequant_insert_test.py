@@ -252,6 +252,38 @@ class DequantInsertTest(googletest.TestCase):
     self.assertEqual(subgraph.operators[2].inputs[0], 9)
     self.assertEqual(subgraph.operators[3].inputs[0], 1)
 
+  def test_dequant_insert_on_graph_output(self):
+    """Test dequant insert lib on graph output."""
+    subgraph = self._model.subgraphs[0]
+    model = self._model
+    dequant_opcode = schema_py_generated.BuiltinOperator.DEQUANTIZE
+    # insert dequant on the graph output
+    dequant_insert.insert_dequant(
+        transformation_utils.TransformationInput(
+            8,
+            model.operatorCodes,
+            model.buffers,
+            subgraph,
+            4,
+            [-1],
+            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+        )
+    )
+
+    # check dequant op code is added to the model
+    self.assertEqual(
+        model.operatorCodes[len(model.operatorCodes) - 1].builtinCode,
+        dequant_opcode,
+    )
+
+    # checking inserted node is the dequant node
+    self.assertEqual(
+        subgraph.operators[5].opcodeIndex, len(model.operatorCodes) - 1
+    )
+
+    # check if the graph output is updated
+    self.assertEqual(subgraph.outputs[0], 9)
+
 
 if __name__ == "__main__":
   googletest.main()

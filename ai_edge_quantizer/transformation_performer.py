@@ -52,9 +52,7 @@ class TransformationPerformer:
         qtyping.QuantTransformation.EMULATED_SUBCHANNEL: (
             emulated_subchannel.emulated_subchannel
         ),
-        qtyping.QuantTransformation.ADD_QUANTIZE: (
-            quant_insert.insert_quant
-        ),
+        qtyping.QuantTransformation.ADD_QUANTIZE: quant_insert.insert_quant,
     }
     # transformations are seprated in two categories:
     # op_insertion_transformations are transformations that only insert ops
@@ -166,7 +164,9 @@ class TransformationPerformer:
       None, update the transformation_inst & tflite_model in place
     """
     instruction = transformation_inst.instructions[transformation_index]
-    if instruction.producer < len(
+    if not instruction.producer or instruction.producer < 0:
+      producer = -1
+    elif instruction.producer < len(
         self._original_op_id_map[transformation_inst.subgraph_id]
     ):
       producer = self._original_op_id_map[transformation_inst.subgraph_id][
@@ -186,8 +186,6 @@ class TransformationPerformer:
               original_op_id
           ]
       )
-    # TODO(b/335523694): since all transformation use the same input format,
-    # we can have a dedicated data structure for it
     trans_info = self._transformation_registration[instruction.transformation](
         transformation_utils.TransformationInput(
             instruction.tensor_id,

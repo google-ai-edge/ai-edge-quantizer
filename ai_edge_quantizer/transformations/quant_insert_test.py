@@ -243,6 +243,27 @@ class QuantInsertTest(googletest.TestCase):
     self.assertEqual(subgraph.operators[1].outputs[0], 9)
     self.assertEqual(subgraph.operators[1].inputs[0], 1)
 
+  def test_dequant_insert_on_graph_output(self):
+    """Test dequant insert lib on graph output."""
+    subgraph = self._model.subgraphs[0]
+    model = self._model
+    # insert dequant on the graph output
+    quant_insert.insert_quant(
+        transformation_utils.TransformationInput(
+            8,
+            model.operatorCodes,
+            model.buffers,
+            subgraph,
+            4,
+            [-1],
+            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+        )
+    )
+    # checking inserted node is the quant node
+    self.assertEqual(subgraph.operators[5].opcodeIndex, 0)
+    # check if the graph output is updated
+    self.assertEqual(subgraph.outputs[0], 9)
+
 
 if __name__ == "__main__":
   googletest.main()
