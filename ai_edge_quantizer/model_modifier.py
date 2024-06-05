@@ -24,9 +24,6 @@ class ModelModifier:
     """
     self._float_tflite_path = float_tflite_path
     self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite_path)
-    self._model_buffer: bytearray = tfl_flatbuffer_utils.get_model_buffer(
-        float_tflite_path
-    )
     self._constant_map = []
     self._transformation_instruction_generator = transformation_instruction_generator.TransformationInstructionsGenerator(
         self._float_tflite_path

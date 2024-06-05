@@ -22,15 +22,11 @@ class Fp16QuantizeTest(parameterized.TestCase):
     self._test_model_path = os.path.join(
         _TEST_DATA_PREFIX_PATH, "conv_fc_mnist.tflite"
     )
-    self._model_buffer = tfl_flatbuffer_utils.get_model_buffer(
-        self._test_model_path
-    )
     self._test_model = tfl_flatbuffer_utils.read_model(self._test_model_path)
     # The test model has one subgraph for now.
     self._graph_info = qtyping.GraphInfo(
         subgraph_tensors=self._test_model.subgraphs[0].tensors,
         buffers=self._test_model.buffers,
-        whole_model_buffer=self._model_buffer,
     )
     self._tensor_name_to_qsv = {}
 
@@ -352,7 +348,6 @@ class Fp16QuantizeTest(parameterized.TestCase):
     weight_tensor_data = tfl_flatbuffer_utils.get_tensor_data(
         weight_tensor,
         self._test_model.buffers,
-        self._model_buffer,
     )
 
     self._test_fp16_weight_tensor_transformation_params(

@@ -56,7 +56,6 @@ def materialize_fc_conv(
   weight_content = tfl_flatbuffer_utils.get_tensor_data(
       weight_tensor,
       graph_info.buffers,
-      graph_info.whole_model_buffer,
   )
   quant_params = qtyping.NonLinearQuantParams(
       num_bits=16, quantized_data=weight_content.astype(np.float16)  # pytype: disable=attribute-error

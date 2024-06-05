@@ -312,13 +312,10 @@ class GraphInfo:
   Attributes:
     subgraph_tensors: A list of tensors in the subgraph.
     buffers: A list of buffers in the subgraph.
-    whole_model_buffer: A buffer containing the whole model data.
   """
 
   subgraph_tensors: list[Any]
   buffers: list[Any]
-  # Required for >2GB model data access.
-  whole_model_buffer: bytearray
 
 
 @dataclasses.dataclass(frozen=True)

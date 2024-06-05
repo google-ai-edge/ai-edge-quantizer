@@ -20,9 +20,6 @@ class Calibrator:
       float_tflite_path: str,
   ):
     self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite_path)
-    self._model_buffer: bytearray = tfl_flatbuffer_utils.get_model_buffer(
-        float_tflite_path
-    )
     self._tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
         float_tflite_path
     )
@@ -80,7 +77,7 @@ class Calibrator:
       # Step2: go through each op to update quantization statistic values.
       for subgraph in self._flatbuffer_model.subgraphs:
         graph_info = qtyping.GraphInfo(
-            subgraph.tensors, self._flatbuffer_model.buffers, self._model_buffer
+            subgraph.tensors, self._flatbuffer_model.buffers
         )
         for op in subgraph.operators:
           op_code = op_codes[op.opcodeIndex].builtinCode
@@ -176,7 +173,7 @@ class Calibrator:
     op_codes = self._flatbuffer_model.operatorCodes
     for subgraph in self._flatbuffer_model.subgraphs:
       graph_info = qtyping.GraphInfo(
-          subgraph.tensors, self._flatbuffer_model.buffers, self._model_buffer
+          subgraph.tensors, self._flatbuffer_model.buffers
       )
       for subgraph_op_id, op in enumerate(subgraph.operators):
         op_code = op_codes[op.opcodeIndex].builtinCode

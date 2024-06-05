@@ -99,14 +99,13 @@ class FlatbufferUtilsTest(googletest.TestCase):
 
   # TODO(b/325123193): test tensor with data outside of flatbuffer.
   def test_get_tensor_data(self):
-    model_buffer = tfl_flatbuffer_utils.get_model_buffer(self._test_model_path)
     subgraph0 = self._test_model.subgraphs[0]
     subgraph_tensors = subgraph0.tensors
     conv2d_op = subgraph0.operators[0]
     # Check tensor with data
     weight_tensor = subgraph_tensors[conv2d_op.inputs[1]]
     weight_tensor_data = tfl_flatbuffer_utils.get_tensor_data(
-        weight_tensor, self._test_model.buffers, model_buffer
+        weight_tensor, self._test_model.buffers
     )
     self.assertEqual(
         tuple(weight_tensor.shape), tuple(weight_tensor_data.shape)  # pytype: disable=attribute-error
@@ -116,7 +115,7 @@ class FlatbufferUtilsTest(googletest.TestCase):
     # Check tensor with no data
     input_tensor = subgraph_tensors[conv2d_op.inputs[0]]
     input_tensor_data = tfl_flatbuffer_utils.get_tensor_data(
-        input_tensor, self._test_model.buffers, model_buffer
+        input_tensor, self._test_model.buffers
     )
     self.assertIsNone(input_tensor_data)
 

@@ -168,7 +168,6 @@ def materialize_fc_conv(
       bias_content = tfl_flatbuffer_utils.get_tensor_data(
           bias_tensor,
           graph_info.buffers,
-          graph_info.whole_model_buffer,
       )
       bias_quant_params = (
           uniform_quantize_tensor.symmetric_quantize_bias_tensor(
@@ -269,7 +268,7 @@ def min_max_calibrate(
   def _collect_activation_tensor_min_max(tensor_idx):
     tensor = graph_info.subgraph_tensors[tensor_idx]
     tensor_data = tfl_flatbuffer_utils.get_tensor_data(
-        tensor, graph_info.buffers, graph_info.whole_model_buffer
+        tensor, graph_info.buffers
     )
     # Skip constant tensors.
     if tensor_data is not None:

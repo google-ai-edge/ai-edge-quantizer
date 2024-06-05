@@ -185,26 +185,18 @@ def get_tensor_name(tensor: Any) -> str:
   return tensor.name.decode("utf-8")
 
 
-# TODO(b/325123193): better ways to access buffer data for large model.
-def get_tensor_data(
-    tensor: Any, buffers: list[Any], model_buffer: bytearray
-) -> Optional[np.ndarray]:
+def get_tensor_data(tensor: Any, buffers: list[Any]) -> Optional[np.ndarray]:
   """Get the tensor data.
 
   Args:
     tensor: tensor in flatbuffer.
     buffers: list of buffers
-    model_buffer: the whole model buffer. Required for model size > 2G.
 
   Returns:
     tensor_data: data inside the tensor
   """
   tensor_buffer = buffers[tensor.buffer]
   buffer_data = tensor_buffer.data
-  if tensor_buffer.offset > 1:
-    buffer_data = model_buffer[
-        tensor_buffer.offset : tensor_buffer.offset + tensor_buffer.size
-    ]
   if buffer_data is None:
     return None
   data = np.frombuffer(

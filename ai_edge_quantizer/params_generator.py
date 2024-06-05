@@ -14,9 +14,6 @@ class ParamsGenerator:
   def __init__(self, float_tflite_path):
     self._float_tflite_path = float_tflite_path
     self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite_path)
-    self.model_buffer: bytearray = tfl_flatbuffer_utils.get_model_buffer(
-        float_tflite_path
-    )
     self.buffer_to_tensors: dict[int, list[Any]] = (
         tfl_flatbuffer_utils.buffer_to_tensors(self.flatbuffer_model)
     )
@@ -53,7 +50,7 @@ class ParamsGenerator:
     op_codes = self.flatbuffer_model.operatorCodes
     for subgraph in self.flatbuffer_model.subgraphs:
       graph_info = qtyping.GraphInfo(
-          subgraph.tensors, self.flatbuffer_model.buffers, self.model_buffer
+          subgraph.tensors, self.flatbuffer_model.buffers
       )
       for subgraph_op_id, op in enumerate(subgraph.operators):
         op_code = op_codes[op.opcodeIndex].builtinCode

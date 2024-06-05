@@ -100,9 +100,7 @@ def init_tensor_min_max(
     init_max_val: float = 6.0,
 ):
   """Initialize the min/max for a tensor."""
-  tensor_data = tfl_flatbuffer_utils.get_tensor_data(
-      tensor, graph_info.buffers, graph_info.whole_model_buffer
-  )
+  tensor_data = tfl_flatbuffer_utils.get_tensor_data(tensor, graph_info.buffers)
   # Initial values for non-constant tensors.
   if tensor_data is None:
     # preserve tensor rank on min/max (e.g., keepdims=True).
@@ -169,7 +167,7 @@ def materialize_standard_op(
     """Util to get tensor transformation params."""
     tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
     tensor_data = tfl_flatbuffer_utils.get_tensor_data(
-        tensor, graph_info.buffers, graph_info.whole_model_buffer
+        tensor, graph_info.buffers
     )
     tensor_quant_config = op_info.op_quant_config.activation_tensor_config
     is_constant = tensor_data is not None

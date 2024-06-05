@@ -21,7 +21,6 @@ class OpTestInfo:
   """Aggregate op test information."""
 
   test_model: Any
-  model_buffer: Any
   op_tensor_names: dict[str, str]
   input_range: tuple[np.ndarray, np.ndarray]
   output_range: tuple[np.ndarray, np.ndarray]
@@ -161,7 +160,6 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       bias_tensor_data = tfl_flatbuffer_utils.get_tensor_data(
           bias_tensor,
           op_test_info.test_model.buffers,
-          op_test_info.model_buffer,
       )
 
     # Test input tensor settings
@@ -186,7 +184,6 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     weight_tensor_data = tfl_flatbuffer_utils.get_tensor_data(
         weight_tensor,
         op_test_info.test_model.buffers,
-        op_test_info.model_buffer,
     )
     self._test_tensor_transformation_params(
         op_test_info.op_tensor_names["weight"],

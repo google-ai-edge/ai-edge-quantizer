@@ -32,9 +32,6 @@ class Conv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     )
     self._op_test_info = _OpTestInfo(
         test_model=tfl_flatbuffer_utils.read_model(self._test_model_path),
-        model_buffer=tfl_flatbuffer_utils.get_model_buffer(
-            self._test_model_path
-        ),
         op_tensor_names={},
         input_range=(np.array([[-10]]), np.array([[8]])),
         output_range=(np.array([[10]]), np.array([[88]])),
@@ -43,7 +40,6 @@ class Conv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     self._graph_info = qtyping.GraphInfo(
         subgraph_tensors=self._op_test_info.test_model.subgraphs[0].tensors,
         buffers=self._op_test_info.test_model.buffers,
-        whole_model_buffer=self._op_test_info.model_buffer,
     )
 
   # TODO(rewu): add int16 tests.

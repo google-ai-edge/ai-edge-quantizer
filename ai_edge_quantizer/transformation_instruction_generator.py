@@ -115,9 +115,6 @@ class TransformationInstructionsGenerator:
     """
     self._float_tflite_path = float_tflite_path
     self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite_path)
-    self.model_buffer: bytearray = tfl_flatbuffer_utils.get_model_buffer(
-        float_tflite_path
-    )
     self._create_tensor_name_to_graph_info_map()
 
   @dataclasses.dataclass(frozen=True)
