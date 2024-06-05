@@ -1,4 +1,4 @@
-"""A quantizer for advanced developers to quantize converted ODML models.
+"""A quantizer for advanced developers to quantize converted AI Edge models.
 
 It aims to facilitate advanced users to strive for optimal performance on
 resource demanding models (e.g., GenAI models).

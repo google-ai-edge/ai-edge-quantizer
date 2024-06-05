@@ -1,4 +1,4 @@
-"""Type hinting support for ODML quantizer."""
+"""Type hinting support for AI Edge Quantizer."""
 
 from collections.abc import MutableMapping
 import copy

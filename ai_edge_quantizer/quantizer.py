@@ -1,4 +1,4 @@
-"""ODML quantizer API."""
+"""AI Edge Quantizer API."""
 
 from collections.abc import Iterable
 import dataclasses
@@ -68,7 +68,7 @@ class QuantizationResult:
 
 
 class Quantizer:
-  """ODML quantizer API.
+  """AI Edge Quantizer API.
 
   Attributes:
     float_model_path: Path to the float tflite model.

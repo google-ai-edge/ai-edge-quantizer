@@ -13,8 +13,8 @@ from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-dire
 class TransformationPerformer:
   """Wrapper class for transformations.
 
-  all transformations supported by ODML quantizer should be registered in the
-  Transformation Performer
+  all transformations supported by the AI Edge Quantizer should be registered in
+  the Transformation Performer.
 
   transformation to be appied to a tensor in the Instruction Generator is
   specified
