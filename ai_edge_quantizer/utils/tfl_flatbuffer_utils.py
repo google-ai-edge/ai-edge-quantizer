@@ -42,7 +42,6 @@ TFL_OP_CODE_TO_NAME = immutabledict.immutabledict(
 # See https://www.tensorflow.org/lite/performance/quantization_spec.
 TFL_OP_TO_WEIGHT_QUANTIZED_DIM = immutabledict.immutabledict({
     _TFLOpName.FULLY_CONNECTED: 0,
-    _TFLOpName.BATCH_MATMUL: -1,  # last dimension.
     _TFLOpName.DEPTHWISE_CONV_2D: 3,
     _TFLOpName.CONV_2D: 0,
     _TFLOpName.EMBEDDING_LOOKUP: 0,

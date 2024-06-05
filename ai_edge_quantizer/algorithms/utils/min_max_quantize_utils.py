@@ -120,9 +120,9 @@ def init_tensor_min_max(
             tensor_data, adj_y=op_info.op.builtinOptions.adjY
         )
       else:
-        quantized_dim = tfl_flatbuffer_utils.TFL_OP_TO_WEIGHT_QUANTIZED_DIM[
-            op_info.op_name
-        ]
+        quantized_dim = tfl_flatbuffer_utils.TFL_OP_TO_WEIGHT_QUANTIZED_DIM.get(
+            op_info.op_name, None
+        )
     reduce_dims = _get_reduce_dims(quantized_dim, tensor.shape)
     return {
         "min": np.min(tensor_data, axis=reduce_dims, keepdims=True),
