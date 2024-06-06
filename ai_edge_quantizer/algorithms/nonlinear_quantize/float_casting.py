@@ -1,11 +1,11 @@
-"""Performs float 32 to float 16 quantization."""
+"""Performs float casting quantization."""
 
 from typing import Any
 import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
-ALGORITHM_KEY = "fp16_quantize"
+ALGORITHM_KEY = "float_casting"
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation
 
@@ -39,7 +39,7 @@ def materialize_fc_conv(
     ValueError: If the op is not supported or the execution mode is not
       WEIGHT_ONLY.
   """
-  _check_valid_fp16_config(op_info)
+  _check_valid_float_casting_config(op_info)
 
   input_tensor, weight_tensor, bias_tensor, output_tensor = (
       tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
@@ -115,8 +115,8 @@ def _config_no_quantize_tensor(
   )
 
 
-def _check_valid_fp16_config(op_info: qtyping.OpInfo) -> None:
-  """Checks if the op is valid for fp16 quantization.
+def _check_valid_float_casting_config(op_info: qtyping.OpInfo) -> None:
+  """Checks if the op is valid for float casting quantization.
 
   Args:
     op_info: Aggregated information about the op (e.g., quantization config).
@@ -130,17 +130,18 @@ def _check_valid_fp16_config(op_info: qtyping.OpInfo) -> None:
       != qtyping.OpExecutionMode.WEIGHT_ONLY
   ):
     raise ValueError(
-        "Currently, only Weight-Only is supported for fp16 quantization. Got"
-        " unsupported execution mode:"
+        "Currently, only Weight-Only is supported for float casting"
+        " quantization. Got unsupported execution mode:"
         f" {op_info.op_quant_config.execution_mode} for op: {op_info.op_name}"
     )
   if op_info.op_quant_config.activation_tensor_config is not None:
     raise ValueError(
-        "Activation tensor quantization is not supported for fp16 quantization."
+        "Activation tensor quantization is not supported for float casting"
+        " quantization."
     )
   if op_info.op_name not in SUPPORTED_WEIGHT_QUANT_OPS:
     raise ValueError(
-        f"Unsupported op: {op_info.op_name} for fp16 quantization."
+        f"Unsupported op: {op_info.op_name} for float casting quantization."
     )
   if (
       op_info.op_quant_config.weight_tensor_config.num_bits != 16
@@ -148,8 +149,8 @@ def _check_valid_fp16_config(op_info: qtyping.OpInfo) -> None:
       != qtyping.TensorDataType.FLOAT
   ):
     raise ValueError(
-        "fp16 quantization requires number of bits to be set as 16, dtype as"
-        " float, got"
+        "Currently, float casting quantization requires number of bits to be"
+        " set as 16, dtype as float, got"
         f" {op_info.op_quant_config.weight_tensor_config.num_bits} and"
         f" {op_info.op_quant_config.weight_tensor_config.dtype} ."
     )

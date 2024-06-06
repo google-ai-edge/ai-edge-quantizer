@@ -3,7 +3,7 @@ from absl.testing import parameterized
 import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
-from ai_edge_quantizer.algorithms.nonlinear_quantize import fp16_quantize
+from ai_edge_quantizer.algorithms.nonlinear_quantize import float_casting
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -72,7 +72,7 @@ class Fp16QuantizeTest(parameterized.TestCase):
         op_info,
         self._graph_info,
         op_tensor_names,
-        fp16_quantize.materialize_fc_conv,
+        float_casting.materialize_fc_conv,
     )
 
   def test_conv2d_weight_only_succeeds(self):
@@ -106,7 +106,7 @@ class Fp16QuantizeTest(parameterized.TestCase):
         op_info,
         self._graph_info,
         op_tensor_names,
-        fp16_quantize.materialize_fc_conv,
+        float_casting.materialize_fc_conv,
     )
 
   @parameterized.named_parameters(
@@ -128,12 +128,13 @@ class Fp16QuantizeTest(parameterized.TestCase):
     op = subgraph0.operators[subgraph_op_id]
     # Use DRQ instead of WEIGHT-ONLY.
     error_message = (
-        "Currently, only Weight-Only is supported for fp16 quantization."
+        "Currently, only Weight-Only is supported for float casting"
+        " quantization."
     )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      fp16_quantize.materialize_fc_conv(
+      float_casting.materialize_fc_conv(
           qtyping.OpInfo(
               op=op,
               op_name=op_name,
@@ -170,12 +171,13 @@ class Fp16QuantizeTest(parameterized.TestCase):
 
     # With activation tensor config.
     error_message = (
-        "Activation tensor quantization is not supported for fp16 quantization."
+        "Activation tensor quantization is not supported for float casting"
+        " quantization."
     )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      fp16_quantize.materialize_fc_conv(
+      float_casting.materialize_fc_conv(
           qtyping.OpInfo(
               op=op,
               op_name=op_name,
@@ -212,14 +214,14 @@ class Fp16QuantizeTest(parameterized.TestCase):
     subgraph0 = self._test_model.subgraphs[0]
     op = subgraph0.operators[subgraph_op_id]
     error_message = (
-        "fp16 quantization requires number of bits to be set as 16, dtype as"
-        " float"
+        "float casting quantization requires number of bits to be set as 16,"
+        " dtype as float"
     )
     # Wrong bit width.
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      fp16_quantize.materialize_fc_conv(
+      float_casting.materialize_fc_conv(
           qtyping.OpInfo(
               op=op,
               op_name=op_name,
@@ -254,14 +256,14 @@ class Fp16QuantizeTest(parameterized.TestCase):
     subgraph0 = self._test_model.subgraphs[0]
     op = subgraph0.operators[subgraph_op_id]
     error_message = (
-        "fp16 quantization requires number of bits to be set as 16, dtype as"
-        " float"
+        "float casting quantization requires number of bits to be set as 16,"
+        " dtype as float"
     )
     # Wrong dtype.
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      fp16_quantize.materialize_fc_conv(
+      float_casting.materialize_fc_conv(
           qtyping.OpInfo(
               op=op,
               op_name=op_name,
@@ -298,7 +300,7 @@ class Fp16QuantizeTest(parameterized.TestCase):
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      fp16_quantize.materialize_fc_conv(
+      float_casting.materialize_fc_conv(
           qtyping.OpInfo(
               op=op,
               op_name=op_name,
