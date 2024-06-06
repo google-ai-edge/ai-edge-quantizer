@@ -17,6 +17,48 @@ SUPPORTED_WEIGHT_QUANT_OPS = frozenset([
 ])
 
 
+def check_op_quantization_config(
+    op_name: _TFLOpName,
+    op_quant_config: qtyping.OpQuantizationConfig,
+) -> None:
+  """Checks if the op is valid for float casting quantization.
+
+  Args:
+    op_name: the name of the op.
+    op_quant_config: the quantization config for the op.
+
+  Raises:
+    ValueError: If the op is not supported or the execution mode is not
+      WEIGHT_ONLY.
+  """
+  if op_quant_config.execution_mode != qtyping.OpExecutionMode.WEIGHT_ONLY:
+    raise ValueError(
+        "Currently, only Weight-Only is supported for float casting"
+        " quantization. Got unsupported execution mode:"
+        f" {op_quant_config.execution_mode} for op: {op_name}"
+    )
+  if op_quant_config.activation_tensor_config is not None:
+    raise ValueError(
+        "Activation tensor quantization is not supported for float casting"
+        " quantization."
+    )
+  if op_name not in SUPPORTED_WEIGHT_QUANT_OPS:
+    raise ValueError(
+        f"Unsupported op: {op_name} for float casting quantization."
+    )
+  if (
+      op_quant_config.weight_tensor_config.num_bits != 16
+      or op_quant_config.weight_tensor_config.dtype
+      != qtyping.TensorDataType.FLOAT
+  ):
+    raise ValueError(
+        "Currently, float casting quantization requires number of bits to be"
+        " set as 16, dtype as float, got"
+        f" {op_quant_config.weight_tensor_config.num_bits} and"
+        f" {op_quant_config.weight_tensor_config.dtype} ."
+    )
+
+
 def materialize_fc_conv(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
@@ -39,8 +81,6 @@ def materialize_fc_conv(
     ValueError: If the op is not supported or the execution mode is not
       WEIGHT_ONLY.
   """
-  _check_valid_float_casting_config(op_info)
-
   input_tensor, weight_tensor, bias_tensor, output_tensor = (
       tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
           op_info.op, graph_info.subgraph_tensors
@@ -115,42 +155,11 @@ def _config_no_quantize_tensor(
   )
 
 
-def _check_valid_float_casting_config(op_info: qtyping.OpInfo) -> None:
-  """Checks if the op is valid for float casting quantization.
+def init_qsvs(*_) -> qtyping.QSV:
+  """Currently calibration free. Placeholder for AlgorithmManager."""
+  return {}
 
-  Args:
-    op_info: Aggregated information about the op (e.g., quantization config).
 
-  Raises:
-    ValueError: If the op is not supported or the execution mode is not
-      WEIGHT_ONLY.
-  """
-  if (
-      op_info.op_quant_config.execution_mode
-      != qtyping.OpExecutionMode.WEIGHT_ONLY
-  ):
-    raise ValueError(
-        "Currently, only Weight-Only is supported for float casting"
-        " quantization. Got unsupported execution mode:"
-        f" {op_info.op_quant_config.execution_mode} for op: {op_info.op_name}"
-    )
-  if op_info.op_quant_config.activation_tensor_config is not None:
-    raise ValueError(
-        "Activation tensor quantization is not supported for float casting"
-        " quantization."
-    )
-  if op_info.op_name not in SUPPORTED_WEIGHT_QUANT_OPS:
-    raise ValueError(
-        f"Unsupported op: {op_info.op_name} for float casting quantization."
-    )
-  if (
-      op_info.op_quant_config.weight_tensor_config.num_bits != 16
-      or op_info.op_quant_config.weight_tensor_config.dtype
-      != qtyping.TensorDataType.FLOAT
-  ):
-    raise ValueError(
-        "Currently, float casting quantization requires number of bits to be"
-        " set as 16, dtype as float, got"
-        f" {op_info.op_quant_config.weight_tensor_config.num_bits} and"
-        f" {op_info.op_quant_config.weight_tensor_config.dtype} ."
-    )
+def calibrate(*_) -> dict[str, qtyping.QSV]:
+  """Currently calibration free. Placeholder for AlgorithmManager."""
+  return {}

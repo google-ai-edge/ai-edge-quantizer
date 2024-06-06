@@ -32,6 +32,153 @@ class Fp16QuantizeTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
       dict(
+          testcase_name="fc",
+          op_name=_TFLOpName.FULLY_CONNECTED,
+      ),
+      dict(
+          testcase_name="conv2d",
+          op_name=_TFLOpName.CONV_2D,
+      ),
+  )
+  def test_check_op_quantization_config_succeeds(self, op_name):
+    float_casting.check_op_quantization_config(
+        op_name,
+        qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=16, dtype=qtyping.TensorDataType.FLOAT
+            ),
+            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+        ),
+    )
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="invalid_fc",
+          op_name=_TFLOpName.FULLY_CONNECTED,
+      ),
+      dict(
+          testcase_name="invalid_conv2d",
+          op_name=_TFLOpName.CONV_2D,
+      ),
+  )
+  def test_check_op_quantization_config_invalid_activation_tensor_config_raises_exception(
+      self, op_name
+  ):
+    # With activation tensor config.
+    error_message = (
+        "Activation tensor quantization is not supported for float casting"
+        " quantization."
+    )
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda err: error_message in str(err)
+    ):
+      float_casting.check_op_quantization_config(
+          op_name,
+          qtyping.OpQuantizationConfig(
+              activation_tensor_config=_TensorQuantConfig(
+                  num_bits=16, dtype=qtyping.TensorDataType.FLOAT
+              ),
+              weight_tensor_config=_TensorQuantConfig(
+                  num_bits=16, dtype=qtyping.TensorDataType.FLOAT
+              ),
+              execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+          ),
+      )
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="invalid_fc",
+          op_name=_TFLOpName.FULLY_CONNECTED,
+      ),
+      dict(
+          testcase_name="invalid_conv2d",
+          op_name=_TFLOpName.CONV_2D,
+      ),
+  )
+  def test_check_op_quantization_config_invalid_bit_width_raises_exception(
+      self, op_name
+  ):
+    error_message = (
+        "float casting quantization requires number of bits to be set as 16,"
+        " dtype as float"
+    )
+    # Wrong bit width.
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda err: error_message in str(err)
+    ):
+      float_casting.check_op_quantization_config(
+          op_name,
+          qtyping.OpQuantizationConfig(
+              activation_tensor_config=None,
+              weight_tensor_config=_TensorQuantConfig(
+                  num_bits=8, dtype=qtyping.TensorDataType.FLOAT
+              ),
+              execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+          ),
+      )
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="invalid_fc",
+          op_name=_TFLOpName.FULLY_CONNECTED,
+      ),
+      dict(
+          testcase_name="invalid_conv2d",
+          op_name=_TFLOpName.CONV_2D,
+      ),
+  )
+  def test_check_op_quantization_config_invalid_dtype_raises_exception(
+      self, op_name
+  ):
+    error_message = (
+        "float casting quantization requires number of bits to be set as 16,"
+        " dtype as float"
+    )
+    # Wrong dtype.
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda err: error_message in str(err)
+    ):
+      float_casting.check_op_quantization_config(
+          op_name,
+          qtyping.OpQuantizationConfig(
+              activation_tensor_config=None,
+              weight_tensor_config=_TensorQuantConfig(
+                  num_bits=16, dtype=qtyping.TensorDataType.INT
+              ),
+              execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+          ),
+      )
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="averagepool2D",
+          op_name=_TFLOpName.AVERAGE_POOL_2D,
+      ),
+      dict(
+          testcase_name="reshape",
+          op_name=_TFLOpName.RESHAPE,
+      ),
+  )
+  def test_check_op_quantization_config_invalid_ops_raises_exception(
+      self, op_name
+  ):
+    error_message = "Unsupported op"
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda err: error_message in str(err)
+    ):
+      float_casting.check_op_quantization_config(
+          op_name=op_name,
+          op_quant_config=qtyping.OpQuantizationConfig(
+              activation_tensor_config=None,
+              weight_tensor_config=_TensorQuantConfig(
+                  num_bits=16, dtype=qtyping.TensorDataType.FLOAT
+              ),
+              execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+          ),
+      )
+
+  @parameterized.named_parameters(
+      dict(
           testcase_name="fc_with_bias",
           subgraph_op_id=3,
           op_tensor_names={
@@ -112,20 +259,16 @@ class Fp16QuantizeTest(parameterized.TestCase):
   @parameterized.named_parameters(
       dict(
           testcase_name="invalid_fc",
-          subgraph_op_id=3,
           op_name=_TFLOpName.FULLY_CONNECTED,
       ),
       dict(
           testcase_name="invalid_conv2d",
-          subgraph_op_id=0,
           op_name=_TFLOpName.CONV_2D,
       ),
   )
-  def test_fc_conv_invalid_execution_mode_raises_exception(
-      self, subgraph_op_id, op_name
+  def test_check_op_quantization_config_invalid_execution_mode_raises_exception(
+      self, op_name
   ):
-    subgraph0 = self._test_model.subgraphs[0]
-    op = subgraph0.operators[subgraph_op_id]
     # Use DRQ instead of WEIGHT-ONLY.
     error_message = (
         "Currently, only Weight-Only is supported for float casting"
@@ -134,187 +277,15 @@ class Fp16QuantizeTest(parameterized.TestCase):
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      float_casting.materialize_fc_conv(
-          qtyping.OpInfo(
-              op=op,
-              op_name=op_name,
-              subgraph_op_index=subgraph_op_id,
-              op_quant_config=qtyping.OpQuantizationConfig(
-                  activation_tensor_config=None,
-                  weight_tensor_config=_TensorQuantConfig(
-                      num_bits=16, dtype=qtyping.TensorDataType.FLOAT
-                  ),
-                  execution_mode=_OpExecutionMode.DRQ,
+      float_casting.check_op_quantization_config(
+          op_name,
+          qtyping.OpQuantizationConfig(
+              activation_tensor_config=None,
+              weight_tensor_config=_TensorQuantConfig(
+                  num_bits=16, dtype=qtyping.TensorDataType.FLOAT
               ),
+              execution_mode=_OpExecutionMode.DRQ,
           ),
-          self._graph_info,
-          self._tensor_name_to_qsv,
-      )
-
-  @parameterized.named_parameters(
-      dict(
-          testcase_name="invalid_fc",
-          subgraph_op_id=3,
-          op_name=_TFLOpName.FULLY_CONNECTED,
-      ),
-      dict(
-          testcase_name="invalid_conv2d",
-          subgraph_op_id=0,
-          op_name=_TFLOpName.CONV_2D,
-      ),
-  )
-  def test_fc_conv_invalid_activation_tensor_config_raises_exception(
-      self, subgraph_op_id, op_name
-  ):
-    subgraph0 = self._test_model.subgraphs[0]
-    op = subgraph0.operators[subgraph_op_id]
-
-    # With activation tensor config.
-    error_message = (
-        "Activation tensor quantization is not supported for float casting"
-        " quantization."
-    )
-    with self.assertRaisesWithPredicateMatch(
-        ValueError, lambda err: error_message in str(err)
-    ):
-      float_casting.materialize_fc_conv(
-          qtyping.OpInfo(
-              op=op,
-              op_name=op_name,
-              subgraph_op_index=subgraph_op_id,
-              op_quant_config=qtyping.OpQuantizationConfig(
-                  activation_tensor_config=_TensorQuantConfig(
-                      num_bits=16, dtype=qtyping.TensorDataType.FLOAT
-                  ),
-                  weight_tensor_config=_TensorQuantConfig(
-                      num_bits=16, dtype=qtyping.TensorDataType.FLOAT
-                  ),
-                  execution_mode=_OpExecutionMode.WEIGHT_ONLY,
-              ),
-          ),
-          self._graph_info,
-          self._tensor_name_to_qsv,
-      )
-
-  @parameterized.named_parameters(
-      dict(
-          testcase_name="invalid_fc",
-          subgraph_op_id=3,
-          op_name=_TFLOpName.FULLY_CONNECTED,
-      ),
-      dict(
-          testcase_name="invalid_conv2d",
-          subgraph_op_id=0,
-          op_name=_TFLOpName.CONV_2D,
-      ),
-  )
-  def test_fc_conv_invalid_bit_width_raises_exception(
-      self, subgraph_op_id, op_name
-  ):
-    subgraph0 = self._test_model.subgraphs[0]
-    op = subgraph0.operators[subgraph_op_id]
-    error_message = (
-        "float casting quantization requires number of bits to be set as 16,"
-        " dtype as float"
-    )
-    # Wrong bit width.
-    with self.assertRaisesWithPredicateMatch(
-        ValueError, lambda err: error_message in str(err)
-    ):
-      float_casting.materialize_fc_conv(
-          qtyping.OpInfo(
-              op=op,
-              op_name=op_name,
-              subgraph_op_index=subgraph_op_id,
-              op_quant_config=qtyping.OpQuantizationConfig(
-                  activation_tensor_config=None,
-                  weight_tensor_config=_TensorQuantConfig(
-                      num_bits=8, dtype=qtyping.TensorDataType.FLOAT
-                  ),
-                  execution_mode=_OpExecutionMode.WEIGHT_ONLY,
-              ),
-          ),
-          self._graph_info,
-          self._tensor_name_to_qsv,
-      )
-
-  @parameterized.named_parameters(
-      dict(
-          testcase_name="invalid_fc",
-          subgraph_op_id=3,
-          op_name=_TFLOpName.FULLY_CONNECTED,
-      ),
-      dict(
-          testcase_name="invalid_conv2d",
-          subgraph_op_id=0,
-          op_name=_TFLOpName.CONV_2D,
-      ),
-  )
-  def test_fc_conv_invalid_dtype_raises_exception(
-      self, subgraph_op_id, op_name
-  ):
-    subgraph0 = self._test_model.subgraphs[0]
-    op = subgraph0.operators[subgraph_op_id]
-    error_message = (
-        "float casting quantization requires number of bits to be set as 16,"
-        " dtype as float"
-    )
-    # Wrong dtype.
-    with self.assertRaisesWithPredicateMatch(
-        ValueError, lambda err: error_message in str(err)
-    ):
-      float_casting.materialize_fc_conv(
-          qtyping.OpInfo(
-              op=op,
-              op_name=op_name,
-              subgraph_op_index=subgraph_op_id,
-              op_quant_config=qtyping.OpQuantizationConfig(
-                  activation_tensor_config=None,
-                  weight_tensor_config=_TensorQuantConfig(
-                      num_bits=16, dtype=qtyping.TensorDataType.INT
-                  ),
-                  execution_mode=_OpExecutionMode.WEIGHT_ONLY,
-              ),
-          ),
-          self._graph_info,
-          self._tensor_name_to_qsv,
-      )
-
-  @parameterized.named_parameters(
-      dict(
-          testcase_name="averagepool2D",
-          subgraph_op_id=1,
-          op_name=_TFLOpName.AVERAGE_POOL_2D,
-      ),
-      dict(
-          testcase_name="reshape",
-          subgraph_op_id=2,
-          op_name=_TFLOpName.RESHAPE,
-      ),
-  )
-  def test_invalid_ops_raises_exception(self, subgraph_op_id, op_name):
-    subgraph0 = self._test_model.subgraphs[0]
-    op = subgraph0.operators[subgraph_op_id]
-
-    error_message = "Unsupported op"
-    with self.assertRaisesWithPredicateMatch(
-        ValueError, lambda err: error_message in str(err)
-    ):
-      float_casting.materialize_fc_conv(
-          qtyping.OpInfo(
-              op=op,
-              op_name=op_name,
-              subgraph_op_index=subgraph_op_id,
-              op_quant_config=qtyping.OpQuantizationConfig(
-                  activation_tensor_config=None,
-                  weight_tensor_config=_TensorQuantConfig(
-                      num_bits=16, dtype=qtyping.TensorDataType.FLOAT
-                  ),
-                  execution_mode=_OpExecutionMode.WEIGHT_ONLY,
-              ),
-          ),
-          self._graph_info,
-          self._tensor_name_to_qsv,
       )
 
   def _test_fc_conv(
