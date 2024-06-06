@@ -167,7 +167,8 @@ class AlgorithmManagerApi:
     """Gets the quantization function.
 
     Args:
-      algorithm_key: Target quantization algorithm key (e.g., PTQ).
+      algorithm_key: Target quantization algorithm key (e.g.,
+        AlgorithmName.MIN_MAX_UNIFORM_QUANT).
       tfl_op_name: TFLite op name.
       quantize_mode: Quantization mode to be used.
 

@@ -11,6 +11,7 @@ _OpExecutionMode = qtyping.OpExecutionMode
 _TFLOpName = qtyping.TFLOperationName
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _TensorDataType = qtyping.TensorDataType
+_AlgorithmName = quantizer.AlgorithmName
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('')
 
@@ -42,7 +43,7 @@ class QuantizerTest(googletest.TestCase):
     self._quantizer.update_quantization_recipe(
         regex=scope_regex,
         operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
-        algorithm_key='ptq',
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=new_op_config,
         override_algorithm=True,
     )

@@ -11,6 +11,7 @@ from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import test_utils
 
 _OpExecutionMode = qtyping.OpExecutionMode
+_AlgorithmName = recipe_manager.AlgorithmName
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("")
 _TENSOR_QUANT_CONFIG = qtyping.TensorQuantizationConfig
@@ -32,7 +33,7 @@ def _add_default_int8xint8_integer_recipe(recipe_manager_object):
   recipe_manager_object.add_quantization_config(
       regex=".*",
       operation_name=qtyping.TFLOperationName.ALL,
-      algorithm_key="ptq",
+      algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
       op_config=qtyping.OpQuantizationConfig(
           activation_tensor_config=_TENSOR_QUANT_CONFIG(
               num_bits=8, symmetric=False
@@ -77,7 +78,7 @@ class CalibratorTest(googletest.TestCase):
     self._recipe_manager.add_quantization_config(
         regex=".*Stateful.*",
         operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
-        algorithm_key="ptq",
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TENSOR_QUANT_CONFIG(
                 num_bits=4, channel_wise=True

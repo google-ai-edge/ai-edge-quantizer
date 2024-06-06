@@ -1,10 +1,10 @@
 """Quantizer Algorithm Manager Interface."""
 
+import enum
 from ai_edge_quantizer import algorithm_manager_api
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
-
 
 _TFLOpName = qtyping.TFLOperationName
 
@@ -24,19 +24,22 @@ check_op_quantization_config = (
     _alg_manager_instance.check_op_quantization_config
 )
 
-# Common Quantization algorithms.
-NO_QUANT = "NO_QUANT"
-PTQ = naive_min_max_quantize.ALGORITHM_KEY
 
-# Common QSV update functions.
+# Quantization algorithms.
+class AlgorithmName(str, enum.Enum):
+  NO_QUANTIZE = "no_quantize"
+  MIN_MAX_UNIFORM_QUANT = naive_min_max_quantize.ALGORITHM_KEY
+
+
+# Register MIN_MAX_UNIFORM_QUANT algorithm.
+register_op_quant_config_validation_func(
+    AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+    naive_min_max_quantize.check_op_quantization_config,
+)
 moving_average_update_qsv = (
     uniform_quantize_tensor.update_tensor_qsv_moving_average
 )
 
-# Register PTQ algorithm.
-register_op_quant_config_validation_func(
-    PTQ, naive_min_max_quantize.check_op_quantization_config
-)
 for op_name, materialize_func in zip(
     (
         _TFLOpName.FULLY_CONNECTED,
@@ -58,7 +61,7 @@ for op_name, materialize_func in zip(
     ),
 ):
   register_quantized_op(
-      PTQ,
+      AlgorithmName.MIN_MAX_UNIFORM_QUANT,
       op_name,
       naive_min_max_quantize.init_qsvs,
       calibration_func=naive_min_max_quantize.min_max_calibrate,

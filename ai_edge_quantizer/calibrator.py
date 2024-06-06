@@ -94,7 +94,7 @@ class Calibrator:
           algorithm_name, _ = model_recipe_manager.get_quantization_configs(
               op_key, op_scope
           )
-          if algorithm_name == algorithm_manager.NO_QUANT:
+          if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
             continue
           # Step2.2: query algorithm_manager to get/call the related calibration
           # function.
@@ -190,7 +190,7 @@ class Calibrator:
         algorithm_name, op_quant_config = (
             model_recipe_manager.get_quantization_configs(op_key, op_scope)
         )
-        if algorithm_name == algorithm_manager.NO_QUANT:
+        if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
           continue
         # Step2: query algorithm_manager to get/call the related qsv init
         # function.

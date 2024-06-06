@@ -10,6 +10,7 @@ _OpExecutionMode = qtyping.OpExecutionMode
 _TFLOpName = qtyping.TFLOperationName
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _TensorDataType = qtyping.TensorDataType
+_AlgorithmName = recipe_manager.AlgorithmName
 
 
 # Sample functions for test cases.
@@ -34,7 +35,7 @@ def _add_default_int8xint8_integer_recipe(recipe_manager_object):
   recipe_manager_object.add_quantization_config(
       regex='.*',
       operation_name=qtyping.TFLOperationName.ALL,
-      algorithm_key='ptq',
+      algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
       op_config=qtyping.OpQuantizationConfig(
           activation_tensor_config=_TensorQuantConfig(
               num_bits=8, symmetric=False
@@ -71,7 +72,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         _TFLOpName.DEPTHWISE_CONV_2D,
     ]
     for op in self._testing_ops:
-      _register_testing_op(algorithm_manager.PTQ, op)
+      _register_testing_op(_AlgorithmName.MIN_MAX_UNIFORM_QUANT, op)
       _register_testing_op('GPTQ', op)
 
   def test_add_get_quantization_config(self):
@@ -79,7 +80,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self._recipe_manager.add_quantization_config(
         regex='.*/Dense/.*',
         operation_name=_TFLOpName.ALL,
-        algorithm_key=algorithm_manager.PTQ,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             execution_mode=_OpExecutionMode.DRQ
         ),
@@ -89,7 +90,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self._recipe_manager.add_quantization_config(
         regex='.*/Dense_3/.*',
         operation_name=_TFLOpName.FULLY_CONNECTED,
-        algorithm_key=algorithm_manager.PTQ,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             execution_mode=_OpExecutionMode.WEIGHT_ONLY
         ),
@@ -98,7 +99,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self._recipe_manager.add_quantization_config(
         regex='.*/Dense_3/.*',
         operation_name=_TFLOpName.BATCH_MATMUL,
-        algorithm_key=algorithm_manager.PTQ,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TensorQuantConfig(num_bits=4),
             execution_mode=_OpExecutionMode.DRQ,
@@ -109,23 +110,23 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     alg_key, _ = self._recipe_manager.get_quantization_configs(
         _TFLOpName.FULLY_CONNECTED, 'model/Dense_1/op'
     )
-    self.assertEqual(alg_key, 'NO_QUANT')
+    self.assertEqual(alg_key, _AlgorithmName.NO_QUANTIZE)
     alg_key, _ = self._recipe_manager.get_quantization_configs(
         _TFLOpName.DEPTHWISE_CONV_2D, 'model/Dense_3/op'
     )
-    self.assertEqual(alg_key, 'NO_QUANT')
+    self.assertEqual(alg_key, _AlgorithmName.NO_QUANTIZE)
 
     # Check _TFLOperationKey.ALL
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.DEPTHWISE_CONV_2D, 'model/Dense/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertEqual(op_config.execution_mode, _OpExecutionMode.DRQ)
 
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.BATCH_MATMUL, 'model/Dense/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertEqual(op_config.execution_mode, _OpExecutionMode.DRQ)
 
     # Check conflicts handling
@@ -134,7 +135,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self._recipe_manager.add_quantization_config(
         regex='.*/Dense/.*',
         operation_name=_TFLOpName.FULLY_CONNECTED,
-        algorithm_key=algorithm_manager.PTQ,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             execution_mode=_OpExecutionMode.WEIGHT_ONLY
         ),
@@ -142,18 +143,18 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.FULLY_CONNECTED, 'model/Dense/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertEqual(op_config.execution_mode, _OpExecutionMode.WEIGHT_ONLY)
     alg_key, _ = self._recipe_manager.get_quantization_configs(
         _TFLOpName.BATCH_MATMUL, 'model/Dense/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
 
     # Reset all ops, this time with 4 bits DRQ.
     self._recipe_manager.add_quantization_config(
         regex='.*/Dense/.*',
         operation_name=_TFLOpName.ALL,
-        algorithm_key=algorithm_manager.PTQ,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TensorQuantConfig(num_bits=4),
             execution_mode=_OpExecutionMode.DRQ,
@@ -162,13 +163,13 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.FULLY_CONNECTED, 'model/Dense/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertEqual(op_config.execution_mode, _OpExecutionMode.DRQ)
     self.assertEqual(op_config.weight_tensor_config.num_bits, 4)
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.BATCH_MATMUL, 'model/Dense/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertEqual(op_config.execution_mode, _OpExecutionMode.DRQ)
     self.assertEqual(op_config.weight_tensor_config.num_bits, 4)
 
@@ -176,7 +177,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self._recipe_manager.add_quantization_config(
         regex='.*',
         operation_name=_TFLOpName.FULLY_CONNECTED,
-        algorithm_key=algorithm_manager.PTQ,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TensorQuantConfig(num_bits=3),
         ),
@@ -185,13 +186,13 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.FULLY_CONNECTED, 'model/Dense_3/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertEqual(op_config.weight_tensor_config.num_bits, 3)
     # but not bmm
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.BATCH_MATMUL, 'model/Dense_3/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertEqual(op_config.weight_tensor_config.num_bits, 4)
 
   def test_add_unsupported_quantization_config(self):
@@ -203,7 +204,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
       self._recipe_manager.add_quantization_config(
           regex='.*/Dense/.*',
           operation_name=_TFLOpName.CUSTOM_OP,
-          algorithm_key=algorithm_manager.PTQ,
+          algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
           op_config=qtyping.OpQuantizationConfig(
               execution_mode=_OpExecutionMode.DRQ
           ),
@@ -230,7 +231,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
       self._recipe_manager.add_quantization_config(
           regex='.*/Dense/.*',
           operation_name=_TFLOpName.FULLY_CONNECTED,
-          algorithm_key=algorithm_manager.PTQ,
+          algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
           op_config=qtyping.OpQuantizationConfig(
               weight_tensor_config=_TensorQuantConfig(num_bits=17),
           ),
@@ -242,7 +243,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.FULLY_CONNECTED, 'model/Dense_3/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     op_act_config = op_config.activation_tensor_config
     self.assertIsNotNone(op_act_config)
     self.assertEqual(op_act_config.num_bits, 8)
@@ -256,7 +257,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self._recipe_manager.add_quantization_config(
         regex='.*/Dense_3/.*',
         operation_name=_TFLOpName.FULLY_CONNECTED,
-        algorithm_key=algorithm_manager.PTQ,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TensorQuantConfig(num_bits=3),
         ),
@@ -264,7 +265,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.FULLY_CONNECTED, 'model/Dense_3/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertIsNone(op_config.activation_tensor_config)
     self.assertEqual(op_config.weight_tensor_config.num_bits, 3)
     self.assertEqual(op_config.execution_mode, _OpExecutionMode.WEIGHT_ONLY)
@@ -273,7 +274,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self._recipe_manager.add_quantization_config(
         regex='.*',
         operation_name=_TFLOpName.ALL,
-        algorithm_key=algorithm_manager.PTQ,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             activation_tensor_config=_TensorQuantConfig(
                 num_bits=16, symmetric=True
@@ -286,7 +287,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.FULLY_CONNECTED, 'model/Dense_3/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertIsNone(op_config.activation_tensor_config)
     self.assertEqual(op_config.weight_tensor_config.num_bits, 3)
     self.assertEqual(op_config.execution_mode, _OpExecutionMode.WEIGHT_ONLY)
@@ -295,8 +296,8 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.CONV_2D, 'model/Dense_31/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     op_act_config = op_config.activation_tensor_config
     self.assertIsNotNone(op_act_config)
     self.assertEqual(op_act_config.num_bits, 16)
@@ -313,14 +314,14 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self._recipe_manager.add_quantization_config(
         regex='.*',
         operation_name=_TFLOpName.BATCH_MATMUL,
-        algorithm_key=algorithm_manager.PTQ,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
     )
 
     # Int8 DRQ FULLY_CONNECTED ops under "Dense".
     self._recipe_manager.add_quantization_config(
         regex='.*/Dense/.*',
         operation_name=_TFLOpName.FULLY_CONNECTED,
-        algorithm_key=algorithm_manager.PTQ,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             execution_mode=_OpExecutionMode.DRQ
         ),
@@ -330,7 +331,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self._recipe_manager.add_quantization_config(
         regex='.*/Dense/.*',
         operation_name=_TFLOpName.ALL,
-        algorithm_key=algorithm_manager.PTQ,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TensorQuantConfig(num_bits=4),
             execution_mode=_OpExecutionMode.WEIGHT_ONLY,
@@ -341,7 +342,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self._recipe_manager.add_quantization_config(
         regex='.*/Dense_1/.*',
         operation_name=_TFLOpName.FULLY_CONNECTED,
-        algorithm_key=algorithm_manager.PTQ,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TensorQuantConfig(num_bits=6),
             execution_mode=_OpExecutionMode.WEIGHT_ONLY,
@@ -352,7 +353,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self._recipe_manager.add_quantization_config(
         regex='.*/Dense_1/.*',
         operation_name=_TFLOpName.BATCH_MATMUL,
-        algorithm_key=algorithm_manager.PTQ,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TensorQuantConfig(num_bits=3),
             execution_mode=_OpExecutionMode.WEIGHT_ONLY,
@@ -363,7 +364,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         {
             'regex': '.*',
             'operation': '*',
-            'algorithm_key': algorithm_manager.PTQ,
+            'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'activation_tensor_config': {
                     'num_bits': 8,
@@ -384,7 +385,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         {
             'regex': '.*',
             'operation': 'BATCH_MATMUL',
-            'algorithm_key': algorithm_manager.PTQ,
+            'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
                     'dtype': 'INT',
@@ -399,7 +400,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         {
             'regex': '.*/Dense/.*',
             'operation': '*',
-            'algorithm_key': algorithm_manager.PTQ,
+            'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
                     'dtype': 'INT',
@@ -414,7 +415,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         {
             'regex': '.*/Dense_1/.*',
             'operation': 'FULLY_CONNECTED',
-            'algorithm_key': algorithm_manager.PTQ,
+            'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
                     'dtype': 'INT',
@@ -429,7 +430,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         {
             'regex': '.*/Dense_1/.*',
             'operation': 'BATCH_MATMUL',
-            'algorithm_key': algorithm_manager.PTQ,
+            'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
                     'dtype': 'INT',
@@ -452,7 +453,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         {
             'regex': '.*',
             'operation': 'BATCH_MATMUL',
-            'algorithm_key': algorithm_manager.PTQ,
+            'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
                     'dtype': 'INT',
@@ -467,7 +468,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         {
             'regex': '.*/Dense/.*',
             'operation': '*',
-            'algorithm_key': algorithm_manager.PTQ,
+            'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
                     'dtype': 'INT',
@@ -485,7 +486,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.BATCH_MATMUL, 'model/Dense10/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertEqual(op_config.execution_mode, _OpExecutionMode.WEIGHT_ONLY)
     self.assertEqual(op_config.weight_tensor_config.num_bits, 8)
 
@@ -493,7 +494,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.FULLY_CONNECTED, 'model/Dense/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertEqual(op_config.execution_mode, _OpExecutionMode.DRQ)
     self.assertEqual(op_config.weight_tensor_config.num_bits, 4)
 
@@ -502,7 +503,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         {
             'regex': '.*',
             'operation': '*',
-            'algorithm_key': algorithm_manager.PTQ,
+            'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'activation_tensor_config': {
                     'num_bits': 8,
@@ -523,7 +524,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         {
             'regex': '.*',
             'operation': 'BATCH_MATMUL',
-            'algorithm_key': algorithm_manager.PTQ,
+            'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
                     'dtype': 'INT',
@@ -538,7 +539,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         {
             'regex': '.*/Dense/.*',
             'operation': '*',
-            'algorithm_key': algorithm_manager.PTQ,
+            'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
                     'dtype': 'INT',
@@ -557,7 +558,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.BATCH_MATMUL, 'model/Dense10/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertIsNone(op_config.activation_tensor_config)
     self.assertEqual(op_config.execution_mode, _OpExecutionMode.WEIGHT_ONLY)
     self.assertEqual(op_config.weight_tensor_config.num_bits, 8)
@@ -566,7 +567,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.FULLY_CONNECTED, 'model/Dense/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertIsNone(op_config.activation_tensor_config)
     self.assertEqual(op_config.execution_mode, _OpExecutionMode.DRQ)
     self.assertEqual(op_config.weight_tensor_config.num_bits, 4)
@@ -575,7 +576,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.CONV_2D, 'model/Dense11/op'
     )
-    self.assertEqual(alg_key, algorithm_manager.PTQ)
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     op_act_config = op_config.activation_tensor_config
     self.assertIsNotNone(op_act_config)
     self.assertEqual(op_act_config.num_bits, 8)

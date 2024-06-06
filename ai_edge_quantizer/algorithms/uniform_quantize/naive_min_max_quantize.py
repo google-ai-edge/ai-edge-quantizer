@@ -8,7 +8,7 @@ from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tenso
 from ai_edge_quantizer.algorithms.utils import min_max_quantize_utils as utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
-ALGORITHM_KEY = "ptq"
+ALGORITHM_KEY = "min_max_uniform_quantize"
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation
 _OpQuantConstraint = utils.OpQuantConstraint

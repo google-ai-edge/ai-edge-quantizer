@@ -15,6 +15,8 @@ from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import validation_utils
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 
+# Expose algorithm names to users.
+AlgorithmName = algorithm_manager.AlgorithmName
 
 _QuantRecipe = recipe_manager.ModelQuantizationRecipe
 _TFLOpName = qtyping.TFLOperationName
@@ -118,7 +120,7 @@ class Quantizer:
       regex: str,
       operation_name: _TFLOpName,
       op_config: Optional[_OpQuantizationConfig] = None,
-      algorithm_key: str = algorithm_manager.PTQ,
+      algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
       override_algorithm: bool = True,
   ):
     """Adds a quantization configuration to the recipe.

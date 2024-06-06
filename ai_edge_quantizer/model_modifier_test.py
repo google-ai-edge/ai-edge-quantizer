@@ -43,7 +43,7 @@ class ModelModifierTest(parameterized.TestCase):
         {
             'regex': '.*',
             'operation': 'FULLY_CONNECTED',
-            'algorithm_key': 'ptq',
+            'algorithm_key': 'min_max_uniform_quantize',
             'op_config': {
                 'weight_tensor_config': {
                     'dtype': qtyping.TensorDataType.INT,

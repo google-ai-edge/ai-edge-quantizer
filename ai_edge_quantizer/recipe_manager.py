@@ -12,6 +12,9 @@ from ai_edge_quantizer import qtyping
 # Key: scope regex.
 # Value: list of OpQuantizationRecipe in dictionary format.
 ModelQuantizationRecipe = list[dict[str, Any]]
+# Expose algorithm names to users.
+AlgorithmName = algorithm_manager.AlgorithmName
+
 _TFLOpName = qtyping.TFLOperationName
 _OpQuantizationConfig = qtyping.OpQuantizationConfig
 _TensorQuantizationConfig = qtyping.TensorQuantizationConfig
@@ -70,7 +73,7 @@ class RecipeManager:
       regex: str,
       operation_name: _TFLOpName,
       op_config: Optional[_OpQuantizationConfig] = None,
-      algorithm_key: str = algorithm_manager.PTQ,
+      algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
       override_algorithm: bool = True,
   ) -> None:
     """Adds a quantization configuration.
@@ -110,7 +113,7 @@ class RecipeManager:
       self._scope_configs[regex] = [config]
       return
 
-    if algorithm_key != algorithm_manager.NO_QUANT:
+    if algorithm_key != AlgorithmName.NO_QUANTIZE:
       algorithm_manager.check_op_quantization_config(
           algorithm_key, operation_name, op_config
       )
@@ -163,7 +166,7 @@ class RecipeManager:
        A tuple of quantization algorithm, and quantization configuration.
     """
     result_key, result_config = (
-        algorithm_manager.NO_QUANT,
+        AlgorithmName.NO_QUANTIZE,
         _OpQuantizationConfig(),
     )
     for scope_regex, recipes in self._scope_configs.items():

@@ -18,6 +18,7 @@ _OpExecutionMode = qtyping.OpExecutionMode
 _TensorDataType = qtyping.TensorDataType
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
+_AlgorithmName = recipe_manager.AlgorithmName
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('')
 
@@ -113,7 +114,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         {
             'regex': '.*',
             'operation': 'FULLY_CONNECTED',
-            'algorithm_key': 'ptq',
+            'algorithm_key': 'min_max_uniform_quantize',
             'op_config': {
                 'weight_tensor_config': {
                     'dtype': _TensorDataType.INT,
@@ -251,7 +252,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         {
             'regex': '.*/dense/.*',
             'operation': 'FULLY_CONNECTED',
-            'algorithm_key': 'ptq',
+            'algorithm_key': 'min_max_uniform_quantize',
             'op_config': {
                 'weight_tensor_config': {
                     'dtype': _TensorDataType.INT,
@@ -266,7 +267,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         {
             'regex': '.*/dense_1/.*',
             'operation': 'FULLY_CONNECTED',
-            'algorithm_key': 'ptq',
+            'algorithm_key': 'min_max_uniform_quantize',
             'op_config': {
                 'weight_tensor_config': {
                     'dtype': _TensorDataType.INT,
@@ -318,7 +319,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         {
             'regex': 'sequential/dense_1/MatMul',
             'operation': 'FULLY_CONNECTED',
-            'algorithm_key': 'ptq',
+            'algorithm_key': 'min_max_uniform_quantize',
             'op_config': {
                 'weight_tensor_config': {
                     'num_bits': 8,
@@ -333,7 +334,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         {
             'regex': '.*/dense_3/.*',
             'operation': 'FULLY_CONNECTED',
-            'algorithm_key': 'ptq',
+            'algorithm_key': 'min_max_uniform_quantize',
             'op_config': {
                 'weight_tensor_config': {
                     'num_bits': 4,
@@ -383,7 +384,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
     self._recipe_manager.add_quantization_config(
         regex='.*',
         operation_name=qtyping.TFLOperationName.ALL,
-        algorithm_key='ptq',
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             activation_tensor_config=_TensorQuantConfig(
                 num_bits=8, symmetric=act_symmetric
