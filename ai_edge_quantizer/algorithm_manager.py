@@ -3,8 +3,10 @@
 import enum
 from ai_edge_quantizer import algorithm_manager_api
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.algorithms.nonlinear_quantize import float_casting
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
+
 
 _TFLOpName = qtyping.TFLOperationName
 
@@ -29,6 +31,7 @@ check_op_quantization_config = (
 class AlgorithmName(str, enum.Enum):
   NO_QUANTIZE = "no_quantize"
   MIN_MAX_UNIFORM_QUANT = naive_min_max_quantize.ALGORITHM_KEY
+  FLOAT_CASTING = float_casting.ALGORITHM_KEY
 
 
 # Register MIN_MAX_UNIFORM_QUANT algorithm.
@@ -65,5 +68,28 @@ for op_name, materialize_func in zip(
       op_name,
       naive_min_max_quantize.init_qsvs,
       calibration_func=naive_min_max_quantize.min_max_calibrate,
+      materialize_func=materialize_func,
+  )
+
+# Register FLOAT_CASTING algorithm.
+register_op_quant_config_validation_func(
+    AlgorithmName.FLOAT_CASTING,
+    float_casting.check_op_quantization_config,
+)
+for op_name, materialize_func in zip(
+    (
+        _TFLOpName.FULLY_CONNECTED,
+        _TFLOpName.CONV_2D,
+    ),
+    (
+        float_casting.materialize_fc_conv,
+        float_casting.materialize_fc_conv,
+    ),
+):
+  register_quantized_op(
+      AlgorithmName.FLOAT_CASTING,
+      op_name,
+      float_casting.init_qsvs,
+      calibration_func=float_casting.calibrate,
       materialize_func=materialize_func,
   )
