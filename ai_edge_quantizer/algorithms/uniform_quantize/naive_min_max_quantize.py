@@ -30,7 +30,9 @@ def check_op_quantization_config(
   """
   if op_quant_config.weight_tensor_config.dtype != qtyping.TensorDataType.INT:
     raise ValueError(
-        "Weights need to have integer type for naive min/max quantization."
+        "Weights need to have integer type for min/max uniform quantization. If"
+        " you wish to perform float casting quantization (e.g., fp16 weight"
+        " only), please set algorithm key as 'float_casting'."
     )
   execution_mode = op_quant_config.execution_mode
   if execution_mode == _OpExecutionMode.WEIGHT_ONLY:

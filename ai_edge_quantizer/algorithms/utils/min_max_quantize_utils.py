@@ -65,6 +65,8 @@ def check_srq_config(
     )
   if act_config is None:
     raise ValueError("activation_tensor_config is required for SRQ.")
+  if act_config.dtype != qtyping.TensorDataType.INT:
+    raise ValueError("SRQ requires activation tensor to be int type.")
   if act_config.num_bits not in (8, 16):
     raise ValueError(
         f"Only int8/int16 activation SRQ is supported for op {op_name}."
