@@ -19,7 +19,7 @@ class ModelModifierTest(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     self._model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'test_models/conv_fc_mnist.tflite'
+        TEST_DATA_PREFIX_PATH, 'tests/models/conv_fc_mnist.tflite'
     )
     self._model_modifier = model_modifier.ModelModifier(self._model_path)
     self._model_buffer: bytearray = tfl_flatbuffer_utils.get_model_buffer(

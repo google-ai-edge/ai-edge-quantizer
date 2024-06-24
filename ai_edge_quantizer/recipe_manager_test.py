@@ -34,7 +34,7 @@ def _sample_check_op_config_func(_, op_config):
 def _add_default_int8xint8_integer_recipe(recipe_manager_object):
   recipe_manager_object.add_quantization_config(
       regex='.*',
-      operation_name=qtyping.TFLOperationName.ALL,
+      operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
       algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
       op_config=qtyping.OpQuantizationConfig(
           activation_tensor_config=_TensorQuantConfig(
@@ -79,7 +79,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     # Int8 DRQ all ops under "Dense".
     self._recipe_manager.add_quantization_config(
         regex='.*/Dense/.*',
-        operation_name=_TFLOpName.ALL,
+        operation_name=_TFLOpName.ALL_SUPPORTED,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             execution_mode=_OpExecutionMode.DRQ
@@ -153,7 +153,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     # Reset all ops, this time with 4 bits DRQ.
     self._recipe_manager.add_quantization_config(
         regex='.*/Dense/.*',
-        operation_name=_TFLOpName.ALL,
+        operation_name=_TFLOpName.ALL_SUPPORTED,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TensorQuantConfig(num_bits=4),
@@ -273,7 +273,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     # Change the global setting to  int16
     self._recipe_manager.add_quantization_config(
         regex='.*',
-        operation_name=_TFLOpName.ALL,
+        operation_name=_TFLOpName.ALL_SUPPORTED,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             activation_tensor_config=_TensorQuantConfig(
@@ -330,7 +330,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     # Overwrite DRQ ALL ops under "Dense".
     self._recipe_manager.add_quantization_config(
         regex='.*/Dense/.*',
-        operation_name=_TFLOpName.ALL,
+        operation_name=_TFLOpName.ALL_SUPPORTED,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TensorQuantConfig(num_bits=4),
@@ -498,6 +498,21 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self.assertEqual(op_config.execution_mode, _OpExecutionMode.DRQ)
     self.assertEqual(op_config.weight_tensor_config.num_bits, 4)
 
+  def test_get_unsupported_op_fall_back_to_default(self):
+    self._recipe_manager.add_quantization_config(
+        regex='.*/Dense/.*',
+        operation_name=_TFLOpName.ALL_SUPPORTED,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+        op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=17),
+        ),
+    )
+    alg_key, _ = self._recipe_manager.get_quantization_configs(
+        _TFLOpName.BATCH_MATMUL, 'model/Dense10/op'
+    )
+    # int17 is not supported, fall back to float.
+    self.assertEqual(alg_key, _AlgorithmName.NO_QUANTIZE)
+
   def test_load_from_full_quantization_config_full_integer(self):
     full_quantization_config = [
         {
@@ -582,6 +597,52 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self.assertEqual(op_act_config.num_bits, 8)
     self.assertEqual(op_config.execution_mode, _OpExecutionMode.SRQ)
     self.assertEqual(op_config.weight_tensor_config.num_bits, 8)
+
+  def test_need_calibration_false(self):
+    self._recipe_manager.add_quantization_config(
+        regex='.*/Dense_1/.*',
+        operation_name=_TFLOpName.FULLY_CONNECTED,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+        op_config=qtyping.OpQuantizationConfig(
+            execution_mode=_OpExecutionMode.DRQ
+        ),
+    )
+    self._recipe_manager.add_quantization_config(
+        regex='.*/Dense_2/.*',
+        operation_name=_TFLOpName.CONV_2D,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+        op_config=qtyping.OpQuantizationConfig(
+            execution_mode=_OpExecutionMode.WEIGHT_ONLY
+        ),
+    )
+    self.assertFalse(self._recipe_manager.need_calibration())
+
+  def test_need_calibration_true(self):
+    self._recipe_manager.add_quantization_config(
+        regex='.*/Dense_1/.*',
+        operation_name=_TFLOpName.FULLY_CONNECTED,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+        op_config=qtyping.OpQuantizationConfig(
+            execution_mode=_OpExecutionMode.DRQ
+        ),
+    )
+    self._recipe_manager.add_quantization_config(
+        regex='.*/Dense_2/.*',
+        operation_name=_TFLOpName.CONV_2D,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+        op_config=qtyping.OpQuantizationConfig(
+            execution_mode=_OpExecutionMode.WEIGHT_ONLY
+        ),
+    )
+    self._recipe_manager.add_quantization_config(
+        regex='.*/Dense_3/.*',
+        operation_name=_TFLOpName.BATCH_MATMUL,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+        op_config=qtyping.OpQuantizationConfig(
+            execution_mode=_OpExecutionMode.SRQ
+        ),
+    )
+    self.assertTrue(self._recipe_manager.need_calibration())
 
 
 if __name__ == '__main__':

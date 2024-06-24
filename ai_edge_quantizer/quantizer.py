@@ -4,7 +4,7 @@ from collections.abc import Iterable
 import dataclasses
 import json
 import os
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import model_modifier
 from ai_edge_quantizer import model_validator
@@ -23,6 +23,7 @@ _TFLOpName = qtyping.TFLOperationName
 _OpQuantizationConfig = qtyping.OpQuantizationConfig
 _TensorQuantizationConfig = qtyping.TensorQuantizationConfig
 _TensorTransformationParams = dict[str, qtyping.TensorTransformationParams]
+_SignatureInput = dict[str, Any]  # input_argument_name -> tensor_value.
 
 
 @dataclasses.dataclass(frozen=True)
@@ -73,38 +74,42 @@ class Quantizer:
   """AI Edge Quantizer API.
 
   Attributes:
-    float_model_path: Path to the float tflite model.
+    float_model: TFLite model file path or bytearray.
+    quantization_recipe: Quantization recipe .json filepath or in loaded json
+      format.
   """
 
   def __init__(
       self,
-      float_model_path: str,
-      quantization_recipe_path: Optional[str] = None,
+      float_model: Union[str, bytearray],
+      quantization_recipe: Optional[Union[str, _QuantRecipe]] = None,
   ):
     """Initializes the quantizer.
 
     Args:
-      float_model_path: Path to the float tflite model.
-      quantization_recipe_path: Path to the quantization recipe (.json).
+      float_model: Path to the float tflite model.
+      quantization_recipe: Quantization recipe in .json filepath or loaded json
+        format.
     """
-    self.float_model_path: str = float_model_path
+    self.float_model: Union[str, bytearray] = float_model
     self._recipe_manager: recipe_manager.RecipeManager = (
         recipe_manager.RecipeManager()
     )
-    if quantization_recipe_path is not None:
-      self.load_quantization_recipe(quantization_recipe_path)
+    if quantization_recipe is not None:
+      self.load_quantization_recipe(quantization_recipe)
     self._result: QuantizationResult = QuantizationResult([{}], None)
 
-  def load_quantization_recipe(self, recipe_path: str) -> None:
+  def load_quantization_recipe(self, recipe: Union[str, _QuantRecipe]) -> None:
     """Loads a quantization recipe.
 
     The existing recipe will be overwritten.
 
     Args:
-      recipe_path: Path to the quantization recipe (.json).
+      recipe: Quantization recipe in json format.
     """
-    with gfile.Open(recipe_path) as json_file:
-      recipe = json.load(json_file)
+    if isinstance(recipe, str):
+      with gfile.Open(recipe) as json_file:
+        recipe = json.load(json_file)
     self._recipe_manager.load_quantization_recipe(recipe)
 
   def get_quantization_recipe(self) -> _QuantRecipe:
@@ -169,10 +174,11 @@ class Quantizer:
   # TODO: b/337299171 - generate a readable quantization report.
   def compare(
       self,
-      test_data: Optional[Iterable[Any]] = None,
+      signature_test_data: Optional[Iterable[_SignatureInput]] = None,
       error_metrics: str = 'mse',
+      signature_key: Optional[str] = None,
   ) -> dict[str, float]:
-    """Compares the quantized model with the float model.
+    """Compares the quantized model with the float model for a model signature.
 
     Side by side numerical comparison will be performed on all tensors in the
     quantized model against ones from the float model. If no test data is
@@ -183,27 +189,36 @@ class Quantizer:
     json_save_path is provided.
 
     Args:
-      test_data: Test data to be used for comparison.
+      signature_test_data: Test data to be used for comparison for a model
+        signature.
       error_metrics: Error metrics to be used for comparison.
+      signature_key: the signature key to be used for invoking the models. If
+        the model doesn't have a signature key, this can be set to None.
 
     Returns:
       A dictionary containing the comparison result.
     """
-    if test_data is None:
+    if signature_test_data is None:
       test_data = test_utils.create_random_normal_input_data(
-          self.float_model_path
+          self.float_model
       )
-    # TODO: b/337296308 - directly pass the quantized model for comparison.
-    quantized_model_path = '/tmp/quantized_model.tflite'
-    with gfile.GFile(quantized_model_path, 'wb') as output_file_handle:
-      output_file_handle.write(self._result.quantized_model)
+      if signature_key is not None:
+        signature_test_data = test_data[signature_key]
+      else:
+        if len(test_data) != 1:
+          raise ValueError(
+              'The model has multiple signatures but no signature key is'
+              ' provided for comparison.'
+          )
+        signature_test_data = list(test_data.values())[0]  # single signature.
 
     comparison_result = model_validator.compare_model(
-        self.float_model_path,
-        quantized_model_path,
-        test_data,
+        self.float_model,
+        self._result.quantized_model,
+        signature_test_data,
         quantize_target_input=False,  # will be removed later.
         compare_fn=validation_utils.get_validation_func(error_metrics),
+        signature_key=signature_key,
     )
     return comparison_result
 
@@ -238,7 +253,7 @@ class Quantizer:
       A dictionary containing the quantization parameters.
     """
     params_generator_instance = params_generator.ParamsGenerator(
-        self.float_model_path
+        self.float_model
     )
     return params_generator_instance.generate_quantization_parameters(
         self._recipe_manager
@@ -256,6 +271,6 @@ class Quantizer:
       The quantized model.
     """
     model_modifier_instance = model_modifier.ModelModifier(
-        self.float_model_path
+        self.float_model
     )
     return model_modifier_instance.modify_model(quant_params)

@@ -107,14 +107,13 @@ def check_replace_dq_q_with_rq(
 class TransformationInstructionsGenerator:
   """Generates transformation instructions from tensor quant params."""
 
-  def __init__(self, float_tflite_path):
+  def __init__(self, float_tflite):
     """Constructor.
 
     Args:
-      float_tflite_path: the path to the original TFlite model.
+      float_tflite: the original TFlite model in bytearray or file path.
     """
-    self._float_tflite_path = float_tflite_path
-    self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite_path)
+    self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
     self._create_tensor_name_to_graph_info_map()
 
   @dataclasses.dataclass(frozen=True)

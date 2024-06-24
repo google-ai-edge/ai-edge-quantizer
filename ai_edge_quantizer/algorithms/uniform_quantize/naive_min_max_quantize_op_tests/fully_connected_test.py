@@ -16,7 +16,9 @@ _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
 _OpTestInfo = naive_min_max_test_utils.OpTestInfo
 
-_TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("../../../test_models")
+_TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(
+    "../../../tests/models"
+)
 _DEFAULT_ACTIVATION_QUANT_SETTING = (
     naive_min_max_test_utils.DEFAULT_ACTIVATION_QUANT_SETTING
 )

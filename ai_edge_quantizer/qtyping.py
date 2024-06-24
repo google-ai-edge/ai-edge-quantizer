@@ -14,7 +14,7 @@ QSV: TypeAlias = MutableMapping[str, Any]
 
 
 class TFLOperationName(str, enum.Enum):
-  ALL = '*'
+  ALL_SUPPORTED = '*'
   FULLY_CONNECTED = 'FULLY_CONNECTED'
   BATCH_MATMUL = 'BATCH_MATMUL'
   DEPTHWISE_CONV_2D = 'DEPTHWISE_CONV_2D'

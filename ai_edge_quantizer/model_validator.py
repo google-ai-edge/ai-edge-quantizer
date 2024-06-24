@@ -13,48 +13,57 @@ from ai_edge_quantizer.utils import tfl_interpreter_utils
 # TODO(b/331655892): have this function automatically detect the input tensor
 # type
 def compare_model(
-    reference_model_path: str,
-    target_model_path: str,
-    dataset: Iterable[Any],
-    quantize_target_input: bool,
+    reference_model: Union[str, bytearray],
+    target_model: Union[str, bytearray],
+    signature_dataset: Iterable[dict[str, Any]],
     compare_fn: Callable[[Any, Any], float],
+    signature_key: str | None = None,
+    quantize_target_input: bool = True,
 ) -> dict[str, float]:
-  """Produces comparison of all intermediate tensors given 2 models and a compare_fn.
+  """Compares model tensors over a model signature using the compare_fn.
 
-  This function returns a per-tensor mean difference comparison across all
-  inputs in the dataset, which will be returned at the end of this function
+  This function will run the model signature on the provided dataset over and
+  compare all the tensors (cached) using the compare_fn (e.g., mean square
+  error).
 
   Args:
-    reference_model_path: path to the model which will be used as the reference
-    target_model_path: path to the model which we're interested in the output,
-      we expect reference_model and target_model have the inputs and outputs
-    dataset: A list of input dataset to be run on reference and target models
-    quantize_target_input: indicating whether the target requires quantized
-      input
+    reference_model: Model which will be used as the reference
+    target_model: Target model which will be compared against the reference.
+      We expect reference_model and target_model have the inputs and outputs
+    signature_dataset: A list of inputs of the signature to be run on reference
+      and target models.
     compare_fn: a comparison function to be used for calculating the statistics,
       this function must be taking in two ArrayLike strcuture and output a
-      single float value
+      single float value.
+    signature_key: the signature key to be used for invoking the models. If the
+      model doesn't have a signature key, this can be set to None.
+    quantize_target_input: indicating whether the target requires quantized
+      input.
 
   Returns:
     a dictionary of tensor name and a single float value representing
     the differences
   """
   reference_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
-      reference_model_path
+      reference_model
   )
   target_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
-      target_model_path
+      target_model
   )
   comparison_results = {}
 
-  # TODO(b/330797129): enable multi-threaded evaluation
-  for data in dataset:
-    tfl_interpreter_utils.invoke_interpreter_once(
-        reference_interpreter, data, False
+  # TODO(b/330797129): enable multi-threaded evaluation.
+  for signature_input in signature_dataset:
+    tfl_interpreter_utils.invoke_interpreter_signature(
+        reference_interpreter, signature_input, signature_key
     )
-    tfl_interpreter_utils.invoke_interpreter_once(
-        target_interpreter, data, quantize_target_input
+    tfl_interpreter_utils.invoke_interpreter_signature(
+        target_interpreter,
+        signature_input,
+        signature_key,
+        quantize_input=quantize_target_input,
     )
+
     reference_name_to_details = (
         tfl_interpreter_utils.get_tensor_name_to_details_map(
             reference_interpreter

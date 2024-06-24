@@ -1,25 +1,33 @@
 """Util functions for TFL interpreter."""
 
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 import tensorflow as tf
 
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
+from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 
 
-def create_tfl_interpreter(model_path: str) -> tf.lite.Interpreter:
+def create_tfl_interpreter(
+    tflite_model: Union[str, bytearray],
+) -> tf.lite.Interpreter:
   """Creates a TFLite interpreter from a model file.
 
   Args:
-    model_path: Path to the TFLite model file.
+    tflite_model: Model file path or bytearray.
 
   Returns:
     A TFLite interpreter.
   """
+  if isinstance(tflite_model, str):
+    with gfile.GFile(tflite_model, "rb") as f:
+      tflite_model = f.read()
+  else:
+    tflite_model = bytes(tflite_model)
   tflite_interpreter = tf.lite.Interpreter(
-      model_path=model_path,
+      model_content=tflite_model,
       experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_WITHOUT_DEFAULT_DELEGATES,
       experimental_preserve_all_tensors=True,
   )
@@ -38,6 +46,36 @@ def _is_tensor_quantized(tensor_detail: dict[str, Any]) -> bool:
   """
   quant_params = tensor_detail["quantization_parameters"]
   return bool(len(quant_params["scales"]))
+
+
+def invoke_interpreter_signature(
+    tflite_interpreter: tf.lite.Interpreter,
+    signature_input_data: dict[str, Any],
+    signature_key: str | None = None,
+    quantize_input: bool = True,
+) -> dict[str, np.ndarray]:
+  """Invokes the TFLite interpreter through signature runner.
+
+  Args:
+    tflite_interpreter: A TFLite interpreter.
+    signature_input_data: The input data for the signature.
+    signature_key: The signature key.
+    quantize_input: Whether to quantize the input data.
+
+  Returns:
+    The output data of the signature.
+  """
+  signature_runner = tflite_interpreter.get_signature_runner(signature_key)
+  for input_name, input_detail in signature_runner.get_input_details().items():
+    if _is_tensor_quantized(input_detail) and quantize_input:
+      input_data = signature_input_data[input_name]
+      quant_params = qtyping.UniformQuantParams.from_tfl_tensor_details(
+          input_detail
+      )
+      signature_input_data[input_name] = (
+          uniform_quantize_tensor.uniform_quantize(input_data, quant_params)
+      )
+  return signature_runner(**signature_input_data)
 
 
 def invoke_interpreter_once(

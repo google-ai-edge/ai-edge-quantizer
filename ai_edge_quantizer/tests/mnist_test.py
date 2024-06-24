@@ -1,4 +1,4 @@
-"""E2E tests for the quantizer."""
+"""E2E tests for the quantizer using a toy MNIST model."""
 
 from absl.testing import parameterized
 from tensorflow.python.platform import googletest
@@ -12,7 +12,13 @@ _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _OpQuantConfig = qtyping.OpQuantizationConfig
 
 
-class E2ETest(parameterized.TestCase):
+class MNISTTest(parameterized.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    self.float_model_path = test_utils.get_path_to_datafile(
+        'models/conv_fc_mnist.tflite'
+    )
 
   @parameterized.product(
       execution_mode=[_OpExecutionMode.WEIGHT_ONLY, _OpExecutionMode.DRQ],
@@ -27,11 +33,7 @@ class E2ETest(parameterized.TestCase):
     # TODO: b/335254997 - fail when trying to use unsupported recipe.
     if execution_mode == _OpExecutionMode.DRQ and not symmetric_weight:
       return
-
-    float_model_path = test_utils.get_path_to_datafile(
-        './test_models/conv_fc_mnist.tflite'
-    )
-    qt = quantizer.Quantizer(float_model_path)
+    qt = quantizer.Quantizer(self.float_model_path)
     qt.update_quantization_recipe(
         regex='.*',
         operation_name=_OpName.FULLY_CONNECTED,
@@ -66,10 +68,7 @@ class E2ETest(parameterized.TestCase):
     # TODO: b/345503484 - Check weight tensor type of the quantized model.
 
   def test_mnist_toy_model_fp16_weight_only(self):
-    float_model_path = test_utils.get_path_to_datafile(
-        './test_models/conv_fc_mnist.tflite'
-    )
-    qt = quantizer.Quantizer(float_model_path)
+    qt = quantizer.Quantizer(self.float_model_path)
     qt.update_quantization_recipe(
         regex='.*',
         algorithm_key=quantizer.AlgorithmName.FLOAT_CASTING,

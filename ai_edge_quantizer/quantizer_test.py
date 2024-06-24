@@ -21,11 +21,11 @@ class QuantizerTest(googletest.TestCase):
   def setUp(self):
     super().setUp()
     self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'test_models/conv_fc_mnist.tflite'
+        TEST_DATA_PREFIX_PATH, 'tests/models/conv_fc_mnist.tflite'
     )
     self._test_recipe_path = os.path.join(
         TEST_DATA_PREFIX_PATH,
-        'test_models/recipes/conv_fc_mnist_weight_only_recipe.json',
+        'tests/recipes/conv_fc_mnist_weight_only_recipe.json',
     )
     with open(self._test_recipe_path) as json_file:
       self._test_recipe = json.load(json_file)
@@ -65,7 +65,7 @@ class QuantizerTest(googletest.TestCase):
     # Load a different recipe.
     new_recipe_path = os.path.join(
         TEST_DATA_PREFIX_PATH,
-        'test_models/recipes/conv_fc_mnist_drq_recipe.json',
+        'tests/recipes/conv_fc_mnist_drq_recipe.json',
     )
     with open(new_recipe_path) as json_file:
       new_recipe = json.load(json_file)
@@ -125,6 +125,38 @@ class QuantizerTest(googletest.TestCase):
     self.assertIn('results', json_dict)
     results = json_dict['results']
     self.assertIn('sequential/dense_1/MatMul', results)
+
+
+class QuantizerBytearrayInputs(googletest.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    self._test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, 'tests/models/conv_fc_mnist.tflite'
+    )
+    self._test_recipe_path = os.path.join(
+        TEST_DATA_PREFIX_PATH,
+        'tests/recipes/conv_fc_mnist_weight_only_recipe.json',
+    )
+    with open(self._test_model_path, 'rb') as f:
+      model_content = bytearray(f.read())
+    with open(self._test_recipe_path, 'r') as f:
+      self._test_recipe = json.load(f)
+    self._quantizer = quantizer.Quantizer(model_content, self._test_recipe)
+
+  def test_quantize_compare_succeeds(self):
+    quant_result = self._quantizer.quantize()
+    self.assertEqual(quant_result.recipe, self._test_recipe)
+    self.assertIsNotNone(quant_result.quantized_model)
+    comparison_result = self._quantizer.compare()
+    self.assertIsNotNone(comparison_result)
+    self.assertIn('sequential/dense_1/MatMul', comparison_result)
+
+  def test_compare_succeeds(self):
+    self._quantizer.quantize()
+    comparison_result = self._quantizer.compare()
+    self.assertIsNotNone(comparison_result)
+    self.assertIn('sequential/dense_1/MatMul', comparison_result)
 
 
 if __name__ == '__main__':

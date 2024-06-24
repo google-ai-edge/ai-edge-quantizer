@@ -32,10 +32,10 @@ def get_path_to_datafile(path):
 
 
 def create_random_normal_dataset(
-    input_details: list[Any],
+    input_details: dict[str, Any],
     num_samples: int,
     random_seed: Union[int, np._typing.ArrayLike],
-) -> list[list[np._typing.ArrayLike]]:
+) -> list[dict[str, Any]]:
   """create random dataset following random distribution.
 
   Args:
@@ -52,31 +52,41 @@ def create_random_normal_dataset(
   rng = np.random.default_rng(random_seed)
   dataset = []
   for _ in range(num_samples):
-    input_data = []
-    for input_tensor in input_details:
-      input_data.append(
-          rng.normal(size=input_tensor['shape']).astype(input_tensor['dtype'])
+    input_data = {}
+    for arg_name, input_tensor in input_details.items():
+      new_data = rng.normal(size=input_tensor['shape']).astype(
+          input_tensor['dtype']
       )
+      input_data[arg_name] = new_data
     dataset.append(input_data)
   return dataset
 
 
 def create_random_normal_input_data(
-    tfl_model_path: str, num_samples: int = 8, random_seed: int = 666
-) -> list[list[np._typing.ArrayLike]]:
-  """create random dataset for a TFLite model following normal distribution.
+    tflite_model: Union[str, bytearray],
+    num_samples: int = 4,
+    random_seed: int = 666,
+) -> dict[str, list[dict[str, Any]]]:
+  """create random dataset following random distribution for signature runner.
 
   Args:
-    tfl_model_path: path to the tflite model
+    tflite_model: TFLite model path or bytearray
     num_samples: number of input samples to be generated
     random_seed: random seed to be used for function
 
   Returns:
     a list of inputs to the given interpreter, for a single interpreter we may
-    have multiple input tensors so each set of inputs is also represented as
+    have multiple signatures so each set of inputs is also represented as
     list
   """
-  tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(tfl_model_path)
-  return create_random_normal_dataset(
-      tfl_interpreter.get_input_details(), num_samples, random_seed
-  )
+  tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(tflite_model)
+  signature_defs = tfl_interpreter.get_signature_list()
+  signature_keys = list(signature_defs.keys())
+  test_data = {}
+  for signature_key in signature_keys:
+    signature_runner = tfl_interpreter.get_signature_runner(signature_key)
+    input_details = signature_runner.get_input_details()
+    test_data[signature_key] = create_random_normal_dataset(
+        input_details, num_samples, random_seed
+    )
+  return test_data

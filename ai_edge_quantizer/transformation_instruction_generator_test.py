@@ -442,7 +442,9 @@ class InstructionGeneratorTest(parameterized.TestCase):
       self, producer_trans_rule, consumer_trans_rule, expected
   ):
     ins_gen = instruction_generator.TransformationInstructionsGenerator(
-        os.path.join(TEST_DATA_PREFIX_PATH, "test_models/single_fc_bias.tflite")
+        os.path.join(
+            TEST_DATA_PREFIX_PATH, "tests/models/single_fc_bias.tflite"
+        )
     )
     got = ins_gen._apply_vertical_optimization(
         producer_trans_rule, consumer_trans_rule
@@ -512,7 +514,9 @@ class InstructionGeneratorTest(parameterized.TestCase):
   )
   def test_group_consumer_transformations(self, param, expected):
     ins_gen = instruction_generator.TransformationInstructionsGenerator(
-        os.path.join(TEST_DATA_PREFIX_PATH, "test_models/single_fc_bias.tflite")
+        os.path.join(
+            TEST_DATA_PREFIX_PATH, "tests/models/single_fc_bias.tflite"
+        )
     )
     got = ins_gen._group_consumer_transformations(param)
     self.assertEqual(expected, got)
@@ -612,7 +616,7 @@ class InstructionGeneratorTest(parameterized.TestCase):
   ):
     ins_gen = instruction_generator.TransformationInstructionsGenerator(
         os.path.join(
-            TEST_DATA_PREFIX_PATH, "test_models/insert_dequant_test.tflite"
+            TEST_DATA_PREFIX_PATH, "tests/models/insert_dequant_test.tflite"
         )
     )
     got = ins_gen._produce_transformation_for_vertical_opt(
@@ -706,7 +710,7 @@ class InstructionGeneratorTest(parameterized.TestCase):
   ):
     ins_gen = instruction_generator.TransformationInstructionsGenerator(
         os.path.join(
-            TEST_DATA_PREFIX_PATH, "test_models/insert_dequant_test.tflite"
+            TEST_DATA_PREFIX_PATH, "tests/models/insert_dequant_test.tflite"
         )
     )
     got = (
@@ -719,7 +723,7 @@ class InstructionGeneratorTest(parameterized.TestCase):
   def test_empty_param(self):
     """test the capability to handle empty params."""
     test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "test_models/single_fc_bias.tflite"
+        TEST_DATA_PREFIX_PATH, "tests/models/single_fc_bias.tflite"
     )
     quant_parameters = {}
     ins_gen = instruction_generator.TransformationInstructionsGenerator(
@@ -733,7 +737,7 @@ class InstructionGeneratorTest(parameterized.TestCase):
   def test_generate_instruction_for_single_fc_bias(self):
     """test the capability to run multiple tensor infos."""
     test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "test_models/single_fc_bias.tflite"
+        TEST_DATA_PREFIX_PATH, "tests/models/single_fc_bias.tflite"
     )
     quant_parameters = {}
     quant_parameters["serving_default_input_2:0"] = (
@@ -824,7 +828,7 @@ class InstructionGeneratorTest(parameterized.TestCase):
 
   def test_raise_error_on_op_replacement_transformation_is_not_unique(self):
     test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "test_models/insert_dequant_test.tflite"
+        TEST_DATA_PREFIX_PATH, "tests/models/insert_dequant_test.tflite"
     )
     quant_parameters = {}
     quant_parameters["tfl.quantize"] = qtyping.TensorTransformationParams(
@@ -851,7 +855,7 @@ class InstructionGeneratorTest(parameterized.TestCase):
 
   def test_raise_error_on_no_quant_conflict(self):
     test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "test_models/insert_dequant_test.tflite"
+        TEST_DATA_PREFIX_PATH, "tests/models/insert_dequant_test.tflite"
     )
     quant_parameters = {}
     quant_parameters["tfl.quantize"] = qtyping.TensorTransformationParams(
@@ -889,7 +893,7 @@ class InstructionGeneratorTest(parameterized.TestCase):
   def test_generate_instruction_for_branching(self):
     """test horizontal and vertial optimization on a graph with multi branch."""
     test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "test_models/insert_dequant_test.tflite"
+        TEST_DATA_PREFIX_PATH, "tests/models/insert_dequant_test.tflite"
     )
     quant_parameters = {}
     quant_parameters["tfl.quantize"] = qtyping.TensorTransformationParams(

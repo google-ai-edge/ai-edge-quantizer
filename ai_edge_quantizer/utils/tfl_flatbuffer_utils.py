@@ -1,6 +1,6 @@
 """flatbuffer utils for the Quantizer."""
 
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import immutabledict
 import numpy as np
@@ -60,33 +60,26 @@ TENSOR_TYPE_TO_CODE = immutabledict.immutabledict(
 write_model = flatbuffer_utils.write_model
 
 
-def read_model(tflite_path: str) -> Any:
-  """Read the model from the path.
+def read_model(tflite_model: Union[str, bytearray]) -> Any:
+  """Read and convert the TFLite model into a flatbuffer object.
 
   Args:
-    tflite_path: path to the .tflite.
+    tflite_model: TFLite model path or bytearray.
+
+  Raises:
+    ValueError: Unsupported tflite_model type.
 
   Returns:
     flatbuffer_model: the flatbuffer_model.
   """
-  model = flatbuffer_utils.read_model(tflite_path)
-  model_buffer = get_model_buffer(tflite_path)
-  for buffer in model.buffers:
-    if buffer.offset:
-      buffer.data = model_buffer[buffer.offset : buffer.offset + buffer.size]
-      buffer.offset = 0
-      buffer.size = 0
-  for subgraph in model.subgraphs:
-    for op in subgraph.operators:
-      if op.largeCustomOptionsOffset:
-        op.customOptions = model_buffer[
-            op.largeCustomOptionsOffset : op.largeCustomOptionsOffset
-            + op.largeCustomOptionsSize
-        ]
-        op.largeCustomOptionsOffset = 0
-        op.largeCustomOptionsSize = 0
-
-  return model
+  if isinstance(tflite_model, str):
+    return flatbuffer_utils.read_model(tflite_model)
+  elif isinstance(tflite_model, bytearray):
+    return flatbuffer_utils.read_model_from_bytearray(tflite_model)
+  else:
+    raise ValueError(
+        "Unsupported tflite_model type: %s" % type(tflite_model).__name__
+    )
 
 
 def get_model_buffer(tflite_path: str) -> bytearray:

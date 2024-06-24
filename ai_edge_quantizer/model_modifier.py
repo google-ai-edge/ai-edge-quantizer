@@ -1,6 +1,7 @@
 """Model Modifier class that produce the final quantized TFlite model."""
 
 import copy
+from typing import Union
 
 import numpy as np
 
@@ -16,17 +17,16 @@ class ModelModifier:
   """Model Modifier class that produce the final quantized TFlite model."""
 
   # TODO(b/336599483): support byte array as input
-  def __init__(self, float_tflite_path: str):
+  def __init__(self, float_tflite: Union[str, bytearray]):
     """Constructor.
 
     Args:
-      float_tflite_path: the path to the original TFlite models
+      float_tflite: the original TFlite model in bytearray or file path
     """
-    self._float_tflite_path = float_tflite_path
-    self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite_path)
+    self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
     self._constant_map = []
     self._transformation_instruction_generator = transformation_instruction_generator.TransformationInstructionsGenerator(
-        self._float_tflite_path
+        float_tflite
     )
     self._transformation_performer = (
         transformation_performer.TransformationPerformer()

@@ -9,7 +9,7 @@ from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
-TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("../test_models")
+TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("../tests/models")
 
 
 class TransformationUtilsTest(parameterized.TestCase):

@@ -1,6 +1,6 @@
 """Generate model tensor level quantization config."""
 import copy
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import qtyping
@@ -11,9 +11,8 @@ from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 class ParamsGenerator:
   """Generate model tensor level quantization parameters."""
 
-  def __init__(self, float_tflite_path):
-    self._float_tflite_path = float_tflite_path
-    self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite_path)
+  def __init__(self, float_tflite: Union[str, bytearray]):
+    self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
     self.buffer_to_tensors: dict[int, list[Any]] = (
         tfl_flatbuffer_utils.buffer_to_tensors(self.flatbuffer_model)
     )
@@ -37,7 +36,7 @@ class ParamsGenerator:
     Raises:
       RuntimeError: if the calibration dataset is required but not provided.
     """
-    if self._need_calibration(model_recipe_manager) and not model_qsvs:
+    if model_recipe_manager.need_calibration() and not model_qsvs:
       raise RuntimeError(
           'Model quantization statistics values (QSVs) are required for the'
           ' input recipe. This can be obtained by running calibration on sample'
@@ -164,27 +163,6 @@ class ParamsGenerator:
         scope += ';'  # split names
     return scope
 
-  def _need_calibration(
-      self, model_recipe_manager: recipe_manager.RecipeManager
-  ) -> bool:
-    """Check if the model requires calibration.
-
-    Args:
-      model_recipe_manager: the recipe manager for the model.
-
-    Returns:
-      True if the model requires calibration.
-    """
-    recipe = model_recipe_manager.get_quantization_recipe()
-    # At the moment, only SRQ requires calibration.
-    for op_quant_config in recipe:
-      if (
-          op_quant_config['op_config']['execution_mode']
-          == qtyping.OpExecutionMode.SRQ
-      ):
-        return True
-    return False
-
   def _get_params_for_no_quant_op(
       self,
       subgraph_op_id: int,
@@ -237,13 +215,23 @@ class ParamsGenerator:
     """
     for tensors in self.buffer_to_tensors.values():
       first_tensor = tensors[0]
+      first_tensor_params = self.model_quant_results[
+          tfl_flatbuffer_utils.get_tensor_name(first_tensor)
+      ]
       for tensor in tensors[1:]:
-        if not tfl_flatbuffer_utils.has_same_quantization(first_tensor, tensor):
-          raise RuntimeError(
-              f'The tensors {first_tensor.name} and {tensor.name} do not have'
-              ' the same quantization setting even though they share the same'
-              ' buffer.'
-          )
+        tensor_params = self.model_quant_results[
+            tfl_flatbuffer_utils.get_tensor_name(tensor)
+        ]
+        error_msg = (
+            f'The tensors {first_tensor.name} and {tensor.name} do not have the'
+            ' same quantization parameters even though they share the same'
+            ' buffer. Please modify your quantization recipe to make sure the'
+            ' two tensors have the same quantization settings.'
+        )
+        if not _same_tensor_transformation_params_except_name(
+            first_tensor_params, tensor_params
+        ):
+          raise RuntimeError(error_msg)
 
   def _modify_io_tensor_transformations(
       self,
@@ -288,3 +276,42 @@ class ParamsGenerator:
           transformations=[qtyping.QuantTransformation.QUANTIZE_TENSOR],
           parameters=tensor_params.producer.parameters,
       )
+
+
+def _same_tensor_transformation_params_except_name(
+    params1: qtyping.TensorTransformationParams,
+    params2: qtyping.TensorTransformationParams,
+) -> bool:
+  """Check if two tensor transformation params are the same except tensor name."""
+  # Check producer.
+  if params1.producer is None or params2.producer is None:
+    if params1.producer != params2.producer:
+      return False
+  elif not _same_op_to_tensor_params_except_subgraph_op_id(
+      params1.producer, params2.producer
+  ):
+    return False
+  # Check consumers.
+  if params1.consumers is None or params2.consumers is None:
+    if params1.consumers != params2.consumers:
+      return False
+  else:
+    if len(params1.consumers) != len(params2.consumers):
+      return False
+    for consumer1, consumer2 in zip(params1.consumers, params2.consumers):
+      if not _same_op_to_tensor_params_except_subgraph_op_id(
+          consumer1, consumer2
+      ):
+        return False
+  return True
+
+
+def _same_op_to_tensor_params_except_subgraph_op_id(
+    params1: qtyping.OpToTensorParams, params2: qtyping.OpToTensorParams
+) -> bool:
+  """Check if two op to tensor params are the same except subgraph op id."""
+  if params1.transformations != params2.transformations:
+    return False
+  if params1.parameters != params2.parameters:
+    return False
+  return True

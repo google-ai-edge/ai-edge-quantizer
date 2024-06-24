@@ -22,7 +22,7 @@ class TransformationPerformerTest(parameterized.TestCase):
         transformation_performer.TransformationPerformer()
     )
     self._test_model = tfl_flatbuffer_utils.read_model(
-        os.path.join(TEST_DATA_PREFIX_PATH, "test_models/conv_fc_mnist.tflite")
+        os.path.join(TEST_DATA_PREFIX_PATH, "tests/models/conv_fc_mnist.tflite")
     )
 
   def test_apply_single_insert_dequant(self):

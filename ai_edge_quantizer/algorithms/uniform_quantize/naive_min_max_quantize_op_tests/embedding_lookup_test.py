@@ -10,8 +10,9 @@ from ai_edge_quantizer.algorithms.uniform_quantize.naive_min_max_quantize_op_tes
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
-_TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("../../../test_models")
-
+_TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(
+    "../../../tests/models"
+)
 _TFLOpName = qtyping.TFLOperationName
 _OpExecutionMode = qtyping.OpExecutionMode
 _TensorQuantConfig = qtyping.TensorQuantizationConfig

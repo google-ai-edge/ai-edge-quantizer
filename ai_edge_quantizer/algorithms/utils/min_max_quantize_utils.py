@@ -29,6 +29,7 @@ _SUPPORTED_SRQ_OPS = frozenset([
     _TFLOpName.CONV_2D,
     _TFLOpName.AVERAGE_POOL_2D,
     _TFLOpName.RESHAPE,
+    _TFLOpName.SOFTMAX,
 ])
 
 

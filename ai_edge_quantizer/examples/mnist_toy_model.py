@@ -2,10 +2,6 @@
 
 This script quantizes the float mnist toy model and runs inference on a sample
 mnist image.
-
-blaze run
-//third_party/odml/model_customization/quantization/examples:mnist_toy_model
---float_model_path=/tmp/conv_fc_mnist.tflite --img_path=/tmp/sample6.png
 """
 
 import os
@@ -28,7 +24,7 @@ _OpQuantConfig = qtyping.OpQuantizationConfig
 
 _FLOAT_MODEL_PATH = flags.DEFINE_string(
     'float_model_path',
-    test_utils.get_path_to_datafile('../test_models/conv_fc_mnist.tflite'),
+    test_utils.get_path_to_datafile('../tests/models/conv_fc_mnist.tflite'),
     'The trained float MNIST toy model path.',
 )
 _IMG_PATH = flags.DEFINE_string(

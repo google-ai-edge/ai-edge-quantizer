@@ -7,7 +7,7 @@ from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 
-TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("../test_models")
+TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("../tests/models")
 
 
 # TODO(rewu): add quantized model to tests.

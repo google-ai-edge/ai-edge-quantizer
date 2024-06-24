@@ -26,13 +26,13 @@ def _representative_dataset_gen(size=(1, 8), num_samples=10):
         TEST_MIN_VAL,
         TEST_MAX_VAL,
     )  # fix min/max for testing
-    yield [vals]
+    yield {"input_1": vals}
 
 
 def _add_default_int8xint8_integer_recipe(recipe_manager_object):
   recipe_manager_object.add_quantization_config(
       regex=".*",
-      operation_name=qtyping.TFLOperationName.ALL,
+      operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
       algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
       op_config=qtyping.OpQuantizationConfig(
           activation_tensor_config=_TENSOR_QUANT_CONFIG(
@@ -50,7 +50,7 @@ class CalibratorTest(googletest.TestCase):
     super().setUp()
     np.random.seed(0)
     self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "test_models/single_fc.tflite"
+        TEST_DATA_PREFIX_PATH, "tests/models/single_fc.tflite"
     )
     self._calibrator = calibrator.Calibrator(self._test_model_path)
     self._recipe_manager = recipe_manager.RecipeManager()
@@ -163,7 +163,7 @@ class CalibratorTest(googletest.TestCase):
   def test_calibrate_unsupported_ops_fails(self):
     # Many ops in the following model are not supported currently.
     test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "test_models/branching_conv_fc.tflite"
+        TEST_DATA_PREFIX_PATH, "tests/models/branching_conv_fc.tflite"
     )
     test_calibrator = calibrator.Calibrator(test_model_path)
 

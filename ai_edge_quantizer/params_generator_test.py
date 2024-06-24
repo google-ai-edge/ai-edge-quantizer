@@ -25,7 +25,7 @@ TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('')
 
 def _single_fc_model_representative_dataset_gen(num_samples=5):
   for _ in range(num_samples):
-    yield [np.random.rand(1, 8).astype(np.float32)]
+    yield {'input_1': np.random.rand(1, 8).astype(np.float32)}
 
 
 class ParamsGeneratorTest(parameterized.TestCase):
@@ -33,7 +33,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'test_models/conv_fc_mnist.tflite'
+        TEST_DATA_PREFIX_PATH, 'tests/models/conv_fc_mnist.tflite'
     )
     self._recipe_manager = recipe_manager.RecipeManager()
     self._params_generator = params_generator.ParamsGenerator(
@@ -379,11 +379,11 @@ class ParamsGeneratorTest(parameterized.TestCase):
       self, act_symmetric, channelwise_weight
   ):
     single_fc_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'test_models/single_fc.tflite'
+        TEST_DATA_PREFIX_PATH, 'tests/models/single_fc.tflite'
     )
     self._recipe_manager.add_quantization_config(
         regex='.*',
-        operation_name=qtyping.TFLOperationName.ALL,
+        operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             activation_tensor_config=_TensorQuantConfig(
@@ -467,6 +467,66 @@ class ParamsGeneratorTest(parameterized.TestCase):
         symmetric=True,
         is_inbounding_tensor=True,
     )
+
+  def test_generate_params_buffer_sharing_graphs_succeeds(self):
+    model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, 'tests/models/weight_sharing_fcs.tflite'
+    )
+    self._recipe_manager.add_quantization_config(
+        regex='.*',
+        operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
+        op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8, symmetric=True),
+            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+        ),
+    )
+    pg = params_generator.ParamsGenerator(model_path)
+    quant_params = pg.generate_quantization_parameters(
+        self._recipe_manager,
+    )
+    self.assertLen(quant_params, 6)
+
+  @parameterized.parameters('no_quant', 'execution_mode', 'num_bits')
+  def test_generate_params_buffer_sharing_graphs_fails(
+      self, the_other_fc_difference
+  ):
+    model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, 'tests/models/weight_sharing_fcs.tflite'
+    )
+    # Setup the quantization config for the first FC.
+    self._recipe_manager.add_quantization_config(
+        regex='PartitionedCall:0',
+        operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
+        op_config=qtyping.OpQuantizationConfig(),
+    )
+    # Setup the quantization config for the second FC (weight shared with the
+    # first FC).
+    if the_other_fc_difference == 'no_quant':
+      pass
+    elif the_other_fc_difference == 'execution_mode':
+      self._recipe_manager.add_quantization_config(
+          regex='PartitionedCall_1:0',
+          operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
+          op_config=qtyping.OpQuantizationConfig(
+              execution_mode=_OpExecutionMode.DRQ,
+          ),
+      )
+    elif the_other_fc_difference == 'num_bits':
+      self._recipe_manager.add_quantization_config(
+          regex='PartitionedCall_1:0',
+          operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
+          op_config=qtyping.OpQuantizationConfig(
+              weight_tensor_config=_TensorQuantConfig(num_bits=4),
+          ),
+      )
+    pg = params_generator.ParamsGenerator(model_path)
+    error_message = 'do not have the same quantization parameters'
+    with self.assertRaisesWithPredicateMatch(
+        RuntimeError, lambda err: error_message in str(err)
+    ):
+      pg.generate_quantization_parameters(
+          self._recipe_manager,
+      )
 
   def _test_tensor_transformation_params(
       self,

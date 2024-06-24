@@ -1,7 +1,7 @@
 """Quantization Calibration."""
 
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Optional
 
 from absl import logging
 
@@ -10,6 +10,8 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
+
+_SignatureInput = dict[str, Any]  # input_argument_name -> tensor_value.
 
 
 class Calibrator:
@@ -31,10 +33,11 @@ class Calibrator:
   # TODO(b/330740605)- Collect multiple QSVs in one run to save compute.
   def calibrate(
       self,
-      calibration_dataset: Iterable[Any],
+      calibration_dataset: Iterable[_SignatureInput],
       model_recipe_manager: recipe_manager.RecipeManager,
+      signature_key: Optional[str] = None,
   ) -> None:
-    """Calibrates the model with the given dataset.
+    """Calibrates the model using the given dataset for a model signature.
 
     The process is
     0. Initialize quantization statistics values (QSVs) using the initialization
@@ -50,9 +53,13 @@ class Calibrator:
     6. Start another round of calibration.
 
     Args:
-      calibration_dataset: A list of input data for calibration.
+      calibration_dataset: A list of input data for calibration for the given
+        model signature.
       model_recipe_manager: A RecipeManager object that contains the
         quantization recipe.
+      signature_key: the signature key to be used for invoking the models. If
+        the model doesn't have a signature key (or only has one ), this can be
+        set to None.
     """
     op_codes = self._flatbuffer_model.operatorCodes
     if not self._model_qsvs:
@@ -68,7 +75,9 @@ class Calibrator:
     # TODO: b/329322226 - Enable parrallel calibration.
     for data in calibration_dataset:
       # Step1: run tfl interpreter to get tensor content.
-      tfl_interpreter_utils.invoke_interpreter_once(self._tfl_interpreter, data)
+      tfl_interpreter_utils.invoke_interpreter_signature(
+          self._tfl_interpreter, data, signature_key
+      )
       self._tensor_content_map = (
           tfl_interpreter_utils.get_tensor_name_to_content_map(
               self._tfl_interpreter

@@ -19,7 +19,7 @@ class EmulatedSubchannelTest(googletest.TestCase):
   def test_emulate_subchannel_without_bias(self):
     """Tests the emulated_subchannel function."""
     self._model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "test_models/single_fc_no_bias.tflite"
+        TEST_DATA_PREFIX_PATH, "tests/models/single_fc_no_bias.tflite"
     )
     self._model = tfl_flatbuffer_utils.read_model(self._model_path)
     subgraph = self._model.subgraphs[0]
@@ -82,7 +82,7 @@ class EmulatedSubchannelTest(googletest.TestCase):
   def test_emulate_subchannel(self):
     """Tests the emulated_subchannel function."""
     self._model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "test_models/single_fc_bias.tflite"
+        TEST_DATA_PREFIX_PATH, "tests/models/single_fc_bias.tflite"
     )
     self._model = tfl_flatbuffer_utils.read_model(self._model_path)
     subgraph = self._model.subgraphs[0]

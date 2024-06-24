@@ -18,7 +18,7 @@ class DequantInsertTest(googletest.TestCase):
   def setUp(self):
     super().setUp()
     self._orig_test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "test_models/insert_dequant_test.tflite"
+        TEST_DATA_PREFIX_PATH, "tests/models/insert_dequant_test.tflite"
     )
     self._model = tfl_flatbuffer_utils.read_model(self._orig_test_model_path)
 
