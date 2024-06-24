@@ -1,6 +1,6 @@
 """Util functions for TFL interpreter."""
 
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import tensorflow as tf
@@ -51,7 +51,7 @@ def _is_tensor_quantized(tensor_detail: dict[str, Any]) -> bool:
 def invoke_interpreter_signature(
     tflite_interpreter: tf.lite.Interpreter,
     signature_input_data: dict[str, Any],
-    signature_key: str | None = None,
+    signature_key: Optional[str] = None,
     quantize_input: bool = True,
 ) -> dict[str, np.ndarray]:
   """Invokes the TFLite interpreter through signature runner.

@@ -3,7 +3,7 @@
 from collections.abc import Callable, Iterable
 import json
 import math
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 
@@ -17,7 +17,7 @@ def compare_model(
     target_model: Union[str, bytearray],
     signature_dataset: Iterable[dict[str, Any]],
     compare_fn: Callable[[Any, Any], float],
-    signature_key: str | None = None,
+    signature_key: Optional[str] = None,
     quantize_target_input: bool = True,
 ) -> dict[str, float]:
   """Compares model tensors over a model signature using the compare_fn.
