@@ -258,6 +258,82 @@ class InstructionGeneratorTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
       dict(
+          testcase_name="test_elimination_success",
+          producer_inst=qtyping.TransformationInst(
+              transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
+              tensor_id=1,
+              producer=0,
+              consumers=[2],
+              parameters=qtyping.UniformQuantParams(
+                  8, None, np.array([1]), np.array([0])
+              ),
+          ),
+          consumer_inst=qtyping.TransformationInst(
+              transformation=qtyping.QuantTransformation.NO_QUANTIZE,
+              tensor_id=1,
+              producer=0,
+              consumers=[2],
+              parameters=qtyping.UniformQuantParams(
+                  8, None, np.array([1]), np.array([0])
+              ),
+          ),
+          expected=True,
+      ),
+      dict(
+          testcase_name="test_wrong_transformation1",
+          producer_inst=qtyping.TransformationInst(
+              transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
+              tensor_id=1,
+              producer=0,
+              consumers=[2],
+              parameters=qtyping.UniformQuantParams(
+                  8, None, np.array([1]), np.array([0])
+              ),
+          ),
+          consumer_inst=qtyping.TransformationInst(
+              transformation=qtyping.QuantTransformation.ADD_QUANTIZE,
+              tensor_id=1,
+              producer=0,
+              consumers=[2],
+              parameters=qtyping.UniformQuantParams(
+                  8, None, np.array([1]), np.array([0])
+              ),
+          ),
+          expected=False,
+      ),
+      dict(
+          testcase_name="test_wrong_transformation2",
+          producer_inst=qtyping.TransformationInst(
+              transformation=qtyping.QuantTransformation.ADD_QUANTIZE,
+              tensor_id=1,
+              producer=0,
+              consumers=[2],
+              parameters=qtyping.UniformQuantParams(
+                  8, None, np.array([1]), np.array([0])
+              ),
+          ),
+          consumer_inst=qtyping.TransformationInst(
+              transformation=qtyping.QuantTransformation.NO_QUANTIZE,
+              tensor_id=1,
+              producer=0,
+              consumers=[2],
+              parameters=qtyping.UniformQuantParams(
+                  8, None, np.array([1]), np.array([0])
+              ),
+          ),
+          expected=False,
+      ),
+  )
+  def test_check_dq_no_quant_elimination(
+      self, producer_inst, consumer_inst, expected
+  ):
+    got = instruction_generator.check_dq_no_quant_elimination(
+        producer_inst, consumer_inst
+    )
+    self.assertEqual(expected, got)
+
+  @parameterized.named_parameters(
+      dict(
           testcase_name="test_empty_consumer",
           producer_trans_rule=qtyping.TransformationInst(
               transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
@@ -400,7 +476,7 @@ class InstructionGeneratorTest(parameterized.TestCase):
               transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
               tensor_id=1,
               producer=0,
-              consumers=[0, np.array([1]), 2],
+              consumers=[0, 1, 2],
               parameters=qtyping.UniformQuantParams(
                   8, None, np.array([1]), np.array([0])
               ),
@@ -437,8 +513,42 @@ class InstructionGeneratorTest(parameterized.TestCase):
               ),
           ],
       ),
+      dict(
+          testcase_name="test_dequant_no_quant_elimination_succeeds",
+          producer_trans_rule=qtyping.TransformationInst(
+              transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
+              tensor_id=1,
+              producer=0,
+              consumers=[0, 1, 2],
+              parameters=qtyping.UniformQuantParams(
+                  8, None, np.array([1]), np.array([0])
+              ),
+          ),
+          consumer_trans_rule=[
+              qtyping.TransformationInst(
+                  transformation=qtyping.QuantTransformation.NO_QUANTIZE,
+                  tensor_id=1,
+                  producer=0,
+                  consumers=[0, 1, 2],
+                  parameters=qtyping.UniformQuantParams(
+                      8, None, np.array([1]), np.array([0])
+                  ),
+              ),
+          ],
+          expected=[
+              qtyping.TransformationInst(
+                  transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
+                  tensor_id=1,
+                  producer=0,
+                  consumers=[0, 1, 2],
+                  parameters=qtyping.UniformQuantParams(
+                      8, None, np.array([1]), np.array([0])
+                  ),
+              ),
+          ],
+      ),
   )
-  def test__apply_vertical_optimization(
+  def test_apply_vertical_optimization(
       self, producer_trans_rule, consumer_trans_rule, expected
   ):
     ins_gen = instruction_generator.TransformationInstructionsGenerator(
@@ -860,17 +970,11 @@ class InstructionGeneratorTest(parameterized.TestCase):
     quant_parameters = {}
     quant_parameters["tfl.quantize"] = qtyping.TensorTransformationParams(
         "tfl.quantize",
-        qtyping.OpToTensorParams(
-            subgraph_op_id=0,
-            transformations=[qtyping.QuantTransformation.ADD_DEQUANTIZE],
-            parameters=qtyping.UniformQuantParams(
-                8, None, np.array([1]), np.array([0])
-            ),
-        ),
+        None,
         [
             qtyping.OpToTensorParams(
                 subgraph_op_id=1,
-                transformations=[qtyping.QuantTransformation.ADD_QUANTIZE],
+                transformations=[qtyping.QuantTransformation.QUANTIZE_TENSOR],
                 parameters=qtyping.UniformQuantParams(
                     8, None, np.array([1]), np.array([0])
                 ),

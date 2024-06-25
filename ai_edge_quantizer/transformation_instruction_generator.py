@@ -104,6 +104,31 @@ def check_replace_dq_q_with_rq(
   )
 
 
+def check_dq_no_quant_elimination(
+    producer_inst: qtyping.TransformationInst,
+    consumer_inst: qtyping.TransformationInst,
+) -> bool:
+  """Check if a pair of dequantize & no quantize transformation can be eliminated.
+
+  This can only happen when the dequantize belongs to producer and no quantize
+  belongs to a consumer.
+
+  Args:
+    producer_inst: TransformationInst from producer.
+    consumer_inst: TransformationInst from consumer.
+
+  Returns:
+    True if dequantize & no quantize can be eliminated, False otherwise.
+  """
+  is_dequantize_in_producer = (
+      producer_inst.transformation == qtyping.QuantTransformation.ADD_DEQUANTIZE
+  )
+  is_no_quant_in_consumer = (
+      consumer_inst.transformation == qtyping.QuantTransformation.NO_QUANTIZE
+  )
+  return is_dequantize_in_producer and is_no_quant_in_consumer
+
+
 class TransformationInstructionsGenerator:
   """Generates transformation instructions from tensor quant params."""
 
@@ -364,7 +389,7 @@ class TransformationInstructionsGenerator:
             )
         )
         continue
-      if check_replace_dq_q_with_rq(producer_trans_rule, trans_rule):
+      elif check_replace_dq_q_with_rq(producer_trans_rule, trans_rule):
         for consumer_id in trans_rule.consumers:
           producer_trans_rule.consumers.remove(consumer_id)
         transformations.append(
@@ -383,6 +408,19 @@ class TransformationInstructionsGenerator:
                 trans_rule.producer,
                 trans_rule.consumers,
                 trans_rule.parameters,
+            )
+        )
+        continue
+      elif check_dq_no_quant_elimination(producer_trans_rule, trans_rule):
+        for consumer_id in trans_rule.consumers:
+          producer_trans_rule.consumers.remove(consumer_id)
+        transformations.append(
+            qtyping.TransformationInst(
+                qtyping.QuantTransformation.ADD_DEQUANTIZE,
+                trans_rule.tensor_id,
+                trans_rule.producer,
+                trans_rule.consumers,
+                producer_trans_rule.parameters,
             )
         )
         continue
