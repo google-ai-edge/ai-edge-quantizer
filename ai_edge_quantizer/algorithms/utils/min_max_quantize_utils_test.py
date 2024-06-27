@@ -13,19 +13,14 @@ _TensorQuantConfig = qtyping.TensorQuantizationConfig
 # TODO: b/335008966 - increase test coverage.
 class MinMaxQuantizeUtilsTest(parameterized.TestCase):
 
-  @parameterized.parameters(
-      (_OpExecutionMode.WEIGHT_ONLY, True, True),
-      (_OpExecutionMode.WEIGHT_ONLY, False, False),
-      (_OpExecutionMode.WEIGHT_ONLY, True, False),
-      (_OpExecutionMode.WEIGHT_ONLY, False, True),
-      (_OpExecutionMode.DRQ, True, True),
-      (_OpExecutionMode.DRQ, False, False),
-      (_OpExecutionMode.DRQ, True, False),
-      (_OpExecutionMode.DRQ, False, True),
-      (_OpExecutionMode.SRQ, True, True),
-      (_OpExecutionMode.SRQ, False, False),
-      (_OpExecutionMode.SRQ, True, False),
-      (_OpExecutionMode.SRQ, False, True),
+  @parameterized.product(
+      execution_mode=[
+          _OpExecutionMode.WEIGHT_ONLY,
+          _OpExecutionMode.DRQ,
+          _OpExecutionMode.SRQ,
+      ],
+      is_inbounding_tensor=[True, False],
+      is_constant=[True, False],
   )
   def test_get_tensor_transformations(
       self, execution_mode, is_inbounding_tensor, is_constant
@@ -261,6 +256,83 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
       min_max_quantize_utils.check_srq_config(
           _TFLOpName.FULLY_CONNECTED, op_quant_config
       )
+
+  @parameterized.product(
+      op_name=(_TFLOpName.FULLY_CONNECTED, _TFLOpName.CONV_2D),
+      activation_tensor_config=[
+          None,
+          _TensorQuantConfig(num_bits=8, symmetric=False),
+          _TensorQuantConfig(num_bits=16, symmetric=True),
+      ],
+      execution_mode=[
+          _OpExecutionMode.WEIGHT_ONLY,
+          _OpExecutionMode.DRQ,
+          _OpExecutionMode.SRQ,
+      ],
+  )
+  def test_check_supported_int4_config_succeeds(
+      self, op_name, activation_tensor_config, execution_mode
+  ):
+    # Exclude invalid SRQ config.
+    if (
+        activation_tensor_config is not None
+        and execution_mode != _OpExecutionMode.SRQ
+    ) or (
+        activation_tensor_config is None
+        and execution_mode == _OpExecutionMode.SRQ
+    ):
+      return
+    op_quant_config = _OpQuantConfig(
+        activation_tensor_config=activation_tensor_config,
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=4, symmetric=True, channel_wise=True
+        ),
+        execution_mode=execution_mode,
+    )
+    # Raise error if the config is not supported.
+    if execution_mode == _OpExecutionMode.DRQ:
+      min_max_quantize_utils.check_drq_config(op_name, op_quant_config)
+    elif execution_mode == _OpExecutionMode.WEIGHT_ONLY:
+      min_max_quantize_utils.check_weight_only_config(op_name)
+    elif execution_mode == _OpExecutionMode.SRQ:
+      min_max_quantize_utils.check_srq_config(op_name, op_quant_config)
+
+  @parameterized.product(
+      op_name=[_TFLOpName.BATCH_MATMUL],
+      activation_tensor_config=[
+          None,
+          _TensorQuantConfig(num_bits=8, symmetric=False),
+          _TensorQuantConfig(num_bits=16, symmetric=True),
+      ],
+      execution_mode=[
+          _OpExecutionMode.DRQ,
+          _OpExecutionMode.SRQ,
+      ],
+  )
+  def test_check_unsupported_int4_config_raise_error(
+      self, op_name, activation_tensor_config, execution_mode
+  ):
+    # Exclude invalid SRQ config.
+    if (
+        activation_tensor_config is not None
+        and execution_mode != _OpExecutionMode.SRQ
+    ) or (
+        activation_tensor_config is None
+        and execution_mode == _OpExecutionMode.SRQ
+    ):
+      return
+    op_quant_config = _OpQuantConfig(
+        activation_tensor_config=activation_tensor_config,
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=4, symmetric=True, channel_wise=True
+        ),
+        execution_mode=execution_mode,
+    )
+    with self.assertRaises(ValueError):
+      if execution_mode == _OpExecutionMode.DRQ:
+        min_max_quantize_utils.check_drq_config(op_name, op_quant_config)
+      elif execution_mode == _OpExecutionMode.SRQ:
+        min_max_quantize_utils.check_srq_config(op_name, op_quant_config)
 
 
 if __name__ == "__main__":

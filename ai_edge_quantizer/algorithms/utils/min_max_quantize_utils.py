@@ -32,8 +32,13 @@ _SUPPORTED_SRQ_OPS = frozenset([
     _TFLOpName.SOFTMAX,
 ])
 
+_INT4_DRQ_SRQ_SUPPORTED_OPS = frozenset([
+    _TFLOpName.FULLY_CONNECTED,
+    _TFLOpName.CONV_2D,
+])
 
-def check_weight_only_config(op_name: _TFLOpName):
+
+def check_weight_only_config(op_name: _TFLOpName) -> None:
   """Checks the op quantization config for weight-only quantization."""
   if op_name not in _SUPPORTED_WEIGHT_ONLY_OPS:
     raise ValueError(f"Unsupported op for weight-only quantization: {op_name}.")
@@ -41,7 +46,7 @@ def check_weight_only_config(op_name: _TFLOpName):
 
 def check_drq_config(
     op_name: _TFLOpName, op_quant_config: qtyping.OpQuantizationConfig
-):
+) -> None:
   """Checks the op quantization config for dynamic range quantization."""
   weight_config = op_quant_config.weight_tensor_config
   if op_name not in _SUPPORTED_DRQ_OPS:
@@ -52,11 +57,13 @@ def check_drq_config(
     raise ValueError(
         f"Only int4/int8 symmetric DRQ is supported for op {op_name}"
     )
+  if weight_config.num_bits == 4 and op_name not in _INT4_DRQ_SRQ_SUPPORTED_OPS:
+    raise ValueError(f"Int4 DRQ is not supported for op {op_name}.")
 
 
 def check_srq_config(
     op_name: _TFLOpName, op_quant_config: qtyping.OpQuantizationConfig
-):
+) -> None:
   """Checks the op quantization config for static range quantization."""
   act_config = op_quant_config.activation_tensor_config
   weight_config = op_quant_config.weight_tensor_config
@@ -81,6 +88,8 @@ def check_srq_config(
         "Currently only int4/int8 symmetric weight are supported for op"
         f" {op_name}."
     )
+  if weight_config.num_bits == 4 and op_name not in _INT4_DRQ_SRQ_SUPPORTED_OPS:
+    raise ValueError(f"Int4 weight SRQ is not supported for op {op_name}.")
 
 
 class OpQuantConstraint(enum.Enum):
