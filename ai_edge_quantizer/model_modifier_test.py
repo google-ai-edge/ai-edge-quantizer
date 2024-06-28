@@ -53,7 +53,6 @@ class ModelModifierTest(parameterized.TestCase):
                 },
                 'execution_mode': qtyping.OpExecutionMode.WEIGHT_ONLY,
             },
-            'override_algorithm': True,
         },
     ]
     recipe_manager_instance.load_quantization_recipe(global_recipe)

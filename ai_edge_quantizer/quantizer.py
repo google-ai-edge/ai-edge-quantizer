@@ -6,6 +6,7 @@ import json
 import os
 from typing import Any, Optional, Union
 from ai_edge_quantizer import algorithm_manager
+from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import model_modifier
 from ai_edge_quantizer import model_validator
 from ai_edge_quantizer import params_generator
@@ -24,6 +25,7 @@ _OpQuantizationConfig = qtyping.OpQuantizationConfig
 _TensorQuantizationConfig = qtyping.TensorQuantizationConfig
 _TensorTransformationParams = dict[str, qtyping.TensorTransformationParams]
 _SignatureInput = dict[str, Any]  # input_argument_name -> tensor_value.
+_CalibrationResult = dict[str, qtyping.QSV]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -126,7 +128,6 @@ class Quantizer:
       operation_name: _TFLOpName,
       op_config: Optional[_OpQuantizationConfig] = None,
       algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
-      override_algorithm: bool = True,
   ):
     """Adds a quantization configuration to the recipe.
 
@@ -146,25 +147,62 @@ class Quantizer:
         default configuration. None or empty dict means the default
         configuration will be used.
       algorithm_key: Algorithm key to be applied.
-      override_algorithm: Flag to check if this rule overrides the previously
-        matched rule with different algorithm key.
     """
     self._recipe_manager.add_quantization_config(
-        regex, operation_name, op_config, algorithm_key, override_algorithm
+        regex, operation_name, op_config, algorithm_key
     )
 
-  def quantize(self) -> QuantizationResult:
+  @property
+  def need_calibration(self) -> bool:
+    """Checks if the current recipe needs calibration."""
+    return self._recipe_manager.need_calibration()
+
+  def calibrate(
+      self,
+      calibration_data: Iterable[_SignatureInput],
+      signature_key: Optional[str] = None,
+      previous_calibration_result: Optional[_CalibrationResult] = None,
+  ) -> _CalibrationResult:
+    """Calibrates the float model (required by static range quantization).
+
+    Args:
+      calibration_data: Calibration data for a model signature.
+      signature_key: The signature key to be used for invoking the models. If
+        the model doesn't have a signature key, this can be set to None.
+      previous_calibration_result: Previous calibration result to be loaded. The
+        calibration process will be resumed from the previous result.
+
+    Returns:
+      Calibration result ({tensor_name: tensor QSVs (e.g.,min/max)}).
+    """
+    if not self.need_calibration:
+      return {}
+
+    calib = calibrator.Calibrator(self.float_model)
+    if previous_calibration_result is not None:
+      calib.load_model_qsvs(previous_calibration_result)
+    calib.calibrate(calibration_data, self._recipe_manager, signature_key)
+    return calib.get_model_qsvs()
+
+  def quantize(
+      self, calibration_result: Optional[_CalibrationResult] = None
+  ) -> QuantizationResult:
     """Quantizes the float model.
+
+    Args:
+      calibration_result: Calibration result to be used for quantization (if
+        needed, check with self.need_calibration).
 
     Returns:
       Quantization result.
 
     Raises:
-      RuntimeError: If no quantization recipe is loaded.
+      RuntimeError: If quantization recipe is empty.
     """
+
     if not self.get_quantization_recipe():
       raise RuntimeError('Can not quantize without a quantization recipe.')
-    quant_params = self._get_quantization_params()
+    quant_params = self._get_quantization_params(calibration_result)
     quantized_model = self._get_quantized_model(quant_params)
     self._result = QuantizationResult(
         self.get_quantization_recipe(), quantized_model
@@ -216,7 +254,6 @@ class Quantizer:
         self.float_model,
         self._result.quantized_model,
         signature_test_data,
-        quantize_target_input=False,  # will be removed later.
         compare_fn=validation_utils.get_validation_func(error_metrics),
         signature_key=signature_key,
     )
@@ -245,9 +282,13 @@ class Quantizer:
       output_file_handle.write(json_object)
 
   def _get_quantization_params(
-      self,
+      self, calibration_result: Optional[_CalibrationResult] = None
   ) -> _TensorTransformationParams:
     """Gets the quantization parameters.
+
+    Args:
+      calibration_result: Calibration result to be used for quantization (if
+        needed, check with self.need_calibration).
 
     Returns:
       A dictionary containing the quantization parameters.
@@ -256,7 +297,7 @@ class Quantizer:
         self.float_model
     )
     return params_generator_instance.generate_quantization_parameters(
-        self._recipe_manager
+        self._recipe_manager, calibration_result
     )
 
   def _get_quantized_model(

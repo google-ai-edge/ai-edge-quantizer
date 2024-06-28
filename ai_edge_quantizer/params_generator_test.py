@@ -124,7 +124,6 @@ class ParamsGeneratorTest(parameterized.TestCase):
                 },
                 'execution_mode': _OpExecutionMode.WEIGHT_ONLY,
             },
-            'override_algorithm': True,
         },
     ]
     self._recipe_manager.load_quantization_recipe(global_recipe)
@@ -262,7 +261,6 @@ class ParamsGeneratorTest(parameterized.TestCase):
                 },
                 'execution_mode': _OpExecutionMode.DRQ,
             },
-            'override_algorithm': True,
         },
         {
             'regex': '.*/dense_1/.*',
@@ -277,7 +275,6 @@ class ParamsGeneratorTest(parameterized.TestCase):
                 },
                 'execution_mode': _OpExecutionMode.WEIGHT_ONLY,
             },
-            'override_algorithm': True,
         },
     ]
     self._recipe_manager.load_quantization_recipe(selective_quantization_recipe)
@@ -328,7 +325,6 @@ class ParamsGeneratorTest(parameterized.TestCase):
                 },
                 'execution_mode': _OpExecutionMode.DRQ,
             },
-            'override_algorithm': True,
         },
         # Scope that does not exist in the model.
         {
@@ -343,7 +339,6 @@ class ParamsGeneratorTest(parameterized.TestCase):
                 },
                 'execution_mode': _OpExecutionMode.WEIGHT_ONLY,
             },
-            'override_algorithm': True,
         },
     ]
     self._recipe_manager.load_quantization_recipe(selective_quantization_recipe)

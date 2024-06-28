@@ -380,7 +380,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 },
                 'execution_mode': 'SRQ',
             },
-            'override_algorithm': True,
         },
         {
             'regex': '.*',
@@ -395,7 +394,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 },
                 'execution_mode': 'WEIGHT_ONLY',
             },
-            'override_algorithm': True,
         },
         {
             'regex': '.*/Dense/.*',
@@ -410,7 +408,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 },
                 'execution_mode': 'WEIGHT_ONLY',
             },
-            'override_algorithm': True,
         },
         {
             'regex': '.*/Dense_1/.*',
@@ -425,7 +422,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 },
                 'execution_mode': 'WEIGHT_ONLY',
             },
-            'override_algorithm': True,
         },
         {
             'regex': '.*/Dense_1/.*',
@@ -440,7 +436,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 },
                 'execution_mode': 'WEIGHT_ONLY',
             },
-            'override_algorithm': True,
         },
     ]
     self.assertEqual(
@@ -463,7 +458,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 },
                 'execution_mode': 'WEIGHT_ONLY',
             },
-            'override_algorithm': True,
         },
         {
             'regex': '.*/Dense/.*',
@@ -478,7 +472,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 },
                 'execution_mode': 'DRQ',
             },
-            'override_algorithm': True,
         },
     ]
     self._recipe_manager.load_quantization_recipe(full_quantization_config)
@@ -534,7 +527,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 },
                 'execution_mode': 'SRQ',
             },
-            'override_algorithm': True,
         },
         {
             'regex': '.*',
@@ -549,7 +541,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 },
                 'execution_mode': 'WEIGHT_ONLY',
             },
-            'override_algorithm': True,
         },
         {
             'regex': '.*/Dense/.*',
@@ -564,7 +555,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 },
                 'execution_mode': 'DRQ',
             },
-            'override_algorithm': True,
         },
     ]
     self._recipe_manager.load_quantization_recipe(full_quantization_config)

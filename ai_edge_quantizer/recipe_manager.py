@@ -38,16 +38,6 @@ class OpQuantizationRecipe:
       default_factory=_OpQuantizationConfig
   )
 
-  # Flag to check if this rule overrides the previous matched rule with
-  # different algorithm key. Used when the algorithm keys of previous matched
-  # config and the current config are different. When set to true, the
-  # previously matched config is ignored; otherwise, the current matched config
-  # is ignored.
-  # When the algorithm keys of both configs are the same, then this flag does
-  # not have any effect; the op_config of previously matched config is updated
-  # using the op_config of this one.
-  override_algorithm: bool = True
-
 
 class RecipeManager:
   """Sets the quantization recipe for target model.
@@ -74,7 +64,6 @@ class RecipeManager:
       operation_name: _TFLOpName,
       op_config: Optional[_OpQuantizationConfig] = None,
       algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
-      override_algorithm: bool = True,
   ) -> None:
     """Adds a quantization configuration.
 
@@ -94,14 +83,12 @@ class RecipeManager:
         default configuration. None or empty dict means the default
         configuration will be used.
       algorithm_key: Algorithm key to be applied.
-      override_algorithm: Flag to check if this rule overrides the previously
-        matched rule with different algorithm key.
     """
     if op_config is None:
       op_config = _OpQuantizationConfig()
 
     config = OpQuantizationRecipe(
-        regex, operation_name, algorithm_key, op_config, override_algorithm
+        regex, operation_name, algorithm_key, op_config
     )
     # Special care if trying to set all ops to some config.
     if config.operation == _TFLOpName.ALL_SUPPORTED:
@@ -141,7 +128,6 @@ class RecipeManager:
         configs.append(config)
       self._scope_configs[regex] = configs
 
-  # TODO: b/348469513 - Remove the override_algorithm flag.
   def get_quantization_configs(
       self,
       target_op_name: _TFLOpName,
@@ -151,13 +137,8 @@ class RecipeManager:
 
     We respect the latest valid config and fall back to no quantization.
     Specifically, we search the quantization configuration in the order of the
-    scope configs. If there are two or more matching rules, if the same
-    quantization algorithms are assigned for both rules, then we will overwrite
-    the quantization config with the later one (if it is valid). If the assigned
-    algorithms are different,override_algorithm flag is used to see which
-    algorithm will be used. If the flag is True, the latter is used. If the flag
-    is False, the latter is ignored. We will fall to no quantization if no
-    matching rule is found or all matched configs are invalid.
+    scope configs. If there are two or more matching settings, the latest one
+    will be used.
 
 
     Args:
@@ -168,10 +149,9 @@ class RecipeManager:
     Returns:
        A tuple of quantization algorithm, and quantization configuration.
     """
-    result_key, result_config, selected_recipe = (
+    result_key, result_config = (
         AlgorithmName.NO_QUANTIZE,
         _OpQuantizationConfig(),
-        None,
     )
     for scope_regex, recipes in self._scope_configs.items():
       if re.search(scope_regex, scope_name):
@@ -179,11 +159,6 @@ class RecipeManager:
           if (
               recipe.operation != _TFLOpName.ALL_SUPPORTED
               and recipe.operation != target_op_name
-          ):
-            continue
-          if (
-              result_key != recipe.algorithm_key
-              and not recipe.override_algorithm
           ):
             continue
           selected_recipe = recipe
@@ -197,19 +172,6 @@ class RecipeManager:
           result_config = selected_recipe.op_config
           result_key = selected_recipe.algorithm_key
 
-    if (
-        selected_recipe is not None
-        and selected_recipe.operation == _TFLOpName.ALL_SUPPORTED
-        and result_config != selected_recipe.op_config
-    ):
-      logging.warning(
-          'Ignored operation %s with config %s under scope_regex %s. Since the'
-          ' specified quantization config is not supported at the moment.'
-          ' (Triggered by quantizing ALL_SUPPORTED ops under a scope.)',
-          target_op_name,
-          selected_recipe.op_config,
-          selected_recipe.regex,
-      )
     return result_key, result_config
 
   def get_quantization_recipe(self) -> ModelQuantizationRecipe:
@@ -226,7 +188,6 @@ class RecipeManager:
         config['operation'] = quant_config.operation
         config['algorithm_key'] = quant_config.algorithm_key
         config['op_config'] = quant_config.op_config.to_dict()
-        config['override_algorithm'] = quant_config.override_algorithm
         ret.append(config)
     return ret
 
@@ -246,7 +207,6 @@ class RecipeManager:
           config['operation'],
           _OpQuantizationConfig.from_dict(config['op_config']),
           config['algorithm_key'],
-          config['override_algorithm'],
       )
 
   def need_calibration(self) -> bool:

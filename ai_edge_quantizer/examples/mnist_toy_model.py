@@ -5,6 +5,7 @@ mnist image.
 """
 
 import os
+import random
 
 from absl import app
 from absl import flags
@@ -37,6 +38,26 @@ _SAVE_PATH = flags.DEFINE_string(
     '/tmp/',
     'Path to save the quantized model and recipe.',
 )
+_QUANTIZATION_MODE = flags.DEFINE_enum(
+    'quantization_mode',
+    'weight_only',
+    ['weight_only', 'drq', 'a8w8', 'a16w8'],
+    'How to quantize the model (e.g., weight_only, drq, a8w8, a16w8).',
+)
+
+
+def _get_calibration_data(
+    num_samples: int = 256,
+) -> list[dict[str, np.ndarray]]:
+  (x_train, _), _ = tf.keras.datasets.mnist.load_data()
+  x_train = x_train / 255.0  # Normalize pixel values to 0-1.
+  x_train = x_train.astype(np.float32)
+  x_train = x_train.reshape([-1, 28, 28, 1])
+  calibration_data = []
+  for _ in range(num_samples):
+    sample = random.choice(x_train)
+    calibration_data.append({'conv2d_input': sample.reshape([-1, 28, 28, 1])})
+  return calibration_data
 
 
 def read_img(img_path: str):
@@ -63,31 +84,45 @@ def read_img(img_path: str):
 
 def quantize(
     float_model_path: str,
-    execution_mode: _OpExecutionMode = _OpExecutionMode.WEIGHT_ONLY,
+    quantization_mode: str,
 ) -> quantizer.QuantizationResult:
   """Quantize the float model.
 
   Args:
       float_model_path: Path to the float model.
-      execution_mode: Execution mode for the quantized model.
+      quantization_mode: How to quantize the model (e.g., weight_only, drq).
 
   Returns:
       QuantResult: quantization result
   """
+  if quantization_mode == 'weight_only':
+    recipe_path = test_utils.get_path_to_datafile(
+        '../tests/recipes/conv_fc_mnist_weight_only_recipe.json'
+    )
+  elif quantization_mode == 'drq':
+    recipe_path = test_utils.get_path_to_datafile(
+        '../tests/recipes/conv_fc_mnist_drq_recipe.json'
+    )
+  elif quantization_mode == 'a8w8':
+    recipe_path = test_utils.get_path_to_datafile(
+        '../tests/recipes/conv_fc_mnist_a8w8_recipe.json'
+    )
+  elif quantization_mode == 'a16w8':
+    recipe_path = test_utils.get_path_to_datafile(
+        '../tests/recipes/conv_fc_mnist_a16w8_recipe.json'
+    )
+  else:
+    raise ValueError(
+        'Invalid quantization mode. Only weight_only, drq, a8w8, a16w8 are'
+        ' supported.'
+    )
+
   qt = quantizer.Quantizer(float_model_path)
-  qt.update_quantization_recipe(
-      regex='.*',
-      operation_name=_OpName.FULLY_CONNECTED,
-      op_config=_OpQuantConfig(
-          weight_tensor_config=_TensorQuantConfig(
-              num_bits=8,
-              symmetric=False,
-              channel_wise=True,
-          ),
-          execution_mode=execution_mode,
-      ),
-  )
-  return qt.quantize()
+  qt.load_quantization_recipe(recipe_path)
+  calibration_result = None
+  if qt.need_calibration:
+    calibration_result = qt.calibrate(_get_calibration_data())
+  return qt.quantize(calibration_result)
 
 
 def inference(quantized_tflite: bytes, image_path: str) -> np.ndarray:
@@ -116,7 +151,7 @@ def main(_) -> None:
     )
   if not os.path.exists(_IMG_PATH.value):
     raise ValueError('Image file does not exist. Please check the image path.')
-  quant_result = quantize(_FLOAT_MODEL_PATH.value, _OpExecutionMode.WEIGHT_ONLY)
+  quant_result = quantize(_FLOAT_MODEL_PATH.value, _QUANTIZATION_MODE.value)
   category_probabilities = inference(
       quant_result.quantized_model, _IMG_PATH.value
   )

@@ -1,7 +1,8 @@
 """Quantization Calibration."""
 
 from collections.abc import Iterable
-from typing import Any, Optional
+import copy
+from typing import Any
 
 from absl import logging
 
@@ -19,11 +20,11 @@ class Calibrator:
 
   def __init__(
       self,
-      float_tflite_path: str,
+      float_tflite: str | bytearray,
   ):
-    self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite_path)
+    self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
     self._tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
-        float_tflite_path
+        float_tflite
     )
     # Tensor name to tensor content.
     self._tensor_content_map: dict[str, Any] = {}
@@ -35,7 +36,7 @@ class Calibrator:
       self,
       calibration_dataset: Iterable[_SignatureInput],
       model_recipe_manager: recipe_manager.RecipeManager,
-      signature_key: Optional[str] = None,
+      signature_key: str | None = None,
   ) -> None:
     """Calibrates the model using the given dataset for a model signature.
 
@@ -134,7 +135,7 @@ class Calibrator:
     Args:
       model_qsvs: A dictionary of tensor name to QSV.
     """
-    self._model_qsvs = model_qsvs
+    self._model_qsvs = copy.deepcopy(model_qsvs)
 
   def _update_qsvs(self, op_qsvs: dict[str, qtyping.QSV]):
     """Update the model qsvs with the new values.

@@ -2,6 +2,10 @@
 
 import json
 import os
+
+from absl.testing import parameterized
+import numpy as np
+
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
@@ -14,9 +18,19 @@ _TensorDataType = qtyping.TensorDataType
 _AlgorithmName = quantizer.AlgorithmName
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('')
+_RNG = np.random.default_rng(66)
 
 
-class QuantizerTest(googletest.TestCase):
+def _get_calibration_data(num_samples: int = 256):
+  calibration_data = []
+  for _ in range(num_samples):
+    calibration_data.append(
+        {'conv2d_input': _RNG.uniform(size=(1, 28, 28, 1)).astype(np.float32)}
+    )
+  return calibration_data
+
+
+class QuantizerTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -45,7 +59,6 @@ class QuantizerTest(googletest.TestCase):
         operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=new_op_config,
-        override_algorithm=True,
     )
     updated_recipe = self._quantizer.get_quantization_recipe()
     self.assertLen(updated_recipe, 2)
@@ -72,12 +85,92 @@ class QuantizerTest(googletest.TestCase):
     qt.load_quantization_recipe(new_recipe_path)
     self.assertEqual(qt.get_quantization_recipe(), new_recipe)
 
-  def test_quantize_succeeds(self):
+  @parameterized.parameters(
+      'tests/recipes/conv_fc_mnist_a8w8_recipe.json',
+      'tests/recipes/conv_fc_mnist_a16w8_recipe.json',
+  )
+  def test_calibrate_required_recipe_succeeds(self, recipe_path):
+    recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
+    self._quantizer.load_quantization_recipe(recipe_path)
+    self.assertTrue(self._quantizer.need_calibration)
+    # Calibrate with empty state.
+    calib_data = _get_calibration_data()
+    calibration_result = self._quantizer.calibrate(calib_data)
+    self.assertLen(calibration_result, 13)
+
+  @parameterized.parameters(
+      'tests/recipes/conv_fc_mnist_a8w8_recipe.json',
+      'tests/recipes/conv_fc_mnist_a16w8_recipe.json',
+  )
+  def test_reloaded_calibration_succeeds(self, recipe_path):
+    recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
+    self._quantizer.load_quantization_recipe(recipe_path)
+    calib_data = _get_calibration_data()
+    calibration_result = self._quantizer.calibrate(calib_data)
+    # Load and calibrate again.
+    updated_calibration_result = self._quantizer.calibrate(
+        calib_data, previous_calibration_result=calibration_result
+    )
+    self.assertLen(updated_calibration_result, 13)
+    self.assertNotEqual(
+        calibration_result['StatefulPartitionedCall:0'],
+        updated_calibration_result['StatefulPartitionedCall:0'],
+    )
+
+  @parameterized.parameters(
+      'tests/recipes/conv_fc_mnist_drq_recipe.json',
+      'tests/recipes/conv_fc_mnist_weight_only_recipe.json',
+  )
+  def test_calibrate_nonrequired_recipe_succeeds(self, recipe_path):
+    recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
+    self._quantizer.load_quantization_recipe(recipe_path)
+    self.assertFalse(self._quantizer.need_calibration)
+    # Empty calibration result if no calibration is required.
+    calibration_result = self._quantizer.calibrate(_get_calibration_data())
+    self.assertEmpty(calibration_result)
+
+  def test_quantize_no_calibration_succeeds(self):
     self._quantizer.load_quantization_recipe(self._test_recipe_path)
     self.assertIsNone(self._quantizer._result.quantized_model)
     quant_result = self._quantizer.quantize()
     self.assertEqual(quant_result.recipe, self._test_recipe)
     self.assertIsNotNone(quant_result.quantized_model)
+
+  @parameterized.parameters(
+      'tests/recipes/conv_fc_mnist_a8w8_recipe.json',
+      'tests/recipes/conv_fc_mnist_a16w8_recipe.json',
+  )
+  def test_quantize_calibration_needed_succeeds(self, recipe_path):
+    recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
+    with open(recipe_path) as json_file:
+      recipe = json.load(json_file)
+
+    self._quantizer.load_quantization_recipe(recipe_path)
+    self.assertTrue(self._quantizer.need_calibration)
+    calibration_result = self._quantizer.calibrate(_get_calibration_data())
+
+    self.assertIsNone(self._quantizer._result.quantized_model)
+    quant_result = self._quantizer.quantize(calibration_result)
+    self.assertEqual(quant_result.recipe, recipe)
+    self.assertIsNotNone(quant_result.quantized_model)
+
+  @parameterized.parameters(
+      'tests/recipes/conv_fc_mnist_a8w8_recipe.json',
+      'tests/recipes/conv_fc_mnist_a16w8_recipe.json',
+  )
+  def test_quantize_calibration_needed_raise_error(self, recipe_path):
+    recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
+
+    self._quantizer.load_quantization_recipe(recipe_path)
+    self.assertTrue(self._quantizer.need_calibration)
+    error_message = (
+        'Model quantization statistics values (QSVs) are required for the input'
+        ' recipe.'
+    )
+    with self.assertRaisesWithPredicateMatch(
+        RuntimeError, lambda err: error_message in str(err)
+    ):
+      self._quantizer.quantize()
 
   def test_quantize_no_recipe_raise_error(self):
     qt = quantizer.Quantizer(self._test_model_path, None)

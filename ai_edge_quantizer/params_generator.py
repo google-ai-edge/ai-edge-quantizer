@@ -215,13 +215,13 @@ class ParamsGenerator:
     """
     for tensors in self.buffer_to_tensors.values():
       first_tensor = tensors[0]
-      first_tensor_params = self.model_quant_results[
-          tfl_flatbuffer_utils.get_tensor_name(first_tensor)
-      ]
+      first_tensor_params = self.model_quant_results.get(
+          tfl_flatbuffer_utils.get_tensor_name(first_tensor), None
+      )
       for tensor in tensors[1:]:
-        tensor_params = self.model_quant_results[
-            tfl_flatbuffer_utils.get_tensor_name(tensor)
-        ]
+        tensor_params = self.model_quant_results.get(
+            tfl_flatbuffer_utils.get_tensor_name(tensor), None
+        )
         error_msg = (
             f'The tensors {first_tensor.name} and {tensor.name} do not have the'
             ' same quantization parameters even though they share the same'

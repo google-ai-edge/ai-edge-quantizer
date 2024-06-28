@@ -215,7 +215,6 @@ def init_qsvs(
   """
 
   # Set min/max to 0/6 to help stablize the calibration process
-  # http://google3/third_party/py/mojax/operation_manager/algorithms/ptq_static_range.py?l=297
   init_min_val, init_max_val = 0.0, 6.0
   op_qsvs = {}
 
@@ -253,7 +252,7 @@ def min_max_calibrate(
     inputs_to_ignore: Optional[list[int]] = None,
     outputs_to_ignore: Optional[list[int]] = None,
 ) -> dict[str, qtyping.QSV]:
-  """Collect quantization statistics variable (QSV, e.g., scale/zero_point) for the op.
+  """Collect quantization statistics variable (QSV, e.g., min/max) for the op.
 
   Args:
     tfl_op: the tfl operation.
