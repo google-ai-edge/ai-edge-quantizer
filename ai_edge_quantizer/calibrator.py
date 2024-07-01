@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable
 import copy
-from typing import Any
+from typing import Any, Optional, Union
 
 from absl import logging
 
@@ -20,7 +20,7 @@ class Calibrator:
 
   def __init__(
       self,
-      float_tflite: str | bytearray,
+      float_tflite: Union[str, bytearray],
   ):
     self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
     self._tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
@@ -36,7 +36,7 @@ class Calibrator:
       self,
       calibration_dataset: Iterable[_SignatureInput],
       model_recipe_manager: recipe_manager.RecipeManager,
-      signature_key: str | None = None,
+      signature_key: Optional[str] = None,
   ) -> None:
     """Calibrates the model using the given dataset for a model signature.
 
