@@ -2,9 +2,10 @@
 
 from collections.abc import Iterable
 import copy
-from typing import Any, Optional, Union
+from typing import Any
 
 from absl import logging
+import numpy as np
 
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import qtyping
@@ -13,6 +14,9 @@ from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 _SignatureInput = dict[str, Any]  # input_argument_name -> tensor_value.
+_SignatureOutput = dict[
+    str, np.ndarray
+]  # output_argument_name -> tensor_value.
 
 
 class Calibrator:
@@ -20,7 +24,7 @@ class Calibrator:
 
   def __init__(
       self,
-      float_tflite: Union[str, bytearray],
+      float_tflite: str | bytearray,
   ):
     self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
     self._tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
@@ -30,13 +34,16 @@ class Calibrator:
     self._tensor_content_map: dict[str, Any] = {}
     # QSV of all the tensors in the model.
     self._model_qsvs: dict[str, qtyping.QSV] = {}
+    # Cached output of the model.
+    self._cached_output: list[_SignatureOutput] = []
 
   # TODO(b/330740605)- Collect multiple QSVs in one run to save compute.
   def calibrate(
       self,
       calibration_dataset: Iterable[_SignatureInput],
       model_recipe_manager: recipe_manager.RecipeManager,
-      signature_key: Optional[str] = None,
+      signature_key: str | None = None,
+      cache_output: bool = False,
   ) -> None:
     """Calibrates the model using the given dataset for a model signature.
 
@@ -58,9 +65,12 @@ class Calibrator:
         model signature.
       model_recipe_manager: A RecipeManager object that contains the
         quantization recipe.
-      signature_key: the signature key to be used for invoking the models. If
+      signature_key: The signature key to be used for invoking the models. If
         the model doesn't have a signature key (or only has one ), this can be
         set to None.
+      cache_output: Whether to cache the output of the model during the
+        calibration process. This is useful if there are dependencies between
+        signatures/models (e.g., decode requires encode output).
     """
     op_codes = self._flatbuffer_model.operatorCodes
     if not self._model_qsvs:
@@ -76,9 +86,11 @@ class Calibrator:
     # TODO: b/329322226 - Enable parrallel calibration.
     for data in calibration_dataset:
       # Step1: run tfl interpreter to get tensor content.
-      tfl_interpreter_utils.invoke_interpreter_signature(
+      signature_output = tfl_interpreter_utils.invoke_interpreter_signature(
           self._tfl_interpreter, data, signature_key
       )
+      if cache_output:
+        self._cached_output.append(signature_output)
       self._tensor_content_map = (
           tfl_interpreter_utils.get_tensor_name_to_content_map(
               self._tfl_interpreter
@@ -124,6 +136,14 @@ class Calibrator:
       A dictionary of tensor name to QSV.
     """
     return self._model_qsvs
+
+  def get_cached_output(self) -> list[_SignatureOutput]:
+    """Get the cached output of the model."""
+    return self._cached_output
+
+  def clear_cached_output(self) -> None:
+    """Clear the cached output of the model."""
+    self._cached_output = []
 
   def reset_model_qsvs(self) -> None:
     """Reset the model qsvs."""

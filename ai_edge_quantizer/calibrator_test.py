@@ -180,6 +180,30 @@ class CalibratorTest(googletest.TestCase):
           _representative_dataset_gen(size=(1, 28, 28, 1)), self._recipe_manager
       )
 
+  def test_calibration_cache_is_empty_when_off(self):
+    _add_default_int8xint8_integer_recipe(self._recipe_manager)
+    self.assertEmpty(self._calibrator.get_cached_output())
+    self._calibrator.calibrate(
+        self._representative_dataset, self._recipe_manager, cache_output=False
+    )
+    self.assertEmpty(self._calibrator.get_cached_output())
+
+  def test_calibration_cache_when_on(self):
+    _add_default_int8xint8_integer_recipe(self._recipe_manager)
+    self.assertEmpty(self._calibrator.get_cached_output())
+    self._calibrator.calibrate(
+        self._representative_dataset, self._recipe_manager, cache_output=True
+    )
+    self.assertLen(self._calibrator.get_cached_output(), 10)
+
+  def test_calibration_cache_is_empty_after_reset(self):
+    _add_default_int8xint8_integer_recipe(self._recipe_manager)
+    self._calibrator.calibrate(
+        self._representative_dataset, self._recipe_manager, cache_output=True
+    )
+    self._calibrator.clear_cached_output()
+    self.assertEmpty(self._calibrator.get_cached_output())
+
 
 if __name__ == "__main__":
   googletest.main()
