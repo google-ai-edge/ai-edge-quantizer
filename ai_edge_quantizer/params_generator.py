@@ -1,4 +1,5 @@
 """Generate model tensor level quantization config."""
+
 import copy
 from typing import Any, Optional, Union
 
@@ -228,7 +229,7 @@ class ParamsGenerator:
             ' buffer. Please modify your quantization recipe to make sure the'
             ' two tensors have the same quantization settings.'
         )
-        if not _same_tensor_transformation_params_except_name(
+        if not _compatible_tensor_transformation_params(
             first_tensor_params, tensor_params
         ):
           raise RuntimeError(error_msg)
@@ -278,40 +279,60 @@ class ParamsGenerator:
       )
 
 
-def _same_tensor_transformation_params_except_name(
+def _compatible_tensor_transformation_params(
     params1: qtyping.TensorTransformationParams,
     params2: qtyping.TensorTransformationParams,
 ) -> bool:
-  """Check if two tensor transformation params are the same except tensor name."""
-  # Check producer.
+  """Check if two tensor transformation params are compatible."""
   if params1.producer is None or params2.producer is None:
     if params1.producer != params2.producer:
       return False
-  elif not _same_op_to_tensor_params_except_subgraph_op_id(
-      params1.producer, params2.producer
-  ):
+  elif not _compatible_tensor_params(params1.producer, params2.producer):
     return False
-  # Check consumers.
   if params1.consumers is None or params2.consumers is None:
     if params1.consumers != params2.consumers:
       return False
   else:
-    if len(params1.consumers) != len(params2.consumers):
-      return False
-    for consumer1, consumer2 in zip(params1.consumers, params2.consumers):
-      if not _same_op_to_tensor_params_except_subgraph_op_id(
-          consumer1, consumer2
-      ):
+    # check all consumers within eah params are compatible.
+    for params1_consumer in params1.consumers:
+      if not _compatible_tensor_params(params1_consumer, params1.consumers[0]):
         return False
+    for params2_consumer in params2.consumers:
+      if not _compatible_tensor_params(params2_consumer, params2.consumers[0]):
+        return False
+    if not _compatible_tensor_params(
+        params1.consumers[0], params2.consumers[0]
+    ):
+      return False
   return True
 
 
-def _same_op_to_tensor_params_except_subgraph_op_id(
-    params1: qtyping.OpToTensorParams, params2: qtyping.OpToTensorParams
+def _compatible_tensor_params(
+    params1: qtyping.OpToTensorParams,
+    params2: qtyping.OpToTensorParams,
 ) -> bool:
-  """Check if two op to tensor params are the same except subgraph op id."""
-  if params1.transformations != params2.transformations:
-    return False
+  """Check if two op to tensor params are compatible."""
+  float_source_transformations = [
+      qtyping.QuantTransformation.ADD_QUANTIZE,
+      qtyping.QuantTransformation.NO_QUANTIZE,
+  ]
+  quantized_source_transformations = [
+      qtyping.QuantTransformation.QUANTIZE_TENSOR,
+      qtyping.QuantTransformation.ADD_DEQUANTIZE,
+  ]
   if params1.parameters != params2.parameters:
     return False
-  return True
+  # we only need to check the first transformation because transformations are
+  # applied in order, and as long as the one that's immediately after the tensor
+  # is the same, it's compatible.
+  if (
+      params1.transformations[0] in float_source_transformations
+      and params2.transformations[0] in float_source_transformations
+  ):
+    return True
+  if (
+      params1.transformations[0] in quantized_source_transformations
+      and params2.transformations[0] in quantized_source_transformations
+  ):
+    return True
+  return False
