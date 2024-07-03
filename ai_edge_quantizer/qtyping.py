@@ -27,7 +27,7 @@ class TFLOperationName(str, enum.Enum):
   SOFTMAX = 'SOFTMAX'
 
 
-# Use same code number as MOJAX for compatibility
+# Use same code number as MOJAX for compatibility.
 class QuantizeMode(enum.Enum):
   CALIBRATE = 2
   MATERIALIZE = 3
@@ -37,8 +37,8 @@ class OpExecutionMode(str, enum.Enum):
   """How to execute the op."""
 
   WEIGHT_ONLY = 'WEIGHT_ONLY'
-  DRQ = 'DRQ'  # Dynamic range quantization
-  SRQ = 'SRQ'  # Static range quantization
+  DRQ = 'DRQ'  # Dynamic range quantization.
+  SRQ = 'SRQ'  # Static range quantization.
 
 
 class TensorDataType(str, enum.Enum):
@@ -57,7 +57,7 @@ class QuantTransformation(enum.Enum):
   ADD_DEQUANTIZE = 2
   # Quantize the float tensor: float_tensor -> quantized_tensor.
   QUANTIZE_TENSOR = 3
-  # create pattern for emulated subchannel quantization, only support fully
+  # Create pattern for emulated subchannel quantization, only support fully
   # connected op.
   EMULATED_SUBCHANNEL = 4
 
@@ -310,8 +310,8 @@ class GraphInfo:
   """Aggregates graph information needed to perform quantization for an op.
 
   Attributes:
-    subgraph_tensors: A list of tensors in the subgraph.
-    buffers: A list of buffers in the subgraph.
+    subgraph_tensors: Tensors in the subgraph.
+    buffers: Buffers in the subgraph.
   """
 
   subgraph_tensors: list[Any]
@@ -331,14 +331,14 @@ class OpInfo:
 
   op: Any
   op_name: TFLOperationName
-  subgraph_op_index: int  # position of the op in the subgraph.
+  subgraph_op_index: int  # Position of the op in the subgraph.
   op_quant_config: OpQuantizationConfig
 
 
-# data classes used by model modifier.
+# Data classes used by model modifier.
 
 
-# TODO(b/335530570): this needs to support more than one parameters
+# TODO: b/335530570 - This needs to support more than one parameters.
 @dataclasses.dataclass
 class TransformationInst:
   """Transformation instruction for a tensor.
@@ -401,8 +401,8 @@ def _compare_array_or_none(
     True if both objects are None or both objects are equal.
   """
   if obj1 is None and obj2 is None:
-    return True  # Both None, so they're equal
+    return True  # Both None, so they're equal.
   elif obj1 is None or obj2 is None:
-    return False  # Only one is None, so they're different
+    return False  # Only one is None, so they're different.
   else:
     return np.array_equal(obj1, obj2)
