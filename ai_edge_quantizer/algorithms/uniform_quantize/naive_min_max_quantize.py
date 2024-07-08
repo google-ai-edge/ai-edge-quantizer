@@ -22,11 +22,11 @@ def check_op_quantization_config(
   """Checks the op quantization config.
 
   Args:
-    op_name: the name of the op.
-    op_quant_config: the quantization config for the op.
+    op_name: The name of the op.
+    op_quant_config: The quantization config for the op.
 
   Raises:
-    ValueError: if the op quantization config is invalid.
+    ValueError: If the op quantization config is invalid.
   """
   if op_quant_config.weight_tensor_config.dtype != qtyping.TensorDataType.INT:
     raise ValueError(
@@ -158,14 +158,14 @@ def materialize_fc_conv(
       op_info,
       graph_info,
       tensor_name_to_qsv,
-      inputs_to_ignore=[2],  # ignore bias tensor.
+      inputs_to_ignore=[2],  # Ignore bias tensor.
   )
   _, _, bias_tensor, _ = tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
       op_info.op, graph_info.subgraph_tensors
   )
   if bias_tensor is not None:
     bias_quant_params = None
-    # Fused bias needs to be quantized for SRQ
+    # Fused bias needs to be quantized for SRQ.
     if op_info.op_quant_config.execution_mode == qtyping.OpExecutionMode.SRQ:
       bias_content = tfl_flatbuffer_utils.get_tensor_data(
           bias_tensor,
@@ -174,8 +174,8 @@ def materialize_fc_conv(
       bias_quant_params = (
           uniform_quantize_tensor.symmetric_quantize_bias_tensor(
               bias_content,
-              op_tensor_params[0].consumers[0].parameters,  # input
-              op_tensor_params[1].consumers[0].parameters,  # weight
+              op_tensor_params[0].consumers[0].parameters,  # Input.
+              op_tensor_params[1].consumers[0].parameters,  # Weight.
           )
       )
     # We only quantize bias under SRQ. Setting is_constant=True for SRQ only
@@ -195,7 +195,7 @@ def materialize_fc_conv(
   return op_tensor_params
 
 
-# TODO(b/333731147): use named tuple to store min/max.
+# TODO: b/333731147 - Use named tuple to store min/max.
 def init_qsvs(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
@@ -205,16 +205,16 @@ def init_qsvs(
   """Initialize the QSVs.
 
   Args:
-    op_info: aggregated information about the op (e.g., quantization config).
-    graph_info: graph information needed to perform quantization for the op.
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
     inputs_to_ignore: Input tensor indices to ignore.
-    outputs_to_ignore: output tensor indices to ignore.
+    outputs_to_ignore: Output tensor indices to ignore.
 
   Returns:
     QSVs.
   """
 
-  # Set min/max to 0/6 to help stablize the calibration process
+  # Set min/max to 0/6 to help stablize the calibration process.
   init_min_val, init_max_val = 0.0, 6.0
   op_qsvs = {}
 
@@ -255,11 +255,11 @@ def min_max_calibrate(
   """Collect quantization statistics variable (QSV, e.g., min/max) for the op.
 
   Args:
-    tfl_op: the tfl operation.
-    graph_info: graph information needed to perform quantization for the op.
-    tensor_content_map: a map of tensor name to tensor content.
-    inputs_to_ignore: list of input tensor indices to ignore.
-    outputs_to_ignore: list of output tensor indices to ignore.
+    tfl_op: The tfl operation.
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_content_map: A map of tensor name to tensor content.
+    inputs_to_ignore: Input tensor indices to ignore.
+    outputs_to_ignore: Output tensor indices to ignore.
 
   Returns:
     A dictionary with key as tensor name and value as the collected QSV.
