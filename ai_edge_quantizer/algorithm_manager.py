@@ -82,8 +82,10 @@ for op_name, materialize_func in zip(
     (
         _TFLOpName.FULLY_CONNECTED,
         _TFLOpName.CONV_2D,
+        _TFLOpName.DEPTHWISE_CONV_2D,
     ),
     (
+        float_casting.materialize_fc_conv,
         float_casting.materialize_fc_conv,
         float_casting.materialize_fc_conv,
     ),

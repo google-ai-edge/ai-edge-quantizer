@@ -288,6 +288,49 @@ class Fp16QuantizeTest(parameterized.TestCase):
           ),
       )
 
+  def test_depthwise_conv2d_weight_only_succeeds(self):
+    # Read from Model Explorer.
+    test_model_path = os.path.join(
+        _TEST_DATA_PREFIX_PATH, "single_depthwise_conv2d_bias.tflite"
+    )
+
+    test_model = tfl_flatbuffer_utils.read_model(test_model_path)
+    # The test model has one subgraph for now.
+    graph_info = qtyping.GraphInfo(
+        subgraph_tensors=test_model.subgraphs[0].tensors,
+        buffers=test_model.buffers,
+    )
+
+    subgraph0 = test_model.subgraphs[0]
+    subgraph_op_id = 0
+    op = subgraph0.operators[subgraph_op_id]
+
+    op_info = qtyping.OpInfo(
+        op=op,
+        op_name=_TFLOpName.DEPTHWISE_CONV_2D,
+        subgraph_op_index=subgraph_op_id,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=16, dtype=qtyping.TensorDataType.FLOAT
+            ),
+            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+        ),
+    )
+
+    op_tensor_names = {}
+    op_tensor_names["weight"] = "sequential/depthwise_conv2d/depthwise"
+    op_tensor_names["bias"] = (
+        "sequential/depthwise_conv2d/BiasAdd;sequential/depthwise_conv2d/depthwise;sequential/depthwise_conv2d/BiasAdd/ReadVariableOp"
+    )
+    op_tensor_names["input"] = "serving_default_input_1:0"
+    op_tensor_names["output"] = "StatefulPartitionedCall:0"
+    self._test_fc_conv(
+        op_info,
+        graph_info,
+        op_tensor_names,
+        float_casting.materialize_fc_conv,
+    )
+
   def _test_fc_conv(
       self,
       op_info,
@@ -320,7 +363,7 @@ class Fp16QuantizeTest(parameterized.TestCase):
     # Test weight tensor params.
     weight_tensor_data = tfl_flatbuffer_utils.get_tensor_data(
         weight_tensor,
-        self._test_model.buffers,
+        graph_info.buffers,
     )
 
     self._test_fp16_weight_tensor_transformation_params(
