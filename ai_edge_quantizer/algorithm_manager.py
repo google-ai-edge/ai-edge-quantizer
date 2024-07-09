@@ -48,6 +48,7 @@ for op_name, materialize_func in zip(
         _TFLOpName.FULLY_CONNECTED,
         _TFLOpName.BATCH_MATMUL,
         _TFLOpName.CONV_2D,
+        _TFLOpName.DEPTHWISE_CONV_2D,
         _TFLOpName.RESHAPE,
         _TFLOpName.AVERAGE_POOL_2D,
         _TFLOpName.EMBEDDING_LOOKUP,
@@ -56,6 +57,7 @@ for op_name, materialize_func in zip(
     (
         naive_min_max_quantize.materialize_fc_conv,
         naive_min_max_quantize.materialize_batch_matmul,
+        naive_min_max_quantize.materialize_fc_conv,
         naive_min_max_quantize.materialize_fc_conv,
         naive_min_max_quantize.materialize_reshape,
         naive_min_max_quantize.materialize_average_pool_2d,

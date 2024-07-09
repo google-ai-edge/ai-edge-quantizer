@@ -15,6 +15,7 @@ _SUPPORTED_WEIGHT_ONLY_OPS = frozenset([
     _TFLOpName.CONV_2D,
     _TFLOpName.BATCH_MATMUL,
     _TFLOpName.EMBEDDING_LOOKUP,
+    _TFLOpName.DEPTHWISE_CONV_2D,
 ])
 
 _SUPPORTED_DRQ_OPS = frozenset([
@@ -22,6 +23,7 @@ _SUPPORTED_DRQ_OPS = frozenset([
     _TFLOpName.CONV_2D,
     _TFLOpName.BATCH_MATMUL,
     _TFLOpName.EMBEDDING_LOOKUP,
+    _TFLOpName.DEPTHWISE_CONV_2D,
 ])
 
 _SUPPORTED_SRQ_OPS = frozenset([
@@ -30,6 +32,7 @@ _SUPPORTED_SRQ_OPS = frozenset([
     _TFLOpName.AVERAGE_POOL_2D,
     _TFLOpName.RESHAPE,
     _TFLOpName.SOFTMAX,
+    _TFLOpName.DEPTHWISE_CONV_2D,
 ])
 
 _INT4_DRQ_SRQ_SUPPORTED_OPS = frozenset([
