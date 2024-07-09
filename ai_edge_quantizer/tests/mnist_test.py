@@ -141,8 +141,8 @@ class MNISTTest(parameterized.TestCase):
     )
 
   @parameterized.parameters(
-      'recipes/conv_fc_mnist_a8w8_recipe.json',
-      'recipes/conv_fc_mnist_a16w8_recipe.json',
+      'recipes/default_a8w8_recipe.json',
+      'recipes/default_a16w8_recipe.json',
   )
   def test_mnist_toy_model_full_intege(self, recipe_path):
     recipe_path = test_utils.get_path_to_datafile(recipe_path)

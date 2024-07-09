@@ -39,7 +39,7 @@ class QuantizerTest(parameterized.TestCase):
     )
     self._test_recipe_path = os.path.join(
         TEST_DATA_PREFIX_PATH,
-        'tests/recipes/conv_fc_mnist_weight_only_recipe.json',
+        'tests/recipes/default_weight_only_recipe.json',
     )
     with open(self._test_recipe_path) as json_file:
       self._test_recipe = json.load(json_file)
@@ -78,7 +78,7 @@ class QuantizerTest(parameterized.TestCase):
     # Load a different recipe.
     new_recipe_path = os.path.join(
         TEST_DATA_PREFIX_PATH,
-        'tests/recipes/conv_fc_mnist_drq_recipe.json',
+        'tests/recipes/default_drq_recipe.json',
     )
     with open(new_recipe_path) as json_file:
       new_recipe = json.load(json_file)
@@ -86,8 +86,8 @@ class QuantizerTest(parameterized.TestCase):
     self.assertEqual(qt.get_quantization_recipe(), new_recipe)
 
   @parameterized.parameters(
-      'tests/recipes/conv_fc_mnist_a8w8_recipe.json',
-      'tests/recipes/conv_fc_mnist_a16w8_recipe.json',
+      'tests/recipes/default_a8w8_recipe.json',
+      'tests/recipes/default_a16w8_recipe.json',
   )
   def test_calibrate_required_recipe_succeeds(self, recipe_path):
     recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
@@ -99,8 +99,8 @@ class QuantizerTest(parameterized.TestCase):
     self.assertLen(calibration_result, 13)
 
   @parameterized.parameters(
-      'tests/recipes/conv_fc_mnist_a8w8_recipe.json',
-      'tests/recipes/conv_fc_mnist_a16w8_recipe.json',
+      'tests/recipes/default_a8w8_recipe.json',
+      'tests/recipes/default_a16w8_recipe.json',
   )
   def test_reloaded_calibration_succeeds(self, recipe_path):
     recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
@@ -118,8 +118,8 @@ class QuantizerTest(parameterized.TestCase):
     )
 
   @parameterized.parameters(
-      'tests/recipes/conv_fc_mnist_drq_recipe.json',
-      'tests/recipes/conv_fc_mnist_weight_only_recipe.json',
+      'tests/recipes/default_drq_recipe.json',
+      'tests/recipes/default_weight_only_recipe.json',
   )
   def test_calibrate_nonrequired_recipe_succeeds(self, recipe_path):
     recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
@@ -137,8 +137,8 @@ class QuantizerTest(parameterized.TestCase):
     self.assertIsNotNone(quant_result.quantized_model)
 
   @parameterized.parameters(
-      'tests/recipes/conv_fc_mnist_a8w8_recipe.json',
-      'tests/recipes/conv_fc_mnist_a16w8_recipe.json',
+      'tests/recipes/default_a8w8_recipe.json',
+      'tests/recipes/default_a16w8_recipe.json',
   )
   def test_quantize_calibration_needed_succeeds(self, recipe_path):
     recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
@@ -155,8 +155,8 @@ class QuantizerTest(parameterized.TestCase):
     self.assertIsNotNone(quant_result.quantized_model)
 
   @parameterized.parameters(
-      'tests/recipes/conv_fc_mnist_a8w8_recipe.json',
-      'tests/recipes/conv_fc_mnist_a16w8_recipe.json',
+      'tests/recipes/default_a8w8_recipe.json',
+      'tests/recipes/default_a16w8_recipe.json',
   )
   def test_quantize_calibration_needed_raise_error(self, recipe_path):
     recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
@@ -229,7 +229,7 @@ class QuantizerBytearrayInputs(googletest.TestCase):
     )
     self._test_recipe_path = os.path.join(
         TEST_DATA_PREFIX_PATH,
-        'tests/recipes/conv_fc_mnist_weight_only_recipe.json',
+        'tests/recipes/default_weight_only_recipe.json',
     )
     with open(self._test_model_path, 'rb') as f:
       model_content = bytearray(f.read())
