@@ -16,7 +16,8 @@ on:
         type: string
 
 jobs:
-  test:
+  run-unittests-python:
+    name: "Run Unit Tests with Python ${{ matrix.python-version }} on {{ matrix.runner }}"
     strategy:
       matrix:
         runner: [ubuntu-latest]

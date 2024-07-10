@@ -10,8 +10,8 @@ on:
   workflow_dispatch:  # Allow manual triggers
 
 jobs:
-  run-unittests-python:
-    name: Unit Tests Python
+  run-unittests-nightly:
+    name: Run Unit Tests Python Nightly
     uses: ./.github/workflows/unittests_python.yml
     with:
       trigger-sha: ${{ github.sha }}
