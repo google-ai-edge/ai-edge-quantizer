@@ -16,7 +16,7 @@ from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-t
 class ModelModifier:
   """Model Modifier class that produce the final quantized TFlite model."""
 
-  # TODO(b/336599483): support byte array as input
+  # TODO: b/336599483 - support byte array as input
   def __init__(self, float_tflite: Union[str, bytearray]):
     """Constructor.
 
@@ -84,7 +84,7 @@ class ModelModifier:
         buffer_size += len(buffer.data)
     return buffer_size
 
-  # TODO(b/333797307): support > 2GB output model
+  # TODO: b/333797307 - support > 2GB output model
   def _serialize_large_model(
       self, quantized_model: schema_py_generated.ModelT
   ) -> bytearray:
@@ -96,7 +96,7 @@ class ModelModifier:
     Returns:
       a byte buffer that represents the serialized tflite model
     """
-    # TODO(b/338244867): we can have more efficient way to calculate the
+    # TODO: b/338244867 - we can have more efficient way to calculate the
     # buffer offsets.
 
     # remove all the constant from the model.

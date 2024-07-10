@@ -97,7 +97,7 @@ class FlatbufferUtilsTest(googletest.TestCase):
     weight_tensor_name = tfl_flatbuffer_utils.get_tensor_name(weight_tensor)
     self.assertEqual(weight_tensor_name, "sequential/conv2d/Conv2D")
 
-  # TODO(b/325123193): test tensor with data outside of flatbuffer.
+  # TODO: b/325123193 - test tensor with data outside of flatbuffer.
   def test_get_tensor_data(self):
     subgraph0 = self._test_model.subgraphs[0]
     subgraph_tensors = subgraph0.tensors

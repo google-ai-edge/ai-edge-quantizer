@@ -129,7 +129,7 @@ def uniform_quantize(
       quantization_params.zero_point,
   )
   inverse_scales = 1.0 / scales
-  # TODO(b/332574603): support unsigned data type.
+  # TODO: b/332574603 - support unsigned data type.
   qtype = IntType(quantization_params.num_bits, signed=True)
   # Symmetric means narrow range (e.g., -127 to 127)
   narrow_range = quantization_params.symmetric
@@ -236,7 +236,7 @@ def tensor_zp_scale_from_min_max(
   Returns:
     The zero point and scale of the tensor.
   """
-  # TODO(b/332574603): support unsigned data type.
+  # TODO: b/332574603 - support unsigned data type.
   qtype = IntType(
       num_bits,
       signed=True,

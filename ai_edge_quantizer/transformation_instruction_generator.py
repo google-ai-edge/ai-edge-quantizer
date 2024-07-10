@@ -182,7 +182,7 @@ class TransformationInstructionsGenerator:
   def _create_tensor_name_to_graph_info_map(self):
     """Create a mapping between tensor name and tensor info."""
     self._tensor_name_to_graph_info = {}
-    # TODO(b/333607428): support graph input & output
+    # TODO: b/333607428 - support graph input & output
     for subgraph_id, subgraph in enumerate(self.flatbuffer_model.subgraphs):
       for tensor_name, tensor_info in self._tensor_info_generator(
           subgraph_id, subgraph

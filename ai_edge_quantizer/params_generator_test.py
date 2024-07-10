@@ -244,7 +244,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
     transformation_config = tensor_quantization_params[tensor_name]
     self.assertIsNone(transformation_config.consumers)
 
-  # TODO(b/330770656): expand the test to cover mixed activation precision.
+  # TODO: b/330770656 - expand the test to cover mixed activation precision.
   def test_generate_config_selective(self):
     # Choose scope regex using Model Explorer
     selective_quantization_recipe = [

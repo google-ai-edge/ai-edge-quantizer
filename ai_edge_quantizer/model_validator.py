@@ -10,7 +10,7 @@ import numpy as np
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 
-# TODO(b/331655892): have this function automatically detect the input tensor
+# TODO: b/331655892 - have this function automatically detect the input tensor
 # type
 def compare_model(
     reference_model: Union[str, bytearray],
@@ -52,7 +52,7 @@ def compare_model(
   )
   comparison_results = {}
 
-  # TODO(b/330797129): enable multi-threaded evaluation.
+  # TODO: b/330797129 - enable multi-threaded evaluation.
   for signature_input in signature_dataset:
     tfl_interpreter_utils.invoke_interpreter_signature(
         reference_interpreter, signature_input, signature_key

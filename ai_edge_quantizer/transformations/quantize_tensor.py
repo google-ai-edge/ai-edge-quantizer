@@ -7,7 +7,7 @@ from ai_edge_quantizer.transformations import transformation_utils
 from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
-# TODO(b/335014051): support distinguishing INT, FLOAT & UINT, BFLOAT
+# TODO: b/335014051 - support distinguishing INT, FLOAT & UINT, BFLOAT
 def quant_params_to_tflite_type(
     bitwidth: int,
 ) -> Optional[schema_py_generated.TensorType]:
@@ -91,7 +91,7 @@ def quantize_tensor(
         is 0
   """
   tensor = transformation_input.subgraph.tensors[transformation_input.tensor_id]
-  # TODO(b/336385820): suppport quantize buffer directly when quantized_data
+  # TODO: b/336385820 - suppport quantize buffer directly when quantized_data
   # is not provided
   if tensor.buffer:
     if transformation_input.quant_params.quantized_data is not None:
