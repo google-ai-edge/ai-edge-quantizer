@@ -162,13 +162,14 @@ class RecipeManager:
           ):
             continue
           selected_recipe = recipe
-          # The selected recipe must contain a supported config.
-          try:
-            algorithm_manager.check_op_quantization_config(
-                recipe.algorithm_key, target_op_name, recipe.op_config
-            )
-          except ValueError:
-            continue
+          if selected_recipe.algorithm_key != AlgorithmName.NO_QUANTIZE:
+            # The selected recipe must contain a supported config.
+            try:
+              algorithm_manager.check_op_quantization_config(
+                  recipe.algorithm_key, target_op_name, recipe.op_config
+              )
+            except ValueError:
+              continue  # Skip the recipe if it is not supported.
           result_config = selected_recipe.op_config
           result_key = selected_recipe.algorithm_key
 

@@ -443,6 +443,34 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         self._recipe_manager.get_quantization_recipe(),
     )
 
+  def test_get_quantization_configs_with_no_quantize_overwrite(self):
+    self._recipe_manager.add_quantization_config(
+        regex='.*/Dense/.*',
+        operation_name=_TFLOpName.ALL_SUPPORTED,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+        op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8),
+        ),
+    )
+    self._recipe_manager.add_quantization_config(
+        regex='.*/Dense/.*',
+        operation_name=_TFLOpName.FULLY_CONNECTED,
+        algorithm_key=_AlgorithmName.NO_QUANTIZE,
+    )
+
+    # Fully connected will be overwritten to no quantization.
+    alg_key, _ = self._recipe_manager.get_quantization_configs(
+        _TFLOpName.FULLY_CONNECTED, 'model/Dense/op'
+    )
+    self.assertEqual(alg_key, _AlgorithmName.NO_QUANTIZE)
+    # Other ops will be quantized.
+    alg_key, op_config = self._recipe_manager.get_quantization_configs(
+        _TFLOpName.CONV_2D, 'model/Dense/op'
+    )
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
+    self.assertEqual(op_config.execution_mode, _OpExecutionMode.WEIGHT_ONLY)
+    self.assertEqual(op_config.weight_tensor_config.num_bits, 8)
+
   def test_load_from_full_quantization_config(self):
     full_quantization_config = [
         {
