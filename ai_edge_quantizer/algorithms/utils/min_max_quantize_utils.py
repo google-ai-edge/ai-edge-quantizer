@@ -143,6 +143,145 @@ def init_tensor_min_max(
     }
 
 
+def _get_tensor_transformation_params_wrapper(
+    tensor: Any,
+    is_inbounding_tensor: bool,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+    quant_params=None,
+) -> qtyping.TensorTransformationParams:
+  """Util to get tensor transformation params.
+
+  Args:
+    tensor: Tensor to be quantized.
+    is_inbounding_tensor: Whether the tensor is an inbounding tensor for the op.
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    quant_params: Quantization parameters for the tensor.
+
+  Returns:
+    Transformation parameters for the tensor.
+
+  Raises:
+    ValueError: If the tensor is not found in tensor_name_to_qsv.
+  """
+  tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
+  tensor_data = tfl_flatbuffer_utils.get_tensor_data(tensor, graph_info.buffers)
+  tensor_quant_config = op_info.op_quant_config.activation_tensor_config
+  is_constant = tensor_data is not None
+  # Use weight configuration if it is supported.
+  if is_constant and op_info.op_name in frozenset.union(
+      _SUPPORTED_WEIGHT_ONLY_OPS, _SUPPORTED_DRQ_OPS
+  ):
+    tensor_quant_config = op_info.op_quant_config.weight_tensor_config
+  # Get quant params.
+  if quant_params is None and tensor_quant_config is not None:
+    if tensor_name not in tensor_name_to_qsv:
+      if is_constant:
+        # We need min/max to calculate quantization parameters, which
+        # should be collected during the calibration process. However,
+        # weight-only and DRQ do not require calibration, thus it is
+        # possible that this information is missing here. In that case we
+        # collect min/max on the spot.
+        tensor_min_max = init_tensor_min_max(
+            tensor,
+            graph_info,
+            op_info,
+        )
+      else:
+        raise ValueError(
+            f"Tensor {tensor_name} not found in tensor_name_to_qsv. Check"
+            " if the correct calibration results are passed into the"
+            " ParamsGenerator."
+        )
+    else:
+      tensor_min_max = tensor_name_to_qsv[tensor_name]
+    quant_params = _get_tensor_quant_params(
+        op_info,
+        tensor_min_max,
+        tensor_quant_config,
+        tensor_content=tensor_data,
+    )
+  return get_tensor_transformation_params(
+      tensor_name,
+      op_info,
+      is_inbounding_tensor,
+      quant_params,
+      is_constant,
+  )
+
+
+def _materialize_op_tensors(
+    op_tensor_params: list[qtyping.TensorTransformationParams],
+    op_tensors: list[Any],
+    is_inbounding_tensor: bool,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+    quant_params=None,
+) -> None:
+  """Util to materialize op tensors. Appends the results to op_tensor_params.
+
+  Args:
+    op_tensor_params: Tensor transformation parameters for the op. Will be
+      modified to include new tensor parameters.
+    op_tensors: A list of tensors associated with the op.
+    is_inbounding_tensor: Whether the tensor is an inbounding tensor for the op.
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    quant_params: Quantization parameters for the tensor.
+  """
+  for tensor in op_tensors:
+    tensor_params = _get_tensor_transformation_params_wrapper(
+        tensor,
+        is_inbounding_tensor,
+        op_info,
+        graph_info,
+        tensor_name_to_qsv,
+        quant_params,
+    )
+    op_tensor_params.append(tensor_params)
+
+
+def _get_single_tensor_params(
+    tensors: list[Any],
+    is_inbounding_tensor: bool,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> qtyping.TensorTransformationParams:
+  """Util to get single tensor params.
+
+  Args:
+    tensors: A list of a single tensor.
+    is_inbounding_tensor: Whether the tensor is an inbounding tensor for the op.
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_name_to_qsv: A map of tensor name to quantization parameters.
+
+  Returns:
+    Transformation parameters for the tensor.
+
+  Raises:
+    ValueError: If the tensor list is not of size 1.
+  """
+  if len(tensors) != 1:
+    raise ValueError(
+        "Trying to get a single tensor params with a list of multiple tensor"
+        f" with size {len(tensors)}."
+    )
+  return _get_tensor_transformation_params_wrapper(
+      tensors[0],
+      is_inbounding_tensor,
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+  )
+
+
 def materialize_standard_op(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
@@ -157,16 +296,19 @@ def materialize_standard_op(
   CONV_2D, DEPTHWISE_CONV_2D as these ops may contain fused bias.
 
   Args:
-    op_info: aggregated information about the op (e.g., quantization config).
-    graph_info: graph information needed to perform quantization for the op.
-    tensor_name_to_qsv: a map of tensor name to quantization parameters.
-    constraint: the constraint for materializing the op.
-    inputs_to_ignore: list of input tensor indices to ignore.
-    outputs_to_ignore: list of output tensor indices to ignore.
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    constraint: The constraint for materializing the op.
+    inputs_to_ignore: Input tensor indices to ignore.
+    outputs_to_ignore: Output tensor indices to ignore.
 
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
     weights, bias).
+
+  Raises:
+    ValueError: If not SRQ is requested for SRQ only op.
   """
   inputs_to_ignore = inputs_to_ignore or []
   outputs_to_ignore = outputs_to_ignore or []
@@ -175,81 +317,6 @@ def materialize_standard_op(
   ):
     if op_info.op_quant_config.execution_mode != qtyping.OpExecutionMode.SRQ:
       raise ValueError(f"Only SRQ is supported for op {op_info.op_name}.")
-
-  def _get_tensor_transformation_params_wrapper(
-      tensor, is_inbounding_tensor, quant_params=None
-  ):
-    """Util to get tensor transformation params."""
-    tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
-    tensor_data = tfl_flatbuffer_utils.get_tensor_data(
-        tensor, graph_info.buffers
-    )
-    tensor_quant_config = op_info.op_quant_config.activation_tensor_config
-    is_constant = tensor_data is not None
-    # Use weight configuration if it is supported.
-    if is_constant and op_info.op_name in frozenset.union(
-        _SUPPORTED_WEIGHT_ONLY_OPS, _SUPPORTED_DRQ_OPS
-    ):
-      tensor_quant_config = op_info.op_quant_config.weight_tensor_config
-    # Get quant params.
-    if quant_params is None and tensor_quant_config is not None:
-      if tensor_name not in tensor_name_to_qsv:
-        if is_constant:
-          # We need min/max to calculate quantization parameters, which
-          # should be collected during the calibration process. However,
-          # weight-only and DRQ do not require calibration, thus it is
-          # possible that this information is missing here. In that case we
-          # collect min/max on the spot.
-          tensor_min_max = init_tensor_min_max(
-              tensor,
-              graph_info,
-              op_info,
-          )
-        else:
-          raise ValueError(
-              f"Tensor {tensor_name} not found in tensor_name_to_qsv. Check"
-              " if the correct calibration results are passed into the"
-              " ParamsGenerator."
-          )
-      else:
-        tensor_min_max = tensor_name_to_qsv[tensor_name]
-      quant_params = _get_tensor_quant_params(
-          op_info,
-          tensor_min_max,
-          tensor_quant_config,
-          tensor_content=tensor_data,
-      )
-    return get_tensor_transformation_params(
-        tensor_name,
-        op_info,
-        is_inbounding_tensor=is_inbounding_tensor,
-        quant_params=quant_params,
-        is_constant=is_constant,
-    )
-
-  def _materialize_op_tensors(
-      op_tensors, is_inbounding_tensor, quant_params=None
-  ):
-    """Util to materialize op tensors."""
-    for tensor in op_tensors:
-      tensor_params = _get_tensor_transformation_params_wrapper(
-          tensor,
-          is_inbounding_tensor=is_inbounding_tensor,
-          quant_params=quant_params,
-      )
-      op_tensor_params.append(tensor_params)
-
-  def _get_single_tensor_params(tensors, is_inbounding_tensor):
-    """Util to get single tensor params."""
-    if len(tensors) != 1:
-      raise ValueError(
-          "Trying to get a single tensor params with a list of multiple tensor"
-          f" with size {len(tensors)}."
-      )
-    return _get_tensor_transformation_params_wrapper(
-        tensors[0],
-        is_inbounding_tensor=is_inbounding_tensor,
-    )
 
   # Process op inputs and outputs.
   input_tensors, output_tensors = [], []
@@ -264,13 +331,21 @@ def materialize_standard_op(
   if constraint == OpQuantConstraint.SAME_AS_INPUT_SCALE:
     # Must be a single input to avoid ambiguity.
     input_tensor_params = _get_single_tensor_params(
-        input_tensors, is_inbounding_tensor=True
+        input_tensors,
+        is_inbounding_tensor=True,
+        op_info=op_info,
+        graph_info=graph_info,
+        tensor_name_to_qsv=tensor_name_to_qsv,
     )
     op_tensor_params.append(input_tensor_params)
     # Use input quantization params for all output tensors.
     _materialize_op_tensors(
+        op_tensor_params,
         output_tensors,
         is_inbounding_tensor=False,
+        op_info=op_info,
+        graph_info=graph_info,
+        tensor_name_to_qsv=tensor_name_to_qsv,
         quant_params=input_tensor_params.consumers[0].parameters,
     )
     # Change output qsv to be the same as input qsv. This is safe since TFL
@@ -284,19 +359,45 @@ def materialize_standard_op(
   elif constraint == OpQuantConstraint.SAME_AS_OUTPUT_SCALE:
     # Must be a single output to avoid ambiguity.
     output_tensor_params = _get_single_tensor_params(
-        output_tensors, is_inbounding_tensor=False
+        output_tensors,
+        is_inbounding_tensor=False,
+        op_info=op_info,
+        graph_info=graph_info,
+        tensor_name_to_qsv=tensor_name_to_qsv,
     )
     op_tensor_params.append(output_tensor_params)
     # Use output quantization params for all input tensors.
+    if output_tensor_params.producer is None:
+      quant_params = None
+    else:
+      quant_params = output_tensor_params.producer.parameters
     _materialize_op_tensors(
+        op_tensor_params,
         input_tensors,
         is_inbounding_tensor=True,
-        quant_params=output_tensor_params.producer.parameters,
+        op_info=op_info,
+        graph_info=graph_info,
+        tensor_name_to_qsv=tensor_name_to_qsv,
+        quant_params=quant_params,
     )
 
   else:
-    _materialize_op_tensors(input_tensors, is_inbounding_tensor=True)
-    _materialize_op_tensors(output_tensors, is_inbounding_tensor=False)
+    _materialize_op_tensors(
+        op_tensor_params,
+        input_tensors,
+        is_inbounding_tensor=True,
+        op_info=op_info,
+        graph_info=graph_info,
+        tensor_name_to_qsv=tensor_name_to_qsv,
+    )
+    _materialize_op_tensors(
+        op_tensor_params,
+        output_tensors,
+        is_inbounding_tensor=False,
+        op_info=op_info,
+        graph_info=graph_info,
+        tensor_name_to_qsv=tensor_name_to_qsv,
+    )
 
   return op_tensor_params
 
