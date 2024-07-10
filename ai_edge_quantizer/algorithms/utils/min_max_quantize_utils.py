@@ -1,5 +1,6 @@
 """Utils for min/max based quantization."""
 
+from collections.abc import Sequence
 import enum
 from typing import Any, Optional
 import numpy as np
@@ -215,7 +216,7 @@ def _get_tensor_transformation_params_wrapper(
 
 def _materialize_op_tensors(
     op_tensor_params: list[qtyping.TensorTransformationParams],
-    op_tensors: list[Any],
+    op_tensors: Sequence[Any],
     is_inbounding_tensor: bool,
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
@@ -227,7 +228,7 @@ def _materialize_op_tensors(
   Args:
     op_tensor_params: Tensor transformation parameters for the op. Will be
       modified to include new tensor parameters.
-    op_tensors: A list of tensors associated with the op.
+    op_tensors: Tensors associated with the op.
     is_inbounding_tensor: Whether the tensor is an inbounding tensor for the op.
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
@@ -247,7 +248,7 @@ def _materialize_op_tensors(
 
 
 def _get_single_tensor_params(
-    tensors: list[Any],
+    tensors: Sequence[Any],
     is_inbounding_tensor: bool,
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
@@ -282,6 +283,146 @@ def _get_single_tensor_params(
   )
 
 
+def _materialize_standard_op_with_same_as_input_scale(
+    input_tensors: Sequence[Any],
+    output_tensors: Sequence[Any],
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in an op with same as input scale constraint.
+
+  Args:
+    input_tensors: Input tensors for the op.
+    output_tensors: Output tensors for the op.
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_name_to_qsv: A map of tensor name to quantization parameters.
+
+  Returns:
+    Quantization configuration for the tensors associated with the op (e.g.,
+    weights, bias).
+  """
+  op_tensor_params = []
+  # Must be a single input to avoid ambiguity.
+  input_tensor_params = _get_single_tensor_params(
+      input_tensors,
+      is_inbounding_tensor=True,
+      op_info=op_info,
+      graph_info=graph_info,
+      tensor_name_to_qsv=tensor_name_to_qsv,
+  )
+  op_tensor_params.append(input_tensor_params)
+  # Use input quantization params for all output tensors.
+  _materialize_op_tensors(
+      op_tensor_params,
+      output_tensors,
+      is_inbounding_tensor=False,
+      op_info=op_info,
+      graph_info=graph_info,
+      tensor_name_to_qsv=tensor_name_to_qsv,
+      quant_params=input_tensor_params.consumers[0].parameters,
+  )
+  # Change output qsv to be the same as input qsv. This is safe since TFL
+  # subgraph is acyclic.
+  input_tensor_qsv = tensor_name_to_qsv[input_tensor_params.tensor_name]
+  for output_tensor in output_tensors:
+    tensor_name_to_qsv[tfl_flatbuffer_utils.get_tensor_name(output_tensor)] = (
+        input_tensor_qsv
+    )
+
+  return op_tensor_params
+
+
+def _materialize_standard_op_with_same_as_output_scale(
+    input_tensors: Sequence[Any],
+    output_tensors: Sequence[Any],
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in an op with same as output scale constraint.
+
+  Args:
+    input_tensors: Input tensors for the op.
+    output_tensors: Output tensors for the op.
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_name_to_qsv: A map of tensor name to quantization parameters.
+
+  Returns:
+    Quantization configuration for the tensors associated with the op (e.g.,
+    weights, bias).
+  """
+  op_tensor_params = []
+  # Must be a single output to avoid ambiguity.
+  output_tensor_params = _get_single_tensor_params(
+      output_tensors,
+      is_inbounding_tensor=False,
+      op_info=op_info,
+      graph_info=graph_info,
+      tensor_name_to_qsv=tensor_name_to_qsv,
+  )
+  op_tensor_params.append(output_tensor_params)
+  # Use output quantization params for all input tensors.
+  if output_tensor_params.producer is None:
+    quant_params = None
+  else:
+    quant_params = output_tensor_params.producer.parameters
+  _materialize_op_tensors(
+      op_tensor_params,
+      input_tensors,
+      is_inbounding_tensor=True,
+      op_info=op_info,
+      graph_info=graph_info,
+      tensor_name_to_qsv=tensor_name_to_qsv,
+      quant_params=quant_params,
+  )
+
+  return op_tensor_params
+
+
+def _materialize_standard_op_no_constraint(
+    input_tensors: Sequence[Any],
+    output_tensors: Sequence[Any],
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in an op with no constraint.
+
+  Args:
+    input_tensors: Input tensors for the op.
+    output_tensors: Output tensors for the op.
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_name_to_qsv: A map of tensor name to quantization parameters.
+
+  Returns:
+    Quantization configuration for the tensors associated with the op (e.g.,
+    weights, bias).
+  """
+  op_tensor_params = []
+  _materialize_op_tensors(
+      op_tensor_params,
+      input_tensors,
+      is_inbounding_tensor=True,
+      op_info=op_info,
+      graph_info=graph_info,
+      tensor_name_to_qsv=tensor_name_to_qsv,
+  )
+  _materialize_op_tensors(
+      op_tensor_params,
+      output_tensors,
+      is_inbounding_tensor=False,
+      op_info=op_info,
+      graph_info=graph_info,
+      tensor_name_to_qsv=tensor_name_to_qsv,
+  )
+
+  return op_tensor_params
+
+
 def materialize_standard_op(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
@@ -306,19 +447,10 @@ def materialize_standard_op(
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
     weights, bias).
-
-  Raises:
-    ValueError: If not SRQ is requested for SRQ only op.
   """
+  # Process op inputs and outputs.
   inputs_to_ignore = inputs_to_ignore or []
   outputs_to_ignore = outputs_to_ignore or []
-  if op_info.op_name not in frozenset.union(
-      _SUPPORTED_WEIGHT_ONLY_OPS, _SUPPORTED_DRQ_OPS
-  ):
-    if op_info.op_quant_config.execution_mode != qtyping.OpExecutionMode.SRQ:
-      raise ValueError(f"Only SRQ is supported for op {op_info.op_name}.")
-
-  # Process op inputs and outputs.
   input_tensors, output_tensors = [], []
   for i, input_tensor_index in enumerate(op_info.op.inputs):
     if i not in inputs_to_ignore and input_tensor_index >= 0:
@@ -327,79 +459,19 @@ def materialize_standard_op(
     if i not in outputs_to_ignore and output_tensor_index >= 0:
       output_tensors.append(graph_info.subgraph_tensors[output_tensor_index])
 
-  op_tensor_params = []
+  # Materialize op tensors.
   if constraint == OpQuantConstraint.SAME_AS_INPUT_SCALE:
-    # Must be a single input to avoid ambiguity.
-    input_tensor_params = _get_single_tensor_params(
-        input_tensors,
-        is_inbounding_tensor=True,
-        op_info=op_info,
-        graph_info=graph_info,
-        tensor_name_to_qsv=tensor_name_to_qsv,
+    return _materialize_standard_op_with_same_as_input_scale(
+        input_tensors, output_tensors, op_info, graph_info, tensor_name_to_qsv
     )
-    op_tensor_params.append(input_tensor_params)
-    # Use input quantization params for all output tensors.
-    _materialize_op_tensors(
-        op_tensor_params,
-        output_tensors,
-        is_inbounding_tensor=False,
-        op_info=op_info,
-        graph_info=graph_info,
-        tensor_name_to_qsv=tensor_name_to_qsv,
-        quant_params=input_tensor_params.consumers[0].parameters,
-    )
-    # Change output qsv to be the same as input qsv. This is safe since TFL
-    # subgraph is acyclic.
-    input_tensor_qsv = tensor_name_to_qsv[input_tensor_params.tensor_name]
-    for output_tensor in output_tensors:
-      tensor_name_to_qsv[
-          tfl_flatbuffer_utils.get_tensor_name(output_tensor)
-      ] = input_tensor_qsv
-
   elif constraint == OpQuantConstraint.SAME_AS_OUTPUT_SCALE:
-    # Must be a single output to avoid ambiguity.
-    output_tensor_params = _get_single_tensor_params(
-        output_tensors,
-        is_inbounding_tensor=False,
-        op_info=op_info,
-        graph_info=graph_info,
-        tensor_name_to_qsv=tensor_name_to_qsv,
+    return _materialize_standard_op_with_same_as_output_scale(
+        input_tensors, output_tensors, op_info, graph_info, tensor_name_to_qsv
     )
-    op_tensor_params.append(output_tensor_params)
-    # Use output quantization params for all input tensors.
-    if output_tensor_params.producer is None:
-      quant_params = None
-    else:
-      quant_params = output_tensor_params.producer.parameters
-    _materialize_op_tensors(
-        op_tensor_params,
-        input_tensors,
-        is_inbounding_tensor=True,
-        op_info=op_info,
-        graph_info=graph_info,
-        tensor_name_to_qsv=tensor_name_to_qsv,
-        quant_params=quant_params,
-    )
-
   else:
-    _materialize_op_tensors(
-        op_tensor_params,
-        input_tensors,
-        is_inbounding_tensor=True,
-        op_info=op_info,
-        graph_info=graph_info,
-        tensor_name_to_qsv=tensor_name_to_qsv,
+    return _materialize_standard_op_no_constraint(
+        input_tensors, output_tensors, op_info, graph_info, tensor_name_to_qsv
     )
-    _materialize_op_tensors(
-        op_tensor_params,
-        output_tensors,
-        is_inbounding_tensor=False,
-        op_info=op_info,
-        graph_info=graph_info,
-        tensor_name_to_qsv=tensor_name_to_qsv,
-    )
-
-  return op_tensor_params
 
 
 def get_tensor_transformations(
