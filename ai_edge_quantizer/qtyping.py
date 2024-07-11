@@ -25,6 +25,7 @@ class TFLOperationName(str, enum.Enum):
   CUSTOM_OP = 'CUSTOM_OP'
   EMBEDDING_LOOKUP = 'EMBEDDING_LOOKUP'
   SOFTMAX = 'SOFTMAX'
+  TRANSPOSE = 'TRANSPOSE'
 
 
 # Use same code number as MOJAX for compatibility.

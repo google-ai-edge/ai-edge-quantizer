@@ -195,6 +195,21 @@ def materialize_fc_conv(
   return op_tensor_params
 
 
+def materialize_transpose(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.transpose."""
+  return utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
+      inputs_to_ignore=[1],  # Permutation tensor does not need to be quantized.
+  )
+
+
 # TODO: b/333731147 - Use named tuple to store min/max.
 def init_qsvs(
     op_info: qtyping.OpInfo,

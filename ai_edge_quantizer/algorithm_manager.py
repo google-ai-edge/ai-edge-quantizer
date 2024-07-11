@@ -53,6 +53,7 @@ for op_name, materialize_func in zip(
         _TFLOpName.AVERAGE_POOL_2D,
         _TFLOpName.EMBEDDING_LOOKUP,
         _TFLOpName.SOFTMAX,
+        _TFLOpName.TRANSPOSE,
     ),
     (
         naive_min_max_quantize.materialize_fc_conv,
@@ -63,6 +64,7 @@ for op_name, materialize_func in zip(
         naive_min_max_quantize.materialize_average_pool_2d,
         naive_min_max_quantize.materialize_embedding_lookup,
         naive_min_max_quantize.materialize_softmax,
+        naive_min_max_quantize.materialize_transpose,
     ),
 ):
   register_quantized_op(
