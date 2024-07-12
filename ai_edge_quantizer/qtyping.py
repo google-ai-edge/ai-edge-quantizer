@@ -14,6 +14,8 @@ QSV: TypeAlias = MutableMapping[str, Any]
 
 
 class TFLOperationName(str, enum.Enum):
+  """TF Lite operation names."""
+
   ALL_SUPPORTED = '*'
   FULLY_CONNECTED = 'FULLY_CONNECTED'
   BATCH_MATMUL = 'BATCH_MATMUL'
@@ -26,6 +28,7 @@ class TFLOperationName(str, enum.Enum):
   EMBEDDING_LOOKUP = 'EMBEDDING_LOOKUP'
   SOFTMAX = 'SOFTMAX'
   TRANSPOSE = 'TRANSPOSE'
+  GELU = 'GELU'
 
 
 # Use same code number as MOJAX for compatibility.

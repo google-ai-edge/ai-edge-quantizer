@@ -35,6 +35,7 @@ _SUPPORTED_SRQ_OPS = frozenset([
     _TFLOpName.SOFTMAX,
     _TFLOpName.DEPTHWISE_CONV_2D,
     _TFLOpName.TRANSPOSE,
+    _TFLOpName.GELU,
 ])
 
 _INT4_DRQ_SRQ_SUPPORTED_OPS = frozenset([
