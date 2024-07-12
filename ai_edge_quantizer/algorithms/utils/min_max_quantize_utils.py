@@ -366,7 +366,6 @@ def _materialize_standard_op_with_same_as_output_scale(
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
   )
-  op_tensor_params.append(output_tensor_params)
   # Use output quantization params for all input tensors.
   if output_tensor_params.producer is None:
     quant_params = None
@@ -381,6 +380,7 @@ def _materialize_standard_op_with_same_as_output_scale(
       tensor_name_to_qsv=tensor_name_to_qsv,
       quant_params=quant_params,
   )
+  op_tensor_params.append(output_tensor_params)
 
   return op_tensor_params
 
@@ -449,7 +449,9 @@ def materialize_standard_op(
 
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
-    weights, bias).
+    weights, bias). The returned list has the structure:
+    [input_tensor_0_params, ..., input_tensor_n_params,
+    output_tensor_0_params, ..., output_tensor_m_params].
   """
   # Process op inputs and outputs.
   inputs_to_ignore = inputs_to_ignore or []
