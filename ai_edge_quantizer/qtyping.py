@@ -29,6 +29,7 @@ class TFLOperationName(str, enum.Enum):
   SOFTMAX = 'SOFTMAX'
   TRANSPOSE = 'TRANSPOSE'
   GELU = 'GELU'
+  ADD = 'ADD'
 
 
 # Use same code number as MOJAX for compatibility.

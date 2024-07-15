@@ -18,7 +18,17 @@ _QuantTransformation = qtyping.QuantTransformation
 
 @dataclasses.dataclass
 class OpTestInfo:
-  """Aggregate op test information."""
+  """Aggregate op test information.
+
+  Attributes:
+    test_model: The test model.
+    op_tensor_names: A map of op tensor names with keys for input(s) and output.
+      Note for multiple inputs, the keys will follow the pattern of "input",
+      "input2", "input3" etc.
+    input_range: A tuple of input min and max.
+    output_range: A tuple of output min and max.
+    quantized_dimension: Quantized dimension.
+  """
 
   test_model: Any
   op_tensor_names: dict[str, str]
@@ -53,21 +63,31 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       self,
       execution_mode,
       op_test_info,
+      num_inputs=1,
   ):
+    """Helper to set up qsv for op test."""
     # SRQ requires QSVs (min/max).
     input_min, input_max = op_test_info.input_range
     output_min, output_max = op_test_info.output_range
     if execution_mode == _OpExecutionMode.SRQ:
-      self._tensor_name_to_qsv = {
-          op_test_info.op_tensor_names["input"]: {
-              "min": input_min,
-              "max": input_max,
-          },
-          op_test_info.op_tensor_names["output"]: {
-              "min": output_min,
-              "max": output_max,
-          },
+      input_qsv = {
+          "min": input_min,
+          "max": input_max,
       }
+      output_qsv = {
+          "min": output_min,
+          "max": output_max,
+      }
+      self._tensor_name_to_qsv = {
+          op_test_info.op_tensor_names["output"]: output_qsv,
+      }
+      for i in range(num_inputs):
+        input_name = "input"
+        if i > 0:
+          input_name = f"input{i+1}"
+        self._tensor_name_to_qsv[op_test_info.op_tensor_names[input_name]] = (
+            input_qsv
+        )
 
   def _test_single_input_output_ops(
       self,
@@ -121,6 +141,68 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       input_tensor_quant_params = tensor_quant_params[0].consumers[0].parameters  # pytype: disable=attribute-error
       output_tensor_quant_params = tensor_quant_params[1].producer.parameters  # pytype: disable=attribute-error
       self.assertEqual(input_tensor_quant_params, output_tensor_quant_params)
+
+  def _test_two_input_one_output_ops(
+      self,
+      op_info,
+      graph_info,
+      op_test_info,
+      materialization_func,
+  ):
+    """Tests ops with two inputs and single output.
+
+    Can be used for ops such as ADD, MUL, SUB.
+
+    Args:
+      op_info: OpInfo object.
+      graph_info: GraphInfo object.
+      op_test_info: OpTestInfo object.
+      materialization_func: Function to materialize tensor transformation
+        parameters.
+    """
+    op_quant_config = op_info.op_quant_config
+    self._setup_op_test_config(
+        execution_mode=op_quant_config.execution_mode,
+        op_test_info=op_test_info,
+        num_inputs=2,
+    )
+    tensor_quant_params = materialization_func(
+        op_info, graph_info, self._tensor_name_to_qsv
+    )
+    self.assertLen(tensor_quant_params, 3)
+
+    # Test input tensor settings.
+    transformations = [_QuantTransformation.NO_QUANTIZE]
+    if op_quant_config.execution_mode == _OpExecutionMode.SRQ:
+      transformations = [_QuantTransformation.ADD_QUANTIZE]
+    self._test_tensor_transformation_params(
+        op_test_info.op_tensor_names["input"],
+        op_info.subgraph_op_index,
+        is_inbounding_tensor=True,
+        tensor_quant_config=op_quant_config.activation_tensor_config,
+        transformation_params=tensor_quant_params[0],
+        desired_transformations=transformations,
+    )
+    self._test_tensor_transformation_params(
+        op_test_info.op_tensor_names["input2"],
+        op_info.subgraph_op_index,
+        is_inbounding_tensor=True,
+        tensor_quant_config=op_quant_config.activation_tensor_config,
+        transformation_params=tensor_quant_params[1],
+        desired_transformations=transformations,
+    )
+    # Test output tensor settings
+    transformations = [_QuantTransformation.NO_QUANTIZE]
+    if op_quant_config.execution_mode == _OpExecutionMode.SRQ:
+      transformations = [_QuantTransformation.ADD_DEQUANTIZE]
+    self._test_tensor_transformation_params(
+        op_test_info.op_tensor_names["output"],
+        op_info.subgraph_op_index,
+        is_inbounding_tensor=False,
+        tensor_quant_config=op_quant_config.activation_tensor_config,
+        transformation_params=tensor_quant_params[2],
+        desired_transformations=transformations,
+    )
 
   def _test_fc_bmm_conv(
       self,

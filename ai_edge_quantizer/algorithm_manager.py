@@ -55,6 +55,7 @@ for op_name, materialize_func in zip(
         _TFLOpName.SOFTMAX,
         _TFLOpName.TRANSPOSE,
         _TFLOpName.GELU,
+        _TFLOpName.ADD,
     ),
     (
         naive_min_max_quantize.materialize_fc_conv,
@@ -67,6 +68,7 @@ for op_name, materialize_func in zip(
         naive_min_max_quantize.materialize_softmax,
         naive_min_max_quantize.materialize_transpose,
         naive_min_max_quantize.materialize_gelu,
+        naive_min_max_quantize.materialize_add,
     ),
 ):
   register_quantized_op(
