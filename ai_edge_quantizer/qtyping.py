@@ -27,6 +27,7 @@ class TFLOperationName(str, enum.Enum):
   CUSTOM_OP = 'CUSTOM_OP'
   EMBEDDING_LOOKUP = 'EMBEDDING_LOOKUP'
   SOFTMAX = 'SOFTMAX'
+  TANH = 'TANH'
   TRANSPOSE = 'TRANSPOSE'
   GELU = 'GELU'
   ADD = 'ADD'

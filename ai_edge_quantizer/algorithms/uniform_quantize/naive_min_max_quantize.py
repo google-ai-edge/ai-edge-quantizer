@@ -200,6 +200,29 @@ def materialize_fc_conv(
   return op_tensor_params
 
 
+def materialize_tanh(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.tanh."""
+  # Hard code scales and zero point values as they are hard coded in:
+  # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/mlir/lite/ir/tfl_ops.td#L3430
+  output_activation_constraints = {}
+  for num_bits in [8, 16]:
+    output_activation_constraints[num_bits] = qtyping.UniformQuantParams(
+        num_bits=num_bits,
+        quantized_dimension=None,
+        scale=np.array(1.0 / (1 << (num_bits - 1))),
+        zero_point=np.array(0),
+        # Activation is always asymmetric for 8 bit and symmetric for 16 bits.
+        symmetric=num_bits == 16,
+    )
+  return utils.materialize_op_with_output_activation_constraint(
+      op_info, graph_info, tensor_name_to_qsv, output_activation_constraints
+  )
+
+
 def materialize_transpose(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,

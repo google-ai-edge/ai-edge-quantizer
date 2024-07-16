@@ -32,6 +32,7 @@ TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
         schema_py_generated.BuiltinOperator.AVERAGE_POOL_2D
     ),
     _TFLOpName.RESHAPE: schema_py_generated.BuiltinOperator.RESHAPE,
+    _TFLOpName.TANH: schema_py_generated.BuiltinOperator.TANH,
     _TFLOpName.TRANSPOSE: schema_py_generated.BuiltinOperator.TRANSPOSE,
     _TFLOpName.GELU: schema_py_generated.BuiltinOperator.GELU,
     _TFLOpName.ADD: schema_py_generated.BuiltinOperator.ADD,

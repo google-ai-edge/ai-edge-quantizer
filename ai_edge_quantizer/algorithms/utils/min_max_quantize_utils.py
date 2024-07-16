@@ -34,6 +34,7 @@ _SUPPORTED_SRQ_OPS = frozenset([
     _TFLOpName.RESHAPE,
     _TFLOpName.SOFTMAX,
     _TFLOpName.DEPTHWISE_CONV_2D,
+    _TFLOpName.TANH,
     _TFLOpName.TRANSPOSE,
     _TFLOpName.GELU,
     _TFLOpName.ADD,
