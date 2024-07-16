@@ -1,3 +1,4 @@
+import collections
 from absl.testing import parameterized
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
@@ -333,6 +334,28 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         min_max_quantize_utils.check_drq_config(op_name, op_quant_config)
       elif execution_mode == _OpExecutionMode.SRQ:
         min_max_quantize_utils.check_srq_config(op_name, op_quant_config)
+
+  def test_materialize_op_with_output_activation_constraint_fails_for_multiple_output_op(
+      self,
+  ):
+    # Create a mock op with multiple outputs.
+    MockOp = collections.namedtuple("MockOp", ["outputs"])
+    mock_op_info = qtyping.OpInfo(
+        op=MockOp(outputs=[1, 2]),
+        op_name=_TFLOpName.SOFTMAX,
+        subgraph_op_index=0,
+        op_quant_config=_OpQuantConfig(),
+    )
+
+    with self.assertRaisesRegex(
+        ValueError, "only supports ops with a single output tensor"
+    ):
+      min_max_quantize_utils.materialize_op_with_output_activation_constraint(
+          op_info=mock_op_info,
+          graph_info=qtyping.GraphInfo([], []),
+          tensor_name_to_qsv={},
+          output_activation_constraints={},
+      )
 
 
 if __name__ == "__main__":

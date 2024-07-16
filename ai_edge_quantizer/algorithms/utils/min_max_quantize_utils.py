@@ -480,6 +480,70 @@ def materialize_standard_op(
     )
 
 
+def materialize_op_with_output_activation_constraint(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+    output_activation_constraints: dict[int, qtyping.UniformQuantParams],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in an op with output activation constraint.
+
+  The output activation constraints are used to explicitly set
+  quantization parameters for the output tensor when doing SRQ.
+
+  Function assumes that there is only one output tensor.
+
+  Args:
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    output_activation_constraints: A map of output activation num bits to
+      quantization parameters.
+
+  Returns:
+    Quantization configuration for the tensors associated with the op (e.g.,
+    weights, bias).
+
+  Raises:
+    ValueError: If the op has more than one output tensor, or if the output
+      activation constraints dictionary does not contain an entry for the
+      activation num bits specified in the op quantization config.
+  """
+  if len(op_info.op.outputs) != 1:
+    raise ValueError(
+        "Materialize op with output activation constraint only supports ops"
+        " with a single output tensor."
+    )
+
+  tensor_params = materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+  )
+  output_tensor_params = tensor_params[-1]
+
+  # Explicitly set quantization parameters for the output tensor when doing SRQ.
+  activation_tensor_config = op_info.op_quant_config.activation_tensor_config
+  if (
+      activation_tensor_config is not None
+      and output_tensor_params.producer is not None
+  ):
+    activation_num_bits = activation_tensor_config.num_bits
+    if activation_num_bits not in output_activation_constraints:
+      raise ValueError(
+          "Output activation constraints dictionary does not contain entity"
+          f" for activation num bits {activation_num_bits}."
+      )
+    op_tensor_params = qtyping.OpToTensorParams(
+        subgraph_op_id=output_tensor_params.producer.subgraph_op_id,
+        transformations=output_tensor_params.producer.transformations,
+        parameters=output_activation_constraints[activation_num_bits],
+    )
+    output_tensor_params.producer = op_tensor_params
+
+  return tensor_params
+
+
 def get_tensor_transformations(
     op_quant_config: qtyping.OpQuantizationConfig,
     is_inbounding_tensor: bool,

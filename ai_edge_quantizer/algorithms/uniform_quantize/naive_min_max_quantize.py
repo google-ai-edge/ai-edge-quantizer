@@ -62,38 +62,30 @@ def materialize_softmax(
     tensor_name_to_qsv: dict[str, Any],
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize tensors in tfl.softmax."""
-  input_tensor_params, output_tensor_params = utils.materialize_standard_op(
+  # Hard code scales and zp values as they are hard coded in TFL kernels.
+  # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/kernels/activations.cc#L548
+  output_activation_constraints = {
+      8: qtyping.UniformQuantParams(
+          num_bits=8,
+          quantized_dimension=None,
+          scale=np.array(1.0 / 256),
+          zero_point=np.array(-128),
+          symmetric=False,
+      ),
+      16: qtyping.UniformQuantParams(
+          num_bits=16,
+          quantized_dimension=None,
+          scale=np.array(1.0 / 32768),
+          zero_point=np.array(0),
+      ),
+  }
+
+  return utils.materialize_op_with_output_activation_constraint(
       op_info,
       graph_info,
       tensor_name_to_qsv,
+      output_activation_constraints,
   )
-  # Explicitly set output scale and zero point for the output tensor when doing
-  # SRQ.
-  activation_tensor_config = op_info.op_quant_config.activation_tensor_config
-  if (
-      activation_tensor_config is not None
-      and output_tensor_params.producer is not None
-  ):
-    act_num_bits = activation_tensor_config.num_bits
-    # Hard code scales and zp values as they are hard coded in TFL kernels.
-    # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/kernels/activations.cc#L548
-    scales, zp, symmetric = 1.0 / 256, -128, False
-    if act_num_bits == 16:
-      scales, zp, symmetric = 1.0 / 32768, 0, True
-    output_quant_params = qtyping.UniformQuantParams(
-        num_bits=act_num_bits,
-        quantized_dimension=None,
-        scale=np.array(scales),
-        zero_point=np.array(zp),
-        symmetric=symmetric,
-    )
-    op_tensor_params = qtyping.OpToTensorParams(
-        subgraph_op_id=output_tensor_params.producer.subgraph_op_id,
-        transformations=output_tensor_params.producer.transformations,
-        parameters=output_quant_params,
-    )
-    output_tensor_params.producer = op_tensor_params
-  return [input_tensor_params, output_tensor_params]
 
 
 def materialize_batch_matmul(
