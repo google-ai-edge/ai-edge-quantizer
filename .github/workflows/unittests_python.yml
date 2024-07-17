@@ -9,6 +9,12 @@
 name: Python Unit Tests
 
 on:
+  merge_group:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+  workflow_dispatch:  # Allow manual triggers
   workflow_call:
     inputs:
       trigger-sha:
@@ -17,7 +23,7 @@ on:
 
 jobs:
   run-unittests-python:
-    name: "Run Unit Tests with Python ${{ matrix.python-version }} on {{ matrix.runner }}"
+    name: "Run Unit Tests with Python ${{ matrix.python-version }} on ${{ matrix.runner }}"
     strategy:
       matrix:
         runner: [ubuntu-latest]
