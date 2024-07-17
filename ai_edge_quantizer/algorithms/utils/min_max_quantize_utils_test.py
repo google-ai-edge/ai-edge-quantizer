@@ -89,6 +89,10 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
   def test_check_drq_config_succeeds(
       self, op_name, weight_num_bits, weight_channel_wise
   ):
+    # TODO: b/353365054 - Remove this check after int4 DRQ is supported for
+    # conv2d.
+    if op_name == _TFLOpName.CONV_2D and weight_num_bits == 4:
+      return
     op_quant_config = _OpQuantConfig(
         weight_tensor_config=_TensorQuantConfig(
             num_bits=weight_num_bits, channel_wise=weight_channel_wise
@@ -259,7 +263,10 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
       )
 
   @parameterized.product(
-      op_name=(_TFLOpName.FULLY_CONNECTED, _TFLOpName.CONV_2D),
+      op_name=[
+          _TFLOpName.FULLY_CONNECTED,
+          _TFLOpName.CONV_2D,
+      ],
       activation_tensor_config=[
           None,
           _TensorQuantConfig(num_bits=8, symmetric=False),
@@ -282,6 +289,10 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         activation_tensor_config is None
         and execution_mode == _OpExecutionMode.SRQ
     ):
+      return
+    # TODO: b/353365054 - Remove this check after int4 DRQ is supported for
+    # conv2d.
+    if execution_mode == _OpExecutionMode.DRQ and op_name == _TFLOpName.CONV_2D:
       return
     op_quant_config = _OpQuantConfig(
         activation_tensor_config=activation_tensor_config,

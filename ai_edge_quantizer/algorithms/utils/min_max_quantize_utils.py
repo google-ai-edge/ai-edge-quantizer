@@ -27,6 +27,13 @@ _SUPPORTED_DRQ_OPS = frozenset([
     _TFLOpName.DEPTHWISE_CONV_2D,
 ])
 
+_INT4_DRQ_SUPPORTED_OPS = frozenset([
+    _TFLOpName.FULLY_CONNECTED,
+    # TODO: b/353365054 - Uncomment after int4 DRQ is supported for
+    # conv2d.
+    # _TFLOpName.CONV_2D,
+])
+
 _SUPPORTED_SRQ_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
     _TFLOpName.CONV_2D,
@@ -40,7 +47,7 @@ _SUPPORTED_SRQ_OPS = frozenset([
     _TFLOpName.ADD,
 ])
 
-_INT4_DRQ_SRQ_SUPPORTED_OPS = frozenset([
+_INT4_SRQ_SUPPORTED_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
     _TFLOpName.CONV_2D,
     _TFLOpName.EMBEDDING_LOOKUP,
@@ -66,7 +73,7 @@ def check_drq_config(
     raise ValueError(
         f"Only int4/int8 symmetric DRQ is supported for op {op_name}"
     )
-  if weight_config.num_bits == 4 and op_name not in _INT4_DRQ_SRQ_SUPPORTED_OPS:
+  if weight_config.num_bits == 4 and op_name not in _INT4_DRQ_SUPPORTED_OPS:
     raise ValueError(f"Int4 DRQ is not supported for op {op_name}.")
 
 
@@ -97,7 +104,7 @@ def check_srq_config(
         "Currently only int4/int8 symmetric weight are supported for op"
         f" {op_name}."
     )
-  if weight_config.num_bits == 4 and op_name not in _INT4_DRQ_SRQ_SUPPORTED_OPS:
+  if weight_config.num_bits == 4 and op_name not in _INT4_SRQ_SUPPORTED_OPS:
     raise ValueError(f"Int4 weight SRQ is not supported for op {op_name}.")
 
 

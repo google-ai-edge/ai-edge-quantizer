@@ -19,9 +19,6 @@ _OpTestInfo = naive_min_max_test_utils.OpTestInfo
 _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(
     "../../../tests/models"
 )
-_DEFAULT_ACTIVATION_QUANT_SETTING = (
-    naive_min_max_test_utils.DEFAULT_ACTIVATION_QUANT_SETTING
-)
 
 
 class Conv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
@@ -37,36 +34,16 @@ class Conv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         op_tensor_names={},
         input_range=(np.array([[-10]]), np.array([[8]])),
         output_range=(np.array([[10]]), np.array([[88]])),
+        quantized_dimension=0,
     )
     # The test model has one subgraph for now.
     self._graph_info = qtyping.GraphInfo(
         subgraph_tensors=self._op_test_info.test_model.subgraphs[0].tensors,
         buffers=self._op_test_info.test_model.buffers,
     )
+    self._set_op_tensor_names()
 
-  # TODO(rewu): add int16 tests.
-  @parameterized.product(
-      num_bits_weight=(4, 8),
-      symmetric_weight=(True, False),
-      channel_wise_weight=(True, False),
-      execution_mode=(
-          _OpExecutionMode.WEIGHT_ONLY,
-          _OpExecutionMode.DRQ,
-          _OpExecutionMode.SRQ,
-      ),
-  )
-  def test_materialize_conv2d_succeeds(
-      self,
-      num_bits_weight,
-      symmetric_weight,
-      channel_wise_weight,
-      execution_mode,
-  ):
-
-    # Read from Model Explorer.
-    subgraph0 = self._op_test_info.test_model.subgraphs[0]
-    subgraph_op_id = 0
-    op = subgraph0.operators[subgraph_op_id]
+  def _set_op_tensor_names(self):
     op_tensor_names = {}
     op_tensor_names["weight"] = "sequential/conv2d/Conv2D"
     op_tensor_names["bias"] = (
@@ -78,9 +55,27 @@ class Conv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     )
     self._op_test_info.op_tensor_names = op_tensor_names
 
+  @parameterized.product(
+      num_bits_weight=(4, 8),
+      symmetric_weight=(True, False),
+      channel_wise_weight=(True, False),
+      execution_mode=(
+          _OpExecutionMode.WEIGHT_ONLY,
+          _OpExecutionMode.DRQ,
+      ),
+  )
+  def test_materialize_weight_only_drq_conv2d_succeeds(
+      self,
+      num_bits_weight,
+      symmetric_weight,
+      channel_wise_weight,
+      execution_mode,
+  ):
+    # Read from Model Explorer.
+    subgraph0 = self._op_test_info.test_model.subgraphs[0]
+    subgraph_op_id = 0
+    op = subgraph0.operators[subgraph_op_id]
     activation_tensor_config = None
-    if execution_mode == _OpExecutionMode.SRQ:
-      activation_tensor_config = _DEFAULT_ACTIVATION_QUANT_SETTING
     op_info = qtyping.OpInfo(
         op=op,
         op_name=qtyping.TFLOperationName.CONV_2D,
@@ -95,7 +90,53 @@ class Conv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
             execution_mode=execution_mode,
         ),
     )
+    self._test_fc_bmm_conv(
+        op_info,
+        self._graph_info,
+        self._op_test_info,
+        naive_min_max_quantize.materialize_fc_conv,
+    )
 
+  @parameterized.product(
+      activation_num_bits=(8, 16),
+      weight_num_bits=(4, 8),
+  )
+  def test_materialize_srq_conv2d_succeeds(
+      self,
+      activation_num_bits,
+      weight_num_bits,
+  ):
+    # Read from Model Explorer.
+    subgraph0 = self._op_test_info.test_model.subgraphs[0]
+    subgraph_op_id = 0
+    op = subgraph0.operators[subgraph_op_id]
+
+    if activation_num_bits == 8:
+      activation_tensor_config = _TensorQuantConfig(
+          num_bits=8,
+          symmetric=False,
+          channel_wise=False,
+      )
+    else:
+      activation_tensor_config = _TensorQuantConfig(
+          num_bits=16,
+          symmetric=True,
+          channel_wise=False,
+      )
+    op_info = qtyping.OpInfo(
+        op=op,
+        op_name=qtyping.TFLOperationName.CONV_2D,
+        subgraph_op_index=subgraph_op_id,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            activation_tensor_config=activation_tensor_config,
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=weight_num_bits,
+                symmetric=True,
+                channel_wise=True,
+            ),
+            execution_mode=_OpExecutionMode.SRQ,
+        ),
+    )
     self._test_fc_bmm_conv(
         op_info,
         self._graph_info,
