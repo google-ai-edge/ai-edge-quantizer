@@ -14,9 +14,9 @@ DOCLINES = __doc__.split("\n")
 
 name = "ai-edge-quantizer"
 version = "0.0.1"
-if nightly_release_datetime := os.environ.get("NIGHTLY_RELEASE_DATETIME"):
+if nightly_release_date := os.environ.get("NIGHTLY_RELEASE_DATE"):
   name += "-nightly"
-  version += ".dev" + nightly_release_datetime
+  version += ".dev" + nightly_release_date
 
 
 setuptools.setup(

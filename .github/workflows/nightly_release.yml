@@ -23,12 +23,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get and set nightly datetime
-        id: datetime
+      - name: Get and set nightly date
+        id: date
         run: |
-          DATETIME=$(date +'%Y%m%d%H%M')
-          echo "NIGHTLY_RELEASE_DATETIME=${DATETIME}" >> $GITHUB_ENV
-          echo "datetime=${DATETIME}" >> $GITHUB_OUTPUT
+          DATE=$(date +'%Y%m%d')
+          echo "NIGHTLY_RELEASE_DATE=${DATE}" >> $GITHUB_ENV
+          echo "date=${DATE}" >> $GITHUB_OUTPUT
 
       - name: Setup Python
         uses: actions/setup-python@v4
