@@ -84,7 +84,7 @@ def compare_model(
             target_interpreter, target_name_to_details[tensor_name]
         )
         comparison_results[tensor_name].append(
-            compare_fn(reference_data, target_data)
+            compare_fn(target_data, reference_data)
         )
 
   agregated_results = {}
