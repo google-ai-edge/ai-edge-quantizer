@@ -27,15 +27,15 @@ class ParamsGenerator:
     """Generate the quantization parameters for the model.
 
     Args:
-      model_recipe_manager: the recipe manager for the model.
-      model_qsvs: quantization statistics values (qsvs) for the model. This is
+      model_recipe_manager: The recipe manager for the model.
+      model_qsvs: Quantization statistics values (QSVs) for the model. This is
         obtained through calibration process.
 
     Returns:
-      model_quant_results: the quantization parameters for tensors in the model.
+      model_quant_results: The quantization parameters for tensors in the model.
 
     Raises:
-      RuntimeError: if the calibration dataset is required but not provided.
+      RuntimeError: If the calibration dataset is required but not provided.
     """
     if model_recipe_manager.need_calibration() and not model_qsvs:
       raise RuntimeError(
@@ -95,7 +95,7 @@ class ParamsGenerator:
     """Post process the quantization results.
 
     Raises:
-      RuntimeError: if the tensors sharing the same buffer have different
+      RuntimeError: If the tensors sharing the same buffer have different
       quantization settings.
     """
     self._check_buffer_sharing()
@@ -110,10 +110,10 @@ class ParamsGenerator:
     """Update the op quantization results to the final output.
 
     Args:
-      op_tensor_results: list of tensor level quantization params for the op.
+      op_tensor_results: Tensor level quantization params for the op.
 
     Raises:
-      RuntimeError: if the same tensor has multiple quantization configs.
+      RuntimeError: If the same tensor has multiple quantization configs.
     """
 
     for op_tensor_result in op_tensor_results:
@@ -124,7 +124,7 @@ class ParamsGenerator:
         tensor_params = self.model_quant_results[tensor_name]
         # Set source op.
         if op_tensor_result.producer is not None:
-          # src params must be unique (a tensor can only be produced by one op).
+          # Src params must be unique (a tensor can only be produced by one op).
           if tensor_params.producer is not None:
             raise RuntimeError(
                 'Tensor %s received multiple quantization parameters from the'
@@ -148,11 +148,11 @@ class ParamsGenerator:
     Explorer).
 
     Args:
-      op: the op that need to be parsed.
-      subgraph_tensors: list of tensors in the subgraph.
+      op: The op that needs to be parsed.
+      subgraph_tensors: Tensors in the subgraph.
 
     Returns:
-      scope: scope for the op.
+      Scope for the op.
     """
     scope = ''
     # Op scope is determined by output tensors.
@@ -161,7 +161,7 @@ class ParamsGenerator:
         scope += tfl_flatbuffer_utils.get_tensor_name(
             subgraph_tensors[output_tensor_idx]
         )
-        scope += ';'  # split names
+        scope += ';'  # Split names.
     return scope
 
   def _get_params_for_no_quant_op(
@@ -173,12 +173,12 @@ class ParamsGenerator:
     """Get the quantization parameters for ops require no quantization.
 
     Args:
-      subgraph_op_id: the op id in the subgraph.
-      op: the op that need to be parsed.
-      subgraph_tensors: list of tensors in the subgraph.
+      subgraph_op_id: The op id in the subgraph.
+      op: The op that needs to be parsed.
+      subgraph_tensors: Tensors in the subgraph.
 
     Returns:
-      tensor_params: list of tensor level quantization params for the op.
+      Tensor level quantization params for the op.
     """
 
     def no_quant_tensor_params():
@@ -211,8 +211,8 @@ class ParamsGenerator:
     """Check if tensors sharing the same buffer have the same quantization.
 
     Raises:
-      RuntimeError: if the tensors sharing the same buffer have different
-      quantization settings.
+      RuntimeError: If the tensors sharing the same buffer have different
+        quantization settings.
     """
     for tensors in self.buffer_to_tensors.values():
       first_tensor = tensors[0]
@@ -240,14 +240,15 @@ class ParamsGenerator:
   ) -> None:
     """Modify quantization information for I/O tensors.
 
-    This will not be trigged by weight-only/drq because they do not quantize
+    This will not be trigged by weight-only/DRQ because they do not quantize
     activation tensors.
-    Selective srq & emulated srq will be okay because only the I/O tensors will
+
+    Selective SRQ & emulated SRQ will be okay because only the I/O tensors will
     be left as quantized, if applicable. This is the intended behavior if user
-    choose to SRQ ops contain I/O tensors.
+    choose SRQ ops to contain I/O tensors.
 
     Args:
-      tensor_params: tensor level quantization params for the tensor.
+      tensor_params: Tensor level quantization params for the tensor.
     """
     # Change ADD_QUANTIZE to QUANTIZE_TENSOR for unique input/constant tensors.
     if (
@@ -293,7 +294,7 @@ def _compatible_tensor_transformation_params(
     if params1.consumers != params2.consumers:
       return False
   else:
-    # check all consumers within eah params are compatible.
+    # Check all consumers within each params are compatible.
     for params1_consumer in params1.consumers:
       if not _compatible_tensor_params(params1_consumer, params1.consumers[0]):
         return False
@@ -322,7 +323,7 @@ def _compatible_tensor_params(
   ]
   if params1.parameters != params2.parameters:
     return False
-  # we only need to check the first transformation because transformations are
+  # We only need to check the first transformation because transformations are
   # applied in order, and as long as the one that's immediately after the tensor
   # is the same, it's compatible.
   if (
