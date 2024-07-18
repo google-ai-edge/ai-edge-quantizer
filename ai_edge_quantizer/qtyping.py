@@ -47,6 +47,7 @@ class TFLOperationName(str, enum.Enum):
   GELU = 'GELU'
   ADD = 'ADD'
   SUB = 'SUB'
+  MUL = 'MUL'
 
 
 # Use same code number as MOJAX for compatibility.
