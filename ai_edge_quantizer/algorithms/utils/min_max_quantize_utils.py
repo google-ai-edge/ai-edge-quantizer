@@ -60,6 +60,7 @@ _SUPPORTED_SRQ_OPS = frozenset([
     _TFLOpName.TRANSPOSE,
     _TFLOpName.GELU,
     _TFLOpName.ADD,
+    _TFLOpName.SUB,
 ])
 
 _INT4_SRQ_SUPPORTED_OPS = frozenset([

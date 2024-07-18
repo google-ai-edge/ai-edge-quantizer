@@ -46,6 +46,7 @@ class TFLOperationName(str, enum.Enum):
   TRANSPOSE = 'TRANSPOSE'
   GELU = 'GELU'
   ADD = 'ADD'
+  SUB = 'SUB'
 
 
 # Use same code number as MOJAX for compatibility.

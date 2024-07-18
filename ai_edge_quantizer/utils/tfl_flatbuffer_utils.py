@@ -51,6 +51,7 @@ TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
     _TFLOpName.TRANSPOSE: schema_py_generated.BuiltinOperator.TRANSPOSE,
     _TFLOpName.GELU: schema_py_generated.BuiltinOperator.GELU,
     _TFLOpName.ADD: schema_py_generated.BuiltinOperator.ADD,
+    _TFLOpName.SUB: schema_py_generated.BuiltinOperator.SUB,
 })
 
 TFL_OP_CODE_TO_NAME = immutabledict.immutabledict(
