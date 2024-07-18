@@ -261,6 +261,7 @@ class OpQuantizationConfig:
     weight_tensor_config: The quantization configuration for weight tensor in
       the op.
     execution_mode: How to execute the op after quantization.
+    skip_checks: Whether to skip op quantization config checks.
   """
 
   # Quant config for activation tensors in the op (i.e., runtime tensors).
@@ -276,6 +277,11 @@ class OpQuantizationConfig:
 
   # How to execute the op after quantization.
   execution_mode: OpExecutionMode = OpExecutionMode.WEIGHT_ONLY
+
+  # For advanced users only. If set, the quantizer will ignore all op
+  # configuration checks and forcefully quantize this op according to the user
+  # instructions even if it's not supported in the TFLite runtime.
+  skip_checks: bool = False
 
   def __post_init__(self):
     if self.activation_tensor_config is None:

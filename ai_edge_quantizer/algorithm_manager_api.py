@@ -140,6 +140,8 @@ class AlgorithmManagerApi:
       ValueError if the given op is not registered for the given algorithm, or
       the given algorithm is not registered.
     """
+    if op_quantization_config.skip_checks:
+      return
     if not self.is_op_registered(quantization_algorithm, tfl_op_name):
       raise ValueError(
           f"Unsupported operation {tfl_op_name} for Algorithm:"

@@ -252,6 +252,25 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
           ),
       )
 
+  def test_add_unsupported_skip_successful(self):
+    self._recipe_manager.add_quantization_config(
+        regex='.*/Dense_3/.*',
+        operation_name=_TFLOpName.FULLY_CONNECTED,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+        op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=17),
+            execution_mode=_OpExecutionMode.DRQ,
+            skip_checks=True,
+        ),
+    )
+    alg_key, op_config = self._recipe_manager.get_quantization_configs(
+        _TFLOpName.FULLY_CONNECTED, 'model/Dense_3/op'
+    )
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
+    self.assertIsNone(op_config.activation_tensor_config)
+    self.assertEqual(op_config.weight_tensor_config.num_bits, 17)
+    self.assertEqual(op_config.execution_mode, _OpExecutionMode.DRQ)
+
   def test_set_full_integer_quantization_config(self):
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
     # Full integer setting is global
@@ -394,6 +413,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'dtype': 'INT',
                 },
                 'execution_mode': 'SRQ',
+                'skip_checks': False,
             },
         },
         {
@@ -408,6 +428,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'channel_wise': False,
                 },
                 'execution_mode': 'WEIGHT_ONLY',
+                'skip_checks': False,
             },
         },
         {
@@ -422,6 +443,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'channel_wise': False,
                 },
                 'execution_mode': 'WEIGHT_ONLY',
+                'skip_checks': False,
             },
         },
         {
@@ -436,6 +458,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'channel_wise': False,
                 },
                 'execution_mode': 'WEIGHT_ONLY',
+                'skip_checks': False,
             },
         },
         {
@@ -450,6 +473,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'channel_wise': False,
                 },
                 'execution_mode': 'WEIGHT_ONLY',
+                'skip_checks': False,
             },
         },
     ]
