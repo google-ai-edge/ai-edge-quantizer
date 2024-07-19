@@ -119,11 +119,7 @@ class Calibrator:
         for op in subgraph.operators:
           op_code = op_codes[op.opcodeIndex].builtinCode
           if op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME:
-            raise ValueError(
-                "Full integer calibration requires all ops in the model to be"
-                " supported. Encounter unsupported op code: %s. Please add the"
-                " op to Algorithm Manager." % op_code
-            )
+            continue
           op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
           # Step2.1: query the quantization_recipe to get op quantization
           # settings.
@@ -223,11 +219,7 @@ class Calibrator:
       for subgraph_op_id, op in enumerate(subgraph.operators):
         op_code = op_codes[op.opcodeIndex].builtinCode
         if op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME:
-          raise ValueError(
-              "Full integer calibration requires all ops in the model to be"
-              " supported. Encounter unsupported op code: %s. Please add the"
-              " op to Algorithm Manager." % op_code
-          )
+          continue
         op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
         # Step1: query the quantization_recipe to get op quantization
         # settings.

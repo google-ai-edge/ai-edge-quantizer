@@ -175,26 +175,6 @@ class CalibratorTest(googletest.TestCase):
     # Relu, only check the min
     self.assertSequenceAlmostEqual(output_qsv["min"].flatten(), [0])
 
-  def test_calibrate_unsupported_ops_fails(self):
-    # Many ops in the following model are not supported currently.
-    test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "tests/models/branching_conv_fc.tflite"
-    )
-    test_calibrator = calibrator.Calibrator(test_model_path)
-
-    _add_default_int8xint8_integer_recipe(self._recipe_manager)
-
-    error_message = (
-        "Full integer calibration requires all ops in the model to be"
-        " supported."
-    )
-    with self.assertRaisesWithPredicateMatch(
-        ValueError, lambda err: error_message in str(err)
-    ):
-      test_calibrator.calibrate(
-          _representative_dataset_gen(size=(1, 28, 28, 1)), self._recipe_manager
-      )
-
   def test_calibration_cache_is_empty_when_off(self):
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
     self.assertEmpty(self._calibrator.get_cached_output())
@@ -218,6 +198,20 @@ class CalibratorTest(googletest.TestCase):
     )
     self._calibrator.clear_cached_output()
     self.assertEmpty(self._calibrator.get_cached_output())
+
+  def test_calibrate_unsupported_ops_success(self):
+    # Many ops in the following model are not supported currently.
+    test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, "tests/models/branching_conv_fc.tflite"
+    )
+    test_calibrator = calibrator.Calibrator(test_model_path)
+    _add_default_int8xint8_integer_recipe(self._recipe_manager)
+    test_calibrator.calibrate(
+        _representative_dataset_gen(size=(3, 4, 4, 1)),
+        self._recipe_manager,
+        cache_output=True,
+    )
+    self.assertLen(test_calibrator.get_cached_output(), 10)
 
 
 if __name__ == "__main__":
