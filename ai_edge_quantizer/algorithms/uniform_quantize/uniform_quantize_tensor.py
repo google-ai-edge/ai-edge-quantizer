@@ -295,7 +295,7 @@ def tensor_zp_scale_from_min_max(
 
 
 def update_tensor_qsv_moving_average(
-    qsv: qtyping.QSV, new_qsv: qtyping.QSV, smoothing_factor: float = 0.99
+    qsv: qtyping.QSV, new_qsv: qtyping.QSV, smoothing_factor: float = 0.95
 ) -> qtyping.QSV:
   """Update the qsv (i.e., min/max) using moving average.
 

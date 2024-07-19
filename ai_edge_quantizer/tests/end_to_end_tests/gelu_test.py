@@ -68,7 +68,7 @@ class GeluTest(parameterized.TestCase):
     )
     self._check_comparison_result(
         comparison_result,
-        output_tolerance=1e-4,
+        output_tolerance=1e-3,
     )
 
   # TODO: b/345503484 - Check weight tensor type of the quantized model.

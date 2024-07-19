@@ -152,10 +152,10 @@ class CalibratorTest(googletest.TestCase):
     self.assertIn("serving_default_input_1:0", model_tensor_qsvs)  # input
     input_qsv = model_tensor_qsvs["serving_default_input_1:0"]
     self.assertSequenceAlmostEqual(
-        input_qsv["min"].flatten(), [-0.09561], delta=1e-5
+        input_qsv["min"].flatten(), [-0.401263], delta=1e-5
     )
     self.assertSequenceAlmostEqual(
-        input_qsv["max"].flatten(), [5.52191], delta=1e-5
+        input_qsv["max"].flatten(), [3.993684], delta=1e-5
     )
 
     self.assertIn("sequential/dense/MatMul", model_tensor_qsvs)  # weight

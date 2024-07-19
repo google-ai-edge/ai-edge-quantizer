@@ -100,6 +100,9 @@ class Calibrator:
 
     # TODO: b/329322226 - Enable parrallel calibration.
     for data in calibration_dataset:
+      # Initialize tensor names that are updated in this round of calibration.
+      updated_tensor_names = set()
+
       # Step1: run tfl interpreter to get tensor content.
       signature_output = tfl_interpreter_utils.invoke_interpreter_signature(
           self._tfl_interpreter, data, signature_key
@@ -135,8 +138,12 @@ class Calibrator:
               algorithm_name, op_key, qtyping.QuantizeMode.CALIBRATE
           )
           op_qsvs = calibrate_func(op, graph_info, self._tensor_content_map)
-          # Step3: Update model qsvs with the new values.
-          self._update_qsvs(op_qsvs)
+          # Step3: Update tensor qsvs with the new values. Ignore the tensor
+          # names that are already updated in this round of calibration.
+          op_updated_tensor_name = self._update_qsvs(
+              op_qsvs, ignore_tensor_names=updated_tensor_names
+          )
+          updated_tensor_names.update(op_updated_tensor_name)
       # Reset interpreter after one round of calibration.
       self._tfl_interpreter.reset_all_variables()
 
@@ -168,20 +175,33 @@ class Calibrator:
     """
     self._model_qsvs = copy.deepcopy(model_qsvs)
 
-  def _update_qsvs(self, op_qsvs: dict[str, qtyping.QSV]):
+  def _update_qsvs(
+      self,
+      op_qsvs: dict[str, qtyping.QSV],
+      ignore_tensor_names: set[str],
+  ) -> set[str]:
     """Update the model qsvs with the new values.
 
     Args:
       op_qsvs: A dictionary of tensor name to QSV.
+      ignore_tensor_names: A set of tensor names to ignore.
+
+    Returns:
+      A set of tensor names that are updated.
     """
+    updated_tensor_names = set()
     for tensor_name, qsv in op_qsvs.items():
+      if tensor_name in ignore_tensor_names:
+        continue
       if tensor_name not in self._model_qsvs:
         self._model_qsvs[tensor_name] = qsv
       else:
-        previous_qsv = self._model_qsvs[tensor_name]
-        self._model_qsvs[tensor_name] = (
-            algorithm_manager.moving_average_update_qsv(previous_qsv, qsv)
+        updated_qsv = algorithm_manager.moving_average_update_qsv(
+            self._model_qsvs[tensor_name], qsv
         )
+        self._model_qsvs[tensor_name] = updated_qsv
+      updated_tensor_names.add(tensor_name)
+    return updated_tensor_names
 
   def _get_op_scope(self, op, subgraph_tensors) -> str:
     """Get the scope of the op.
@@ -202,6 +222,8 @@ class Calibrator:
         scope += tfl_flatbuffer_utils.get_tensor_name(output_tensor)
     return scope
 
+  # TODO: b/354224138 - Remove code duplication between calibrate and
+  # _initialize_model_qsvs.
   def _initialize_model_qsvs(
       self, model_recipe_manager: recipe_manager.RecipeManager
   ) -> None:
@@ -236,6 +258,7 @@ class Calibrator:
         )
         op_info = qtyping.OpInfo(op, op_key, subgraph_op_id, op_quant_config)
         op_qsvs = qsv_init_func(op_info, graph_info)
-        # Step3: update tensor qsvs.
+        # Step3: initialize tensor qsvs.
         for tensor_name, qsv in op_qsvs.items():
-          self._model_qsvs[tensor_name] = qsv
+          if tensor_name not in self._model_qsvs:
+            self._model_qsvs[tensor_name] = qsv
