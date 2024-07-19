@@ -74,6 +74,7 @@ for op_name, materialize_func in zip(
         _TFLOpName.ADD,
         _TFLOpName.SUB,
         _TFLOpName.MUL,
+        _TFLOpName.MEAN,
     ),
     (
         naive_min_max_quantize.materialize_fc_conv,
@@ -90,6 +91,7 @@ for op_name, materialize_func in zip(
         naive_min_max_quantize.materialize_add,
         naive_min_max_quantize.materialize_sub,
         naive_min_max_quantize.materialize_mul,
+        naive_min_max_quantize.materialize_mean,
     ),
 ):
   register_quantized_op(

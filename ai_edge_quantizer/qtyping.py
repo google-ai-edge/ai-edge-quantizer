@@ -48,6 +48,7 @@ class TFLOperationName(str, enum.Enum):
   ADD = 'ADD'
   SUB = 'SUB'
   MUL = 'MUL'
+  MEAN = 'MEAN'
 
 
 # Use same code number as MOJAX for compatibility.
