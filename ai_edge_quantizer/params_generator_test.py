@@ -757,6 +757,12 @@ class ParamsGeneratorTest(parameterized.TestCase):
                           8, None, np.array([1]), np.array([0])
                       ),
                   ),
+                  qtyping.OpToTensorParams(
+                      subgraph_op_id=4,
+                      transformations=[
+                          qtyping.QuantTransformation.NO_QUANTIZE,
+                      ],
+                  ),
               ],
           ),
           param2=qtyping.TensorTransformationParams(
@@ -787,6 +793,15 @@ class ParamsGeneratorTest(parameterized.TestCase):
                       transformations=[
                           qtyping.QuantTransformation.ADD_QUANTIZE,
                           qtyping.QuantTransformation.ADD_DEQUANTIZE,
+                      ],
+                      parameters=qtyping.UniformQuantParams(
+                          8, None, np.array([1]), np.array([0])
+                      ),
+                  ),
+                  qtyping.OpToTensorParams(
+                      subgraph_op_id=4,
+                      transformations=[
+                          qtyping.QuantTransformation.ADD_QUANTIZE,
                       ],
                       parameters=qtyping.UniformQuantParams(
                           8, None, np.array([1]), np.array([0])

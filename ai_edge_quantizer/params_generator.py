@@ -336,8 +336,14 @@ def _compatible_tensor_params(
       qtyping.QuantTransformation.QUANTIZE_TENSOR,
       qtyping.QuantTransformation.ADD_DEQUANTIZE,
   ]
-  if params1.parameters != params2.parameters:
-    return False
+  if (
+      params1.transformations[0] != qtyping.QuantTransformation.NO_QUANTIZE
+      and params2.transformations[0] != qtyping.QuantTransformation.NO_QUANTIZE
+  ):
+    # NO_QUANTIZE has no parameters. So only if both params aren't NO_QUANTIZE
+    # do we expect the parameters to be the same.
+    if params1.parameters != params2.parameters:
+      return False
   # We only need to check the first transformation because transformations are
   # applied in order, and as long as the one that's immediately after the tensor
   # is the same, it's compatible.
