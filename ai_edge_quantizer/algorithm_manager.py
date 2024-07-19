@@ -76,6 +76,7 @@ for op_name, materialize_func in zip(
         _TFLOpName.MUL,
         _TFLOpName.MEAN,
         _TFLOpName.RSQRT,
+        _TFLOpName.CONCATENATION,
     ),
     (
         naive_min_max_quantize.materialize_fc_conv,
@@ -94,6 +95,7 @@ for op_name, materialize_func in zip(
         naive_min_max_quantize.materialize_mul,
         naive_min_max_quantize.materialize_mean,
         naive_min_max_quantize.materialize_rsqrt,
+        naive_min_max_quantize.materialize_concatenation,
     ),
 ):
   register_quantized_op(

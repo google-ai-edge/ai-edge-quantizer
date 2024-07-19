@@ -50,6 +50,7 @@ class TFLOperationName(str, enum.Enum):
   MUL = 'MUL'
   MEAN = 'MEAN'
   RSQRT = 'RSQRT'
+  CONCATENATION = 'CONCATENATION'
 
 
 # Use same code number as MOJAX for compatibility.

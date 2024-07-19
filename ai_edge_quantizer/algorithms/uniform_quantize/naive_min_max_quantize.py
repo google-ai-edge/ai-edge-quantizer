@@ -319,6 +319,20 @@ def materialize_rsqrt(
   )
 
 
+def materialize_concatenation(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.concatenation."""
+  return utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
+  )
+
+
 # TODO: b/333731147 - Use named tuple to store min/max.
 def init_qsvs(
     op_info: qtyping.OpInfo,

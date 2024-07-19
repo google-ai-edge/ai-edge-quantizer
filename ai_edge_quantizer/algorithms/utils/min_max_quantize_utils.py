@@ -65,6 +65,7 @@ _SUPPORTED_SRQ_OPS = frozenset([
     _TFLOpName.BATCH_MATMUL,
     _TFLOpName.MEAN,
     _TFLOpName.RSQRT,
+    _TFLOpName.CONCATENATION,
 ])
 
 _INT4_SRQ_SUPPORTED_OPS = frozenset([
