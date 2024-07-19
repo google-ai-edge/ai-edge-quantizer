@@ -306,6 +306,19 @@ def materialize_mean(
   )
 
 
+def materialize_rsqrt(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.rsqrt."""
+  return utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+  )
+
+
 # TODO: b/333731147 - Use named tuple to store min/max.
 def init_qsvs(
     op_info: qtyping.OpInfo,
