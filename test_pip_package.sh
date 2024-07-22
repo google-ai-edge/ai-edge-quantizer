@@ -71,9 +71,7 @@ function test_import {
 }
 
 function test_unittest {
-  TEST_DIR="${WORKSPACE_DIR}/tensorflow_examples/lite/model_maker"
-
-  echo "=== BEGIN UNIT TESTS FOR: ${TEST_DIR} ==="
+  echo "=== BEGIN UNIT TESTS ==="
 
   pushd "${SCRIPT_DIR}" > /dev/null
 
@@ -81,7 +79,7 @@ function test_unittest {
   ${PYTHON_BIN} -m unittest discover --pattern *_test.py
 
   popd > /dev/null
-  echo "=== END UNIT TESTS: ${TEST_DIR} ==="
+  echo "=== END UNIT TESTS ==="
   echo
   echo
 }
