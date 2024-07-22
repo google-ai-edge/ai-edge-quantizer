@@ -1,1 +1,17 @@
-[{"regex": ".*", "operation": "*", "algorithm_key": "min_max_uniform_quantize", "op_config": {"weight_tensor_config": {"num_bits": 8, "symmetric": false, "channel_wise": true, "dtype": "INT"}, "execution_mode": "WEIGHT_ONLY", "skip_checks": false}}]
+[
+  {
+    "regex": ".*",
+    "operation": "*",
+    "algorithm_key": "min_max_uniform_quantize",
+    "op_config": {
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": false,
+        "channel_wise": true,
+        "dtype": "INT"
+      },
+      "execution_mode": "WEIGHT_ONLY",
+      "skip_checks": false
+    }
+  }
+]
