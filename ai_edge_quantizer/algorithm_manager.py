@@ -77,6 +77,7 @@ for op_name, materialize_func in zip(
         _TFLOpName.MEAN,
         _TFLOpName.RSQRT,
         _TFLOpName.CONCATENATION,
+        _TFLOpName.STRIDED_SLICE,
     ),
     (
         naive_min_max_quantize.materialize_fc_conv,
@@ -96,6 +97,7 @@ for op_name, materialize_func in zip(
         naive_min_max_quantize.materialize_mean,
         naive_min_max_quantize.materialize_rsqrt,
         naive_min_max_quantize.materialize_concatenation,
+        naive_min_max_quantize.materialize_strided_slice,
     ),
 ):
   register_quantized_op(
