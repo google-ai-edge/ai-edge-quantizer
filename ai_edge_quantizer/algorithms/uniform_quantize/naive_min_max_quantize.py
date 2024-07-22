@@ -348,6 +348,21 @@ def materialize_concatenation(
   )
 
 
+def materialize_split(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.split."""
+  return utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
+      inputs_to_ignore=[0],  # Split dimension does not need to be quantized.
+  )
+
+
 # TODO: b/333731147 - Use named tuple to store min/max.
 def init_qsvs(
     op_info: qtyping.OpInfo,

@@ -67,6 +67,7 @@ _SUPPORTED_SRQ_OPS = frozenset([
     _TFLOpName.RSQRT,
     _TFLOpName.CONCATENATION,
     _TFLOpName.STRIDED_SLICE,
+    _TFLOpName.SPLIT,
 ])
 
 _INT4_SRQ_SUPPORTED_OPS = frozenset([

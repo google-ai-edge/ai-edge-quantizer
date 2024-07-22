@@ -52,6 +52,7 @@ class TFLOperationName(str, enum.Enum):
   RSQRT = 'RSQRT'
   CONCATENATION = 'CONCATENATION'
   STRIDED_SLICE = 'STRIDED_SLICE'
+  SPLIT = 'SPLIT'
 
 
 # Use same code number as MOJAX for compatibility.
