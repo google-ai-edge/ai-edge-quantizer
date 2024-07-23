@@ -56,7 +56,7 @@ class GeluTest(parameterized.TestCase):
     self._quantizer = quantizer.Quantizer(self.float_model_path)
 
   def test_gelu_model_full_integer(self):
-    recipe_json = '../recipes/default_a8w8_recipe.json'
+    recipe_json = '../../recipes/default_a8w8_recipe.json'
     recipe_path = test_utils.get_path_to_datafile(recipe_json)
     self._quantizer.load_quantization_recipe(recipe_path)
     self.assertTrue(self._quantizer.need_calibration)

@@ -56,8 +56,8 @@ class TanhTest(parameterized.TestCase):
     self._quantizer = quantizer.Quantizer(self.float_model_path)
 
   @parameterized.parameters(
-      '../recipes/default_a8w8_recipe.json',
-      '../recipes/default_a16w8_recipe.json',
+      '../../recipes/default_a8w8_recipe.json',
+      '../../recipes/default_a16w8_recipe.json',
   )
   def test_tanh_model_full_integer(self, recipe_path):
     recipe_path = test_utils.get_path_to_datafile(recipe_path)

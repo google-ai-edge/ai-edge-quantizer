@@ -89,7 +89,7 @@ class DepthwiseConv2dTest(parameterized.TestCase):
 
   def test_depthwise_conv2d_model_int8_drq(self):
     recipe_path = test_utils.get_path_to_datafile(
-        '../recipes/default_drq_recipe.json'
+        '../../recipes/default_af32w8int_recipe.json'
     )
     self._quantizer.load_quantization_recipe(recipe_path)
     # Check model size.
@@ -104,8 +104,8 @@ class DepthwiseConv2dTest(parameterized.TestCase):
     )
 
   @parameterized.parameters(
-      '../recipes/default_a8w8_recipe.json',
-      '../recipes/default_a16w8_recipe.json',
+      '../../recipes/default_a8w8_recipe.json',
+      '../../recipes/default_a16w8_recipe.json',
   )
   def test_depthwise_conv2d_model_full_integer(self, recipe_path):
     recipe_path = test_utils.get_path_to_datafile(recipe_path)

@@ -60,8 +60,8 @@ class SubTest(parameterized.TestCase):
     self._quantizer = quantizer.Quantizer(self.float_model_path)
 
   @parameterized.parameters(
-      '../recipes/default_a8w8_recipe.json',
-      '../recipes/default_a16w8_recipe.json',
+      '../../recipes/default_a8w8_recipe.json',
+      '../../recipes/default_a16w8_recipe.json',
   )
   def test_sub_model_full_integer(self, recipe_path):
     self._custom_setup('single_sub.tflite')
@@ -84,8 +84,8 @@ class SubTest(parameterized.TestCase):
     )
 
   @parameterized.parameters(
-      '../recipes/default_a8w8_recipe.json',
-      '../recipes/default_a16w8_recipe.json',
+      '../../recipes/default_a8w8_recipe.json',
+      '../../recipes/default_a16w8_recipe.json',
   )
   def test_sub1_constant_input_model_full_integer(self, recipe_path):
     self._custom_setup('single_sub1_constant_input.tflite')
