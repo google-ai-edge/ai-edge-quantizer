@@ -47,6 +47,7 @@ _INT4_DRQ_SUPPORTED_OPS = frozenset([
     # TODO: b/353365054 - Uncomment after int4 DRQ is supported for
     # conv2d.
     # _TFLOpName.CONV_2D,
+    _TFLOpName.EMBEDDING_LOOKUP,
 ])
 
 _SUPPORTED_SRQ_OPS = frozenset([
