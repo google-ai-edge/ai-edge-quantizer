@@ -393,7 +393,8 @@ class TransformationInstructionsGenerator:
     for trans_rule in consumer_trans_rules:
       if check_dq_q_elimination(producer_trans_rule, trans_rule):
         for consumer_id in trans_rule.consumers:
-          producer_trans_rule.consumers.remove(consumer_id)
+          if consumer_id in producer_trans_rule.consumers:
+            producer_trans_rule.consumers.remove(consumer_id)
         transformations.append(
             qtyping.TransformationInst(
                 qtyping.QuantTransformation.QUANTIZE_TENSOR,
