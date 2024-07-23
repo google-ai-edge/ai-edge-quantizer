@@ -74,7 +74,6 @@ _SUPPORTED_SRQ_OPS = frozenset([
 _INT4_SRQ_SUPPORTED_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
     _TFLOpName.CONV_2D,
-    _TFLOpName.EMBEDDING_LOOKUP,
 ])
 
 
