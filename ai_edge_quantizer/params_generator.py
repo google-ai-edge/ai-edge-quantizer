@@ -231,6 +231,7 @@ class ParamsGenerator:
     """
     for tensors in self.buffer_to_tensors.values():
       first_tensor = tensors[0]
+      # TODO: b/352167271 - Stop returning None after the bug is fixed.
       first_tensor_params = self.model_quant_results.get(
           tfl_flatbuffer_utils.get_tensor_name(first_tensor), None
       )
@@ -238,6 +239,9 @@ class ParamsGenerator:
         tensor_params = self.model_quant_results.get(
             tfl_flatbuffer_utils.get_tensor_name(tensor), None
         )
+        # TODO: b/352167271 - Remove this check after the bug is fixed.
+        if tensor_params is None and first_tensor_params is None:
+          continue
         error_msg = (
             f'The tensors {first_tensor.name} and {tensor.name} do not have the'
             ' same quantization parameters even though they share the same'
