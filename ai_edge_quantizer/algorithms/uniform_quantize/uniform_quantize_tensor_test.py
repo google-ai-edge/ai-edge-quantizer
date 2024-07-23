@@ -57,21 +57,62 @@ class TensorUtilsTest(parameterized.TestCase):
     result = uniform_quantize_tensor.assign_quantized_type(sample_input, qtype)
     self.assertEqual(expected_type, result.dtype)
 
-  def test_extend_quantization_params_dimensions(self):
-    flattend_quant_params = qtyping.UniformQuantParams(
-        quantized_dimension=0,
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="scalar_tensor_1d_params",
+          scale=np.array([0.1]),
+          zero_point=np.array([-1], dtype=np.int8),
+          tensor_data=np.array(6.66),
+          quantized_dimension=None,
+      ),
+      dict(
+          testcase_name="1d_tensor_scalar_params",
+          scale=np.array(0.1),
+          zero_point=np.array(-1, dtype=np.int8),
+          tensor_data=np.array([6.66, 8.88]),
+          quantized_dimension=None,
+      ),
+      dict(
+          testcase_name="2d_tensor_1d_params",
+          scale=np.array([0.1, 0.2]),
+          zero_point=np.array([-1, 2], dtype=np.int8),
+          tensor_data=np.array([[1, 2], [4, 5]]),
+          quantized_dimension=0,
+      ),
+  )
+  def test_fix_quantization_params_rank_succeed(
+      self, scale, zero_point, tensor_data, quantized_dimension
+  ):
+    quant_params = qtyping.UniformQuantParams(
         num_bits=8,
-        scale=np.array([0.1, 0.2], dtype=np.float32),
-        zero_point=np.array([-1, 2], dtype=np.int8),
+        quantized_dimension=quantized_dimension,
+        scale=scale,
+        zero_point=zero_point,
         symmetric=False,
     )
-    extended_quant_params = (
-        uniform_quantize_tensor.extend_quantization_params_dimensions(
-            self._test_data, flattend_quant_params
-        )
+    fixed_quant_params = uniform_quantize_tensor.fix_quantization_params_rank(
+        tensor_data, quant_params
     )
-    self.assertEqual(tuple(extended_quant_params.scale.shape), (2, 1))
-    self.assertEqual(tuple(extended_quant_params.zero_point.shape), (2, 1))
+    self.assertEqual(fixed_quant_params.scale.ndim, tensor_data.ndim)
+    self.assertEqual(fixed_quant_params.zero_point.ndim, tensor_data.ndim)
+
+  def test_fix_quantization_params_rank_scalar_tensor_1d_params_raise(self):
+    quant_params = qtyping.UniformQuantParams(
+        num_bits=8,
+        quantized_dimension=None,
+        scale=np.array([0.1, 0.5]),
+        zero_point=np.array([-1, -2], dtype=np.int8),
+        symmetric=False,
+    )
+    error_message = (
+        "Scale and zero_point must contain single element for scalar tensor."
+    )
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda err: error_message in str(err)
+    ):
+      uniform_quantize_tensor.fix_quantization_params_rank(
+          np.array(6.66), quant_params
+      )
 
   @parameterized.parameters(
       (

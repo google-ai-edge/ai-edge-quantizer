@@ -69,13 +69,13 @@ def assign_quantized_type(tensor: np.ndarray, qtype: IntType) -> np.ndarray:
   return tensor.astype(qtype)
 
 
-def extend_quantization_params_dimensions(
+def fix_quantization_params_rank(
     tensor_data: np.ndarray,
     quantization_params: qtyping.UniformQuantParams,
 ) -> qtyping.UniformQuantParams:
-  """Extend the dimension of quantization parameters (scale/zp).
+  """Fix the rank of quantization parameters (scale/zero points).
 
-  Scale and zps are reshaped to the same shape as tensor_data to avoid
+  Scale and zero points need to be the same rank as tensor_data to avoid
   ambiguous broadcasting.
 
   Args:
@@ -85,16 +85,31 @@ def extend_quantization_params_dimensions(
   Returns:
     quantization_params with broadcasted scales and zero_points.
   """
-  if tensor_data.ndim == quantization_params.scale.ndim:
+  scales, zero_points = (
+      quantization_params.scale,
+      quantization_params.zero_point,
+  )
+  if tensor_data.ndim == scales.ndim:
     return quantization_params
-  tensor_dims = list(range(tensor_data.ndim))
-  dims = [
-      dim
-      for dim in tensor_dims
-      if dim != quantization_params.quantized_dimension
-  ]
-  scales = np.expand_dims(quantization_params.scale, axis=dims)
-  zero_points = np.expand_dims(quantization_params.zero_point, axis=dims)
+
+  if tensor_data.ndim == 0:
+    # Scalar tensor requires scalar scale and zero_point.
+    if scales.size != 1 or zero_points.size != 1:
+      raise ValueError(
+          "Scale and zero_point must contain single element for scalar tensor."
+          f" Got scale: {scales}, zero_point: {zero_points}"
+      )
+    scales = np.array(scales.item())
+    zero_points = np.array(zero_points.item())
+  else:
+    dims = [
+        dim
+        for dim in range(tensor_data.ndim)
+        if dim != quantization_params.quantized_dimension
+    ]
+    scales = np.expand_dims(scales, axis=dims)
+    zero_points = np.expand_dims(zero_points, axis=dims)
+
   return qtyping.UniformQuantParams(
       scale=scales,
       zero_point=zero_points,
@@ -138,7 +153,7 @@ def uniform_quantize(
   """
   # quant params in flatbuffer is flattened, expand the rank to be the same
   # as the tensor rank to avoid ambiguous broadcasting.
-  quantization_params = extend_quantization_params_dimensions(
+  quantization_params = fix_quantization_params_rank(
       tensor_data, quantization_params
   )
   _is_valid_quantization_params(tensor_data, quantization_params)
@@ -178,7 +193,7 @@ def uniform_dequantize(
   """
   # quant params in flatbuffer is flattened, expand the rank to be the same
   # as the tensor rank to avoid ambiguous broadcasting.
-  quantization_params = extend_quantization_params_dimensions(
+  quantization_params = fix_quantization_params_rank(
       tensor_data, quantization_params
   )
   _is_valid_quantization_params(tensor_data, quantization_params)
@@ -337,8 +352,6 @@ def _is_valid_quantization_params(
   Returns:
     True if the quantization parameters are valid.
   """
-  def _get_tensor_rank(tensor) -> int:
-    return len(tensor.shape)
   if quantization_params.scale.shape != quantization_params.zero_point.shape:
     raise ValueError(
         "scale and zero_point must have the same shape. Got"
@@ -346,9 +359,9 @@ def _is_valid_quantization_params(
         f" {quantization_params.zero_point.shape}"
     )
 
-  tensor_rank = _get_tensor_rank(tensor_data)
-  scale_rank = _get_tensor_rank(quantization_params.scale)
-  zero_point_rank = _get_tensor_rank(quantization_params.zero_point)
+  tensor_rank = tensor_data.ndim
+  scale_rank = quantization_params.scale.ndim
+  zero_point_rank = quantization_params.zero_point.ndim
   if (tensor_rank != scale_rank) or (tensor_rank != zero_point_rank):
     raise ValueError(
         f"Ranks of scales ({scale_rank}) and zps"
