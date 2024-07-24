@@ -80,17 +80,19 @@ def invoke_interpreter_signature(
   Returns:
     The output data of the signature.
   """
+  # Make a copy to avoid in-place modification.
+  signature_input = signature_input_data.copy()
   signature_runner = tflite_interpreter.get_signature_runner(signature_key)
   for input_name, input_detail in signature_runner.get_input_details().items():
     if _is_tensor_quantized(input_detail) and quantize_input:
-      input_data = signature_input_data[input_name]
+      input_data = signature_input[input_name]
       quant_params = qtyping.UniformQuantParams.from_tfl_tensor_details(
           input_detail
       )
-      signature_input_data[input_name] = (
+      signature_input[input_name] = (
           uniform_quantize_tensor.uniform_quantize(input_data, quant_params)
       )
-  return signature_runner(**signature_input_data)
+  return signature_runner(**signature_input)
 
 
 def invoke_interpreter_once(

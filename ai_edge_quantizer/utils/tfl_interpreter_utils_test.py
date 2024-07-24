@@ -25,7 +25,6 @@ from ai_edge_quantizer.utils import tfl_interpreter_utils
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("../tests/models")
 
 
-# TODO(rewu): add quantized model to tests.
 class TflUtilsTest(googletest.TestCase):
 
   def setUp(self):
@@ -100,6 +99,41 @@ class TflUtilsTest(googletest.TestCase):
     )
     input_details = tfl_interpreter.get_input_details()[0]
     self.assertFalse(tfl_interpreter_utils._is_tensor_quantized(input_details))
+
+
+class TflUtilsQuantizedModelTest(googletest.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    np.random.seed(0)
+    self._test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, "conv_fc_mnist_srq_a8w8.tflite"
+    )
+    self._signature_input_data = {
+        "conv2d_input": np.random.rand(1, 28, 28, 1).astype(np.float32)
+    }
+
+  def test_is_tensor_quantized(self):
+    tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
+        self._test_model_path
+    )
+    input_details = tfl_interpreter.get_input_details()[0]
+    self.assertTrue(tfl_interpreter_utils._is_tensor_quantized(input_details))
+
+  def test_invoke_interpreter_signature(self):
+    tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
+        self._test_model_path
+    )
+    signature_output = tfl_interpreter_utils.invoke_interpreter_signature(
+        tfl_interpreter, self._signature_input_data
+    )
+    print(signature_output)
+    self.assertEqual(tuple(signature_output["dense_1"].shape), (1, 10))
+
+    # Assert the input data is not modified in-place b/353340272.
+    self.assertEqual(
+        self._signature_input_data["conv2d_input"].dtype, np.float32
+    )
 
 
 if __name__ == "__main__":
