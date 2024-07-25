@@ -16,12 +16,15 @@
 """Generate model tensor level quantization config."""
 
 import copy
+import dataclasses
 from typing import Any, Optional, Union
 
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
+
+_QuantTrans = qtyping.QuantTransformation
 
 
 class ParamsGenerator:
@@ -199,7 +202,7 @@ class ParamsGenerator:
     def no_quant_tensor_params():
       return qtyping.OpToTensorParams(
           subgraph_op_id=subgraph_op_id,
-          transformations=[qtyping.QuantTransformation.NO_QUANTIZE],
+          transformations=[_QuantTrans.NO_QUANTIZE],
       )
 
     tensor_params = []
@@ -269,32 +272,34 @@ class ParamsGenerator:
     Args:
       tensor_params: Tensor level quantization params for the tensor.
     """
-    # Change ADD_QUANTIZE to QUANTIZE_TENSOR for unique input/constant tensors.
-    if (
-        tensor_params.producer is None
-        and tensor_params.consumers is not None
-        and len(tensor_params.consumers) == 1
-        and tensor_params.consumers[0].transformations
-        == [qtyping.QuantTransformation.ADD_QUANTIZE]
-    ):
-      tensor_params.consumers = [
-          qtyping.OpToTensorParams(
-              subgraph_op_id=consumer.subgraph_op_id,
-              transformations=[qtyping.QuantTransformation.QUANTIZE_TENSOR],
-              parameters=consumer.parameters,
+    # Change ADD_QUANTIZE to QUANTIZE_TENSOR for input/constant tensors.
+    if tensor_params.producer is None and tensor_params.consumers is not None:
+      new_consumers = []
+      for consumer in tensor_params.consumers:
+        if consumer.transformations == [
+            _QuantTrans.ADD_QUANTIZE
+        ] or consumer.transformations == [_QuantTrans.QUANTIZE_TENSOR]:
+          new_consumers.append(
+              dataclasses.replace(
+                  consumer,
+                  transformations=[_QuantTrans.QUANTIZE_TENSOR],
+              )
           )
-          for consumer in tensor_params.consumers
-      ]
+        else:
+          # Do not modify if one of the consumers require transformations other
+          # than ADD_QUANTIZE.
+          return
+      tensor_params.consumers = new_consumers
     # Change ADD_DEQUANTIZE to QUANTIZE_TENSOR for output tensors.
     elif (
         tensor_params.consumers is None
         and tensor_params.producer is not None
         and tensor_params.producer.transformations
-        == [qtyping.QuantTransformation.ADD_DEQUANTIZE]
+        == [_QuantTrans.ADD_DEQUANTIZE]
     ):
       tensor_params.producer = qtyping.OpToTensorParams(
           subgraph_op_id=tensor_params.producer.subgraph_op_id,
-          transformations=[qtyping.QuantTransformation.QUANTIZE_TENSOR],
+          transformations=[_QuantTrans.QUANTIZE_TENSOR],
           parameters=tensor_params.producer.parameters,
       )
 
@@ -333,16 +338,16 @@ def _compatible_tensor_params(
 ) -> bool:
   """Check if two op to tensor params are compatible."""
   float_source_transformations = [
-      qtyping.QuantTransformation.ADD_QUANTIZE,
-      qtyping.QuantTransformation.NO_QUANTIZE,
+      _QuantTrans.ADD_QUANTIZE,
+      _QuantTrans.NO_QUANTIZE,
   ]
   quantized_source_transformations = [
-      qtyping.QuantTransformation.QUANTIZE_TENSOR,
-      qtyping.QuantTransformation.ADD_DEQUANTIZE,
+      _QuantTrans.QUANTIZE_TENSOR,
+      _QuantTrans.ADD_DEQUANTIZE,
   ]
   if (
-      params1.transformations[0] != qtyping.QuantTransformation.NO_QUANTIZE
-      and params2.transformations[0] != qtyping.QuantTransformation.NO_QUANTIZE
+      params1.transformations[0] != _QuantTrans.NO_QUANTIZE
+      and params2.transformations[0] != _QuantTrans.NO_QUANTIZE
   ):
     # NO_QUANTIZE has no parameters. So only if both params aren't NO_QUANTIZE
     # do we expect the parameters to be the same.
