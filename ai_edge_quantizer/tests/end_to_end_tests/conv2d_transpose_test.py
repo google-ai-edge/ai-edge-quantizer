@@ -125,6 +125,29 @@ class Conv2DTransposeTest(parameterized.TestCase):
         output_tolerance=1e-4,
     )
 
+  def test_conv2d_transpose_model_fp16_weight_only(self):
+    self._quantizer.update_quantization_recipe(
+        regex='.*',
+        algorithm_key=quantizer.AlgorithmName.FLOAT_CASTING,
+        operation_name=_OpName.CONV_2D_TRANSPOSE,
+        op_config=_OpQuantConfig(
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=16, dtype=qtyping.TensorDataType.FLOAT
+            ),
+            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+        ),
+    )
+    quant_result = self._quantizer.quantize()
+    # Check model size.
+    self.assertLess(len(quant_result.quantized_model), 10000)
+
+    comparion_result = self._quantizer.compare(error_metrics='mse')
+    self._check_comparion_result(
+        comparion_result,
+        weight_tolerance=1e-5,
+        output_tolerance=1e-5,
+    )
+
   # TODO: b/345503484 - Check weight tensor type of the quantized model.
   def _check_comparion_result(
       self,

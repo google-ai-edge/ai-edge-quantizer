@@ -29,6 +29,7 @@ SUPPORTED_WEIGHT_QUANT_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
     _TFLOpName.CONV_2D,
     _TFLOpName.DEPTHWISE_CONV_2D,
+    _TFLOpName.CONV_2D_TRANSPOSE,
 ])
 
 
@@ -99,6 +100,77 @@ def materialize_fc_conv(
   input_tensor, weight_tensor, bias_tensor, output_tensor = (
       tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
           op_info.op, graph_info.subgraph_tensors
+      )
+  )
+  op_tensor_params = []
+  # Input tensor.
+  input_quant_params = _config_no_quantize_tensor(
+      op_info, input_tensor, is_inbounding_tensor=True
+  )
+  op_tensor_params.append(input_quant_params)
+  # Weight tensor.
+  weight_content = tfl_flatbuffer_utils.get_tensor_data(
+      weight_tensor,
+      graph_info.buffers,
+  )
+  quant_params = qtyping.NonLinearQuantParams(
+      num_bits=16, quantized_data=weight_content.astype(np.float16)  # pytype: disable=attribute-error
+  )
+  op2weight_params = qtyping.OpToTensorParams(
+      subgraph_op_id=op_info.subgraph_op_index,
+      parameters=quant_params,
+      transformations=[_QuantTransformation.ADD_DEQUANTIZE],
+  )
+  op_tensor_params.append(
+      qtyping.TensorTransformationParams(
+          tensor_name=tfl_flatbuffer_utils.get_tensor_name(weight_tensor),
+          consumers=[op2weight_params],
+      )
+  )
+  # Output tensor.
+  output_quant_params = _config_no_quantize_tensor(
+      op_info, output_tensor, is_inbounding_tensor=False
+  )
+  op_tensor_params.append(output_quant_params)
+  # Bias tensor.
+  if bias_tensor is not None:
+    bias_quant_params = _config_no_quantize_tensor(
+        op_info, bias_tensor, is_inbounding_tensor=True
+    )
+    op_tensor_params.append(bias_quant_params)
+  return op_tensor_params
+
+
+def materialize_conv2d_transpose(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    _: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in fully_connected, conv_2d and depthwise_conv_2d ops.
+
+  This function is called by the quantization pipeline to materialize
+  quantization parameters for the weight tensor of the op.
+
+  Args:
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    _: A map of tensor name to quantization parameters (unused).
+
+  Returns:
+    Quantization configuration for the weight tensor of the op.
+
+  Raises:
+    ValueError: If the op is not supported or the execution mode is not
+      WEIGHT_ONLY.
+  """
+  input_tensor, weight_tensor, bias_tensor, output_tensor = (
+      tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
+          op_info.op,
+          graph_info.subgraph_tensors,
+          input_index=2,
+          weight_index=1,
+          bias_index=3,
+          output_index=0,
       )
   )
   op_tensor_params = []

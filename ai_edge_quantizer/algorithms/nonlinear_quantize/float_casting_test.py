@@ -303,6 +303,99 @@ class Fp16QuantizeTest(parameterized.TestCase):
           ),
       )
 
+  def test_conv2d_transpose_weight_only_succeeds(self):
+    # Read from Model Explorer.
+    test_model_path = os.path.join(
+        _TEST_DATA_PREFIX_PATH, "single_conv2d_transpose_bias.tflite"
+    )
+
+    test_model = tfl_flatbuffer_utils.read_model(test_model_path)
+    # The test model has one subgraph for now.
+    graph_info = qtyping.GraphInfo(
+        subgraph_tensors=test_model.subgraphs[0].tensors,
+        buffers=test_model.buffers,
+    )
+
+    subgraph0 = test_model.subgraphs[0]
+    subgraph_op_id = 0
+    op = subgraph0.operators[subgraph_op_id]
+
+    op_info = qtyping.OpInfo(
+        op=op,
+        op_name=_TFLOpName.CONV_2D_TRANSPOSE,
+        subgraph_op_index=subgraph_op_id,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=16, dtype=qtyping.TensorDataType.FLOAT
+            ),
+            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+        ),
+    )
+
+    op_tensor_names = {}
+    op_tensor_names["weight"] = (
+        "sequential_5/conv2d_transpose_3/conv2d_transpose"
+    )
+    op_tensor_names["bias"] = (
+        "sequential_5/conv2d_transpose_3/BiasAdd;sequential_5/conv2d_transpose_3/conv2d_transpose;sequential_5/conv2d_transpose_3/BiasAdd/ReadVariableOp"
+    )
+    op_tensor_names["input"] = "serving_default_input_6:0"
+    op_tensor_names["output"] = "StatefulPartitionedCall:0"
+
+    tensor_quant_params = float_casting.materialize_conv2d_transpose(
+        op_info, graph_info, self._tensor_name_to_qsv
+    )
+    _, weight_tensor, bias_tensor, _ = (
+        tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
+            op_info.op, graph_info.subgraph_tensors
+        )
+    )
+
+    num_configs = 4 if bias_tensor is not None else 3
+    self.assertLen(tensor_quant_params, num_configs)
+    print(f"tensor_quant_params: {tensor_quant_params}")
+
+    # Test input tensor params.
+    self._test_fp16_nonweight_tensor_transformation_params(
+        op_tensor_names["input"],
+        op_info.subgraph_op_index,
+        transformation_params=tensor_quant_params[0],
+        desired_transformations=[_QuantTransformation.NO_QUANTIZE],
+        is_inbounding_tensor=True,
+    )
+
+    # Test weight tensor params.
+    weight_tensor_data = tfl_flatbuffer_utils.get_tensor_data(
+        weight_tensor,
+        graph_info.buffers,
+    )
+    self._test_fp16_weight_tensor_transformation_params(
+        op_tensor_names["weight"],
+        op_info.subgraph_op_index,
+        tensor_quant_config=op_info.op_quant_config.weight_tensor_config,
+        transformation_params=tensor_quant_params[1],
+        desired_transformations=[_QuantTransformation.ADD_DEQUANTIZE],
+        tensor_data=weight_tensor_data,
+    )
+    # Test output tensor params.
+    self._test_fp16_nonweight_tensor_transformation_params(
+        op_tensor_names["output"],
+        op_info.subgraph_op_index,
+        transformation_params=tensor_quant_params[2],
+        desired_transformations=[_QuantTransformation.NO_QUANTIZE],
+        is_inbounding_tensor=False,
+    )
+
+    # Test bias tensor params.
+    if bias_tensor is not None:
+      self._test_fp16_nonweight_tensor_transformation_params(
+          op_tensor_names["bias"],
+          op_info.subgraph_op_index,
+          transformation_params=tensor_quant_params[3],
+          desired_transformations=[_QuantTransformation.NO_QUANTIZE],
+          is_inbounding_tensor=True,
+      )
+
   def test_depthwise_conv2d_weight_only_succeeds(self):
     # Read from Model Explorer.
     test_model_path = os.path.join(
@@ -429,7 +522,9 @@ class Fp16QuantizeTest(parameterized.TestCase):
     quantization_params = op_params.parameters
     self.assertIsNotNone(quantization_params)
     self.assertEqual(quantization_params.num_bits, tensor_quant_config.num_bits)
-    self.assertEqual(quantization_params.quantized_data.dtype, "float16")
+    quantized_data = quantization_params.quantized_data
+    self.assertIsNotNone(quantized_data)
+    self.assertEqual(quantized_data.dtype, "float16")
     # fp16 quantization implies very small error.
     self.assertSequenceAlmostEqual(
         list(tensor_data.flatten()),  # pytype: disable=attribute-error

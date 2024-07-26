@@ -122,11 +122,13 @@ for op_name, materialize_func in zip(
         _TFLOpName.FULLY_CONNECTED,
         _TFLOpName.CONV_2D,
         _TFLOpName.DEPTHWISE_CONV_2D,
+        _TFLOpName.CONV_2D_TRANSPOSE,
     ),
     (
         float_casting.materialize_fc_conv,
         float_casting.materialize_fc_conv,
         float_casting.materialize_fc_conv,
+        float_casting.materialize_conv2d_transpose,
     ),
 ):
   register_quantized_op(
