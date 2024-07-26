@@ -274,6 +274,50 @@ def materialize_fc_conv(
   return op_tensor_params
 
 
+def materialize_conv2d_transpose(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.conv2d_transpose.
+
+  Args:
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_name_to_qsv: A map of tensor name to quantization parameters.
+
+  Returns:
+    Quantization configuration for the tensors associated with the op (e.g.,
+    weights, bias).
+  """
+  op_tensor_params = utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      inputs_to_ignore=[0, 3],  # Ignore output_shape and bias tensors.
+  )
+  if len(op_tensor_params) < 2:
+    raise ValueError(
+        "Materialize standard op should return at least two tensors for"
+        " conv2d_transpose."
+    )
+  # TODO(b/355242974): Fix tensor order assumption in materialize_standard_op.
+  # The function assumes the first tensor is the input and the second one is the
+  # weight. However, for conv2d_transpose, the first tensor is the weight and
+  # the second one is the input.
+  weight_params, input_params, *_ = op_tensor_params
+  op_tensor_params = [input_params, weight_params] + op_tensor_params[2:]
+  _materialize_bias_for_conv_ops(
+      op_info,
+      graph_info,
+      op_tensor_params,
+      op_input_index=2,
+      op_weight_index=1,
+      op_bias_index=3,
+  )
+  return op_tensor_params
+
+
 def materialize_tanh(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,

@@ -315,6 +315,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       graph_info,
       op_test_info,
       materialization_func,
+      bias_quantized_dim: int = 0,
   ):
     """Tests fully connected, batch matmul and conv ops.
 
@@ -324,6 +325,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       op_test_info: OpTestInfo object.
       materialization_func: Function to materialize tensor transformation
         parameters.
+      bias_quantized_dim: Quantized dimension for bias.
     """
     op_quant_config = op_info.op_quant_config
     self._setup_op_test_config(
@@ -417,6 +419,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
           transformation_params=tensor_quant_params[3],
           desired_transformations=transformations,
           tensor_data=bias_tensor_data,
+          quantized_dimension=bias_quantized_dim,
       )
 
   def _test_tensor_transformation_params(

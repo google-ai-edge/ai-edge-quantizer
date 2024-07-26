@@ -36,7 +36,7 @@ TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
     _TFLOpName.DEPTHWISE_CONV_2D: (
         schema_py_generated.BuiltinOperator.DEPTHWISE_CONV_2D
     ),
-    _TFLOpName.TRANSPOSE_CONV: (
+    _TFLOpName.CONV_2D_TRANSPOSE: (
         schema_py_generated.BuiltinOperator.TRANSPOSE_CONV
     ),
     _TFLOpName.EMBEDDING_LOOKUP: (
@@ -71,6 +71,7 @@ TFL_OP_TO_WEIGHT_QUANTIZED_DIM = immutabledict.immutabledict({
     _TFLOpName.DEPTHWISE_CONV_2D: 3,
     _TFLOpName.CONV_2D: 0,
     _TFLOpName.EMBEDDING_LOOKUP: 0,
+    _TFLOpName.CONV_2D_TRANSPOSE: 0,
 })
 
 NUM_TFL_DATATYPES = 18
