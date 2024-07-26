@@ -109,6 +109,165 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
             output_qsv
         )
 
+  def _test_same_direction_tensors(
+      self,
+      tensor_quant_params,
+      op_quant_config,
+      op_info,
+      op_test_info,
+      num_tensors,
+      indices_to_ignore,
+      is_inbounding_tensor,
+  ):
+    """Tests all input or output tensors in provided quant params.
+
+    Args:
+      tensor_quant_params: Tensor transformation parameters.
+      op_quant_config: Op quantization config.
+      op_info: OpInfo object.
+      op_test_info: OpTestInfo object.
+      num_tensors: Number of tensors to test.
+      indices_to_ignore: Indices of tensors to ignore.
+      is_inbounding_tensor: Whether to test all inbounding tensors.
+    """
+    tensor_base_name = "input" if is_inbounding_tensor else "output"
+    tensor_names = [tensor_base_name] + [
+        f"{tensor_base_name}{i+2}" for i in range(num_tensors - 1)
+    ]
+    for i in range(num_tensors):
+      if (
+          op_quant_config.execution_mode == _OpExecutionMode.SRQ
+          and i not in indices_to_ignore
+      ):
+        if is_inbounding_tensor:
+          transformations = [_QuantTransformation.ADD_QUANTIZE]
+        else:
+          transformations = [_QuantTransformation.ADD_DEQUANTIZE]
+      else:
+        transformations = [_QuantTransformation.NO_QUANTIZE]
+      self._test_tensor_transformation_params(
+          op_test_info.op_tensor_names[tensor_names[i]],
+          op_info.subgraph_op_index,
+          is_inbounding_tensor=is_inbounding_tensor,
+          tensor_quant_config=op_quant_config.activation_tensor_config,
+          transformation_params=tensor_quant_params[i],
+          desired_transformations=transformations,
+      )
+
+  def _test_same_input_output_params(
+      self,
+      tensor_quant_params,
+      num_inputs,
+      num_outputs,
+      inputs_to_ignore,
+      outputs_to_ignore,
+  ):
+    """Tests input and output tensor transformation parameters are the same.
+
+    Args:
+      tensor_quant_params: Tensor transformation parameters.
+      num_inputs: Number of inputs in materialization function result.
+      num_outputs: Number of outputs in materialization function result.
+      inputs_to_ignore: Inputs to ignore.
+      outputs_to_ignore: Outputs to ignore.
+    """
+    num_quant_inputs = num_inputs - len(inputs_to_ignore)
+    num_quant_outputs = num_outputs - len(outputs_to_ignore)
+    self.assertTrue(num_quant_inputs == 1 or num_quant_outputs == 1)
+
+    # Test inputs.
+    inputs_to_ignore = inputs_to_ignore or []
+    expected_params = None
+    for i in range(num_inputs):
+      if i not in inputs_to_ignore:
+        if expected_params is None:
+          expected_params = tensor_quant_params[i].consumers[0].parameters  # pytype: disable=attribute-error
+        else:
+          input_tensor_quant_params = (
+              tensor_quant_params[i].consumers[0].parameters
+          )  # pytype: disable=attribute-error
+          self.assertEqual(input_tensor_quant_params, expected_params)
+
+    # Test outputs.
+    outputs_to_ignore = outputs_to_ignore or []
+    for i in range(num_outputs):
+      if i not in outputs_to_ignore:
+        output_tensor_quant_params = tensor_quant_params[
+            i + num_inputs
+        ].producer.parameters  # pytype: disable=attribute-error
+        self.assertEqual(output_tensor_quant_params, expected_params)
+
+  def _test_no_weights_op(
+      self,
+      op_info,
+      graph_info,
+      op_test_info,
+      materialization_func,
+      same_input_output_params=False,
+      num_inputs=1,
+      num_outputs=1,
+      inputs_to_ignore=None,
+      outputs_to_ignore=None,
+  ):
+    """Test an op without weights and bias.
+
+    Args:
+      op_info: OpInfo object.
+      graph_info: GraphInfo object.
+      op_test_info: OpTestInfo object.
+      materialization_func: Function to materialize tensor transformation
+        parameters.
+      same_input_output_params: Whether the input and output tensor
+        transformation parameters are the same.
+      num_inputs: Number of inputs in materialization function result.
+      num_outputs: Number of outputs in materialization function result.
+      inputs_to_ignore: Inputs to ignore.
+      outputs_to_ignore: Outputs to ignore.
+    """
+    op_quant_config = op_info.op_quant_config
+    self._setup_op_test_config(
+        execution_mode=op_quant_config.execution_mode,
+        op_test_info=op_test_info,
+        num_inputs=num_inputs,
+        num_outputs=num_outputs,
+    )
+    tensor_quant_params = materialization_func(
+        op_info, graph_info, self._tensor_name_to_qsv
+    )
+    self.assertLen(tensor_quant_params, num_inputs + num_outputs)
+
+    # Test input tensor settings.
+    inputs_to_ignore = inputs_to_ignore or []
+    self._test_same_direction_tensors(
+        tensor_quant_params[:num_inputs],
+        op_quant_config,
+        op_info,
+        op_test_info,
+        num_inputs,
+        inputs_to_ignore,
+        is_inbounding_tensor=True,
+    )
+    # Test output tensor settings.
+    outputs_to_ignore = outputs_to_ignore or []
+    self._test_same_direction_tensors(
+        tensor_quant_params[num_inputs:],
+        op_quant_config,
+        op_info,
+        op_test_info,
+        num_outputs,
+        outputs_to_ignore,
+        is_inbounding_tensor=False,
+    )
+    # Test same input and output params.
+    if same_input_output_params:
+      self._test_same_input_output_params(
+          tensor_quant_params,
+          num_inputs,
+          num_outputs,
+          inputs_to_ignore,
+          outputs_to_ignore,
+      )
+
   def _test_single_input_output_ops(
       self,
       op_info,
@@ -128,39 +287,15 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       same_input_output_params: Whether the input and output tensor
         transformation parameters are the same.
     """
-    self._setup_op_test_config(
-        execution_mode=_OpExecutionMode.SRQ,
-        op_test_info=op_test_info,
+    self._test_no_weights_op(
+        op_info,
+        graph_info,
+        op_test_info,
+        materialization_func,
+        same_input_output_params,
+        num_inputs=1,
+        num_outputs=1,
     )
-
-    tensor_quant_params = materialization_func(
-        op_info, graph_info, self._tensor_name_to_qsv
-    )
-    self.assertLen(tensor_quant_params, 2)
-
-    # Test input tensor settings.
-    op_quant_config = op_info.op_quant_config
-    self._test_tensor_transformation_params(
-        op_test_info.op_tensor_names["input"],
-        op_info.subgraph_op_index,
-        is_inbounding_tensor=True,
-        tensor_quant_config=op_quant_config.activation_tensor_config,
-        transformation_params=tensor_quant_params[0],
-        desired_transformations=[_QuantTransformation.ADD_QUANTIZE],
-    )
-    # Test output tensor settings.
-    self._test_tensor_transformation_params(
-        op_test_info.op_tensor_names["output"],
-        op_info.subgraph_op_index,
-        is_inbounding_tensor=False,
-        tensor_quant_config=op_quant_config.activation_tensor_config,
-        transformation_params=tensor_quant_params[1],
-        desired_transformations=[_QuantTransformation.ADD_DEQUANTIZE],
-    )
-    if same_input_output_params:
-      input_tensor_quant_params = tensor_quant_params[0].consumers[0].parameters  # pytype: disable=attribute-error
-      output_tensor_quant_params = tensor_quant_params[1].producer.parameters  # pytype: disable=attribute-error
-      self.assertEqual(input_tensor_quant_params, output_tensor_quant_params)
 
   def _test_two_input_one_output_ops(
       self,
@@ -183,59 +318,15 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       same_input_output_params: Whether the input and output tensor
         transformation parameters are the same.
     """
-    op_quant_config = op_info.op_quant_config
-    self._setup_op_test_config(
-        execution_mode=op_quant_config.execution_mode,
-        op_test_info=op_test_info,
+    self._test_no_weights_op(
+        op_info,
+        graph_info,
+        op_test_info,
+        materialization_func,
+        same_input_output_params,
         num_inputs=2,
+        num_outputs=1,
     )
-    tensor_quant_params = materialization_func(
-        op_info, graph_info, self._tensor_name_to_qsv
-    )
-    self.assertLen(tensor_quant_params, 3)
-
-    # Test input tensor settings.
-    transformations = [_QuantTransformation.NO_QUANTIZE]
-    if op_quant_config.execution_mode == _OpExecutionMode.SRQ:
-      transformations = [_QuantTransformation.ADD_QUANTIZE]
-    self._test_tensor_transformation_params(
-        op_test_info.op_tensor_names["input"],
-        op_info.subgraph_op_index,
-        is_inbounding_tensor=True,
-        tensor_quant_config=op_quant_config.activation_tensor_config,
-        transformation_params=tensor_quant_params[0],
-        desired_transformations=transformations,
-    )
-    self._test_tensor_transformation_params(
-        op_test_info.op_tensor_names["input2"],
-        op_info.subgraph_op_index,
-        is_inbounding_tensor=True,
-        tensor_quant_config=op_quant_config.activation_tensor_config,
-        transformation_params=tensor_quant_params[1],
-        desired_transformations=transformations,
-    )
-    # Test output tensor settings.
-    transformations = [_QuantTransformation.NO_QUANTIZE]
-    if op_quant_config.execution_mode == _OpExecutionMode.SRQ:
-      transformations = [_QuantTransformation.ADD_DEQUANTIZE]
-    self._test_tensor_transformation_params(
-        op_test_info.op_tensor_names["output"],
-        op_info.subgraph_op_index,
-        is_inbounding_tensor=False,
-        tensor_quant_config=op_quant_config.activation_tensor_config,
-        transformation_params=tensor_quant_params[2],
-        desired_transformations=transformations,
-    )
-    if same_input_output_params:
-      input1_tensor_quant_params = (
-          tensor_quant_params[0].consumers[0].parameters
-      )  # pytype: disable=attribute-error
-      input2_tensor_quant_params = (
-          tensor_quant_params[1].consumers[0].parameters
-      )  # pytype: disable=attribute-error
-      output_tensor_quant_params = tensor_quant_params[2].producer.parameters  # pytype: disable=attribute-error
-      self.assertEqual(input1_tensor_quant_params, output_tensor_quant_params)
-      self.assertEqual(input2_tensor_quant_params, output_tensor_quant_params)
 
   def _test_one_input_two_output_ops(
       self,
@@ -258,56 +349,15 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       same_input_output_params: Whether the input and output tensor
         transformation parameters are the same.
     """
-    op_quant_config = op_info.op_quant_config
-    self._setup_op_test_config(
-        execution_mode=op_quant_config.execution_mode,
-        op_test_info=op_test_info,
+    self._test_no_weights_op(
+        op_info,
+        graph_info,
+        op_test_info,
+        materialization_func,
+        same_input_output_params,
+        num_inputs=1,
         num_outputs=2,
     )
-    tensor_quant_params = materialization_func(
-        op_info, graph_info, self._tensor_name_to_qsv
-    )
-    self.assertLen(tensor_quant_params, 3)
-
-    # Test input tensor settings.
-    transformations = [_QuantTransformation.NO_QUANTIZE]
-    if op_quant_config.execution_mode == _OpExecutionMode.SRQ:
-      transformations = [_QuantTransformation.ADD_QUANTIZE]
-    self._test_tensor_transformation_params(
-        op_test_info.op_tensor_names["input"],
-        op_info.subgraph_op_index,
-        is_inbounding_tensor=True,
-        tensor_quant_config=op_quant_config.activation_tensor_config,
-        transformation_params=tensor_quant_params[0],
-        desired_transformations=transformations,
-    )
-    # Test output tensor settings.
-    transformations = [_QuantTransformation.NO_QUANTIZE]
-    if op_quant_config.execution_mode == _OpExecutionMode.SRQ:
-      transformations = [_QuantTransformation.ADD_DEQUANTIZE]
-    self._test_tensor_transformation_params(
-        op_test_info.op_tensor_names["output"],
-        op_info.subgraph_op_index,
-        is_inbounding_tensor=False,
-        tensor_quant_config=op_quant_config.activation_tensor_config,
-        transformation_params=tensor_quant_params[1],
-        desired_transformations=transformations,
-    )
-    self._test_tensor_transformation_params(
-        op_test_info.op_tensor_names["output2"],
-        op_info.subgraph_op_index,
-        is_inbounding_tensor=False,
-        tensor_quant_config=op_quant_config.activation_tensor_config,
-        transformation_params=tensor_quant_params[2],
-        desired_transformations=transformations,
-    )
-
-    if same_input_output_params:
-      input_tensor_quant_params = tensor_quant_params[0].consumers[0].parameters  # pytype: disable=attribute-error
-      output1_tensor_quant_params = tensor_quant_params[1].producer.parameters  # pytype: disable=attribute-error
-      output2_tensor_quant_params = tensor_quant_params[2].producer.parameters  # pytype: disable=attribute-error
-      self.assertEqual(output1_tensor_quant_params, input_tensor_quant_params)
-      self.assertEqual(output2_tensor_quant_params, input_tensor_quant_params)
 
   def _test_fc_bmm_conv(
       self,
@@ -472,7 +522,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       self.assertEqual(
           quantization_params.num_bits, tensor_quant_config.num_bits
       )
-      # Test correctness of quantization parameters
+      # Test correctness of quantization parameters.
       if tensor_data is not None:
         expected_quantized_data = uniform_quantize_tensor.uniform_quantize(
             tensor_data, quantization_params
