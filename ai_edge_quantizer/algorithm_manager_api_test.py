@@ -183,6 +183,17 @@ class AlgorithmManagerApiTest(parameterized.TestCase):
           tfl_op,
       )
 
+  def test_register_config_check_policy_succeeds(self):
+    self.assertEmpty(self._alg_manager._config_check_policy_registry)
+    test_algorithm_name = "test_algorithm"
+    self._alg_manager.register_config_check_policy(test_algorithm_name)
+    self.assertIn(
+        test_algorithm_name, self._alg_manager._config_check_policy_registry
+    )
+    self.assertIsNotNone(
+        self._alg_manager._config_check_policy_registry[test_algorithm_name]
+    )
+
 
 if __name__ == "__main__":
   googletest.main()

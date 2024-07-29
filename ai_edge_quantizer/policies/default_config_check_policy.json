@@ -1,0 +1,11 @@
+{
+  "FULLY_CONNECTED": [
+    {
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": true,
+        "dtype": "INT"
+      }
+    }
+  ]
+}
