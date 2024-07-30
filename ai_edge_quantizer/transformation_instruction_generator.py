@@ -429,7 +429,8 @@ class TransformationInstructionsGenerator:
         continue
       elif check_dq_no_quant_elimination(producer_trans_rule, trans_rule):
         for consumer_id in trans_rule.consumers:
-          producer_trans_rule.consumers.remove(consumer_id)
+          if consumer_id in producer_trans_rule.consumers:
+            producer_trans_rule.consumers.remove(consumer_id)
         transformations.append(
             qtyping.TransformationInst(
                 qtyping.QuantTransformation.ADD_DEQUANTIZE,
