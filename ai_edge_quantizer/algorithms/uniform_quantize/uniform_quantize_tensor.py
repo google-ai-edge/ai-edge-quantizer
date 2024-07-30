@@ -275,9 +275,11 @@ def tensor_zp_scale_from_min_max(
       signed=True,
   )
   qmin, qmax = get_quantized_range(qtype)
+  min_bound = 1e-4  # 1e-6 precision for int8 and 1e-8 for int16.
 
   if symmetric:
     bound = np.maximum(np.abs(min_value), np.abs(max_value))
+    bound = np.maximum(bound, min_bound)
     if not qtype.signed:
       half_q = (qmax - 1) / 2
       scale = bound / half_q
@@ -285,8 +287,6 @@ def tensor_zp_scale_from_min_max(
     else:
       scale = bound / qmax
       zp = np.zeros_like(scale, dtype=np.int32)
-    # If scale == 0, all W values are 0: you can set scale to 1.
-    scale = np.where(scale == 0, 1.0, scale)
 
   else:
     # Include 0 to the range to support zero-padding.
@@ -294,14 +294,10 @@ def tensor_zp_scale_from_min_max(
     # This ensures bound_min <= 0 <= bound_max.
     bound_max = np.maximum(max_value, np.zeros_like(max_value))
     bound_min = np.minimum(min_value, np.zeros_like(min_value))
-    scale = (bound_max - bound_min) / (qmax - qmin)
+    bound = np.maximum(bound_max - bound_min, min_bound)
+    scale = bound / (qmax - qmin)
     zp = qmin - bound_min / scale
     zp = np.rint(zp)
-
-    # If scale == 0, all W values are equal to bound_max == bound_min.
-    # Adjust scale and zp values so that its quantized value becomes 0.
-    zp = np.where(scale == 0, -1.0, zp)
-    scale = np.where(scale == 0, bound_max, scale)
 
   # It's safe to cast zp to qtype without clipping because we can infer
   # qmin <= zp <= qmax from bound_min <= 0 <= bound_max.
