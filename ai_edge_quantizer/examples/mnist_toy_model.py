@@ -55,9 +55,9 @@ _SAVE_PATH = flags.DEFINE_string(
 )
 _QUANTIZATION_MODE = flags.DEFINE_enum(
     'quantization_mode',
-    'weight_only',
-    ['weight_only', 'drq', 'a8w8', 'a16w8'],
-    'How to quantize the model (e.g., weight_only, drq, a8w8, a16w8).',
+    'af32w8float',
+    ['af32w8float', 'af32w8int', 'a8w8', 'a16w8'],
+    'How to quantize the model (e.g., af32w8float, af32w8int, a8w8, a16w8).',
 )
 
 
@@ -105,31 +105,32 @@ def quantize(
 
   Args:
       float_model_path: Path to the float model.
-      quantization_mode: How to quantize the model (e.g., weight_only, drq).
+      quantization_mode: How to quantize the model (e.g., af32w8float,
+        af32w8int).
 
   Returns:
       QuantResult: quantization result
   """
-  if quantization_mode == 'weight_only':
+  if quantization_mode == 'af32w8float':
     recipe_path = test_utils.get_path_to_datafile(
-        '../tests/recipes/conv_fc_mnist_weight_only_recipe.json'
+        '../recipes/default_af32w8float_recipe.json'
     )
-  elif quantization_mode == 'drq':
+  elif quantization_mode == 'af32w8int':
     recipe_path = test_utils.get_path_to_datafile(
-        '../tests/recipes/conv_fc_mnist_drq_recipe.json'
+        '../recipes/default_af32w8int_recipe.json'
     )
   elif quantization_mode == 'a8w8':
     recipe_path = test_utils.get_path_to_datafile(
-        '../tests/recipes/conv_fc_mnist_a8w8_recipe.json'
+        '../recipes/default_a8w8_recipe.json'
     )
   elif quantization_mode == 'a16w8':
     recipe_path = test_utils.get_path_to_datafile(
-        '../tests/recipes/conv_fc_mnist_a16w8_recipe.json'
+        '../recipes/default_a16w8_recipe.json'
     )
   else:
     raise ValueError(
-        'Invalid quantization mode. Only weight_only, drq, a8w8, a16w8 are'
-        ' supported.'
+        'Invalid quantization mode. Only af32w8float, af32w8int, a8w8, a16w8'
+        ' are supported.'
     )
 
   qt = quantizer.Quantizer(float_model_path)
