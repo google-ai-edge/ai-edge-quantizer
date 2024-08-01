@@ -17,11 +17,11 @@
 
 import enum
 from ai_edge_quantizer import algorithm_manager_api
+from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.nonlinear_quantize import float_casting
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
-
 
 _TFLOpName = qtyping.TFLOperationName
 
@@ -33,6 +33,9 @@ get_supported_ops = _alg_manager_instance.get_supported_ops
 get_init_qsv_func = _alg_manager_instance.get_init_qsv_func
 register_op_quant_config_validation_func = (
     _alg_manager_instance.register_op_quant_config_validation_func
+)
+register_config_check_policy_func = (
+    _alg_manager_instance.register_config_check_policy
 )
 register_quantized_op = _alg_manager_instance.register_quantized_op
 is_op_registered = _alg_manager_instance.is_op_registered
@@ -54,6 +57,13 @@ register_op_quant_config_validation_func(
     AlgorithmName.MIN_MAX_UNIFORM_QUANT,
     naive_min_max_quantize.check_op_quantization_config,
 )
+
+# Register a config check policy for MIN_MAX_UNIFORM_QUANT algorithm.
+register_config_check_policy_func(
+    AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+    default_policy.DEFAULT_CONFIG_CHECK_POLICY,
+)
+
 moving_average_update_qsv = (
     uniform_quantize_tensor.update_tensor_qsv_moving_average
 )
@@ -117,6 +127,13 @@ register_op_quant_config_validation_func(
     AlgorithmName.FLOAT_CASTING,
     float_casting.check_op_quantization_config,
 )
+
+# Register a config check policy for FLOAT_CASTING algorithm.
+# TODO: b/353780772 - Replace an empty policy for FLOAT_CASTING algorithm.
+register_config_check_policy_func(
+    AlgorithmName.FLOAT_CASTING, qtyping.ConfigCheckPolicyDict()
+)
+
 for op_name, materialize_func in zip(
     (
         _TFLOpName.FULLY_CONNECTED,

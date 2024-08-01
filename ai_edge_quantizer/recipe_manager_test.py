@@ -41,9 +41,9 @@ def _sample_materialize_func(*_, **__):
   return 3.0, dict()
 
 
-def _sample_check_op_config_func(_, op_config):
+def _sample_check_op_config_func(op_name, op_config, _):
   if op_config.weight_tensor_config.num_bits == 17:
-    raise ValueError('Unsupported number of bits.')
+    raise ValueError(f'Unsupported number of bits for op: {op_name}.')
 
 
 def _add_default_int8xint8_integer_recipe(recipe_manager_object):
@@ -238,14 +238,15 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
       )
 
   def test_add_unsupported_num_bits_raise_error(self):
-    error_message = 'Unsupported number of bits.'
+    test_op_name = _TFLOpName.FULLY_CONNECTED
+    error_message = f'Unsupported number of bits for op: {test_op_name}.'
     # Add unregistered operation
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
       self._recipe_manager.add_quantization_config(
           regex='.*/Dense/.*',
-          operation_name=_TFLOpName.FULLY_CONNECTED,
+          operation_name=test_op_name,
           algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
           op_config=qtyping.OpQuantizationConfig(
               weight_tensor_config=_TensorQuantConfig(num_bits=17),

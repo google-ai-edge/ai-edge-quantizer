@@ -15,7 +15,7 @@
 
 """Performs float casting quantization."""
 
-from typing import Any
+from typing import Any, Optional
 import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
@@ -36,17 +36,23 @@ SUPPORTED_WEIGHT_QUANT_OPS = frozenset([
 def check_op_quantization_config(
     op_name: _TFLOpName,
     op_quant_config: qtyping.OpQuantizationConfig,
+    config_check_policy: Optional[qtyping.ConfigCheckPolicyDict] = None,
 ) -> None:
   """Checks if the op is valid for float casting quantization.
 
   Args:
-    op_name: the name of the op.
-    op_quant_config: the quantization config for the op.
+    op_name: The name of the op.
+    op_quant_config: The quantization config for the op.
+    config_check_policy: The policy to check the quantization config.
 
   Raises:
     ValueError: If the op is not supported or the execution mode is not
       WEIGHT_ONLY.
   """
+  # TODO: b/353780772 - Add config check policy for float casting quantization.
+  if config_check_policy is not None and config_check_policy:
+    raise ValueError(f"Config check isn't implemented yet for op: {op_name}.")
+
   if op_quant_config.execution_mode != qtyping.OpExecutionMode.WEIGHT_ONLY:
     raise ValueError(
         "Currently, only Weight-Only is supported for float casting"

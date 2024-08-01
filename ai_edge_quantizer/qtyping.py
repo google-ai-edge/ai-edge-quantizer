@@ -15,6 +15,7 @@
 
 """Type hinting support for AI Edge Quantizer."""
 
+import collections
 from collections.abc import MutableMapping
 import copy
 import dataclasses
@@ -420,6 +421,13 @@ class TransformationInfo:
   op_id: int
   num_ops_added: int
   output_tensor_id: int
+
+
+# Policy is represented as a dict to check the op quantization config.
+# Normally the policy is loaded from a json file.
+ConfigCheckPolicyDict = collections.OrderedDict[
+    TFLOperationName, list[OpQuantizationConfig]
+]
 
 
 def _compare_array_or_none(

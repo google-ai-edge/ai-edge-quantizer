@@ -32,12 +32,14 @@ _OpExecutionMode = qtyping.OpExecutionMode
 def check_op_quantization_config(
     op_name: _TFLOpName,
     op_quant_config: qtyping.OpQuantizationConfig,
+    config_check_policy: qtyping.ConfigCheckPolicyDict,
 ) -> None:
   """Checks the op quantization config.
 
   Args:
     op_name: The name of the op.
     op_quant_config: The quantization config for the op.
+    config_check_policy: The policy to check the op quantization config.
 
   Raises:
     ValueError: If the op quantization config is invalid.
@@ -52,7 +54,10 @@ def check_op_quantization_config(
   if execution_mode == _OpExecutionMode.WEIGHT_ONLY:
     utils.check_weight_only_config(op_name)
   if execution_mode == _OpExecutionMode.DRQ:
-    utils.check_drq_config(op_name, op_quant_config)
+    # Use policy-based mechanism to validate op.
+    utils.check_if_valid_op_config(
+        op_name, op_quant_config, config_check_policy
+    )
   if execution_mode == _OpExecutionMode.SRQ:
     utils.check_srq_config(op_name, op_quant_config)
 

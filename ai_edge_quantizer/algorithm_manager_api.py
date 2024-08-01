@@ -30,11 +30,6 @@ _DEFAULT_CONFIG_CHECK_POLICY_PATH = test_utils.get_path_to_datafile(
     "policies/default_config_check_policy.json"
 )
 
-# Policy is represented as a dict to check the op quantization config.
-_ConfigCheckPolicyDict = collections.OrderedDict[
-    qtyping.TFLOperationName, list[qtyping.OpQuantizationConfig]
-]
-
 
 @dataclasses.dataclass
 class QuantizedOperationInfo:
@@ -172,7 +167,9 @@ class AlgorithmManagerApi:
           " validation function."
       )
     self._config_check_registry[quantization_algorithm](
-        tfl_op_name, op_quantization_config
+        tfl_op_name,
+        op_quantization_config,
+        self._config_check_policy_registry[quantization_algorithm],
     )
 
   def get_supported_ops(self, alg_key: str) -> list[qtyping.TFLOperationName]:
@@ -273,7 +270,7 @@ class AlgorithmManagerApi:
 
   def _load_config_check_policy(
       self,
-  ) -> _ConfigCheckPolicyDict:
+  ) -> qtyping.ConfigCheckPolicyDict:
     """Loads the config check policy for all algorithms."""
 
     with gfile.Open(_DEFAULT_CONFIG_CHECK_POLICY_PATH) as json_file:
@@ -295,7 +292,7 @@ class AlgorithmManagerApi:
   def register_config_check_policy(
       self,
       algorithm_key: str,
-      config_check_policy: Optional[_ConfigCheckPolicyDict] = None,
+      config_check_policy: Optional[qtyping.ConfigCheckPolicyDict] = None,
   ):
     """Registers a policy to check the op quantization config."""
     if config_check_policy is None:

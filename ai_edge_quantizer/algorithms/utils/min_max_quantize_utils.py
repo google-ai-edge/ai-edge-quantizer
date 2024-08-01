@@ -80,6 +80,47 @@ _INT4_SRQ_SUPPORTED_OPS = frozenset([
 ])
 
 
+def check_if_valid_op_config(
+    op_name: _TFLOpName,
+    op_quant_config: qtyping.OpQuantizationConfig,
+    config_check_policy: qtyping.ConfigCheckPolicyDict,
+) -> None:
+  """Check if the op quantization config is valid.
+
+  Args:
+    op_name: The name of the op.
+    op_quant_config: The quantization config for the op.
+    config_check_policy: The policy to check the op quantization config.
+
+  Raises:
+    ValueError: If the op quantization config is not valid.
+  """
+
+  check_passed = False
+  error_msg = ""
+  # Check if find op_config in policy config_check_policy.
+  if config_check_policy is None:
+    error_msg = "No policy was specified at all."
+  elif op_name not in config_check_policy.keys():
+    error_msg = (
+        f"No policy was specified for op: {op_name} with config:"
+        f" {op_quant_config}."
+    )
+  elif op_quant_config not in config_check_policy[op_name]:
+    error_msg = (
+        f"Quantization config for op: {op_name} with config:"
+        f" {op_quant_config} was not found in the policy."
+    )
+  else:
+    check_passed = True
+
+  if not check_passed:
+    raise ValueError(
+        f"Unsupported op for {op_quant_config.execution_mode.name}: {op_name}."
+        f" Error: {error_msg}"
+    )
+
+
 def check_weight_only_config(op_name: _TFLOpName) -> None:
   """Checks the op quantization config for weight-only quantization."""
   if op_name not in _SUPPORTED_WEIGHT_ONLY_OPS:

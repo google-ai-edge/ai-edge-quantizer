@@ -2,10 +2,157 @@
   "FULLY_CONNECTED": [
     {
       "weight_tensor_config": {
+        "num_bits": 4,
+        "symmetric": true,
+        "channel_wise": true,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    },
+    {
+      "weight_tensor_config": {
+        "num_bits": 4,
+        "symmetric": true,
+        "channel_wise": false,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    },
+    {
+      "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
+        "channel_wise": true,
         "dtype": "INT"
-      }
+      },
+      "execution_mode": "DRQ"
+    },
+    {
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": true,
+        "channel_wise": false,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    }
+  ],
+  "CONV_2D": [
+    {
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": true,
+        "channel_wise": true,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    },
+    {
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": true,
+        "channel_wise": false,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    }
+  ],
+  "BATCH_MATMUL": [
+    {
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": true,
+        "channel_wise": true,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    },
+    {
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": true,
+        "channel_wise": false,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    }
+  ],
+  "EMBEDDING_LOOKUP": [
+    {
+      "weight_tensor_config": {
+        "num_bits": 4,
+        "symmetric": true,
+        "channel_wise": true,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    },
+    {
+      "weight_tensor_config": {
+        "num_bits": 4,
+        "symmetric": true,
+        "channel_wise": false,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    },
+    {
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": true,
+        "channel_wise": true,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    },
+    {
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": true,
+        "channel_wise": false,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    }
+  ],
+  "DEPTHWISE_CONV_2D": [
+    {
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": true,
+        "channel_wise": true,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    },
+    {
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": true,
+        "channel_wise": false,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    }
+  ],
+  "CONV_2D_TRANSPOSE": [
+    {
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": true,
+        "channel_wise": true,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
+    },
+    {
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": true,
+        "channel_wise": false,
+        "dtype": "INT"
+      },
+      "execution_mode": "DRQ"
     }
   ]
 }
