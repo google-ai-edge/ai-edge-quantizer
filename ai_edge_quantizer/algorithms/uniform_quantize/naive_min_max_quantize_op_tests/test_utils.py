@@ -15,8 +15,9 @@
 
 """Test utils for naive min max quantize."""
 
+from collections.abc import Sequence
 import dataclasses
-from typing import Any
+from typing import Any, Optional
 
 from absl.testing import parameterized
 import numpy as np
@@ -470,6 +471,82 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
           desired_transformations=transformations,
           tensor_data=bias_tensor_data,
           quantized_dimension=bias_quantized_dim,
+      )
+
+  def _get_ignore_tensor_name(
+      self,
+      ignored_tensor_index: int,
+      is_op_with_weight: bool,
+      is_inbounding_tensor: bool,
+  ) -> str:
+    """Gets the tensor name for ignored tensors.
+
+    Args:
+      ignored_tensor_index: Index of the ignored tensor in list of
+        inputs/outputs.
+      is_op_with_weight: Whether the op has weight.
+      is_inbounding_tensor: Whether the tensor is an inbounding tensor.
+
+    Returns:
+      Tensor name.
+    """
+    base_name = "input" if is_inbounding_tensor else "output"
+    if is_op_with_weight:
+      base_name = f"ignored_{base_name}"
+    if ignored_tensor_index == 0:
+      return base_name
+    return f"{base_name}{ignored_tensor_index+1}"
+
+  def _test_ignored_inputs_and_outputs(
+      self,
+      tensor_quant_params,
+      op_info,
+      op_test_info,
+      inputs_to_ignore: Optional[Sequence[int]] = None,
+      outputs_to_ignore: Optional[Sequence[int]] = None,
+      is_op_with_weight: bool = False,
+  ):
+    """Tests ignored inputs and outputs.
+
+    Args:
+      tensor_quant_params: Tensor transformation parameters.
+      op_info: OpInfo object.
+      op_test_info: OpTestInfo object.
+      inputs_to_ignore: Inputs to ignore.
+      outputs_to_ignore: Outputs to ignore.
+      is_op_with_weight: Whether the op has weights.
+    """
+    op_quant_config = op_info.op_quant_config
+    # Use activation tensor config just to pass something.
+    tensor_quant_config = op_quant_config.activation_tensor_config
+    inputs_to_ignore = inputs_to_ignore or []
+    outputs_to_ignore = outputs_to_ignore or []
+    # Test ignored inputs.
+    for i in inputs_to_ignore:
+      tensor_name = self._get_ignore_tensor_name(
+          i, is_op_with_weight=is_op_with_weight, is_inbounding_tensor=True
+      )
+      self._test_tensor_transformation_params(
+          op_test_info.op_tensor_names[tensor_name],
+          op_info.subgraph_op_index,
+          is_inbounding_tensor=True,
+          tensor_quant_config=tensor_quant_config,
+          transformation_params=tensor_quant_params[i],
+          desired_transformations=[_QuantTransformation.NO_QUANTIZE],
+      )
+    # Test ignored outputs.
+    for i in outputs_to_ignore:
+      quant_params_index = op_quant_config.num_inputs + i
+      tensor_name = self._get_ignore_tensor_name(
+          i, is_op_with_weight=is_op_with_weight, is_inbounding_tensor=False
+      )
+      self._test_tensor_transformation_params(
+          op_test_info.op_tensor_names[tensor_name],
+          op_info.subgraph_op_index,
+          is_inbounding_tensor=False,
+          tensor_quant_config=tensor_quant_config,
+          transformation_params=tensor_quant_params[quant_params_index],
+          desired_transformations=[_QuantTransformation.NO_QUANTIZE],
       )
 
   def _test_tensor_transformation_params(
