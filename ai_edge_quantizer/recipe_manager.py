@@ -221,7 +221,9 @@ class RecipeManager:
       self.add_quantization_config(
           config['regex'],
           config['operation'],
-          _OpQuantizationConfig.from_dict(config['op_config']),
+          _OpQuantizationConfig.from_dict(config['op_config'])
+          if config['algorithm_key'] != AlgorithmName.NO_QUANTIZE
+          else None,
           config['algorithm_key'],
       )
 
