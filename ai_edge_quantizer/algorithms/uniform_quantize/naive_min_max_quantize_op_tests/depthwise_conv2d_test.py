@@ -70,7 +70,10 @@ class DepthwiseConv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
 
   @parameterized.product(
       symmetric_weight=(True, False),
-      channel_wise_weight=(True, False),
+      granularity=(
+          qtyping.QuantGranularity.CHANNELWISE,
+          qtyping.QuantGranularity.TENSORWISE,
+      ),
       execution_mode=(
           _OpExecutionMode.WEIGHT_ONLY,
           _OpExecutionMode.DRQ,
@@ -79,7 +82,7 @@ class DepthwiseConv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
   def test_materialize_weight_only_drq_depthwise_conv2d_succeeds(
       self,
       symmetric_weight,
-      channel_wise_weight,
+      granularity,
       execution_mode,
   ):
     # Read from Model Explorer.
@@ -96,7 +99,7 @@ class DepthwiseConv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=8,  # Only int8 is supported for now.
                 symmetric=symmetric_weight,
-                channel_wise=channel_wise_weight,
+                granularity=granularity,
             ),
             execution_mode=execution_mode,
         ),
@@ -122,13 +125,13 @@ class DepthwiseConv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
       activation_tensor_config = _TensorQuantConfig(
           num_bits=8,
           symmetric=False,
-          channel_wise=False,
+          granularity=qtyping.QuantGranularity.TENSORWISE,
       )
     else:
       activation_tensor_config = _TensorQuantConfig(
           num_bits=16,
           symmetric=True,
-          channel_wise=False,
+          granularity=qtyping.QuantGranularity.TENSORWISE,
       )
     op_info = qtyping.OpInfo(
         op=op,
@@ -139,7 +142,7 @@ class DepthwiseConv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=8,  # Only int8 is supported for now.
                 symmetric=True,
-                channel_wise=True,
+                granularity=qtyping.QuantGranularity.CHANNELWISE,
             ),
             execution_mode=_OpExecutionMode.SRQ,
         ),

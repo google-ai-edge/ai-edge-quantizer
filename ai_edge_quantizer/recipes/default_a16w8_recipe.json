@@ -7,14 +7,16 @@
       "activation_tensor_config": {
         "num_bits": 16,
         "symmetric": true,
-        "channel_wise": false,
-        "dtype": "INT"
+        "granularity": "TENSORWISE",
+        "dtype": "INT",
+        "block_size": 0
       },
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": true,
-        "dtype": "INT"
+        "granularity": "CHANNELWISE",
+        "dtype": "INT",
+        "block_size": 0
       },
       "execution_mode": "SRQ",
       "skip_checks": false

@@ -21,6 +21,7 @@ _TFLOpName = qtyping.TFLOperationName
 _OpQuantizationConfig = qtyping.OpQuantizationConfig
 _TensorQuantizationConfig = qtyping.TensorQuantizationConfig
 _OpExecutionMode = qtyping.OpExecutionMode
+_Granularity = qtyping.QuantGranularity
 _INT = qtyping.TensorDataType.INT
 
 DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
@@ -28,28 +29,40 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=4, symmetric=True, channel_wise=True, dtype=_INT
+                num_bits=4,
+                symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=4, symmetric=True, channel_wise=False, dtype=_INT
+                num_bits=4,
+                symmetric=True,
+                granularity=_Granularity.TENSORWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8, symmetric=True, channel_wise=True, dtype=_INT
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8, symmetric=True, channel_wise=False, dtype=_INT
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.TENSORWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
@@ -58,14 +71,20 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8, symmetric=True, channel_wise=True, dtype=_INT
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8, symmetric=True, channel_wise=False, dtype=_INT
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.TENSORWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
@@ -74,14 +93,20 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8, symmetric=True, channel_wise=True, dtype=_INT
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8, symmetric=True, channel_wise=False, dtype=_INT
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.TENSORWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
@@ -90,28 +115,40 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=4, symmetric=True, channel_wise=True, dtype=_INT
+                num_bits=4,
+                symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=4, symmetric=True, channel_wise=False, dtype=_INT
+                num_bits=4,
+                symmetric=True,
+                granularity=_Granularity.TENSORWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8, symmetric=True, channel_wise=True, dtype=_INT
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8, symmetric=True, channel_wise=False, dtype=_INT
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.TENSORWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
@@ -120,14 +157,20 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8, symmetric=True, channel_wise=True, dtype=_INT
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8, symmetric=True, channel_wise=False, dtype=_INT
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.TENSORWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
@@ -136,14 +179,20 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8, symmetric=True, channel_wise=True, dtype=_INT
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
             weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8, symmetric=True, channel_wise=False, dtype=_INT
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.TENSORWISE,
+                dtype=_INT,
             ),
             execution_mode=_OpExecutionMode.DRQ,
         ),

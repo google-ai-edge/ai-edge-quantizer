@@ -34,6 +34,7 @@ _TensorDataType = qtyping.TensorDataType
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
 _AlgorithmName = recipe_manager.AlgorithmName
+_QuantGranularity = qtyping.QuantGranularity
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('')
 
@@ -135,7 +136,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
                     'dtype': _TensorDataType.INT,
                     'num_bits': 8,
                     'symmetric': False,
-                    'channel_wise': True,
+                    'granularity': _QuantGranularity.CHANNELWISE,
                 },
                 'execution_mode': _OpExecutionMode.WEIGHT_ONLY,
             },
@@ -200,7 +201,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         ],
         is_inbounding_tensor=True,
         num_bits=8,
-        channel_wise=True,
+        granularity=_QuantGranularity.CHANNELWISE,
         symmetric=False,
     )  # weight tensor
     self._test_tensor_transformation_params(
@@ -235,7 +236,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         ],
         is_inbounding_tensor=True,
         num_bits=8,
-        channel_wise=True,
+        granularity=_QuantGranularity.CHANNELWISE,
         symmetric=False,
     )  # weight tensor
     self._test_tensor_transformation_params(
@@ -272,7 +273,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
                     'dtype': _TensorDataType.INT,
                     'num_bits': 8,
                     'symmetric': True,
-                    'channel_wise': True,
+                    'granularity': _QuantGranularity.CHANNELWISE,
                 },
                 'execution_mode': _OpExecutionMode.DRQ,
             },
@@ -286,7 +287,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
                     'dtype': _TensorDataType.INT,
                     'num_bits': 4,
                     'symmetric': False,
-                    'channel_wise': False,
+                    'granularity': _QuantGranularity.TENSORWISE,
                 },
                 'execution_mode': _OpExecutionMode.WEIGHT_ONLY,
             },
@@ -306,7 +307,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         [_QuantTransformation.QUANTIZE_TENSOR],
         is_inbounding_tensor=True,
         num_bits=8,
-        channel_wise=True,
+        granularity=_QuantGranularity.CHANNELWISE,
         symmetric=True,
     )
 
@@ -320,7 +321,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         ],
         is_inbounding_tensor=True,
         num_bits=4,
-        channel_wise=False,
+        granularity=_QuantGranularity.TENSORWISE,
         symmetric=False,
     )
 
@@ -336,7 +337,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
                 'weight_tensor_config': {
                     'num_bits': 8,
                     'symmetric': True,
-                    'channel_wise': True,
+                    'granularity': _QuantGranularity.CHANNELWISE,
                 },
                 'execution_mode': _OpExecutionMode.DRQ,
             },
@@ -350,7 +351,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
                 'weight_tensor_config': {
                     'num_bits': 4,
                     'symmetric': False,
-                    'channel_wise': False,
+                    'granularity': _QuantGranularity.TENSORWISE,
                 },
                 'execution_mode': _OpExecutionMode.WEIGHT_ONLY,
             },
@@ -378,12 +379,15 @@ class ParamsGeneratorTest(parameterized.TestCase):
         [_QuantTransformation.QUANTIZE_TENSOR],
         is_inbounding_tensor=True,
         num_bits=8,
-        channel_wise=True,
+        granularity=_QuantGranularity.CHANNELWISE,
         symmetric=True,
     )
 
   @parameterized.parameters(
-      (True, True), (True, False), (False, True), (False, False)
+      (True, _QuantGranularity.CHANNELWISE),
+      (True, _QuantGranularity.TENSORWISE),
+      (False, _QuantGranularity.CHANNELWISE),
+      (False, _QuantGranularity.TENSORWISE),
   )
   def test_generate_config_int8xint8_single_fc(
       self, act_symmetric, channelwise_weight
@@ -400,7 +404,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
                 num_bits=8, symmetric=act_symmetric
             ),
             weight_tensor_config=_TensorQuantConfig(
-                num_bits=8, symmetric=True, channel_wise=channelwise_weight
+                num_bits=8, symmetric=True, granularity=channelwise_weight
             ),
             execution_mode=_OpExecutionMode.SRQ,
         ),
@@ -437,7 +441,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         'serving_default_input_1:0',
         [_QuantTransformation.QUANTIZE_TENSOR],
         num_bits=8,
-        channel_wise=False,
+        granularity=_QuantGranularity.TENSORWISE,
         symmetric=act_symmetric,
         is_inbounding_tensor=True,
     )
@@ -449,7 +453,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         'StatefulPartitionedCall:0',
         [_QuantTransformation.QUANTIZE_TENSOR],
         num_bits=8,
-        channel_wise=False,
+        granularity=_QuantGranularity.TENSORWISE,
         symmetric=act_symmetric,
         is_inbounding_tensor=False,
     )
@@ -461,7 +465,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         'sequential/dense/MatMul',
         [_QuantTransformation.QUANTIZE_TENSOR],
         num_bits=8,
-        channel_wise=channelwise_weight,
+        granularity=channelwise_weight,
         symmetric=True,
         is_inbounding_tensor=True,
     )
@@ -473,7 +477,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         'sequential/dense/BiasAdd/ReadVariableOp',
         [_QuantTransformation.QUANTIZE_TENSOR],
         num_bits=32,
-        channel_wise=channelwise_weight,
+        granularity=channelwise_weight,
         symmetric=True,
         is_inbounding_tensor=True,
     )
@@ -829,7 +833,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
       transformations,
       is_inbounding_tensor,
       num_bits=8,
-      channel_wise=False,
+      granularity=_QuantGranularity.TENSORWISE,
       symmetric=True,
       quantized_dimension=0,
   ):
@@ -850,7 +854,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
     else:
       quantization_params = op_config.parameters
       self.assertIsNotNone(quantization_params)
-      if channel_wise:
+      if granularity is _QuantGranularity.CHANNELWISE:
         self.assertEqual(
             quantization_params.quantized_dimension, quantized_dimension
         )

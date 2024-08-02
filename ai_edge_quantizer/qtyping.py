@@ -75,6 +75,12 @@ class TensorDataType(str, enum.Enum):
   FLOAT = 'FLOAT'
 
 
+class QuantGranularity(str, enum.Enum):
+  TENSORWISE = 'TENSORWISE'
+  CHANNELWISE = 'CHANNELWISE'
+  BLOCKWISE = 'BLOCKWISE'
+
+
 class QuantTransformation(enum.Enum):
   """Operations associated with quantization for a tensor."""
 
@@ -224,8 +230,10 @@ class TensorQuantizationConfig:
     num_bits: Number of bits to quantize to (e.g. 8 for int8).
     symmetric: Whether to perform symmetric or asymmetric quantization. In the
       symmetric quantization mode, the zero point is always 0.
-    channel_wise: Whether to perform channel_wise quantization.
+    granularity: Whether to perform per-tensor, per-channel or per-block
+      quantization.
     dtype: The data type of the tensor.
+    block_size: The block size for blockwise quantization.
   """
 
   # Number of bits to quantize to (e.g. 8 for int8).
@@ -233,9 +241,12 @@ class TensorQuantizationConfig:
   # Whether to perform symmetric or asymmetric quantization. In the symmetric
   # quantization mode, the zero point is always 0.
   symmetric: bool = True
-  # Whether to perform channel_wise quantization.
-  channel_wise: bool = False
+  # The channel configuration for the tensor.
+  granularity: QuantGranularity = QuantGranularity.TENSORWISE
+  # The data type of the tensor.
   dtype: TensorDataType = TensorDataType.INT
+  # The block size for blockwise quantization.
+  block_size: int = 0
 
   def to_dict(self) -> dict[str, Any]:
     """Converts ActivationQuantizationConfig to dict."""

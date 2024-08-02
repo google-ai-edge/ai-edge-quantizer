@@ -59,7 +59,10 @@ class DepthwiseConv2dTest(parameterized.TestCase):
 
   @parameterized.product(
       symmetric_weight=[True, False],
-      channel_wise_weight=[True, False],
+      channel_wise_weight=[
+          qtyping.QuantGranularity.CHANNELWISE,
+          qtyping.QuantGranularity.TENSORWISE,
+      ],
   )
   def test_depthwise_conv2d_model_int8_weight_only(
       self, symmetric_weight, channel_wise_weight
@@ -71,7 +74,7 @@ class DepthwiseConv2dTest(parameterized.TestCase):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=8,
                 symmetric=symmetric_weight,
-                channel_wise=channel_wise_weight,
+                granularity=channel_wise_weight,
             ),
             execution_mode=_OpExecutionMode.WEIGHT_ONLY,
         ),
@@ -92,6 +95,7 @@ class DepthwiseConv2dTest(parameterized.TestCase):
         '../../recipes/default_af32w8int_recipe.json'
     )
     self._quantizer.load_quantization_recipe(recipe_path)
+
     # Check model size.
     quant_result = self._quantizer.quantize()
     self.assertLess(len(quant_result.quantized_model), 10000)

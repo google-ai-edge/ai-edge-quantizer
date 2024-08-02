@@ -73,7 +73,7 @@ class MeanTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         activation_tensor_config=_TensorQuantConfig(
             num_bits=activation_num_bits,
             symmetric=activation_symmetry,
-            channel_wise=False,
+            granularity=qtyping.QuantGranularity.TENSORWISE,
         ),
         execution_mode=_OpExecutionMode.SRQ,
     )

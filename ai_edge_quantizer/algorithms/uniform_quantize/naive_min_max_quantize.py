@@ -60,6 +60,7 @@ def check_op_quantization_config(
     )
   if execution_mode == _OpExecutionMode.SRQ:
     utils.check_srq_config(op_name, op_quant_config)
+  utils.check_subchannel_config(op_name, op_quant_config)
 
 
 def materialize_add(

@@ -37,6 +37,7 @@ _OpExecutionMode = qtyping.OpExecutionMode
 _OpName = qtyping.TFLOperationName
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _OpQuantConfig = qtyping.OpQuantizationConfig
+_QuantGranularity = qtyping.QuantGranularity
 
 _FLOAT_MODEL_PATH = flags.DEFINE_string(
     'float_model_path',

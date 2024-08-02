@@ -55,12 +55,12 @@ class OpTestInfo:
 DEFAULT_ACTIVATION_QUANT_SETTING = _TensorQuantConfig(
     num_bits=8,
     symmetric=False,
-    channel_wise=False,
+    granularity=qtyping.QuantGranularity.TENSORWISE,
 )
 DEFAULT_WEIGHT_QUANT_SETTING = _TensorQuantConfig(
     num_bits=8,
     symmetric=True,
-    channel_wise=True,
+    granularity=qtyping.QuantGranularity.CHANNELWISE,
 )
 
 
@@ -459,7 +459,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       bias_config = qtyping.TensorQuantizationConfig(
           num_bits=bias_bit_width,
           symmetric=True,
-          channel_wise=op_quant_config.weight_tensor_config.channel_wise,
+          granularity=op_quant_config.weight_tensor_config.granularity,
       )
       self._test_tensor_transformation_params(
           op_test_info.op_tensor_names["bias"],
@@ -513,7 +513,10 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       self.assertIsNone(quantization_params)
     else:
       self.assertIsNotNone(quantization_params)
-      if tensor_quant_config.channel_wise:
+      if (
+          tensor_quant_config.granularity
+          is qtyping.QuantGranularity.CHANNELWISE
+      ):
         self.assertEqual(
             quantization_params.quantized_dimension, quantized_dimension
         )

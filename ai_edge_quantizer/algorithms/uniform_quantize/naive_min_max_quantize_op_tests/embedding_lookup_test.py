@@ -33,6 +33,7 @@ _OpExecutionMode = qtyping.OpExecutionMode
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
 _OpTestInfo = naive_min_max_test_utils.OpTestInfo
+_QuantGranularity = qtyping.QuantGranularity
 
 
 class EmbeddingLookupTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
@@ -58,7 +59,10 @@ class EmbeddingLookupTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
   @parameterized.product(
       num_bits_weight=(4, 8),
       symmetric_weight=(True, False),
-      channel_wise_weight=(True, False),
+      granularity=(
+          _QuantGranularity.TENSORWISE,
+          _QuantGranularity.CHANNELWISE,
+      ),
       execution_mode=(
           _OpExecutionMode.DRQ,
           _OpExecutionMode.WEIGHT_ONLY,
@@ -68,7 +72,7 @@ class EmbeddingLookupTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
       self,
       num_bits_weight,
       symmetric_weight,
-      channel_wise_weight,
+      granularity,
       execution_mode,
   ):
 
@@ -93,7 +97,7 @@ class EmbeddingLookupTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=num_bits_weight,
                 symmetric=symmetric_weight,
-                channel_wise=channel_wise_weight,
+                granularity=granularity,
             ),
             execution_mode=execution_mode,
         ),

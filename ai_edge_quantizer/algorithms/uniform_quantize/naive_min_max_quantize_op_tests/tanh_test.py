@@ -68,7 +68,7 @@ class TanhTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
           _TensorQuantConfig(
               num_bits=16,
               symmetric=True,
-              channel_wise=False,
+              granularity=qtyping.QuantGranularity.TENSORWISE,
           )
       ),
   )

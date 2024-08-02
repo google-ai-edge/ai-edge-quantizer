@@ -138,6 +138,53 @@ def update_moving_average(
   return smoothing_factor * w + (1.0 - smoothing_factor) * update
 
 
+def uniform_quantize_for_emulated_subchannel(
+    tensor_data: np.ndarray,
+    quantization_params: qtyping.UniformQuantParams,
+) -> np.ndarray:
+  """Uniform quantize a tensor for emulated subchannel.
+
+  emulation involves reshaping the tensor and quantizing value on a different
+  axes. Hence, we use a different quantization function.
+
+  Args:
+    tensor_data: The tensor to be quantized.
+    quantization_params: The quantization parameters.
+
+  Returns:
+    The quantized tensor.
+  """
+  scales, zero_points = (
+      quantization_params.scale,
+      quantization_params.zero_point,
+  )
+  transposed_and_reshaped_tensor = np.reshape(
+      np.transpose(tensor_data, (1, 0)),
+      (
+          1,
+          scales.shape[1],
+          int(tensor_data.shape[1] / scales.shape[1]),
+          tensor_data.shape[0],
+      ),
+  )
+  inverse_scales = 1.0 / scales
+  qtype = IntType(quantization_params.num_bits, signed=True)
+  # Symmetric means narrow range (e.g., -127 to 127)
+  narrow_range = quantization_params.symmetric
+  required_dtype = np.signedinteger if qtype.signed else np.unsignedinteger
+  if not np.issubdtype(zero_points.dtype, required_dtype):
+    raise ValueError(
+        f"zero_points need to be {required_dtype}."
+        f" But the actual type is {zero_points.dtype}."
+    )
+  ret = (
+      np.multiply(transposed_and_reshaped_tensor, inverse_scales) + zero_points
+  )
+  ret = _round_and_clip(ret, qtype, narrow_range)
+  ret = assign_quantized_type(ret, qtype)
+  return ret
+
+
 def uniform_quantize(
     tensor_data: np.ndarray,
     quantization_params: qtyping.UniformQuantParams,

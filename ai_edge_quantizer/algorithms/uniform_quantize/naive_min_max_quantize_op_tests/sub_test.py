@@ -78,7 +78,7 @@ class SubTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     activation_tensor_config = _TensorQuantConfig(
         num_bits=activation_num_bits,
         symmetric=activation_symmetric,
-        channel_wise=False,
+        granularity=qtyping.QuantGranularity.TENSORWISE,
     )
     op_info = qtyping.OpInfo(
         op=op,
@@ -121,7 +121,7 @@ class SubTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     activation_tensor_config = _TensorQuantConfig(
         num_bits=activation_num_bits,
         symmetric=activation_symmetric,
-        channel_wise=False,
+        granularity=qtyping.QuantGranularity.TENSORWISE,
     )
     op_info = qtyping.OpInfo(
         op=op,
@@ -141,6 +141,7 @@ class SubTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         self._op_test_info,
         naive_min_max_quantize.materialize_sub,
     )
+
 
 if __name__ == "__main__":
   googletest.main()

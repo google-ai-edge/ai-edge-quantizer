@@ -4,7 +4,7 @@
       "weight_tensor_config": {
         "num_bits": 4,
         "symmetric": true,
-        "channel_wise": true,
+        "granularity": "CHANNELWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -13,7 +13,7 @@
       "weight_tensor_config": {
         "num_bits": 4,
         "symmetric": true,
-        "channel_wise": false,
+        "granularity": "TENSORWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -22,7 +22,7 @@
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": true,
+        "granularity": "CHANNELWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -31,7 +31,7 @@
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": false,
+        "granularity": "TENSORWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -42,7 +42,7 @@
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": true,
+        "granularity": "CHANNELWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -51,7 +51,7 @@
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": false,
+        "granularity": "TENSORWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -62,7 +62,7 @@
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": true,
+        "granularity": "CHANNELWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -71,7 +71,7 @@
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": false,
+        "granularity": "TENSORWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -82,7 +82,7 @@
       "weight_tensor_config": {
         "num_bits": 4,
         "symmetric": true,
-        "channel_wise": true,
+        "granularity": "CHANNELWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -91,7 +91,7 @@
       "weight_tensor_config": {
         "num_bits": 4,
         "symmetric": true,
-        "channel_wise": false,
+        "granularity": "TENSORWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -100,7 +100,7 @@
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": true,
+        "granularity": "CHANNELWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -109,7 +109,7 @@
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": false,
+        "granularity": "TENSORWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -120,7 +120,7 @@
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": true,
+        "granularity": "CHANNELWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -129,7 +129,7 @@
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": false,
+        "granularity": "TENSORWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -140,7 +140,7 @@
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": true,
+        "granularity": "CHANNELWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"
@@ -149,7 +149,7 @@
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": false,
+        "granularity": "TENSORWISE",
         "dtype": "INT"
       },
       "execution_mode": "DRQ"

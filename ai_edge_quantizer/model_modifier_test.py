@@ -64,7 +64,10 @@ class ModelModifierTest(parameterized.TestCase):
                     'dtype': qtyping.TensorDataType.INT,
                     'num_bits': 8,
                     'symmetric': False,
-                    'channel_wise': True,
+                    'granularity': (
+                        qtyping.QuantGranularity.CHANNELWISE
+                    ),
+                    'block_size': 0,
                 },
                 'execution_mode': qtyping.OpExecutionMode.WEIGHT_ONLY,
             },

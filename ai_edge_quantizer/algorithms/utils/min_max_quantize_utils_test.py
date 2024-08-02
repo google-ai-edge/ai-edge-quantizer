@@ -99,10 +99,13 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
   @parameterized.product(
       op_name=(_TFLOpName.FULLY_CONNECTED, _TFLOpName.CONV_2D),
       weight_num_bits=(4, 8),
-      weight_channel_wise=(True, False),
+      granularity=(
+          qtyping.QuantGranularity.TENSORWISE,
+          qtyping.QuantGranularity.CHANNELWISE,
+      ),
   )
   def test_check_drq_config_succeeds(
-      self, op_name, weight_num_bits, weight_channel_wise
+      self, op_name, weight_num_bits, granularity
   ):
     # TODO: b/353365054 - Remove this check after int4 DRQ is supported for
     # conv2d.
@@ -110,7 +113,8 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
       return
     op_quant_config = _OpQuantConfig(
         weight_tensor_config=_TensorQuantConfig(
-            num_bits=weight_num_bits, channel_wise=weight_channel_wise
+            num_bits=weight_num_bits,
+            granularity=granularity,
         ),
         execution_mode=_OpExecutionMode.DRQ,
     )
@@ -119,7 +123,10 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
   @parameterized.parameters((_TFLOpName.RESHAPE), (_TFLOpName.AVERAGE_POOL_2D))
   def test_check_drq_config_unsupported_op_raise_error(self, op_name):
     op_quant_config = _OpQuantConfig(
-        weight_tensor_config=_TensorQuantConfig(num_bits=8, channel_wise=True),
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=8,
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
+        ),
         execution_mode=_OpExecutionMode.DRQ,
     )
     error_message = "Unsupported op for dynamic range quantization"
@@ -131,7 +138,10 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
   @parameterized.parameters((_TFLOpName.FULLY_CONNECTED), (_TFLOpName.CONV_2D))
   def test_check_drq_config_wrong_bits_raise_error(self, op_name):
     op_quant_config = _OpQuantConfig(
-        weight_tensor_config=_TensorQuantConfig(num_bits=2, channel_wise=False),
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=2,
+            granularity=qtyping.QuantGranularity.TENSORWISE,
+        ),
         execution_mode=_OpExecutionMode.DRQ,
     )
     error_message = "Only int4/int8 symmetric DRQ is supported for op"
@@ -144,7 +154,9 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
   def test_check_drq_config_asymmetric_weights_raise_error(self, op_name):
     op_quant_config = _OpQuantConfig(
         weight_tensor_config=_TensorQuantConfig(
-            num_bits=8, symmetric=False, channel_wise=False
+            num_bits=8,
+            symmetric=False,
+            granularity=qtyping.QuantGranularity.TENSORWISE,
         ),
         execution_mode=_OpExecutionMode.DRQ,
     )
@@ -158,7 +170,10 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
       op_name=(_TFLOpName.FULLY_CONNECTED, _TFLOpName.CONV_2D),
       act_num_bits=(8, 16),
       weight_num_bits=(4, 8),
-      weight_channel_wise=(True, False),
+      granularity=(
+          qtyping.QuantGranularity.TENSORWISE,
+          qtyping.QuantGranularity.CHANNELWISE,
+      ),
       symmetric_act=(True, False),
   )
   def test_check_srq_config_succeeds(
@@ -166,7 +181,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
       op_name,
       act_num_bits,
       weight_num_bits,
-      weight_channel_wise,
+      granularity,
       symmetric_act,
   ):
     # Asym int16 activation is not supported.
@@ -177,7 +192,8 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             num_bits=act_num_bits, symmetric=symmetric_act
         ),
         weight_tensor_config=_TensorQuantConfig(
-            num_bits=weight_num_bits, channel_wise=weight_channel_wise
+            num_bits=weight_num_bits,
+            granularity=granularity,
         ),
         execution_mode=_OpExecutionMode.SRQ,
     )
@@ -186,7 +202,10 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
   def test_check_srq_config_unsupported_op_raise_error(self):
     op_quant_config = _OpQuantConfig(
         activation_tensor_config=_TensorQuantConfig(num_bits=8, symmetric=True),
-        weight_tensor_config=_TensorQuantConfig(num_bits=8, channel_wise=True),
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=8,
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
+        ),
         execution_mode=_OpExecutionMode.SRQ,
     )
     error_message = "Unsupported op for static range quantization"
@@ -200,7 +219,10 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
   def test_check_srq_config_no_act_config_raise_error(self):
     op_quant_config = _OpQuantConfig(
         activation_tensor_config=None,
-        weight_tensor_config=_TensorQuantConfig(num_bits=8, channel_wise=True),
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=8,
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
+        ),
         execution_mode=_OpExecutionMode.SRQ,
     )
     error_message = "activation_tensor_config is required for SRQ"
@@ -216,7 +238,10 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         activation_tensor_config=_TensorQuantConfig(
             num_bits=14, symmetric=True
         ),
-        weight_tensor_config=_TensorQuantConfig(num_bits=8, channel_wise=True),
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=8,
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
+        ),
         execution_mode=_OpExecutionMode.SRQ,
     )
     error_message = "Only int8/int16 activation SRQ is supported"
@@ -232,7 +257,10 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         activation_tensor_config=_TensorQuantConfig(
             num_bits=16, symmetric=False
         ),
-        weight_tensor_config=_TensorQuantConfig(num_bits=8, channel_wise=True),
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=8,
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
+        ),
         execution_mode=_OpExecutionMode.SRQ,
     )
     error_message = (
@@ -250,7 +278,10 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         activation_tensor_config=_TensorQuantConfig(
             num_bits=16, symmetric=True
         ),
-        weight_tensor_config=_TensorQuantConfig(num_bits=2, channel_wise=True),
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=2,
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
+        ),
         execution_mode=_OpExecutionMode.SRQ,
     )
     error_message = "Currently only int4/int8 symmetric weight are supported"
@@ -265,7 +296,9 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     op_quant_config = _OpQuantConfig(
         activation_tensor_config=_TensorQuantConfig(num_bits=8, symmetric=True),
         weight_tensor_config=_TensorQuantConfig(
-            num_bits=8, symmetric=False, channel_wise=True
+            num_bits=8,
+            symmetric=False,
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
         ),
         execution_mode=_OpExecutionMode.SRQ,
     )
@@ -312,7 +345,9 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     op_quant_config = _OpQuantConfig(
         activation_tensor_config=activation_tensor_config,
         weight_tensor_config=_TensorQuantConfig(
-            num_bits=4, symmetric=True, channel_wise=True
+            num_bits=4,
+            symmetric=True,
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
         ),
         execution_mode=execution_mode,
     )
@@ -351,7 +386,9 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     op_quant_config = _OpQuantConfig(
         activation_tensor_config=activation_tensor_config,
         weight_tensor_config=_TensorQuantConfig(
-            num_bits=4, symmetric=True, channel_wise=True
+            num_bits=4,
+            symmetric=True,
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
         ),
         execution_mode=execution_mode,
     )

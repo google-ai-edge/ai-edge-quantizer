@@ -26,6 +26,7 @@ _TFLOpName = qtyping.TFLOperationName
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _TensorDataType = qtyping.TensorDataType
 _AlgorithmName = recipe_manager.AlgorithmName
+_QuantGranularity = qtyping.QuantGranularity
 
 
 # Sample functions for test cases.
@@ -283,10 +284,16 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self.assertIsNotNone(op_act_config)
     self.assertEqual(op_act_config.num_bits, 8)
     self.assertEqual(op_act_config.symmetric, False)
-    self.assertEqual(op_act_config.channel_wise, False)
+    self.assertEqual(
+        op_act_config.granularity,
+        _QuantGranularity.TENSORWISE,
+    )
     self.assertEqual(op_config.weight_tensor_config.num_bits, 8)
     self.assertEqual(op_config.weight_tensor_config.symmetric, True)
-    self.assertEqual(op_config.weight_tensor_config.channel_wise, False)
+    self.assertEqual(
+        op_config.weight_tensor_config.granularity,
+        _QuantGranularity.TENSORWISE,
+    )
 
     # Change weight settings for Dense_3 FC
     self._recipe_manager.add_quantization_config(
@@ -337,10 +344,16 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self.assertIsNotNone(op_act_config)
     self.assertEqual(op_act_config.num_bits, 16)
     self.assertEqual(op_act_config.symmetric, True)
-    self.assertEqual(op_act_config.channel_wise, False)
+    self.assertEqual(
+        op_act_config.granularity,
+        _QuantGranularity.TENSORWISE,
+    )
     self.assertEqual(op_config.weight_tensor_config.num_bits, 8)
     self.assertEqual(op_config.weight_tensor_config.symmetric, True)
-    self.assertEqual(op_config.weight_tensor_config.channel_wise, False)
+    self.assertEqual(
+        op_config.weight_tensor_config.granularity,
+        _QuantGranularity.TENSORWISE,
+    )
 
   def test_get_full_quantization_config(self):
     # Int8 asymetric full integer model.
@@ -404,14 +417,16 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 'activation_tensor_config': {
                     'num_bits': 8,
                     'symmetric': False,
-                    'channel_wise': False,
+                    'granularity': _QuantGranularity.TENSORWISE,
                     'dtype': 'INT',
+                    'block_size': 0
                 },
                 'weight_tensor_config': {
                     'num_bits': 8,
                     'symmetric': True,
-                    'channel_wise': False,
+                    'granularity': _QuantGranularity.TENSORWISE,
                     'dtype': 'INT',
+                    'block_size': 0
                 },
                 'execution_mode': 'SRQ',
                 'skip_checks': False,
@@ -426,7 +441,8 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'dtype': 'INT',
                     'num_bits': 8,
                     'symmetric': True,
-                    'channel_wise': False,
+                    'granularity': _QuantGranularity.TENSORWISE,
+                    'block_size': 0
                 },
                 'execution_mode': 'WEIGHT_ONLY',
                 'skip_checks': False,
@@ -441,7 +457,8 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'dtype': 'INT',
                     'num_bits': 4,
                     'symmetric': True,
-                    'channel_wise': False,
+                    'granularity': _QuantGranularity.TENSORWISE,
+                    'block_size': 0
                 },
                 'execution_mode': 'WEIGHT_ONLY',
                 'skip_checks': False,
@@ -456,7 +473,8 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'dtype': 'INT',
                     'num_bits': 6,
                     'symmetric': True,
-                    'channel_wise': False,
+                    'granularity': _QuantGranularity.TENSORWISE,
+                    'block_size': 0
                 },
                 'execution_mode': 'WEIGHT_ONLY',
                 'skip_checks': False,
@@ -471,7 +489,8 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'dtype': 'INT',
                     'num_bits': 3,
                     'symmetric': True,
-                    'channel_wise': False,
+                    'granularity': _QuantGranularity.TENSORWISE,
+                    'block_size': 0
                 },
                 'execution_mode': 'WEIGHT_ONLY',
                 'skip_checks': False,
@@ -522,7 +541,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'dtype': 'INT',
                     'num_bits': 8,
                     'symmetric': True,
-                    'channel_wise': True,
+                    'granularity': _QuantGranularity.CHANNELWISE,
                 },
                 'execution_mode': 'WEIGHT_ONLY',
             },
@@ -536,7 +555,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'dtype': 'INT',
                     'num_bits': 4,
                     'symmetric': False,
-                    'channel_wise': True,
+                    'granularity': _QuantGranularity.CHANNELWISE,
                 },
                 'execution_mode': 'DRQ',
             },
@@ -584,13 +603,13 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 'activation_tensor_config': {
                     'num_bits': 8,
                     'symmetric': False,
-                    'channel_wise': False,
+                    'granularity': _QuantGranularity.TENSORWISE,
                     'dtype': 'INT',
                 },
                 'weight_tensor_config': {
                     'num_bits': 8,
                     'symmetric': True,
-                    'channel_wise': False,
+                    'granularity': _QuantGranularity.TENSORWISE,
                     'dtype': 'INT',
                 },
                 'execution_mode': 'SRQ',
@@ -605,7 +624,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'dtype': 'INT',
                     'num_bits': 8,
                     'symmetric': True,
-                    'channel_wise': True,
+                    'granularity': _QuantGranularity.CHANNELWISE,
                 },
                 'execution_mode': 'WEIGHT_ONLY',
             },
@@ -619,7 +638,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'dtype': 'INT',
                     'num_bits': 4,
                     'symmetric': False,
-                    'channel_wise': True,
+                    'granularity': _QuantGranularity.CHANNELWISE,
                 },
                 'execution_mode': 'DRQ',
             },

@@ -49,8 +49,11 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     )
     self._tensor_name_to_qsv = {}
 
-  @parameterized.parameters((False), (True))
-  def test_init_qsvs(self, per_channel_weight):
+  @parameterized.parameters(
+      (qtyping.QuantGranularity.TENSORWISE),
+      (qtyping.QuantGranularity.CHANNELWISE),
+  )
+  def test_init_qsvs(self, granularity):
     # Read from Model Explorer.
     subgraph0 = self._test_model.subgraphs[0]
     subgraph_op_index = 3
@@ -61,7 +64,9 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         subgraph_op_index=subgraph_op_index,
         op_quant_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TensorQuantConfig(
-                8, symmetric=True, channel_wise=per_channel_weight
+                8,
+                symmetric=True,
+                granularity=granularity,
             ),
         ),
     )
@@ -88,13 +93,19 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
 
     self.assertIn("arith.constant1", initial_qsvs)
     weight_tensor_qsv = initial_qsvs["arith.constant1"]
-    mins_maxs_shape = (32, 1) if per_channel_weight else (1, 1)
+    if granularity is qtyping.QuantGranularity.CHANNELWISE:
+      mins_maxs_shape = (32, 1)
+    else:
+      mins_maxs_shape = (1, 1)
     self.assertTupleEqual(weight_tensor_qsv["min"].shape, mins_maxs_shape)
     self.assertTupleEqual(weight_tensor_qsv["max"].shape, mins_maxs_shape)
 
     self.assertIn("arith.constant2", initial_qsvs)
     bias_tensor_qsv = initial_qsvs["arith.constant2"]
-    mins_maxs_shape = (32,) if per_channel_weight else (1,)
+    if granularity is qtyping.QuantGranularity.CHANNELWISE:
+      mins_maxs_shape = (32,)
+    else:
+      mins_maxs_shape = (1,)
     self.assertTupleEqual(bias_tensor_qsv["min"].shape, mins_maxs_shape)
     self.assertTupleEqual(bias_tensor_qsv["max"].shape, mins_maxs_shape)
 

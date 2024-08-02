@@ -59,10 +59,13 @@ class Conv2DTransposeTest(parameterized.TestCase):
 
   @parameterized.product(
       symmetric_weight=[True, False],
-      channel_wise_weight=[True, False],
+      granularity=[
+          qtyping.QuantGranularity.CHANNELWISE,
+          qtyping.QuantGranularity.TENSORWISE,
+      ],
   )
   def test_conv2d_transpose_model_int8_weight_only(
-      self, symmetric_weight, channel_wise_weight
+      self, symmetric_weight, granularity
   ):
     self._quantizer.update_quantization_recipe(
         regex='.*',
@@ -71,7 +74,7 @@ class Conv2DTransposeTest(parameterized.TestCase):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=8,
                 symmetric=symmetric_weight,
-                channel_wise=channel_wise_weight,
+                granularity=granularity,
             ),
             execution_mode=_OpExecutionMode.WEIGHT_ONLY,
         ),
@@ -83,8 +86,8 @@ class Conv2DTransposeTest(parameterized.TestCase):
     comparion_result = self._quantizer.compare(error_metrics='mse')
     self._check_comparion_result(
         comparion_result,
-        weight_tolerance=1e-2 if channel_wise_weight else 1e-1,
-        output_tolerance=1e-4 if channel_wise_weight else 1e-2,
+        weight_tolerance=1e-2 if granularity else 1e-1,
+        output_tolerance=1e-4 if granularity else 1e-2,
     )
 
   def test_conv2d_transpose_model_int8_drq(self):
@@ -92,6 +95,7 @@ class Conv2DTransposeTest(parameterized.TestCase):
         '../../recipes/default_af32w8int_recipe.json'
     )
     self._quantizer.load_quantization_recipe(recipe_path)
+
     # Check model size.
     quant_result = self._quantizer.quantize()
     self.assertLess(len(quant_result.quantized_model), 10000)

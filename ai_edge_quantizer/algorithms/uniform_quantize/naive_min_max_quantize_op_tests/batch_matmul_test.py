@@ -84,7 +84,7 @@ class BatchMatmulTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     activation_tensor_config = _TensorQuantConfig(
         num_bits=num_bits_activation,
         symmetric=symmetric_activation,
-        channel_wise=False,
+        granularity=qtyping.QuantGranularity.TENSORWISE,
     )
 
     op_info = qtyping.OpInfo(
@@ -128,7 +128,7 @@ class BatchMatmulTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     activation_tensor_config = _TensorQuantConfig(
         num_bits=num_bits_activation,
         symmetric=symmetric_activation,
-        channel_wise=False,
+        granularity=qtyping.QuantGranularity.TENSORWISE,
     )
     op_info = qtyping.OpInfo(
         op=op,
@@ -211,7 +211,7 @@ class BatchMatmulConstantInputTest(
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=num_bits_weight,
                 symmetric=symmetric_weight,
-                channel_wise=False,
+                granularity=qtyping.QuantGranularity.TENSORWISE,
             ),
             execution_mode=execution_mode,
         ),
@@ -264,7 +264,7 @@ class BatchMatmulConstantInputTest(
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=num_bits_weight,
                 symmetric=symmetric_weight,
-                channel_wise=False,
+                granularity=qtyping.QuantGranularity.TENSORWISE,
             ),
             execution_mode=execution_mode,
         ),

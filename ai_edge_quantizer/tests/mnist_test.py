@@ -60,10 +60,13 @@ class MNISTTest(parameterized.TestCase):
   @parameterized.product(
       execution_mode=[_OpExecutionMode.WEIGHT_ONLY, _OpExecutionMode.DRQ],
       symmetric_weight=[True, False],
-      channel_wise_weight=[True, False],
+      granularity=[
+          qtyping.QuantGranularity.CHANNELWISE,
+          qtyping.QuantGranularity.TENSORWISE,
+      ],
   )
   def test_mnist_toy_model_int8_weight_only(
-      self, execution_mode, symmetric_weight, channel_wise_weight
+      self, execution_mode, symmetric_weight, granularity
   ):
 
     # asym DRQ is not supported
@@ -77,7 +80,7 @@ class MNISTTest(parameterized.TestCase):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=8,
                 symmetric=symmetric_weight,
-                channel_wise=channel_wise_weight,
+                granularity=granularity,
             ),
             execution_mode=execution_mode,
         ),
@@ -86,12 +89,18 @@ class MNISTTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(self._quantizer._result.quantized_model), 55000)
 
-    comparion_result = self._quantizer.compare(error_metrics='mse')
-    self._check_comparion_result(
-        comparion_result,
-        weight_tolerance=1e-2 if channel_wise_weight else 1e-1,
-        logits_tolerance=1e-2 if channel_wise_weight else 1e-1,
-        output_tolerance=1e-4 if channel_wise_weight else 1e-2,
+    comparison_result = self._quantizer.compare(error_metrics='mse')
+    self._check_comparison_result(
+        comparison_result,
+        weight_tolerance=1e-2
+        if granularity == qtyping.QuantGranularity.CHANNELWISE
+        else 1e-1,
+        logits_tolerance=1e-2
+        if granularity == qtyping.QuantGranularity.CHANNELWISE
+        else 1e-1,
+        output_tolerance=1e-4
+        if granularity == qtyping.QuantGranularity.CHANNELWISE
+        else 1e-2,
     )
 
   @parameterized.product(
@@ -113,7 +122,7 @@ class MNISTTest(parameterized.TestCase):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=4,
                 symmetric=symmetric_weight,
-                channel_wise=True,
+                granularity=qtyping.QuantGranularity.CHANNELWISE,
             ),
             execution_mode=execution_mode,
         ),
@@ -122,10 +131,10 @@ class MNISTTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(self._quantizer._result.quantized_model), 30000)
 
-    comparion_result = self._quantizer.compare(error_metrics='mse')
+    comparison_result = self._quantizer.compare(error_metrics='mse')
     # TODO: b/346787369 - Update the weight tolerance for int4.
-    self._check_comparion_result(
-        comparion_result,
+    self._check_comparison_result(
+        comparison_result,
         weight_tolerance=1000,
         logits_tolerance=2,
         output_tolerance=1e-2,
@@ -147,9 +156,9 @@ class MNISTTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(self._quantizer._result.quantized_model), 105000)
 
-    comparion_result = self._quantizer.compare(error_metrics='mse')
-    self._check_comparion_result(
-        comparion_result,
+    comparison_result = self._quantizer.compare(error_metrics='mse')
+    self._check_comparison_result(
+        comparison_result,
         weight_tolerance=1e-5,
         logits_tolerance=1e-5,
         output_tolerance=1e-5,
@@ -168,36 +177,36 @@ class MNISTTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(quant_result.quantized_model), 55000)
 
-    comparion_result = self._quantizer.compare(
+    comparison_result = self._quantizer.compare(
         error_metrics='mse', signature_test_data=_get_test_data()
     )
-    self._check_comparion_result(
-        comparion_result,
+    self._check_comparison_result(
+        comparison_result,
         weight_tolerance=1e-2,
         logits_tolerance=1e-1,
         output_tolerance=1e-4,
     )
 
   # TODO: b/345503484 - Check weight tensor type of the quantized model.
-  def _check_comparion_result(
+  def _check_comparison_result(
       self,
-      comparion_result,
+      comparison_result,
       weight_tolerance,
       logits_tolerance,
       output_tolerance,
   ):
     # Check weight tensors.
-    conv_weight_mse = comparion_result['sequential/conv2d/Conv2D']
+    conv_weight_mse = comparison_result['sequential/conv2d/Conv2D']
     self.assertLess(conv_weight_mse, weight_tolerance)
-    fc1_weight_mse = comparion_result['arith.constant1']
+    fc1_weight_mse = comparison_result['arith.constant1']
     self.assertLess(fc1_weight_mse, weight_tolerance)
-    fc2_weight_mse = comparion_result['arith.constant']
+    fc2_weight_mse = comparison_result['arith.constant']
     self.assertLess(fc2_weight_mse, weight_tolerance)
     # check logits.
-    logits_mse = comparion_result['sequential/dense_1/MatMul']
+    logits_mse = comparison_result['sequential/dense_1/MatMul']
     self.assertLess(logits_mse, logits_tolerance)
     # check final output.
-    output_mse = comparion_result['StatefulPartitionedCall:0']
+    output_mse = comparison_result['StatefulPartitionedCall:0']
     self.assertLess(output_mse, output_tolerance)
 
 

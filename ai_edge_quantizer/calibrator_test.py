@@ -96,7 +96,8 @@ class CalibratorTest(googletest.TestCase):
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TENSOR_QUANT_CONFIG(
-                num_bits=4, channel_wise=True
+                num_bits=4,
+                granularity=qtyping.QuantGranularity.CHANNELWISE,
             ),
         ),
     )

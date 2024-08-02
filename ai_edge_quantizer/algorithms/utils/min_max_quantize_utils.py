@@ -79,6 +79,36 @@ _INT4_SRQ_SUPPORTED_OPS = frozenset([
     _TFLOpName.CONV_2D,
 ])
 
+_SUPPORTED_SUBCHANNEL_OPS = frozenset([
+    _TFLOpName.FULLY_CONNECTED,
+])
+
+
+def check_subchannel_config(
+    op_name: _TFLOpName, op_quant_config: qtyping.OpQuantizationConfig
+):
+  """Checks the op quantization config for subchannel quantization."""
+  if (
+      op_quant_config.weight_tensor_config.granularity
+      == qtyping.QuantGranularity.BLOCKWISE
+  ):
+    if op_name not in _SUPPORTED_SUBCHANNEL_OPS:
+      raise ValueError(f"Unsupported op for blockwise quantization: {op_name}.")
+    if op_quant_config.activation_tensor_config is not None:
+      raise ValueError(
+          "Blockwise quantization does not support activation tensor"
+          " quantization."
+      )
+    if not op_quant_config.weight_tensor_config.symmetric:
+      raise ValueError(
+          "Blockwise quantization does not support for asymmetric weight"
+          " quantization."
+      )
+    if op_quant_config.weight_tensor_config.block_size <= 0:
+      raise ValueError(
+          "Blockwise quantization must have a non-zero block size."
+      )
+
 
 def check_if_valid_op_config(
     op_name: _TFLOpName,
@@ -207,7 +237,37 @@ def init_tensor_min_max(
   # Real min/max for constant tensors.
   else:
     quantized_dim = None
-    if op_info.op_quant_config.weight_tensor_config.channel_wise:
+    if (
+        op_info.op_quant_config.weight_tensor_config.granularity
+        == qtyping.QuantGranularity.BLOCKWISE
+    ):
+      # TODO(b/346612503): emulate subchannel only supports fully connected,
+      # will skip special handling. Once we have a spec, we can change this.
+      block_size = op_info.op_quant_config.weight_tensor_config.block_size
+      # assuming tensor is 2D, which is correct for FULLY_CONNECTED
+      transposed_tensor_data = np.transpose(tensor_data, (1, 0))
+      if transposed_tensor_data.shape[0] % block_size:
+        raise ValueError(
+            f"Block size {block_size} does not divide channel dimension"
+            f" {transposed_tensor_data.shape[0]}."
+        )
+      reshaped_tensor_data = np.reshape(
+          transposed_tensor_data,
+          (
+              1,
+              int(transposed_tensor_data.shape[0] / block_size),
+              block_size,
+              transposed_tensor_data.shape[1],
+          ),
+      )
+      return {
+          "min": np.min(reshaped_tensor_data, axis=(2), keepdims=True),
+          "max": np.max(reshaped_tensor_data, axis=(2), keepdims=True),
+      }
+    if (
+        op_info.op_quant_config.weight_tensor_config.granularity
+        == qtyping.QuantGranularity.CHANNELWISE
+    ):
       if op_info.op_name == _TFLOpName.BATCH_MATMUL:
         quantized_dim = _get_bmm_weight_quantized_dim(
             tensor_data, adj_y=op_info.op.builtinOptions.adjY
@@ -657,7 +717,16 @@ def get_tensor_transformations(
       transformations = [_QuantTransformation.ADD_DEQUANTIZE]
     else:
       transformations = [_QuantTransformation.NO_QUANTIZE]
-
+  elif (
+      op_quant_config.weight_tensor_config.granularity
+      == qtyping.QuantGranularity.BLOCKWISE
+      and is_constant
+  ):
+    transformations = [_QuantTransformation.EMULATED_SUBCHANNEL]
+  else:
+    raise ValueError(
+        "Unsupported execution mode: %s" % op_quant_config.execution_mode
+    )
   return transformations
 
 
@@ -729,7 +798,10 @@ def _get_tensor_quant_params(
       tensor_quant_config.symmetric,
   )
   quantized_dim = None
-  if tensor_quant_config.channel_wise:
+  if (
+      tensor_quant_config.granularity
+      == qtyping.QuantGranularity.CHANNELWISE
+  ):
     if op_info.op_name == _TFLOpName.BATCH_MATMUL:
       quantized_dim = _get_bmm_weight_quantized_dim(
           tensor_content, adj_y=op_info.op.builtinOptions.adjY
@@ -747,9 +819,19 @@ def _get_tensor_quant_params(
   )
   if tensor_content is None:
     return quant_params
-  quantized_vars = uniform_quantize_tensor.uniform_quantize(
-      tensor_content, quant_params
-  )
+  if (
+      tensor_quant_config.granularity
+      == qtyping.QuantGranularity.BLOCKWISE
+  ):
+    quantized_vars = (
+        uniform_quantize_tensor.uniform_quantize_for_emulated_subchannel(
+            tensor_content, quant_params
+        )
+    )
+  else:
+    quantized_vars = uniform_quantize_tensor.uniform_quantize(
+        tensor_content, quant_params
+    )
   # Update with quantized values.
   return qtyping.UniformQuantParams(
       scale=scale,
