@@ -53,13 +53,11 @@ def check_op_quantization_config(
   execution_mode = op_quant_config.execution_mode
   if execution_mode == _OpExecutionMode.WEIGHT_ONLY:
     utils.check_weight_only_config(op_name)
-  if execution_mode == _OpExecutionMode.DRQ:
+  if execution_mode in [_OpExecutionMode.DRQ, _OpExecutionMode.SRQ]:
     # Use policy-based mechanism to validate op.
     utils.check_if_valid_op_config(
         op_name, op_quant_config, config_check_policy
     )
-  if execution_mode == _OpExecutionMode.SRQ:
-    utils.check_srq_config(op_name, op_quant_config)
   utils.check_subchannel_config(op_name, op_quant_config)
 
 

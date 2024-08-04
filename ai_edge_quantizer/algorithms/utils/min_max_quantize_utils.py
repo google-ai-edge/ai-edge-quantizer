@@ -146,7 +146,7 @@ def check_if_valid_op_config(
 
   if not check_passed:
     raise ValueError(
-        f"Unsupported op for {op_quant_config.execution_mode.name}: {op_name}."
+        f"Unsupported op for {op_quant_config.execution_mode}: {op_name}."
         f" Error: {error_msg}"
     )
 

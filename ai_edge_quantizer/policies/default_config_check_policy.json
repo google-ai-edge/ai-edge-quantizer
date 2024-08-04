@@ -1,158 +1,4486 @@
 {
-  "FULLY_CONNECTED": [
-    {
-      "weight_tensor_config": {
-        "num_bits": 4,
-        "symmetric": true,
-        "granularity": "CHANNELWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    },
-    {
-      "weight_tensor_config": {
-        "num_bits": 4,
-        "symmetric": true,
-        "granularity": "TENSORWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    },
-    {
-      "weight_tensor_config": {
-        "num_bits": 8,
-        "symmetric": true,
-        "granularity": "CHANNELWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    },
-    {
-      "weight_tensor_config": {
-        "num_bits": 8,
-        "symmetric": true,
-        "granularity": "TENSORWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    }
-  ],
-  "CONV_2D": [
-    {
-      "weight_tensor_config": {
-        "num_bits": 8,
-        "symmetric": true,
-        "granularity": "CHANNELWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    },
-    {
-      "weight_tensor_config": {
-        "num_bits": 8,
-        "symmetric": true,
-        "granularity": "TENSORWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    }
-  ],
-  "BATCH_MATMUL": [
-    {
-      "weight_tensor_config": {
-        "num_bits": 8,
-        "symmetric": true,
-        "granularity": "CHANNELWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    },
-    {
-      "weight_tensor_config": {
-        "num_bits": 8,
-        "symmetric": true,
-        "granularity": "TENSORWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    }
-  ],
-  "EMBEDDING_LOOKUP": [
-    {
-      "weight_tensor_config": {
-        "num_bits": 4,
-        "symmetric": true,
-        "granularity": "CHANNELWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    },
-    {
-      "weight_tensor_config": {
-        "num_bits": 4,
-        "symmetric": true,
-        "granularity": "TENSORWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    },
-    {
-      "weight_tensor_config": {
-        "num_bits": 8,
-        "symmetric": true,
-        "granularity": "CHANNELWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    },
-    {
-      "weight_tensor_config": {
-        "num_bits": 8,
-        "symmetric": true,
-        "granularity": "TENSORWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    }
-  ],
-  "DEPTHWISE_CONV_2D": [
-    {
-      "weight_tensor_config": {
-        "num_bits": 8,
-        "symmetric": true,
-        "granularity": "CHANNELWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    },
-    {
-      "weight_tensor_config": {
-        "num_bits": 8,
-        "symmetric": true,
-        "granularity": "TENSORWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    }
-  ],
-  "CONV_2D_TRANSPOSE": [
-    {
-      "weight_tensor_config": {
-        "num_bits": 8,
-        "symmetric": true,
-        "granularity": "CHANNELWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    },
-    {
-      "weight_tensor_config": {
-        "num_bits": 8,
-        "symmetric": true,
-        "granularity": "TENSORWISE",
-        "dtype": "INT"
-      },
-      "execution_mode": "DRQ"
-    }
-  ]
+    "FULLY_CONNECTED": [
+        {
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "CONV_2D": [
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "EMBEDDING_LOOKUP": [
+        {
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        }
+    ],
+    "AVERAGE_POOL_2D": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "RESHAPE": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "SOFTMAX": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "DEPTHWISE_CONV_2D": [
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "TANH": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "TRANSPOSE": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "GELU": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "ADD": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "SUB": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "MUL": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "BATCH_MATMUL": [
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "MEAN": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "RSQRT": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "CONCATENATION": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "STRIDED_SLICE": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "SPLIT": [
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ],
+    "CONV_2D_TRANSPOSE": [
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 16,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "execution_mode": "SRQ"
+        }
+    ]
 }
