@@ -50,10 +50,12 @@ def check_op_quantization_config(
         " you wish to perform float casting quantization (e.g., fp16 weight"
         " only), please set algorithm key as 'float_casting'."
     )
-  execution_mode = op_quant_config.execution_mode
-  if execution_mode == _OpExecutionMode.WEIGHT_ONLY:
-    utils.check_weight_only_config(op_name)
-  if execution_mode in [_OpExecutionMode.DRQ, _OpExecutionMode.SRQ]:
+
+  if op_quant_config.execution_mode in [
+      _OpExecutionMode.DRQ,
+      _OpExecutionMode.SRQ,
+      _OpExecutionMode.WEIGHT_ONLY,
+  ]:
     # Use policy-based mechanism to validate op.
     utils.check_if_valid_op_config(
         op_name, op_quant_config, config_check_policy
@@ -384,7 +386,7 @@ def materialize_strided_slice(
       graph_info,
       tensor_name_to_qsv,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
-      inputs_to_ignore=[1, 2, 3]  # Ignore the begin, end, and strides tensors.
+      inputs_to_ignore=[1, 2, 3],  # Ignore the begin, end, and strides tensors.
   )
 
 
