@@ -27,11 +27,13 @@ from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorf
 
 def create_tfl_interpreter(
     tflite_model: Union[str, bytearray],
+    allocate_tensors: bool = True,
 ) -> tf.lite.Interpreter:
   """Creates a TFLite interpreter from a model file.
 
   Args:
     tflite_model: Model file path or bytearray.
+    allocate_tensors: Whether to allocate tensors.
 
   Returns:
     A TFLite interpreter.
@@ -46,7 +48,8 @@ def create_tfl_interpreter(
       experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_WITHOUT_DEFAULT_DELEGATES,
       experimental_preserve_all_tensors=True,
   )
-  tflite_interpreter.allocate_tensors()
+  if allocate_tensors:
+    tflite_interpreter.allocate_tensors()
   return tflite_interpreter
 
 
@@ -195,3 +198,62 @@ def get_tensor_name_to_details_map(tflite_interpreter: Any) -> dict[str, Any]:
       continue
     tensor_name_to_detail[tensor_detail["name"]] = tensor_detail
   return tensor_name_to_detail
+
+
+def get_input_tensor_names(tflite_model: Union[str, bytearray]) -> list[str]:
+  """Gets input tensor names from a TFLite model.
+
+  Args:
+    tflite_model: Model file path or bytearray.
+
+  Returns:
+    A list of input tensor names.
+  """
+
+  tfl_interpreter = create_tfl_interpreter(tflite_model, allocate_tensors=False)
+  input_tensor_names = []
+
+  for input_detail in tfl_interpreter.get_input_details():
+    input_tensor_names.append(input_detail["name"])
+  return input_tensor_names
+
+
+def get_output_tensor_names(tflite_model: Union[str, bytearray]) -> list[str]:
+  """Gets output tensor names from a TFLite model.
+
+  Args:
+    tflite_model: Model file path or bytearray.
+
+  Returns:
+    A list of output tensor names.
+  """
+  tfl_interpreter = create_tfl_interpreter(tflite_model, allocate_tensors=False)
+  output_tensor_names = []
+  for output_detail in tfl_interpreter.get_output_details():
+    output_tensor_names.append(output_detail["name"])
+  return output_tensor_names
+
+
+def get_constant_tensor_names(
+    tflite_model: Union[str, bytearray], min_constant_size: int = 1
+) -> list[str]:
+  """Gets constant tensor names from a TFLite model.
+
+  Args:
+    tflite_model: Model file path or bytearray.
+    min_constant_size: The minimum size of a constant tensor.
+
+  Returns:
+    A list of names for constant tensor that bigger than min_constant_size and a
+    list of names for constant tensor that smaller than min_constant_size.
+  """
+  tfl_interpreter = create_tfl_interpreter(tflite_model, allocate_tensors=False)
+  const_tensor_names = []
+  for tensor_detail in tfl_interpreter.get_tensor_details():
+    try:
+      tensor_data = get_tensor_data(tfl_interpreter, tensor_detail)
+      if tensor_data.size >= min_constant_size:
+        const_tensor_names.append(tensor_detail["name"])
+    except ValueError:
+      continue
+  return const_tensor_names

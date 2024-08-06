@@ -100,6 +100,40 @@ class TflUtilsTest(googletest.TestCase):
     input_details = tfl_interpreter.get_input_details()[0]
     self.assertFalse(tfl_interpreter_utils.is_tensor_quantized(input_details))
 
+  def test_get_input_tensor_names(self):
+    input_tensor_names = tfl_interpreter_utils.get_input_tensor_names(
+        self._test_model_path
+    )
+    self.assertEqual(
+        input_tensor_names,
+        ["serving_default_conv2d_input:0"],
+    )
+
+  def test_get_output_tensor_names(self):
+    output_tensor_names = tfl_interpreter_utils.get_output_tensor_names(
+        self._test_model_path
+    )
+    self.assertEqual(
+        output_tensor_names,
+        ["StatefulPartitionedCall:0"],
+    )
+
+  def test_get_constant_tensor_names(self):
+    const_tensor_names = tfl_interpreter_utils.get_constant_tensor_names(
+        self._test_model_path
+    )
+    self.assertEqual(
+        set(const_tensor_names),
+        set([
+            "sequential/conv2d/Conv2D",
+            "sequential/conv2d/Relu;sequential/conv2d/BiasAdd;sequential/conv2d/Conv2D;sequential/conv2d/BiasAdd/ReadVariableOp",
+            "arith.constant",
+            "arith.constant1",
+            "arith.constant2",
+            "arith.constant3",
+        ]),
+    )
+
 
 class TflUtilsQuantizedModelTest(googletest.TestCase):
 
