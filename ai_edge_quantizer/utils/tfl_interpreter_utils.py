@@ -50,7 +50,7 @@ def create_tfl_interpreter(
   return tflite_interpreter
 
 
-def _is_tensor_quantized(tensor_detail: dict[str, Any]) -> bool:
+def is_tensor_quantized(tensor_detail: dict[str, Any]) -> bool:
   """Checks if a tensor is quantized.
 
   Args:
@@ -84,7 +84,7 @@ def invoke_interpreter_signature(
   signature_input = signature_input_data.copy()
   signature_runner = tflite_interpreter.get_signature_runner(signature_key)
   for input_name, input_detail in signature_runner.get_input_details().items():
-    if _is_tensor_quantized(input_detail) and quantize_input:
+    if is_tensor_quantized(input_detail) and quantize_input:
       input_data = signature_input[input_name]
       quant_params = qtyping.UniformQuantParams.from_tfl_tensor_details(
           input_detail
@@ -115,7 +115,7 @@ def invoke_interpreter_once(
     )
   for i, input_data in enumerate(input_data_list):
     input_details = tflite_interpreter.get_input_details()[i]
-    if _is_tensor_quantized(input_details) and quantize_input:
+    if is_tensor_quantized(input_details) and quantize_input:
       quant_params = qtyping.UniformQuantParams.from_tfl_tensor_details(
           input_details
       )
@@ -142,7 +142,7 @@ def get_tensor_data(
     The tensor data.
   """
   tensor_data = tflite_interpreter.get_tensor(tensor_detail["index"])
-  if _is_tensor_quantized(tensor_detail) and dequantize:
+  if is_tensor_quantized(tensor_detail) and dequantize:
     quant_params = qtyping.UniformQuantParams.from_tfl_tensor_details(
         tensor_detail
     )

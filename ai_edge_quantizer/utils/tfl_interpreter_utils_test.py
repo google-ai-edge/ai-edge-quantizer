@@ -98,7 +98,7 @@ class TflUtilsTest(googletest.TestCase):
         self._test_model_path
     )
     input_details = tfl_interpreter.get_input_details()[0]
-    self.assertFalse(tfl_interpreter_utils._is_tensor_quantized(input_details))
+    self.assertFalse(tfl_interpreter_utils.is_tensor_quantized(input_details))
 
 
 class TflUtilsQuantizedModelTest(googletest.TestCase):
@@ -118,7 +118,7 @@ class TflUtilsQuantizedModelTest(googletest.TestCase):
         self._test_model_path
     )
     input_details = tfl_interpreter.get_input_details()[0]
-    self.assertTrue(tfl_interpreter_utils._is_tensor_quantized(input_details))
+    self.assertTrue(tfl_interpreter_utils.is_tensor_quantized(input_details))
 
   def test_invoke_interpreter_signature(self):
     tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
