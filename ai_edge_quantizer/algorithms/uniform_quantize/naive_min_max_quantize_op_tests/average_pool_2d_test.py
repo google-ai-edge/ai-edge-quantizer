@@ -97,7 +97,7 @@ class AveragePool2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     op_tensor_names["output"] = "sequential/average_pooling2d/AvgPool"
     self._op_test_info.op_tensor_names = op_tensor_names
 
-    self._test_single_input_output_ops(
+    self._test_no_weights_op(
         op_info,
         self._graph_info,
         self._op_test_info,

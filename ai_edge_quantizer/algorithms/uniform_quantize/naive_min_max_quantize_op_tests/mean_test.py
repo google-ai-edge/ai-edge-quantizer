@@ -87,17 +87,20 @@ class MeanTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         subgraph_op_index=subgraph_op_id,
         op_quant_config=op_quant_config,
     )
-
     # Test settings.
     op_tensor_names = {}
     op_tensor_names["input"] = "serving_default_input_1:0"
+    op_tensor_names["input2"] = (
+        "model/tf.math.reduce_mean/Mean/reduction_indices"
+    )
     op_tensor_names["output"] = "PartitionedCall:0"
     self._op_test_info.op_tensor_names = op_tensor_names
-    self._test_single_input_output_ops(
+    self._test_no_weights_op(
         op_info,
         self._graph_info,
         self._op_test_info,
         naive_min_max_quantize.materialize_mean,
+        inputs_to_ignore=[1],  # Ignore axis tensor.
     )
 
 

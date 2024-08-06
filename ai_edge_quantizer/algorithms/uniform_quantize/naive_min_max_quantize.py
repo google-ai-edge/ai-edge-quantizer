@@ -226,8 +226,8 @@ def _materialize_bias_for_conv_ops(
       bias_quant_params = (
           uniform_quantize_tensor.symmetric_quantize_bias_tensor(
               bias_content,
-              op_tensor_params[0].consumers[0].parameters,  # Input.
-              op_tensor_params[1].consumers[0].parameters,  # Weight.
+              op_tensor_params[op_input_index].consumers[0].parameters,
+              op_tensor_params[op_weight_index].consumers[0].parameters,
           )
       )
     # We only quantize bias under SRQ. Setting is_constant=True for SRQ only
@@ -235,20 +235,22 @@ def _materialize_bias_for_conv_ops(
     is_constant = (
         op_info.op_quant_config.execution_mode == qtyping.OpExecutionMode.SRQ
     )
-    bias_params = utils.get_tensor_transformation_params(
+    op_tensor_params[op_bias_index] = utils.get_tensor_transformation_params(
         tfl_flatbuffer_utils.get_tensor_name(bias_tensor),
         op_info,
         is_inbounding_tensor=True,
         quant_params=bias_quant_params,
         is_constant=is_constant,
     )
-    op_tensor_params.append(bias_params)
 
 
 def materialize_fc_conv(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
+    input_index: int = 0,
+    weight_index: int = 1,
+    bias_index: int = 2,
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize tensors in fully_connected, conv_2d and depthwise_conv_2d.
 
@@ -256,25 +258,29 @@ def materialize_fc_conv(
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    input_index: Index for the input tensor in the op.
+    weight_index: Index for the weight tensor in the op.
+    bias_index: Index for the bias tensor in the op.
 
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
     weights, bias).
   """
+  # Ignore bias tensor as it is quantized separately.
   op_tensor_params = utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
-      inputs_to_ignore=[2],  # Ignore bias tensor.
+      inputs_to_ignore=[bias_index],
   )
 
   _materialize_bias_for_conv_ops(
       op_info,
       graph_info,
       op_tensor_params,
-      op_input_index=0,
-      op_weight_index=1,
-      op_bias_index=2,
+      op_input_index=input_index,
+      op_weight_index=weight_index,
+      op_bias_index=bias_index,
   )
 
   return op_tensor_params
@@ -296,31 +302,30 @@ def materialize_conv2d_transpose(
     Quantization configuration for the tensors associated with the op (e.g.,
     weights, bias).
   """
+  ignored_shape_index = 0
+  weight_index = 1
+  input_index = 2
+  bias_index = 3
   op_tensor_params = utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
-      inputs_to_ignore=[0, 3],  # Ignore output_shape and bias tensors.
+      inputs_to_ignore=[ignored_shape_index, bias_index],
   )
   if len(op_tensor_params) < 2:
     raise ValueError(
         "Materialize standard op should return at least two tensors for"
         " conv2d_transpose."
     )
-  # TODO(b/355242974): Fix tensor order assumption in materialize_standard_op.
-  # The function assumes the first tensor is the input and the second one is the
-  # weight. However, for conv2d_transpose, the first tensor is the weight and
-  # the second one is the input.
-  weight_params, input_params, *_ = op_tensor_params
-  op_tensor_params = [input_params, weight_params] + op_tensor_params[2:]
   _materialize_bias_for_conv_ops(
       op_info,
       graph_info,
       op_tensor_params,
-      op_input_index=2,
-      op_weight_index=1,
-      op_bias_index=3,
+      op_input_index=input_index,
+      op_weight_index=weight_index,
+      op_bias_index=bias_index,
   )
+
   return op_tensor_params
 
 

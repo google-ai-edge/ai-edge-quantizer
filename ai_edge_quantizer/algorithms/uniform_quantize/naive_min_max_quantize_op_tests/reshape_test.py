@@ -92,14 +92,16 @@ class ReshapeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     # Test settings.
     op_tensor_names = {}
     op_tensor_names["input"] = "sequential/average_pooling2d/AvgPool"
+    op_tensor_names["input2"] = "arith.constant3"
     op_tensor_names["output"] = "sequential/flatten/Reshape"
     self._op_test_info.op_tensor_names = op_tensor_names
-    self._test_single_input_output_ops(
+    self._test_no_weights_op(
         op_info,
         self._graph_info,
         self._op_test_info,
         naive_min_max_quantize.materialize_reshape,
         same_input_output_params=True,
+        inputs_to_ignore=[1],  # Shape tensor does not need to be quantized.
     )
 
 

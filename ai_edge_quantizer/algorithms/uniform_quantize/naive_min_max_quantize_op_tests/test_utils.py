@@ -40,7 +40,10 @@ class OpTestInfo:
     test_model: The test model.
     op_tensor_names: A map of op tensor names with keys for input(s) and output.
       Note for multiple inputs, the keys will follow the pattern of "input",
-      "input2", "input3" etc.
+      "input2", "input3" etc. for ops tested with _test_no_weights_op. For ops
+      tested with _test_fc_bmm_conv, the format for non-ignored inputs is the
+      same, but the ignored tensors should have keys "ignored_input",
+      "ignored_input2", "ignored_input3" etc.
     input_range: A tuple of input min and max.
     output_range: A tuple of output min and max.
     quantized_dimension: Quantized dimension.
@@ -205,8 +208,6 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       op_test_info,
       materialization_func,
       same_input_output_params=False,
-      num_inputs=1,
-      num_outputs=1,
       inputs_to_ignore=None,
       outputs_to_ignore=None,
   ):
@@ -215,16 +216,18 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     Args:
       op_info: OpInfo object.
       graph_info: GraphInfo object.
-      op_test_info: OpTestInfo object.
+      op_test_info: OpTestInfo object. In op_tensor_names field of this object,
+        op tensor input names have to follow the pattern of "input", "input2",
+        "input3" etc.
       materialization_func: Function to materialize tensor transformation
         parameters.
       same_input_output_params: Whether the input and output tensor
         transformation parameters are the same.
-      num_inputs: Number of inputs in materialization function result.
-      num_outputs: Number of outputs in materialization function result.
       inputs_to_ignore: Inputs to ignore.
       outputs_to_ignore: Outputs to ignore.
     """
+    num_inputs = len(op_info.op.inputs)
+    num_outputs = len(op_info.op.outputs)
     op_quant_config = op_info.op_quant_config
     self._setup_op_test_config(
         execution_mode=op_quant_config.execution_mode,
@@ -268,96 +271,13 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
           inputs_to_ignore,
           outputs_to_ignore,
       )
-
-  def _test_single_input_output_ops(
-      self,
-      op_info,
-      graph_info,
-      op_test_info,
-      materialization_func,
-      same_input_output_params=False,
-  ):
-    """Tests ops with single input and output.
-
-    Args:
-      op_info: OpInfo object.
-      graph_info: GraphInfo object.
-      op_test_info: OpTestInfo object.
-      materialization_func: Function to materialize tensor transformation
-        parameters.
-      same_input_output_params: Whether the input and output tensor
-        transformation parameters are the same.
-    """
-    self._test_no_weights_op(
+    # Test ignored inputs and outputs.
+    self._test_ignored_inputs_and_outputs(
+        tensor_quant_params,
         op_info,
-        graph_info,
         op_test_info,
-        materialization_func,
-        same_input_output_params,
-        num_inputs=1,
-        num_outputs=1,
-    )
-
-  def _test_two_input_one_output_ops(
-      self,
-      op_info,
-      graph_info,
-      op_test_info,
-      materialization_func,
-      same_input_output_params=False,
-  ):
-    """Tests ops with two inputs and single output.
-
-    Can be used for ops such as ADD, MUL, SUB.
-
-    Args:
-      op_info: OpInfo object.
-      graph_info: GraphInfo object.
-      op_test_info: OpTestInfo object.
-      materialization_func: Function to materialize tensor transformation
-        parameters.
-      same_input_output_params: Whether the input and output tensor
-        transformation parameters are the same.
-    """
-    self._test_no_weights_op(
-        op_info,
-        graph_info,
-        op_test_info,
-        materialization_func,
-        same_input_output_params,
-        num_inputs=2,
-        num_outputs=1,
-    )
-
-  def _test_one_input_two_output_ops(
-      self,
-      op_info,
-      graph_info,
-      op_test_info,
-      materialization_func,
-      same_input_output_params=False,
-  ):
-    """Tests ops with one input and two outputs.
-
-    Can be used for ops such as SPLIT.
-
-    Args:
-      op_info: OpInfo object.
-      graph_info: GraphInfo object.
-      op_test_info: OpTestInfo object.
-      materialization_func: Function to materialize tensor transformation
-        parameters.
-      same_input_output_params: Whether the input and output tensor
-        transformation parameters are the same.
-    """
-    self._test_no_weights_op(
-        op_info,
-        graph_info,
-        op_test_info,
-        materialization_func,
-        same_input_output_params,
-        num_inputs=1,
-        num_outputs=2,
+        inputs_to_ignore,
+        outputs_to_ignore,
     )
 
   def _test_fc_bmm_conv(
@@ -367,16 +287,33 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       op_test_info,
       materialization_func,
       bias_quantized_dim: int = 0,
+      input_index: int = 0,
+      weight_index: int = 1,
+      bias_index: int = 2,
+      inputs_to_ignore: Optional[Sequence[int]] = None,
+      outputs_to_ignore: Optional[Sequence[int]] = None,
   ):
     """Tests fully connected, batch matmul and conv ops.
+
+    Assumes that the op has one non-ignored output, which comes last in the
+    materialization function result.
 
     Args:
       op_info: OpInfo object.
       graph_info: GraphInfo object.
-      op_test_info: OpTestInfo object.
+      op_test_info: OpTestInfo object. In op_tensor_names field of this object,
+        not ignored input tensors' names have to follow the pattern of "input",
+        "input2", "input3" etc. Ignored input tensors' names have to follow the
+        pattern of "ignored_input", "ignored_input2", "ignored_input3" etc.
       materialization_func: Function to materialize tensor transformation
         parameters.
       bias_quantized_dim: Quantized dimension for bias.
+      input_index: Input tensor index in the result of materialization function.
+      weight_index: Weight tensor index in the result of materialization
+        function.
+      bias_index: Bias tensor index in the result of materialization function.
+      inputs_to_ignore: Inputs to ignore.
+      outputs_to_ignore: Outputs to ignore.
     """
     op_quant_config = op_info.op_quant_config
     self._setup_op_test_config(
@@ -394,6 +331,10 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         )
     )
     num_configs = 4 if bias_tensor is not None else 3
+    if inputs_to_ignore:
+      num_configs += len(inputs_to_ignore)
+    if outputs_to_ignore:
+      num_configs += len(outputs_to_ignore)
     self.assertLen(tensor_quant_params, num_configs)
     bias_tensor_data = None
     if bias_tensor is not None:
@@ -401,7 +342,6 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
           bias_tensor,
           op_test_info.test_model.buffers,
       )
-
     # Test input tensor settings
     transformations = [_QuantTransformation.NO_QUANTIZE]
     if op_quant_config.execution_mode == _OpExecutionMode.SRQ:
@@ -411,7 +351,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         op_info.subgraph_op_index,
         is_inbounding_tensor=True,
         tensor_quant_config=op_quant_config.activation_tensor_config,
-        transformation_params=tensor_quant_params[0],
+        transformation_params=tensor_quant_params[input_index],
         desired_transformations=transformations,
     )
 
@@ -430,7 +370,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         op_info.subgraph_op_index,
         is_inbounding_tensor=True,
         tensor_quant_config=op_quant_config.weight_tensor_config,
-        transformation_params=tensor_quant_params[1],
+        transformation_params=tensor_quant_params[weight_index],
         desired_transformations=transformations,
         tensor_data=weight_tensor_data,
         quantized_dimension=op_test_info.quantized_dimension,
@@ -445,7 +385,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         op_info.subgraph_op_index,
         is_inbounding_tensor=False,
         tensor_quant_config=op_quant_config.activation_tensor_config,
-        transformation_params=tensor_quant_params[2],
+        transformation_params=tensor_quant_params[-1],
         desired_transformations=transformations,
     )
 
@@ -467,11 +407,21 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
           op_info.subgraph_op_index,
           is_inbounding_tensor=True,
           tensor_quant_config=bias_config,
-          transformation_params=tensor_quant_params[3],
+          transformation_params=tensor_quant_params[bias_index],
           desired_transformations=transformations,
           tensor_data=bias_tensor_data,
           quantized_dimension=bias_quantized_dim,
       )
+
+    # Test ignored inputs and outputs.
+    self._test_ignored_inputs_and_outputs(
+        tensor_quant_params,
+        op_info,
+        op_test_info,
+        inputs_to_ignore,
+        outputs_to_ignore,
+        is_op_with_weight=True,
+    )
 
   def _get_ignore_tensor_name(
       self,

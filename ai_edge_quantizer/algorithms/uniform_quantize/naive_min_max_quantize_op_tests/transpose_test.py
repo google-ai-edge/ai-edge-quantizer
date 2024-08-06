@@ -92,14 +92,16 @@ class TransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     # Test settings.
     op_tensor_names = {}
     op_tensor_names["input"] = "serving_default_input_2:0"
+    op_tensor_names["input2"] = "sequential_1/permute_1/transpose/perm"
     op_tensor_names["output"] = "PartitionedCall:0"
     self._op_test_info.op_tensor_names = op_tensor_names
-    self._test_single_input_output_ops(
+    self._test_no_weights_op(
         op_info,
         self._graph_info,
         self._op_test_info,
         naive_min_max_quantize.materialize_transpose,
         same_input_output_params=True,
+        inputs_to_ignore=[1],  # Ignore permutation tensor.
     )
 
 

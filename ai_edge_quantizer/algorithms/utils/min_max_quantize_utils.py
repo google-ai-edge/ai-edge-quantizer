@@ -562,13 +562,169 @@ def _materialize_standard_op_no_constraint(
   return op_tensor_params
 
 
+def _split_tensors_by_indices(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    indices: Optional[Sequence[int]],
+    is_inbounding_tensor: bool,
+) -> tuple[list[Any], list[Any], list[int]]:
+  """Split tensors into two lists and return indices with -1 values removed.
+
+  This function splits the tensors into two lists based on the provided indices.
+    * The first list contains tensors with indices in the provided indices list.
+    * The second list contains all remaining tensors.
+
+  Additionally, the function filters out any tensors with the index -1
+  (indicating non-existing bias in FC and cov ops) and returns a new list of
+  indices excluding these values.
+
+  Args:
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    indices: Indices of tensors to use for split.
+    is_inbounding_tensor: Whether the tensor is an inbounding tensor for the op.
+
+  Returns:
+    A tuple containing:
+      * A list of tensors with indices in the provided list.
+      * A list of tensors with indices not in the provided list.
+      * A new list of indices with -1 values removed.
+  """
+  indices = indices or []
+  updated_indices = []
+  updated_index = 0
+  selected_tensors, others = [], []
+  tensors = op_info.op.inputs if is_inbounding_tensor else op_info.op.outputs
+  for i, tensor_index in enumerate(tensors):
+    # Ignore non-existing tensors.
+    if tensor_index == -1:
+      continue
+    if i in indices:
+      updated_indices.append(updated_index)
+      selected_tensors.append(graph_info.subgraph_tensors[tensor_index])
+    else:
+      others.append(graph_info.subgraph_tensors[tensor_index])
+    updated_index += 1
+
+  return selected_tensors, others, updated_indices
+
+
+def _materialize_ignored_tensors(
+    tensors: Sequence[Any],
+    op_info: qtyping.OpInfo,
+    is_inbounding_tensor: bool,
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize ignored tensors.
+
+  Args:
+    tensors: Tensors to ignore.
+    op_info: Aggregated information about the op (e.g., quantization config).
+    is_inbounding_tensor: Whether the tensors are the inbounding tensors for the
+      op.
+
+  Returns:
+    A list of tensor transformation params for the ignored tensors.
+  """
+  op_ignored_tensor_params = []
+  for tensor in tensors:
+    tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
+    no_quant_tensor_params = qtyping.OpToTensorParams(
+        subgraph_op_id=op_info.subgraph_op_index,
+        transformations=[qtyping.QuantTransformation.NO_QUANTIZE],
+    )
+    if is_inbounding_tensor:
+      tensor_params = qtyping.TensorTransformationParams(
+          tensor_name=tensor_name,
+          consumers=[no_quant_tensor_params],
+      )
+    else:
+      tensor_params = qtyping.TensorTransformationParams(
+          tensor_name=tensor_name,
+          producer=no_quant_tensor_params,
+      )
+    op_ignored_tensor_params.append(tensor_params)
+
+  return op_ignored_tensor_params
+
+
+def _merge_materialized_tensors(
+    tensor_params: list[qtyping.TensorTransformationParams],
+    ignored_input_tensor_params: Sequence[qtyping.TensorTransformationParams],
+    ignored_output_tensor_params: Sequence[qtyping.TensorTransformationParams],
+    op_info: qtyping.OpInfo,
+    inputs_to_ignore: Optional[Sequence[int]],
+    outputs_to_ignore: Optional[Sequence[int]],
+) -> list[qtyping.TensorTransformationParams]:
+  """Merge materialized tensors.
+
+  Merge tensor transformation parameters for non-ignored and ignored tensors.
+  The result list will keep the original order of inputs and outputs tensors in
+  the op.
+
+  Args:
+    tensor_params: Tensor transformation params for non-ignored tensors in the
+      op.
+    ignored_input_tensor_params: Tensor transformation params for the ignored
+      input tensors.
+    ignored_output_tensor_params: Tensor transformation params for the ignored
+      output tensors.
+    op_info: Aggregated information about the op (e.g., quantization config).
+    inputs_to_ignore: Input tensor indices to ignore.
+    outputs_to_ignore: Output tensor indices to ignore.
+
+  Returns:
+    Full list of transformation params for the op.
+  """
+  inputs_to_ignore = inputs_to_ignore or []
+  outputs_to_ignore = outputs_to_ignore or []
+  if not inputs_to_ignore and not outputs_to_ignore:
+    return tensor_params
+
+  result_tensor_params = []
+  num_inputs = len([x for x in op_info.op.inputs if x != -1])
+  num_outputs = len([x for x in op_info.op.outputs if x != -1])
+
+  # Add input tensors.
+  if inputs_to_ignore:
+    input_idx, ignored_input_idx = 0, 0
+    for i in range(num_inputs):
+      if i in inputs_to_ignore:
+        result_tensor_params.append(
+            ignored_input_tensor_params[ignored_input_idx]
+        )
+        ignored_input_idx += 1
+      else:
+        result_tensor_params.append(tensor_params[input_idx])
+        input_idx += 1
+  else:
+    result_tensor_params.extend(tensor_params[:num_inputs])
+
+  # Add output tensors.
+  output_start_idx = num_inputs - len(inputs_to_ignore)
+  if outputs_to_ignore:
+    output_idx, ignored_output_idx = output_start_idx, 0
+    for i in range(num_outputs):
+      if i in outputs_to_ignore:
+        result_tensor_params.append(
+            ignored_output_tensor_params[ignored_output_idx]
+        )
+        ignored_output_idx += 1
+      else:
+        result_tensor_params.append(tensor_params[output_idx])
+        output_idx += 1
+  else:
+    result_tensor_params.extend(tensor_params[output_start_idx:])
+
+  return result_tensor_params
+
+
 def materialize_standard_op(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
     constraint: OpQuantConstraint = OpQuantConstraint.NO_CONSTRAIN,
-    inputs_to_ignore: Optional[list[int]] = None,
-    outputs_to_ignore: Optional[list[int]] = None,
+    inputs_to_ignore: Optional[Sequence[int]] = None,
+    outputs_to_ignore: Optional[Sequence[int]] = None,
 ) -> list[qtyping.TensorTransformationParams]:
   """Default materialization function for an op.
 
@@ -590,29 +746,47 @@ def materialize_standard_op(
     output_tensor_0_params, ..., output_tensor_m_params].
   """
   # Process op inputs and outputs.
-  inputs_to_ignore = inputs_to_ignore or []
-  outputs_to_ignore = outputs_to_ignore or []
-  input_tensors, output_tensors = [], []
-  for i, input_tensor_index in enumerate(op_info.op.inputs):
-    if i not in inputs_to_ignore and input_tensor_index >= 0:
-      input_tensors.append(graph_info.subgraph_tensors[input_tensor_index])
-  for i, output_tensor_index in enumerate(op_info.op.outputs):
-    if i not in outputs_to_ignore and output_tensor_index >= 0:
-      output_tensors.append(graph_info.subgraph_tensors[output_tensor_index])
-
+  ignored_input_tensors, input_tensors, inputs_to_ignore = (
+      _split_tensors_by_indices(
+          op_info, graph_info, inputs_to_ignore, is_inbounding_tensor=True
+      )
+  )
+  ignored_output_tensors, output_tensors, outputs_to_ignore = (
+      _split_tensors_by_indices(
+          op_info, graph_info, outputs_to_ignore, is_inbounding_tensor=False
+      )
+  )
   # Materialize op tensors.
   if constraint == OpQuantConstraint.SAME_AS_INPUT_SCALE:
-    return _materialize_standard_op_with_same_as_input_scale(
+    tensor_params = _materialize_standard_op_with_same_as_input_scale(
         input_tensors, output_tensors, op_info, graph_info, tensor_name_to_qsv
     )
   elif constraint == OpQuantConstraint.SAME_AS_OUTPUT_SCALE:
-    return _materialize_standard_op_with_same_as_output_scale(
+    tensor_params = _materialize_standard_op_with_same_as_output_scale(
         input_tensors, output_tensors, op_info, graph_info, tensor_name_to_qsv
     )
   else:
-    return _materialize_standard_op_no_constraint(
+    tensor_params = _materialize_standard_op_no_constraint(
         input_tensors, output_tensors, op_info, graph_info, tensor_name_to_qsv
     )
+
+  # Materialize ignored tensors.
+  ignored_input_tensor_params = _materialize_ignored_tensors(
+      ignored_input_tensors, op_info, is_inbounding_tensor=True
+  )
+  ignored_output_tensor_params = _materialize_ignored_tensors(
+      ignored_output_tensors, op_info, is_inbounding_tensor=False
+  )
+
+  # Combine all tensor params keeping the original order.
+  return _merge_materialized_tensors(
+      tensor_params,
+      ignored_input_tensor_params,
+      ignored_output_tensor_params,
+      op_info,
+      inputs_to_ignore,
+      outputs_to_ignore,
+  )
 
 
 def materialize_op_with_output_activation_constraint(

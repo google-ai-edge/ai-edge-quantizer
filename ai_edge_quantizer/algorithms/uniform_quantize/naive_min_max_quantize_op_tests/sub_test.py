@@ -90,7 +90,7 @@ class SubTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
             execution_mode=_OpExecutionMode.SRQ,
         ),
     )
-    self._test_two_input_one_output_ops(
+    self._test_no_weights_op(
         op_info,
         self._graph_info,
         self._op_test_info,

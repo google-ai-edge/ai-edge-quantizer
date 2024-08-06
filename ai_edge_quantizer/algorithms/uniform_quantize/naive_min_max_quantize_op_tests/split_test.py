@@ -84,23 +84,25 @@ class SplitTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     op = subgraph0.operators[subgraph_op_id]
     op_info = qtyping.OpInfo(
         op=op,
-        op_name=qtyping.TFLOperationName.TRANSPOSE,
+        op_name=qtyping.TFLOperationName.SPLIT,
         subgraph_op_index=subgraph_op_id,
         op_quant_config=op_quant_config,
     )
 
     # Test settings.
     op_tensor_names = {}
-    op_tensor_names["input"] = "serving_default_input_1:0"
+    op_tensor_names["input"] = "model/tf.split/split/split_dim"
+    op_tensor_names["input2"] = "serving_default_input_1:0"
     op_tensor_names["output"] = "PartitionedCall:0"
     op_tensor_names["output2"] = "PartitionedCall:1"
     self._op_test_info.op_tensor_names = op_tensor_names
-    self._test_one_input_two_output_ops(
+    self._test_no_weights_op(
         op_info,
         self._graph_info,
         self._op_test_info,
         naive_min_max_quantize.materialize_split,
         same_input_output_params=True,
+        inputs_to_ignore=[0],  # Ignore split dimension tensor.
     )
 
 

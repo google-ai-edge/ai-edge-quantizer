@@ -67,6 +67,7 @@ class Conv2DTransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         "sequential_5/conv2d_transpose_3/BiasAdd;sequential_5/conv2d_transpose_3/conv2d_transpose;sequential_5/conv2d_transpose_3/BiasAdd/ReadVariableOp"
     )
     op_tensor_names["input"] = "serving_default_input_6:0"
+    op_tensor_names["ignored_input"] = "sequential_5/conv2d_transpose_3/stack"
     op_tensor_names["output"] = "StatefulPartitionedCall:0"
     self._op_test_info.op_tensor_names = op_tensor_names
 
@@ -112,6 +113,10 @@ class Conv2DTransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         self._op_test_info,
         naive_min_max_quantize.materialize_conv2d_transpose,
         bias_quantized_dim=None,
+        input_index=2,
+        weight_index=1,
+        bias_index=3,
+        inputs_to_ignore=[0],
     )
 
   @parameterized.parameters(8, 16)
@@ -156,6 +161,10 @@ class Conv2DTransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         self._op_test_info,
         naive_min_max_quantize.materialize_conv2d_transpose,
         bias_quantized_dim=None,
+        input_index=2,
+        weight_index=1,
+        bias_index=3,
+        inputs_to_ignore=[0],
     )
 
 
