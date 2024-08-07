@@ -883,6 +883,12 @@ def get_tensor_transformations(
       transformations = [_QuantTransformation.QUANTIZE_TENSOR]
     else:
       transformations = [_QuantTransformation.NO_QUANTIZE]
+  elif (
+      op_quant_config.weight_tensor_config.granularity
+      == qtyping.QuantGranularity.BLOCKWISE
+      and is_constant
+  ):
+    transformations = [_QuantTransformation.EMULATED_SUBCHANNEL]
   elif op_quant_config.execution_mode == qtyping.OpExecutionMode.WEIGHT_ONLY:
     if is_inbounding_tensor and is_constant:
       # ADD_DEQUANTIZE is always accompanined with a quantization parameters.
@@ -891,12 +897,6 @@ def get_tensor_transformations(
       transformations = [_QuantTransformation.ADD_DEQUANTIZE]
     else:
       transformations = [_QuantTransformation.NO_QUANTIZE]
-  elif (
-      op_quant_config.weight_tensor_config.granularity
-      == qtyping.QuantGranularity.BLOCKWISE
-      and is_constant
-  ):
-    transformations = [_QuantTransformation.EMULATED_SUBCHANNEL]
   else:
     raise ValueError(
         "Unsupported execution mode: %s" % op_quant_config.execution_mode
