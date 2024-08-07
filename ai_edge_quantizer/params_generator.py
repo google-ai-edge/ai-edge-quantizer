@@ -332,6 +332,17 @@ def _compatible_tensor_transformation_params(
   return True
 
 
+def _same_tensor_params_except_id(
+    params1: qtyping.OpToTensorParams,
+    params2: qtyping.OpToTensorParams,
+) -> bool:
+  """Check if two op to tensor params are the same except for subgraph_op_id."""
+  return params1.transformations == params2.transformations and (
+      params1.parameters == params2.parameters
+      or params1.parameters is None and params2.parameters is None
+  )
+
+
 def _compatible_tensor_params(
     params1: qtyping.OpToTensorParams,
     params2: qtyping.OpToTensorParams,
@@ -345,6 +356,8 @@ def _compatible_tensor_params(
       _QuantTrans.QUANTIZE_TENSOR,
       _QuantTrans.ADD_DEQUANTIZE,
   ]
+  if _same_tensor_params_except_id(params1, params2):
+    return True
   if (
       params1.transformations[0] != _QuantTrans.NO_QUANTIZE
       and params2.transformations[0] != _QuantTrans.NO_QUANTIZE
