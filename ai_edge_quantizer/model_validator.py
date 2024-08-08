@@ -16,13 +16,110 @@
 """function for validating output models."""
 
 from collections.abc import Callable, Iterable
+import dataclasses
 import json
 import math
+import os
 from typing import Any, Optional, Union
 
 import numpy as np
 
-from ai_edge_quantizer.utils import tfl_interpreter_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils as utils
+from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
+
+
+@dataclasses.dataclass(frozen=True, init=False)
+class ComparisonResult:
+  """A class for storing the comparison result of two models.
+
+  Attributes:
+    error_metric: The name of the error metric used for comparison.
+    input_tensors: A dictionary of input tensor name and its value.
+    output_tensors: A dictionary of output tensor name and its value.
+    constant_tensors: A dictionary of constant tensor name and its value.
+    intermediate_tensors: A dictionary of intermediate tensor name and its
+      value.
+  """
+
+  error_metric: str
+  input_tensors: dict[str, Any]
+  output_tensors: dict[str, Any]
+  constant_tensors: dict[str, Any]
+  intermediate_tensors: dict[str, Any]
+
+  def __init__(
+      self,
+      source_model: Union[str, bytearray],
+      error_metric: str,
+      comparison_result: dict[str, float],
+  ):
+    """Initializes the ComparisonResult object.
+
+    Args:
+      source_model: The model that is used to generate the comparison result.
+      error_metric: The name of the error metric used for comparison.
+      comparison_result: The comparison result from compare_model.
+    """
+    # Construct a new comparison_result dictionary with float values (needed for
+    # json serialization).
+    result = {key: float(value) for key, value in comparison_result.items()}
+
+    input_tensor_results = {}
+    for name in utils.get_input_tensor_names(source_model):
+      input_tensor_results[name] = result.pop(name)
+
+    output_tensor_results = {}
+    for name in utils.get_output_tensor_names(source_model):
+      output_tensor_results[name] = result.pop(name)
+
+    constant_tensor_results = {}
+    for name in utils.get_constant_tensor_names(source_model):
+      constant_tensor_results[name] = result.pop(name)
+
+    object.__setattr__(self, 'error_metric', error_metric)
+    object.__setattr__(self, 'input_tensors', input_tensor_results)
+    object.__setattr__(self, 'output_tensors', output_tensor_results)
+    object.__setattr__(self, 'constant_tensors', constant_tensor_results)
+    object.__setattr__(self, 'intermediate_tensors', result)
+
+  def get_all_tensor_results(self) -> dict[str, Any]:
+    """Get all the tensor results in a single dictionary.
+
+    Returns:
+      A dictionary of tensor name and its value.
+    """
+    result = self.input_tensors.copy()
+    result.update(self.output_tensors)
+    result.update(self.constant_tensors)
+    result.update(self.intermediate_tensors)
+    return result
+
+  def save(self, save_folder: str, model_name: str) -> None:
+    """Saves the model comparison result.
+
+    Args:
+      save_folder: Path to the folder to save the comparison result.
+      model_name: Name of the model.
+
+    Raises:
+      RuntimeError: If no quantized model is available.
+    """
+    result = {
+        'error_metric': self.error_metric,
+        'input_tensors': self.input_tensors,
+        'output_tensors': self.output_tensors,
+        'constant_tensors': self.constant_tensors,
+        'intermediate_tensors': self.intermediate_tensors,
+    }
+    # Same file structure as QuantizationResult.save.
+    save_folder = os.path.join(save_folder, model_name)
+    gfile.MakeDirs(save_folder)
+
+    result_save_path = os.path.join(
+        save_folder, model_name + '_comparison_result.json'
+    )
+    with gfile.GFile(result_save_path, 'w') as output_file_handle:
+      output_file_handle.write(json.dumps(result))
 
 
 # TODO: b/331655892 - have this function automatically detect the input tensor
@@ -33,7 +130,6 @@ def compare_model(
     signature_dataset: Iterable[dict[str, Any]],
     compare_fn: Callable[[Any, Any], float],
     signature_key: Optional[str] = None,
-    quantize_target_input: bool = True,
 ) -> dict[str, float]:
   """Compares model tensors over a model signature using the compare_fn.
 
@@ -43,8 +139,8 @@ def compare_model(
 
   Args:
     reference_model: Model which will be used as the reference
-    target_model: Target model which will be compared against the reference.
-      We expect reference_model and target_model have the inputs and outputs
+    target_model: Target model which will be compared against the reference. We
+      expect reference_model and target_model have the inputs and outputs
     signature_dataset: A list of inputs of the signature to be run on reference
       and target models.
     compare_fn: a comparison function to be used for calculating the statistics,
@@ -52,50 +148,38 @@ def compare_model(
       single float value.
     signature_key: the signature key to be used for invoking the models. If the
       model doesn't have a signature key, this can be set to None.
-    quantize_target_input: indicating whether the target requires quantized
-      input.
 
   Returns:
-    a dictionary of tensor name and a single float value representing
-    the differences
+    A ComparisonResult object.
   """
-  reference_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
-      reference_model
-  )
-  target_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
-      target_model
-  )
+  reference_interpreter = utils.create_tfl_interpreter(reference_model)
+  target_interpreter = utils.create_tfl_interpreter(target_model)
   comparison_results = {}
 
   # TODO: b/330797129 - enable multi-threaded evaluation.
   for signature_input in signature_dataset:
-    tfl_interpreter_utils.invoke_interpreter_signature(
+    utils.invoke_interpreter_signature(
         reference_interpreter, signature_input, signature_key
     )
-    tfl_interpreter_utils.invoke_interpreter_signature(
+    utils.invoke_interpreter_signature(
         target_interpreter,
         signature_input,
         signature_key,
-        quantize_input=quantize_target_input,
     )
 
-    reference_name_to_details = (
-        tfl_interpreter_utils.get_tensor_name_to_details_map(
-            reference_interpreter
-        )
+    reference_name_to_details = utils.get_tensor_name_to_details_map(
+        reference_interpreter
     )
-    target_name_to_details = (
-        tfl_interpreter_utils.get_tensor_name_to_details_map(target_interpreter)
+    target_name_to_details = utils.get_tensor_name_to_details_map(
+        target_interpreter
     )
 
     for tensor_name, detail in reference_name_to_details.items():
       if tensor_name in target_name_to_details:
         if tensor_name not in comparison_results:
           comparison_results[tensor_name] = []
-        reference_data = tfl_interpreter_utils.get_tensor_data(
-            reference_interpreter, detail
-        )
-        target_data = tfl_interpreter_utils.get_tensor_data(
+        reference_data = utils.get_tensor_data(reference_interpreter, detail)
+        target_data = utils.get_tensor_data(
             target_interpreter, target_name_to_details[tensor_name]
         )
         comparison_results[tensor_name].append(
@@ -115,12 +199,12 @@ def create_json_for_model_explorer(
   """create a dict type that can be exported as json for model_explorer to use.
 
   Args:
-    data: output from compare_model function
-    threshold: a list of numbers representing thresholds for model_exlorer to
+    data: Output from compare_model function
+    threshold: A list of numbers representing thresholds for model_exlorer to
       display different colors
 
   Returns:
-    a string represents the json format accepted by model_explorer
+    A string represents the json format accepted by model_explorer
   """
   color_scheme = []
   results = {name: {'value': float(value)} for name, value in data.items()}
