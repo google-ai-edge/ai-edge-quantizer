@@ -271,29 +271,6 @@ class Quantizer:
     )
     return comparison_result
 
-  # TODO: b/352774205 - Move this outside the quantizer class.
-  def save_comparison_result(
-      self,
-      comparison_result: model_validator.ComparisonResult,
-      json_save_path: str,
-      color_threshold: list[float],
-  ) -> None:
-    """Saves the comparison result in json format to be visualized through Model Explorer.
-
-    Args:
-      comparison_result: The comparison result object.
-      json_save_path: Path to save the comparison result in json format to be
-        visualized through Model Explorer.
-      color_threshold: Thresholds for color coding the comparison result when
-        visualize through Model Explorer.
-    """
-    json_object = model_validator.create_json_for_model_explorer(
-        comparison_result,
-        threshold=color_threshold,
-    )
-    with gfile.GFile(json_save_path, 'w') as output_file_handle:
-      output_file_handle.write(json_object)
-
   def _check_is_float_model(self, float_model: Union[str, bytearray]):
     """Checks that the model is float and not already quantized."""
     tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(float_model)

@@ -221,19 +221,6 @@ class QuantizerTest(parameterized.TestCase):
         'sequential/dense_1/MatMul', comparison_result.intermediate_tensors
     )
 
-  def test_save_compare_result_succeeds(self):
-    self._quantizer.quantize()
-    test_json_path = '/tmp/test_compare_result.json'
-    comparison_result = self._quantizer.compare()
-    self._quantizer.save_comparison_result(
-        comparison_result, test_json_path, [0, 1]
-    )
-    with open(test_json_path) as json_file:
-      json_dict = json.load(json_file)
-    self.assertIn('results', json_dict)
-    results = json_dict['results']
-    self.assertIn('sequential/dense_1/MatMul', results)
-
 
 class QuantizerBytearrayInputs(googletest.TestCase):
 

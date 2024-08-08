@@ -15,7 +15,9 @@
 
 """Test for model_validator."""
 
+import json
 import os
+from absl import flags
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import model_validator
 from ai_edge_quantizer.utils import test_utils
@@ -27,6 +29,8 @@ TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('.')
 class ModelValidatorCompareTest(googletest.TestCase):
 
   def setUp(self):
+    # TODO: b/358437395 - Remove this line once the bug is fixed.
+    flags.FLAGS.mark_as_parsed()
     super().setUp()
     self.reference_model_path = os.path.join(
         TEST_DATA_PREFIX_PATH, 'tests/models/single_fc_bias.tflite'
@@ -38,6 +42,7 @@ class ModelValidatorCompareTest(googletest.TestCase):
     self.dataset = test_utils.create_random_normal_input_data(
         self.reference_model_path
     )
+    self.test_dir = self.create_tempdir()
 
   def test_model_validator_compare(self):
     error_metric = 'mean_squared_difference'
@@ -105,6 +110,42 @@ class ModelValidatorCompareTest(googletest.TestCase):
           comparison_result, []
       )
       self.assertContainsSubset('"thresholds": []', mv_json)
+
+  def test_save_comparison_result_succeeds(self):
+    error_metric = 'mean_squared_difference'
+    model_name = 'test_model'
+    for signature_key, input_dataset in self.dataset.items():
+      comparison_result = model_validator.compare_model(
+          self.reference_model_path,
+          self.target_model_path,
+          input_dataset,
+          error_metric,
+          validation_utils.mean_squared_difference,
+          signature_key=signature_key,
+      )
+      comparison_result.save(self.test_dir.full_path, model_name)
+
+      # Test json for comparison result.
+      test_json_path = os.path.join(
+          self.test_dir.full_path, model_name + '_comparison_result.json'
+      )
+      with open(test_json_path) as json_file:
+        json_dict = json.load(json_file)
+      self.assertIn('error_metric', json_dict)
+      self.assertEqual(json_dict['error_metric'], 'mean_squared_difference')
+      self.assertIn('constant_tensors', json_dict)
+      self.assertIn('arith.constant', json_dict['constant_tensors'])
+
+      # Test json for model explorer.
+      test_json_path = os.path.join(
+          self.test_dir.full_path,
+          model_name + '_comparison_result_me_input.json',
+      )
+      with open(test_json_path) as json_file:
+        json_dict = json.load(json_file)
+      self.assertIn('results', json_dict)
+      results = json_dict['results']
+      self.assertIn('arith.constant', results)
 
 
 if __name__ == '__main__':

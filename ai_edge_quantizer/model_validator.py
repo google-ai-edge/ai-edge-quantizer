@@ -111,15 +111,23 @@ class ComparisonResult:
         'constant_tensors': self.constant_tensors,
         'intermediate_tensors': self.intermediate_tensors,
     }
-    # Same file structure as QuantizationResult.save.
-    save_folder = os.path.join(save_folder, model_name)
-    gfile.MakeDirs(save_folder)
-
     result_save_path = os.path.join(
         save_folder, model_name + '_comparison_result.json'
     )
     with gfile.GFile(result_save_path, 'w') as output_file_handle:
       output_file_handle.write(json.dumps(result))
+
+    # TODO: b/358122753 - Automatically generate the threshold.
+    color_threshold = [0.05, 0.1, 0.2, 0.4, 1, 10, 100]
+    json_object = create_json_for_model_explorer(
+        self,
+        threshold=color_threshold,
+    )
+    json_save_path = os.path.join(
+        save_folder, model_name + '_comparison_result_me_input.json'
+    )
+    with gfile.GFile(json_save_path, 'w') as output_file_handle:
+      output_file_handle.write(json_object)
 
 
 # TODO: b/331655892 - have this function automatically detect the input tensor
