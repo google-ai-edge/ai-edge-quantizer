@@ -177,6 +177,8 @@ def compare_model(
     )
 
     for tensor_name, detail in reference_name_to_details.items():
+      if detail['dtype'] == np.object_:
+        continue
       if tensor_name in target_name_to_details:
         if tensor_name not in comparison_results:
           comparison_results[tensor_name] = []
