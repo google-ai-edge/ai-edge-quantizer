@@ -1,0 +1,8 @@
+module attributes {tf_saved_model.semantics, tfl.description = "MLIR Converted.", tfl.metadata = {CONVERSION_METADATA = "\0C\00\00\00\08\00\0E\00\08\00\04\00\08\00\00\00\10\00\00\00$\00\00\00\00\00\06\00\08\00\04\00\06\00\00\00\04\00\00\00\00\00\00\00\00\00\0A\00\10\00\0C\00\08\00\04\00\0A\00\00\00\02\00\00\00\02\00\00\00\04\00\00\00\06\00\00\002.17.0\00\00", min_runtime_version = "2.0.0\00\00\00\00\00\00\00\00\00\00\00"}, tfl.schema_version = 3 : i32} {
+  func.func @main(%arg0: tensor<1x2x8xf32> {tf_saved_model.index_path = ["input_2"]}) -> (tensor<1x2x4xf32> {tf_saved_model.index_path = ["dense_1"]}) attributes {tf.entry_function = {inputs = "serving_default_input_2:0", outputs = "StatefulPartitionedCall:0"}, tf_saved_model.exported_names = ["serving_default"]} {
+    %0 = "tfl.pseudo_const"() <{value = dense<[[-0.348109365, 0.592914045, 0.661171376, 0.558787167, -0.48401624, -0.0410988927, 5.558030e-01, -0.0508201718], [0.0595578551, 0.272744417, 0.0188919306, 0.333904684, 0.440707505, 0.328149259, 0.638320267, 0.705169498], [-0.29551363, -0.627031624, -0.507736146, -0.270814389, -0.263713658, -0.206155419, -0.467055857, 0.583435595], [-0.362185746, 0.248489916, -0.61073494, -0.166004658, 0.617535412, -0.0945894718, 0.188788891, -0.388775349]]> : tensor<4x8xf32>}> : () -> tensor<4x8xf32>
+    %1 = "tfl.pseudo_const"() <{value = dense<[0.540925801, -0.52648443, 0.179323375, 0.150123537]> : tensor<4xf32>}> : () -> tensor<4xf32>
+    %2 = "tfl.fully_connected"(%arg0, %0, %1) <{asymmetric_quantize_inputs = false, fused_activation_function = "RELU", keep_num_dims = true, weights_format = "DEFAULT"}> : (tensor<1x2x8xf32>, tensor<4x8xf32>, tensor<4xf32>) -> tensor<1x2x4xf32>
+    return %2 : tensor<1x2x4xf32>
+  }
+}

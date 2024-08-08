@@ -18,6 +18,7 @@
 from typing import cast
 import numpy as np
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.transformations import quantize_tensor
 from ai_edge_quantizer.transformations import transformation_utils
 from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
@@ -30,7 +31,8 @@ def emulated_subchannel(
   The input tensor must also be the weight tensor of the fully_connected op.
 
   after the transformation, the fully connected op will be replaced by:
-  reshape -> batch_matmul -> mul -> sum -> add (if bias is present)
+  reshape -> batch_matmul -> mul -> sum -> add (if bias is present) ->
+  activation (if fused activation function exist, only support ReLU for now)
 
   Args:
     transformation_input: input structure that contains all information needed
@@ -85,17 +87,21 @@ def emulated_subchannel(
       transformation_input.subgraph.operators[
           original_fc_op_idx
       ].builtinOptions,
-  ).fusedActivationFunction != (
-      schema_py_generated.ActivationFunctionType.NONE
+  ).fusedActivationFunction not in (
+      schema_py_generated.ActivationFunctionType.NONE,
+      schema_py_generated.ActivationFunctionType.RELU,
   ):
     raise ValueError(
         'Emulated Subchannel transformation only support'
-        ' fusedActivationFunction NONE for now'
+        ' fusedActivationFunction NONE and RELU for now'
     )
 
   weight_tensor = transformation_input.subgraph.tensors[
       transformation_input.tensor_id
   ]
+  weight_tensor.type = quantize_tensor.quant_params_to_tflite_type(
+      transformation_input.quant_params.num_bits
+  )
 
   # modify the weight tensor with the correct quantization parameters
   transformation_input.buffers[weight_tensor.buffer].data = np.frombuffer(
@@ -278,17 +284,16 @@ def emulated_subchannel(
   transformation_input.subgraph.operators.insert(
       original_fc_op_idx + 4, reshape_op2
   )
+  ops_added = 5
+  last_op = reshape_op2
 
-  # if there is a bias tensor, we need an add to process it
-
+  # If there is a bias tensor (the third input to the original fc op),
+  # we need an add to process it. The current fc op id need to be recalculated
+  # because we added operators in front of it.
+  current_fc_op_id = original_fc_op_idx + ops_added
   if (
-      len(
-          transformation_input.subgraph.operators[original_fc_op_idx + 5].inputs
-      )
-      > 2
-      and transformation_input.subgraph.operators[
-          original_fc_op_idx + 5
-      ].inputs[2]
+      len(transformation_input.subgraph.operators[current_fc_op_id].inputs) > 2
+      and transformation_input.subgraph.operators[current_fc_op_id].inputs[2]
       != -1
   ):
     add_op_code_idx = transformation_utils.add_op_code(
@@ -300,7 +305,7 @@ def emulated_subchannel(
         schema_py_generated.TensorType.FLOAT32,
         transformation_input.subgraph,
     )
-    reshape_op2.outputs = [reshape_op2_output_id]
+    last_op.outputs = [reshape_op2_output_id]
     add_op = schema_py_generated.OperatorT()
     add_op.opcodeIndex = add_op_code_idx
     add_option = schema_py_generated.AddOptionsT()
@@ -308,20 +313,51 @@ def emulated_subchannel(
     add_op.builtinOptions = add_option
     add_op.inputs = [
         reshape_op2_output_id,
-        transformation_input.subgraph.operators[original_fc_op_idx + 5].inputs[
-            2
-        ],
+        transformation_input.subgraph.operators[
+            original_fc_op_idx + ops_added
+        ].inputs[2],
     ]
     add_op.outputs = [activation_output_id]
     transformation_input.subgraph.operators.insert(
-        original_fc_op_idx + 5, add_op
+        original_fc_op_idx + ops_added, add_op
     )
-    del transformation_input.subgraph.operators[original_fc_op_idx + 6]
-    return qtyping.TransformationInfo(
-        original_fc_op_idx, 6, activation_output_id
+    ops_added += 1
+    last_op = add_op
+
+  # If the fused activation function is RELU, we need to add a relu op.
+  # The current fc op id need to be recalculated because we added operators
+  # in front of it.
+  fc_fused_activation_function = cast(
+      schema_py_generated.FullyConnectedOptionsT,
+      transformation_input.subgraph.operators[
+          original_fc_op_idx + ops_added
+      ].builtinOptions,
+  ).fusedActivationFunction
+  if (
+      fc_fused_activation_function
+      == schema_py_generated.ActivationFunctionType.RELU
+  ):
+    activation_output.name += b'_relu'
+    relu_input_id = transformation_utils.add_new_activation_tensor(
+        activation_output.name + b'_relu_input',
+        activation_output.shape,
+        schema_py_generated.TensorType.FLOAT32,
+        transformation_input.subgraph,
     )
-  else:
-    del transformation_input.subgraph.operators[original_fc_op_idx + 5]
-    return qtyping.TransformationInfo(
-        original_fc_op_idx, 5, activation_output_id
+    last_op.outputs = [relu_input_id]
+    relu_op = schema_py_generated.OperatorT()
+    relu_op.opcodeIndex = transformation_utils.add_op_code(
+        schema_py_generated.BuiltinOperator.RELU, transformation_input.op_codes
     )
+    relu_op.inputs = [relu_input_id]
+    relu_op.outputs = [activation_output_id]
+    transformation_input.subgraph.operators.insert(
+        original_fc_op_idx + ops_added, relu_op
+    )
+    ops_added += 1
+    last_op = relu_op
+
+  del transformation_input.subgraph.operators[original_fc_op_idx + ops_added]
+  return qtyping.TransformationInfo(
+      original_fc_op_idx, ops_added - 1, activation_output_id
+  )
