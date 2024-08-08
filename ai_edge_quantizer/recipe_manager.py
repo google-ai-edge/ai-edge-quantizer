@@ -107,11 +107,6 @@ class RecipeManager:
     )
     # Special care if trying to set all ops to some config.
     if config.operation == _TFLOpName.ALL_SUPPORTED:
-      logging.warning(
-          'Reset all op configs under scope_regex %s with %s.',
-          regex,
-          config,
-      )
       self._scope_configs[regex] = [config]
       return
 
