@@ -136,6 +136,8 @@ class MulTest(parameterized.TestCase):
       comparion_result,
       output_tolerance,
   ):
+    # TODO: b/357959309 - Use comparison result directly for testing.
+    comparion_result = comparion_result.get_all_tensor_results()
     # Check final output.
     output_mse = comparion_result['PartitionedCall:0']
     self.assertLess(output_mse, output_tolerance)

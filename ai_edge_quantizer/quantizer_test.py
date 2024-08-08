@@ -217,7 +217,9 @@ class QuantizerTest(parameterized.TestCase):
     self._quantizer.quantize()
     comparison_result = self._quantizer.compare()
     self.assertIsNotNone(comparison_result)
-    self.assertIn('sequential/dense_1/MatMul', comparison_result)
+    self.assertIn(
+        'sequential/dense_1/MatMul', comparison_result.intermediate_tensors
+    )
 
   def test_save_compare_result_succeeds(self):
     self._quantizer.quantize()
@@ -254,15 +256,19 @@ class QuantizerBytearrayInputs(googletest.TestCase):
     quant_result = self._quantizer.quantize()
     self.assertEqual(quant_result.recipe, self._test_recipe)
     self.assertIsNotNone(quant_result.quantized_model)
-    comparison_result = self._quantizer.compare()
-    self.assertIsNotNone(comparison_result)
-    self.assertIn('sequential/dense_1/MatMul', comparison_result)
+    validation_result = self._quantizer.compare()
+    self.assertIsNotNone(validation_result)
+    self.assertIn(
+        'sequential/dense_1/MatMul', validation_result.intermediate_tensors
+    )
 
   def test_compare_succeeds(self):
     self._quantizer.quantize()
-    comparison_result = self._quantizer.compare()
-    self.assertIsNotNone(comparison_result)
-    self.assertIn('sequential/dense_1/MatMul', comparison_result)
+    validation_result = self._quantizer.compare()
+    self.assertIsNotNone(validation_result)
+    self.assertIn(
+        'sequential/dense_1/MatMul', validation_result.intermediate_tensors
+    )
 
 
 class QuantizerAlreadyQuantizedModelTest(googletest.TestCase):

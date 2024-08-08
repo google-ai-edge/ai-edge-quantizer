@@ -159,6 +159,8 @@ class DepthwiseConv2dTest(parameterized.TestCase):
       weight_tolerance,
       output_tolerance,
   ):
+    # TODO: b/357959309 - Use comparison result directly for testing.
+    comparion_result = comparion_result.get_all_tensor_results()
     # Check weight tensors.
     weight_mse = comparion_result['sequential/depthwise_conv2d/depthwise']
     self.assertLess(weight_mse, weight_tolerance)

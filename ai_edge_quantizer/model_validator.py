@@ -128,9 +128,10 @@ def compare_model(
     reference_model: Union[str, bytearray],
     target_model: Union[str, bytearray],
     signature_dataset: Iterable[dict[str, Any]],
+    error_metric: str,
     compare_fn: Callable[[Any, Any], float],
     signature_key: Optional[str] = None,
-) -> dict[str, float]:
+) -> ComparisonResult:
   """Compares model tensors over a model signature using the compare_fn.
 
   This function will run the model signature on the provided dataset over and
@@ -143,6 +144,7 @@ def compare_model(
       expect reference_model and target_model have the inputs and outputs
     signature_dataset: A list of inputs of the signature to be run on reference
       and target models.
+    error_metric: The name of the error metric used for comparison.
     compare_fn: a comparison function to be used for calculating the statistics,
       this function must be taking in two ArrayLike strcuture and output a
       single float value.
@@ -190,11 +192,15 @@ def compare_model(
   for tensor_name in comparison_results:
     agregated_results[tensor_name] = np.mean(comparison_results[tensor_name])
 
-  return agregated_results
+  return ComparisonResult(
+      reference_model,
+      error_metric,
+      agregated_results,
+  )
 
 
 def create_json_for_model_explorer(
-    data: dict[str, float], threshold: list[Union[int, float]]
+    data: ComparisonResult, threshold: list[Union[int, float]]
 ) -> str:
   """create a dict type that can be exported as json for model_explorer to use.
 
@@ -206,6 +212,7 @@ def create_json_for_model_explorer(
   Returns:
     A string represents the json format accepted by model_explorer
   """
+  data = data.get_all_tensor_results()
   color_scheme = []
   results = {name: {'value': float(value)} for name, value in data.items()}
   if threshold:

@@ -195,6 +195,8 @@ class MNISTTest(parameterized.TestCase):
       logits_tolerance,
       output_tolerance,
   ):
+    # TODO: b/357959309 - Use comparison result directly for testing.
+    comparison_result = comparison_result.get_all_tensor_results()
     # Check weight tensors.
     conv_weight_mse = comparison_result['sequential/conv2d/Conv2D']
     self.assertLess(conv_weight_mse, weight_tolerance)

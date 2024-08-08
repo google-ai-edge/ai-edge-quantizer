@@ -40,25 +40,42 @@ class ModelValidatorCompareTest(googletest.TestCase):
     )
 
   def test_model_validator_compare(self):
+    error_metric = 'mean_squared_difference'
     for signature_key, input_dataset in self.dataset.items():
       comparison_result = model_validator.compare_model(
           self.reference_model_path,
           self.target_model_path,
           input_dataset,
+          error_metric,
           validation_utils.mean_squared_difference,
           signature_key=signature_key,
       )
-      self.assertLen(comparison_result, 4)
-      self.assertAlmostEqual(comparison_result['serving_default_input_2:0'], 0)
-      self.assertAlmostEqual(comparison_result['arith.constant1'], 0)
-      self.assertLess(comparison_result['StatefulPartitionedCall:0'], 1e-5)
+      self.assertEqual(
+          comparison_result.error_metric, 'mean_squared_difference'
+      )
+      self.assertLen(comparison_result.input_tensors, 1)
+      self.assertLen(comparison_result.output_tensors, 1)
+      self.assertLen(comparison_result.constant_tensors, 2)
+      self.assertEmpty(comparison_result.intermediate_tensors)
+
+      self.assertAlmostEqual(
+          comparison_result.input_tensors['serving_default_input_2:0'], 0
+      )
+      self.assertAlmostEqual(
+          comparison_result.constant_tensors['arith.constant1'], 0
+      )
+      self.assertLess(
+          comparison_result.output_tensors['StatefulPartitionedCall:0'], 1e-5
+      )
 
   def test_create_json_for_model_explorer(self):
+    error_metric = 'mean_squared_difference'
     for signature_key, input_dataset in self.dataset.items():
       comparison_result = model_validator.compare_model(
           self.reference_model_path,
           self.target_model_path,
           input_dataset,
+          error_metric,
           validation_utils.mean_squared_difference,
           signature_key=signature_key,
       )
@@ -74,11 +91,13 @@ class ModelValidatorCompareTest(googletest.TestCase):
       )
 
   def test_create_json_for_model_explorer_no_thresholds(self):
+    error_metric = 'mean_squared_difference'
     for signature_key, input_dataset in self.dataset.items():
       comparison_result = model_validator.compare_model(
           self.reference_model_path,
           self.target_model_path,
           input_dataset,
+          error_metric,
           validation_utils.mean_squared_difference,
           signature_key=signature_key,
       )
@@ -86,27 +105,6 @@ class ModelValidatorCompareTest(googletest.TestCase):
           comparison_result, []
       )
       self.assertContainsSubset('"thresholds": []', mv_json)
-
-  def test_process_comparison_result(self):
-    for signature_key, input_dataset in self.dataset.items():
-      comparison_result = model_validator.compare_model(
-          self.reference_model_path,
-          self.target_model_path,
-          input_dataset,
-          validation_utils.mean_squared_difference,
-          signature_key=signature_key,
-      )
-      error_metric = 'mean_squared_difference'
-      processed_comparison_result = model_validator.ComparisonResult(
-          self.reference_model_path,
-          error_metric,
-          comparison_result,
-      )
-      self.assertEqual(processed_comparison_result.error_metric, error_metric)
-      self.assertLen(processed_comparison_result.input_tensors, 1)
-      self.assertLen(processed_comparison_result.output_tensors, 1)
-      self.assertLen(processed_comparison_result.constant_tensors, 2)
-      self.assertEmpty(processed_comparison_result.intermediate_tensors)
 
 
 if __name__ == '__main__':

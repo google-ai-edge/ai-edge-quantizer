@@ -221,14 +221,13 @@ class Quantizer:
     )
     return self._result
 
-  # TODO: b/337299171 - generate a readable quantization report.
   def compare(
       self,
       signature_test_data: Optional[Iterable[_SignatureInput]] = None,
       error_metrics: str = 'mse',
       signature_key: Optional[str] = None,
-  ) -> dict[str, float]:
-    """Compares the quantized model with the float model for a model signature.
+  ) -> model_validator.ComparisonResult:
+    """Numerical validation of the quantized model for a model signature.
 
     Side by side numerical comparison will be performed on all tensors in the
     quantized model against ones from the float model. If no test data is
@@ -246,7 +245,7 @@ class Quantizer:
         the model doesn't have a signature key, this can be set to None.
 
     Returns:
-      A dictionary containing the comparison result.
+      The comparison result.
     """
     if signature_test_data is None:
       test_data = test_utils.create_random_normal_input_data(
@@ -267,20 +266,22 @@ class Quantizer:
         self._result.quantized_model,
         signature_test_data,
         compare_fn=validation_utils.get_validation_func(error_metrics),
+        error_metric=error_metrics,
         signature_key=signature_key,
     )
     return comparison_result
 
+  # TODO: b/352774205 - Move this outside the quantizer class.
   def save_comparison_result(
       self,
-      comparison_result: dict[str, float],
+      comparison_result: model_validator.ComparisonResult,
       json_save_path: str,
       color_threshold: list[float],
   ) -> None:
     """Saves the comparison result in json format to be visualized through Model Explorer.
 
     Args:
-      comparison_result: A dictionary containing the comparison result.
+      comparison_result: The comparison result object.
       json_save_path: Path to save the comparison result in json format to be
         visualized through Model Explorer.
       color_threshold: Thresholds for color coding the comparison result when

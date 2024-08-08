@@ -159,6 +159,8 @@ class Conv2DTransposeTest(parameterized.TestCase):
       weight_tolerance,
       output_tolerance,
   ):
+    # TODO: b/357959309 - Use comparison result directly for testing.
+    comparion_result = comparion_result.get_all_tensor_results()
     # Check weight tensors.
     weight_mse = comparion_result[
         'sequential_5/conv2d_transpose_3/conv2d_transpose'

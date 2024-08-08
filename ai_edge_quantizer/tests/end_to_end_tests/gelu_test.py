@@ -77,6 +77,8 @@ class GeluTest(parameterized.TestCase):
       comparison_result,
       output_tolerance,
   ):
+    # TODO: b/357959309 - Use comparison result directly for testing.
+    comparison_result = comparison_result.get_all_tensor_results()
     # Check final output.
     output_mse = comparison_result['PartitionedCall:0']
     self.assertLess(output_mse, output_tolerance)
