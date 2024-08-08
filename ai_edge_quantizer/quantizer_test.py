@@ -201,9 +201,7 @@ class QuantizerTest(parameterized.TestCase):
     self._quantizer.load_quantization_recipe(self._test_recipe_path)
     result = self._quantizer.quantize()
     result.save(save_path, model_name)
-    saved_recipe_path = os.path.join(
-        save_path, model_name, model_name + '_recipe.json'
-    )
+    saved_recipe_path = os.path.join(save_path, model_name + '_recipe.json')
     with open(saved_recipe_path) as json_file:
       saved_recipe = json.load(json_file)
     self.assertEqual(saved_recipe, self._test_recipe)

@@ -71,11 +71,6 @@ class QuantizationResult:
       raise RuntimeError(
           'No quantized model to save. Make sure .quantize() is called.'
       )
-
-    # Nested to group recipe and model under the same folder.
-    save_folder = os.path.join(save_folder, model_name)
-    gfile.MakeDirs(save_folder)
-
     model_save_path = os.path.join(
         save_folder, model_name + '_quantized.tflite'
     )
