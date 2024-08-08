@@ -221,7 +221,7 @@ class Quantizer:
     )
     return self._result
 
-  def compare(
+  def validate(
       self,
       signature_test_data: Optional[Iterable[_SignatureInput]] = None,
       error_metrics: str = 'mse',

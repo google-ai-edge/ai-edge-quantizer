@@ -89,7 +89,7 @@ class MNISTTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(self._quantizer._result.quantized_model), 55000)
 
-    comparison_result = self._quantizer.compare(error_metrics='mse')
+    comparison_result = self._quantizer.validate(error_metrics='mse')
     self._check_comparison_result(
         comparison_result,
         weight_tolerance=1e-2
@@ -131,7 +131,7 @@ class MNISTTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(self._quantizer._result.quantized_model), 30000)
 
-    comparison_result = self._quantizer.compare(error_metrics='mse')
+    comparison_result = self._quantizer.validate(error_metrics='mse')
     # TODO: b/346787369 - Update the weight tolerance for int4.
     self._check_comparison_result(
         comparison_result,
@@ -156,7 +156,7 @@ class MNISTTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(self._quantizer._result.quantized_model), 105000)
 
-    comparison_result = self._quantizer.compare(error_metrics='mse')
+    comparison_result = self._quantizer.validate(error_metrics='mse')
     self._check_comparison_result(
         comparison_result,
         weight_tolerance=1e-5,
@@ -177,7 +177,7 @@ class MNISTTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(quant_result.quantized_model), 55000)
 
-    comparison_result = self._quantizer.compare(
+    comparison_result = self._quantizer.validate(
         error_metrics='mse', signature_test_data=_get_test_data()
     )
     self._check_comparison_result(

@@ -75,7 +75,7 @@ class AddTest(parameterized.TestCase):
     # Skip model size check because the quantized model doesn't decrease as
     # there are no weights in the model file.
 
-    comparion_result = self._quantizer.compare(
+    comparion_result = self._quantizer.validate(
         error_metrics='mse', signature_test_data=_get_test_data(num_inputs=2)
     )
     self._check_comparion_result(
@@ -103,7 +103,7 @@ class AddTest(parameterized.TestCase):
         len(quant_result.quantized_model), len(float_model_bytearray)
     )
 
-    comparion_result = self._quantizer.compare(
+    comparion_result = self._quantizer.validate(
         error_metrics='mse', signature_test_data=_get_test_data(num_inputs=1)
     )
     self._check_comparion_result(

@@ -63,7 +63,7 @@ class GeluTest(parameterized.TestCase):
     calibration_result = self._quantizer.calibrate(_get_calibration_data())
     self._quantizer.quantize(calibration_result)
 
-    comparison_result = self._quantizer.compare(
+    comparison_result = self._quantizer.validate(
         error_metrics='mse', signature_test_data=_get_test_data()
     )
     self._check_comparison_result(

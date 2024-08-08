@@ -83,7 +83,7 @@ class Conv2DTransposeTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(quant_result.quantized_model), 10000)
 
-    comparion_result = self._quantizer.compare(error_metrics='mse')
+    comparion_result = self._quantizer.validate(error_metrics='mse')
     self._check_comparion_result(
         comparion_result,
         weight_tolerance=1e-2 if granularity else 1e-1,
@@ -100,7 +100,7 @@ class Conv2DTransposeTest(parameterized.TestCase):
     quant_result = self._quantizer.quantize()
     self.assertLess(len(quant_result.quantized_model), 10000)
 
-    comparion_result = self._quantizer.compare(error_metrics='mse')
+    comparion_result = self._quantizer.validate(error_metrics='mse')
     self._check_comparion_result(
         comparion_result,
         weight_tolerance=1e-2,
@@ -120,7 +120,7 @@ class Conv2DTransposeTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(quant_result.quantized_model), 10000)
 
-    comparion_result = self._quantizer.compare(
+    comparion_result = self._quantizer.validate(
         error_metrics='mse', signature_test_data=_get_test_data()
     )
     self._check_comparion_result(
@@ -145,7 +145,7 @@ class Conv2DTransposeTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(quant_result.quantized_model), 10000)
 
-    comparion_result = self._quantizer.compare(error_metrics='mse')
+    comparion_result = self._quantizer.validate(error_metrics='mse')
     self._check_comparion_result(
         comparion_result,
         weight_tolerance=1e-5,
