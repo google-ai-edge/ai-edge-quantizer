@@ -16,7 +16,6 @@
 """Uniform quantize in tensor level."""
 
 import dataclasses
-from typing import Union
 import numpy as np
 from ai_edge_quantizer import qtyping
 
@@ -118,24 +117,6 @@ def fix_quantization_params_rank(
       quantized_dimension=quantization_params.quantized_dimension,
       quantized_data=quantization_params.quantized_data,
   )
-
-
-def update_moving_average(
-    smoothing_factor: Union[np.ndarray, float],
-    w: np.ndarray,
-    update: np.ndarray,
-) -> np.ndarray:
-  """Updates weight w with moving average.
-
-  Args:
-    smoothing_factor: Smoothing factor used to update w.
-    w: Matrix w to be updated.
-    update: Value used for update.
-
-  Returns:
-    Weighted sum of w and update.
-  """
-  return smoothing_factor * w + (1.0 - smoothing_factor) * update
 
 
 def uniform_quantize_for_emulated_subchannel(
@@ -350,31 +331,6 @@ def tensor_zp_scale_from_min_max(
   # qmin <= zp <= qmax from bound_min <= 0 <= bound_max.
   zp = assign_quantized_type(zp, qtype)
   return zp, scale
-
-
-def update_tensor_qsv_moving_average(
-    qsv: qtyping.QSV, new_qsv: qtyping.QSV, smoothing_factor: float = 0.95
-) -> qtyping.QSV:
-  """Update the qsv (i.e., min/max) using moving average.
-
-  Args:
-    qsv: The quantization statistical value of the tensor (min/max) that need to
-      be updated.
-    new_qsv: The new qsvs (e.g., from new round of calibration).
-    smoothing_factor: The weight of moving average.
-
-  Returns:
-    The updated qsv for the tensor.
-  """
-  updated_qsv = {}
-  updated_qsv["min"] = update_moving_average(
-      smoothing_factor, qsv["min"], new_qsv["min"]
-  )
-
-  updated_qsv["max"] = update_moving_average(
-      smoothing_factor, qsv["max"], new_qsv["max"]
-  )
-  return updated_qsv
 
 
 def _is_valid_quantization_params(

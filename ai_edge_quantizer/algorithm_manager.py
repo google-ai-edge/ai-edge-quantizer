@@ -21,7 +21,6 @@ from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.nonlinear_quantize import float_casting
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
-from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 
 _TFLOpName = qtyping.TFLOperationName
 
@@ -64,9 +63,6 @@ register_config_check_policy_func(
     default_policy.DEFAULT_CONFIG_CHECK_POLICY,
 )
 
-moving_average_update_qsv = (
-    uniform_quantize_tensor.update_tensor_qsv_moving_average
-)
 
 for op_name, materialize_func in zip(
     (

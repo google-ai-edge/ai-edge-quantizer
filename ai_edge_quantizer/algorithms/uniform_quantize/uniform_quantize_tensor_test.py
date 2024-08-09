@@ -352,25 +352,6 @@ class TensorUtilsTest(parameterized.TestCase):
       # Range has to be extended to include zero.
       self.assertEqual(calculated_min, 0)
 
-  @parameterized.parameters((0), (0.99), (1))
-  def test_update_tensor_qsv_moving_average(self, smoothing_factor):
-    old_qsv = {"min": -10, "max": 8}
-    # Large values to mimic outlier
-    new_qsv = {"min": -1000, "max": 800}
-    updated_qsv = uniform_quantize_tensor.update_tensor_qsv_moving_average(
-        old_qsv, new_qsv, smoothing_factor=smoothing_factor
-    )
-    expected_min = -19.9
-    expected_max = 15.92
-    if smoothing_factor == 0:
-      expected_min = new_qsv["min"]
-      expected_max = new_qsv["max"]
-    elif smoothing_factor == 1:
-      expected_min = old_qsv["min"]
-      expected_max = old_qsv["max"]
-    self.assertAlmostEqual(updated_qsv["min"], expected_min)
-    self.assertAlmostEqual(updated_qsv["max"], expected_max)
-
 
 if __name__ == "__main__":
   googletest.main()

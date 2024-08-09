@@ -25,6 +25,7 @@ import numpy as np
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
+from ai_edge_quantizer.utils import calibration_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 
@@ -196,7 +197,7 @@ class Calibrator:
       if tensor_name not in self._model_qsvs:
         self._model_qsvs[tensor_name] = qsv
       else:
-        updated_qsv = algorithm_manager.moving_average_update_qsv(
+        updated_qsv = calibration_utils.moving_average_update(
             self._model_qsvs[tensor_name], qsv
         )
         self._model_qsvs[tensor_name] = updated_qsv
