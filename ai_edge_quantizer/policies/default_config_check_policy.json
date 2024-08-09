@@ -4,6 +4,46 @@
             "weight_tensor_config": {
                 "num_bits": 4,
                 "symmetric": true,
+                "granularity": "BLOCKWISE",
+                "dtype": "INT",
+                "block_size": 64
+            },
+            "execution_mode": "WEIGHT_ONLY"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "BLOCKWISE",
+                "dtype": "INT",
+                "block_size": 64
+            },
+            "execution_mode": "WEIGHT_ONLY"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "BLOCKWISE",
+                "dtype": "INT",
+                "block_size": 64
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "BLOCKWISE",
+                "dtype": "INT",
+                "block_size": 64
+            },
+            "execution_mode": "DRQ"
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
                 "granularity": "CHANNELWISE",
                 "dtype": "INT",
                 "block_size": 0

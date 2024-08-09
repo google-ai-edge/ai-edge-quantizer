@@ -31,6 +31,50 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
             weight_tensor_config=_TensorQuantizationConfig(
                 num_bits=4,
                 symmetric=True,
+                granularity=_Granularity.BLOCKWISE,
+                dtype=_INT,
+                block_size=64,
+            ),
+            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+        ),
+        _OpQuantizationConfig(
+            activation_tensor_config=None,
+            weight_tensor_config=_TensorQuantizationConfig(
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.BLOCKWISE,
+                dtype=_INT,
+                block_size=64,
+            ),
+            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+        ),
+        _OpQuantizationConfig(
+            activation_tensor_config=None,
+            weight_tensor_config=_TensorQuantizationConfig(
+                num_bits=4,
+                symmetric=True,
+                granularity=_Granularity.BLOCKWISE,
+                dtype=_INT,
+                block_size=64,
+            ),
+            execution_mode=_OpExecutionMode.DRQ,
+        ),
+        _OpQuantizationConfig(
+            activation_tensor_config=None,
+            weight_tensor_config=_TensorQuantizationConfig(
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.BLOCKWISE,
+                dtype=_INT,
+                block_size=64,
+            ),
+            execution_mode=_OpExecutionMode.DRQ,
+        ),
+        _OpQuantizationConfig(
+            activation_tensor_config=None,
+            weight_tensor_config=_TensorQuantizationConfig(
+                num_bits=4,
+                symmetric=True,
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
