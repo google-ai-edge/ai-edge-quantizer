@@ -61,3 +61,20 @@ def moving_average_update(
       smoothing_factor, qsv["max"], new_qsv["max"]
   )
   return updated_qsv
+
+
+def min_max_update(qsv: qtyping.QSV, new_qsv: qtyping.QSV) -> qtyping.QSV:
+  """Update the QSV with minimum min values and maximum max values.
+
+  Args:
+    qsv: The quantization statistical value of the tensor (min/max) that need to
+      be updated.
+    new_qsv: The new QSVs (e.g., from new round of calibration).
+
+  Returns:
+    The updated QSV for the tensor.
+  """
+  updated_qsv = {}
+  updated_qsv["min"] = np.minimum(qsv["min"], new_qsv["min"])
+  updated_qsv["max"] = np.maximum(qsv["max"], new_qsv["max"])
+  return updated_qsv

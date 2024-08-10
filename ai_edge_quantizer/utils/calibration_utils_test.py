@@ -49,6 +49,29 @@ class CalibrationUtilsTest(parameterized.TestCase):
     self.assertAlmostEqual(updated_qsv["min"], expected_vals["min"])
     self.assertAlmostEqual(updated_qsv["max"], expected_vals["max"])
 
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="scalar",
+          old_qsv={"min": -10, "max": 8},
+          new_qsv={"min": -1000, "max": 1},
+          expected_qsv={"min": -1000, "max": 8},
+      ),
+      dict(
+          testcase_name="2darray",
+          old_qsv={"min": [[-19], [20]], "max": [[21], [250]]},
+          new_qsv={"min": [[-1000], [25]], "max": [[33], [100]]},
+          expected_qsv={"min": [[-1000], [20]], "max": [[33], [250]]},
+      ),
+  )
+  def test_update_tensor_qsv_min_max(self, old_qsv, new_qsv, expected_qsv):
+    updated_qsv = calibration_utils.min_max_update(old_qsv, new_qsv)
+    if isinstance(expected_qsv["min"], list):
+      self.assertListEqual(list(updated_qsv["min"]), expected_qsv["min"])
+      self.assertListEqual(list(updated_qsv["max"]), expected_qsv["max"])
+    else:
+      self.assertEqual(updated_qsv["min"], expected_qsv["min"])
+      self.assertEqual(updated_qsv["max"], expected_qsv["max"])
+
 
 if __name__ == "__main__":
   googletest.main()
