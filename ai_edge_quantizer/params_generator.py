@@ -233,27 +233,25 @@ class ParamsGenerator:
         quantization settings.
     """
     for tensors in self.buffer_to_tensors.values():
+      if len(tensors) <= 1:
+        continue
       first_tensor = tensors[0]
-      # TODO: b/352167271 - Stop returning None after the bug is fixed.
-      first_tensor_params = self.model_quant_results.get(
-          tfl_flatbuffer_utils.get_tensor_name(first_tensor), None
-      )
+      first_tensor_params = self.model_quant_results[
+          tfl_flatbuffer_utils.get_tensor_name(first_tensor)
+      ]
       for tensor in tensors[1:]:
-        tensor_params = self.model_quant_results.get(
-            tfl_flatbuffer_utils.get_tensor_name(tensor), None
-        )
-        # TODO: b/352167271 - Remove this check after the bug is fixed.
-        if tensor_params is None and first_tensor_params is None:
-          continue
-        error_msg = (
-            f'The tensors {first_tensor.name} and {tensor.name} do not have the'
-            ' same quantization parameters even though they share the same'
-            ' buffer. Please modify your quantization recipe to make sure the'
-            ' two tensors have the same quantization settings.'
-        )
+        tensor_params = self.model_quant_results[
+            tfl_flatbuffer_utils.get_tensor_name(tensor)
+        ]
         if not _compatible_tensor_transformation_params(
             first_tensor_params, tensor_params
         ):
+          error_msg = (
+              f'The tensors {first_tensor.name} and {tensor.name} do not have'
+              ' the same quantization parameters even though they share the'
+              ' same buffer. Please modify your quantization recipe to make'
+              ' sure the two tensors have the same quantization settings.'
+          )
           raise RuntimeError(error_msg)
 
   def _modify_io_tensor_transformations(
