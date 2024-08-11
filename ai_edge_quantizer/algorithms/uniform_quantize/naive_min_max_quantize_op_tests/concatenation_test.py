@@ -26,7 +26,7 @@ from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 _TFLOpName = qtyping.TFLOperationName
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
 _OpTestInfo = naive_min_max_test_utils.OpTestInfo
@@ -76,7 +76,7 @@ class ConcatenationTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     op_quant_config = qtyping.OpQuantizationConfig(
         activation_tensor_config=activation_tensor_config,
         weight_tensor_config=_DEFAULT_WEIGHT_QUANT_SETTING,
-        execution_mode=_OpExecutionMode.SRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]

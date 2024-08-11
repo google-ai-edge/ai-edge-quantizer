@@ -146,7 +146,7 @@ def check_if_valid_op_config(
 
   if not check_passed:
     raise ValueError(
-        f"Unsupported op for {op_quant_config.execution_mode}: {op_name}."
+        f"Unsupported op for {op_quant_config.compute_precision}: {op_name}."
         f" Error: {error_msg}"
     )
 
@@ -869,7 +869,11 @@ def get_tensor_transformations(
     The transformations for the tensor.
   """
   transformations = []
-  if op_quant_config.execution_mode == qtyping.OpExecutionMode.SRQ:
+  # Check if SRQ.
+  if (
+      op_quant_config.compute_precision == qtyping.ComputePrecision.INTEGER
+      and op_quant_config.activation_tensor_config is not None
+  ):
     if is_inbounding_tensor:
       transformations = [_QuantTransformation.ADD_QUANTIZE]
       if is_constant:
@@ -878,7 +882,11 @@ def get_tensor_transformations(
         transformations = [_QuantTransformation.QUANTIZE_TENSOR]
     else:
       transformations = [_QuantTransformation.ADD_DEQUANTIZE]
-  elif op_quant_config.execution_mode == qtyping.OpExecutionMode.DRQ:
+  # Check if DRQ.
+  elif (
+      op_quant_config.compute_precision == qtyping.ComputePrecision.INTEGER
+      and op_quant_config.activation_tensor_config is None
+  ):
     if is_inbounding_tensor and is_constant:
       transformations = [_QuantTransformation.QUANTIZE_TENSOR]
     else:
@@ -889,7 +897,11 @@ def get_tensor_transformations(
       and is_constant
   ):
     transformations = [_QuantTransformation.EMULATED_SUBCHANNEL]
-  elif op_quant_config.execution_mode == qtyping.OpExecutionMode.WEIGHT_ONLY:
+  # Check if WEIGHT_ONLY.
+  elif (
+      op_quant_config.compute_precision == qtyping.ComputePrecision.FLOAT
+      and op_quant_config.explicit_dequantize
+  ):
     if is_inbounding_tensor and is_constant:
       # ADD_DEQUANTIZE is always accompanined with a quantization parameters.
       # Thus [ADD_DEQUANTIZE] is equivalent to [QUANTIZE_TENSOR, ADD_DEQUANTIZE]
@@ -899,7 +911,7 @@ def get_tensor_transformations(
       transformations = [_QuantTransformation.NO_QUANTIZE]
   else:
     raise ValueError(
-        "Unsupported execution mode: %s" % op_quant_config.execution_mode
+        "Unsupported compute precision: %s" % op_quant_config.compute_precision
     )
   return transformations
 
@@ -972,10 +984,7 @@ def _get_tensor_quant_params(
       tensor_quant_config.symmetric,
   )
   quantized_dim = None
-  if (
-      tensor_quant_config.granularity
-      == qtyping.QuantGranularity.CHANNELWISE
-  ):
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.CHANNELWISE:
     if op_info.op_name == _TFLOpName.BATCH_MATMUL:
       quantized_dim = _get_bmm_weight_quantized_dim(
           tensor_content, adj_y=op_info.op.builtinOptions.adjY
@@ -993,10 +1002,7 @@ def _get_tensor_quant_params(
   )
   if tensor_content is None:
     return quant_params
-  if (
-      tensor_quant_config.granularity
-      == qtyping.QuantGranularity.BLOCKWISE
-  ):
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
     quantized_vars = (
         uniform_quantize_tensor.uniform_quantize_for_emulated_subchannel(
             tensor_content, quant_params

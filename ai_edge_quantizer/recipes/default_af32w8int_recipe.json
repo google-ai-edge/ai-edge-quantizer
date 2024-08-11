@@ -11,7 +11,8 @@
         "dtype": "INT",
         "block_size": 0
       },
-      "execution_mode": "DRQ",
+      "compute_precision": "INTEGER",
+      "explicit_dequantize": false,
       "skip_checks": false
     }
   }

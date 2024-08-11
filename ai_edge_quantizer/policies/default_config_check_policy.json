@@ -8,7 +8,8 @@
                 "dtype": "INT",
                 "block_size": 64
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -18,7 +19,8 @@
                 "dtype": "INT",
                 "block_size": 64
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -28,7 +30,8 @@
                 "dtype": "INT",
                 "block_size": 64
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -38,7 +41,8 @@
                 "dtype": "INT",
                 "block_size": 64
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -48,7 +52,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -58,7 +63,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -68,7 +74,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -78,7 +85,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -88,37 +96,41 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
-        },
-        {
-            "weight_tensor_config": {
-                "num_bits": 4,
-                "symmetric": false,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "WEIGHT_ONLY"
-        },
-        {
-            "weight_tensor_config": {
-                "num_bits": 4,
-                "symmetric": true,
-                "granularity": "TENSORWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
                 "num_bits": 4,
                 "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
                 "granularity": "TENSORWISE",
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -128,7 +140,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -138,7 +151,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -148,7 +162,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -158,7 +173,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "activation_tensor_config": {
@@ -175,7 +191,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -192,7 +209,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -209,7 +227,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -226,41 +245,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
-        },
-        {
-            "activation_tensor_config": {
-                "num_bits": 8,
-                "symmetric": false,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "weight_tensor_config": {
-                "num_bits": 4,
-                "symmetric": true,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "SRQ"
-        },
-        {
-            "activation_tensor_config": {
-                "num_bits": 8,
-                "symmetric": false,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "weight_tensor_config": {
-                "num_bits": 4,
-                "symmetric": true,
-                "granularity": "TENSORWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -271,13 +257,50 @@
                 "block_size": 0
             },
             "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
                 "num_bits": 8,
                 "symmetric": true,
                 "granularity": "CHANNELWISE",
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -294,7 +317,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -311,7 +335,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -328,7 +353,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -345,7 +371,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -362,7 +389,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -379,7 +407,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -396,7 +425,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -413,7 +443,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -430,7 +461,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -447,7 +479,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -464,7 +497,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -481,7 +515,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -498,7 +533,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -515,7 +551,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -532,7 +569,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -549,7 +587,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -566,7 +605,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "CONV_2D": [
@@ -578,7 +618,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -588,7 +629,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -598,94 +640,85 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
-        },
-        {
-            "weight_tensor_config": {
-                "num_bits": 4,
-                "symmetric": false,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "WEIGHT_ONLY"
-        },
-        {
-            "weight_tensor_config": {
-                "num_bits": 4,
-                "symmetric": true,
-                "granularity": "TENSORWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
                 "num_bits": 4,
                 "symmetric": false,
-                "granularity": "TENSORWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "WEIGHT_ONLY"
-        },
-        {
-            "weight_tensor_config": {
-                "num_bits": 8,
-                "symmetric": true,
                 "granularity": "CHANNELWISE",
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
-            "weight_tensor_config": {
-                "num_bits": 8,
-                "symmetric": false,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "WEIGHT_ONLY"
-        },
-        {
-            "weight_tensor_config": {
-                "num_bits": 8,
-                "symmetric": true,
-                "granularity": "TENSORWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "WEIGHT_ONLY"
-        },
-        {
-            "weight_tensor_config": {
-                "num_bits": 8,
-                "symmetric": false,
-                "granularity": "TENSORWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "WEIGHT_ONLY"
-        },
-        {
-            "activation_tensor_config": {
-                "num_bits": 8,
-                "symmetric": true,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
             "weight_tensor_config": {
                 "num_bits": 4,
                 "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
                 "granularity": "CHANNELWISE",
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "activation_tensor_config": {
@@ -698,11 +731,30 @@
             "weight_tensor_config": {
                 "num_bits": 4,
                 "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
                 "granularity": "TENSORWISE",
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -719,7 +771,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -736,7 +789,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -753,7 +807,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -770,7 +825,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -787,7 +843,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -804,7 +861,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -821,7 +879,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -838,7 +897,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -855,7 +915,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -872,7 +933,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -889,7 +951,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -906,7 +969,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -923,7 +987,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -940,7 +1005,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -957,7 +1023,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -974,7 +1041,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -991,7 +1059,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1008,7 +1077,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1025,7 +1095,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1042,7 +1113,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1059,7 +1131,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1076,7 +1149,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "EMBEDDING_LOOKUP": [
@@ -1088,7 +1162,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -1098,7 +1173,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -1108,7 +1184,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -1118,7 +1195,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -1128,37 +1206,41 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
-        },
-        {
-            "weight_tensor_config": {
-                "num_bits": 4,
-                "symmetric": false,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "WEIGHT_ONLY"
-        },
-        {
-            "weight_tensor_config": {
-                "num_bits": 4,
-                "symmetric": true,
-                "granularity": "TENSORWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
                 "num_bits": 4,
                 "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": true,
                 "granularity": "TENSORWISE",
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
+        },
+        {
+            "weight_tensor_config": {
+                "num_bits": 4,
+                "symmetric": false,
+                "granularity": "TENSORWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -1168,7 +1250,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -1178,7 +1261,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -1188,7 +1272,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -1198,7 +1283,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         }
     ],
     "AVERAGE_POOL_2D": [
@@ -1217,7 +1303,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1234,7 +1321,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1251,7 +1339,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1268,7 +1357,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1285,7 +1375,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1302,7 +1393,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1319,7 +1411,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1336,7 +1429,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1353,7 +1447,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1370,7 +1465,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1387,7 +1483,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1404,7 +1501,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "RESHAPE": [
@@ -1423,7 +1521,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1440,7 +1539,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1457,7 +1557,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1474,7 +1575,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1491,7 +1593,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1508,7 +1611,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1525,7 +1629,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1542,7 +1647,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1559,7 +1665,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1576,7 +1683,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1593,7 +1701,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1610,7 +1719,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "SOFTMAX": [
@@ -1629,7 +1739,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1646,7 +1757,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1663,7 +1775,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1680,7 +1793,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1697,7 +1811,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1714,7 +1829,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1731,7 +1847,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1748,7 +1865,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1765,7 +1883,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1782,7 +1901,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1799,7 +1919,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1816,7 +1937,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "DEPTHWISE_CONV_2D": [
@@ -1828,7 +1950,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -1838,7 +1961,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -1848,7 +1972,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -1858,7 +1983,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -1868,7 +1994,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -1878,7 +2005,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -1888,7 +2016,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -1898,7 +2027,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -1908,7 +2038,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -1918,7 +2049,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "activation_tensor_config": {
@@ -1935,7 +2067,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1952,24 +2085,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
-        },
-        {
-            "activation_tensor_config": {
-                "num_bits": 8,
-                "symmetric": false,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "weight_tensor_config": {
-                "num_bits": 8,
-                "symmetric": true,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -1982,11 +2099,30 @@
             "weight_tensor_config": {
                 "num_bits": 8,
                 "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
                 "granularity": "TENSORWISE",
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2003,7 +2139,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2020,7 +2157,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2037,7 +2175,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2054,7 +2193,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2071,7 +2211,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2088,7 +2229,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2105,7 +2247,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2122,7 +2265,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "TANH": [
@@ -2141,7 +2285,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2158,7 +2303,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2175,7 +2321,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2192,7 +2339,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2209,7 +2357,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2226,7 +2375,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2243,7 +2393,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2260,7 +2411,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2277,7 +2429,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2294,7 +2447,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2311,7 +2465,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2328,7 +2483,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "TRANSPOSE": [
@@ -2347,7 +2503,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2364,7 +2521,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2381,7 +2539,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2398,7 +2557,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2415,7 +2575,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2432,7 +2593,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2449,7 +2611,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2466,7 +2629,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2483,7 +2647,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2500,7 +2665,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2517,7 +2683,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2534,7 +2701,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "GELU": [
@@ -2553,7 +2721,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2570,7 +2739,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2587,7 +2757,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2604,7 +2775,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2621,7 +2793,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2638,7 +2811,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2655,7 +2829,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2672,7 +2847,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2689,7 +2865,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2706,7 +2883,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2723,7 +2901,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2740,7 +2919,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "ADD": [
@@ -2759,7 +2939,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2776,7 +2957,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2793,7 +2975,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2810,7 +2993,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2827,7 +3011,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2844,7 +3029,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2861,7 +3047,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2878,7 +3065,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2895,7 +3083,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2912,7 +3101,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2929,7 +3119,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2946,7 +3137,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "SUB": [
@@ -2965,7 +3157,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2982,7 +3175,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -2999,7 +3193,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3016,7 +3211,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3033,7 +3229,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3050,7 +3247,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3067,7 +3265,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3084,7 +3283,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3101,7 +3301,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3118,7 +3319,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3135,7 +3337,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3152,7 +3355,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "MUL": [
@@ -3171,7 +3375,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3188,7 +3393,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3205,7 +3411,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3222,7 +3429,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3239,7 +3447,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3256,7 +3465,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3273,7 +3483,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3290,7 +3501,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3307,7 +3519,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3324,7 +3537,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3341,7 +3555,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3358,7 +3573,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "BATCH_MATMUL": [
@@ -3370,7 +3586,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -3380,7 +3597,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -3390,7 +3608,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -3400,7 +3619,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -3410,7 +3630,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -3420,7 +3641,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -3430,7 +3652,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -3440,7 +3663,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -3450,7 +3674,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -3460,7 +3685,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "activation_tensor_config": {
@@ -3477,7 +3703,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3494,24 +3721,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
-        },
-        {
-            "activation_tensor_config": {
-                "num_bits": 8,
-                "symmetric": false,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "weight_tensor_config": {
-                "num_bits": 8,
-                "symmetric": true,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3524,11 +3735,30 @@
             "weight_tensor_config": {
                 "num_bits": 8,
                 "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
                 "granularity": "TENSORWISE",
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3545,7 +3775,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3562,7 +3793,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3579,7 +3811,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3596,7 +3829,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3613,7 +3847,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3630,7 +3865,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3647,7 +3883,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3664,7 +3901,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "MEAN": [
@@ -3683,7 +3921,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3700,7 +3939,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3717,7 +3957,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3734,7 +3975,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3751,7 +3993,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3768,7 +4011,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3785,7 +4029,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3802,7 +4047,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3819,7 +4065,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3836,7 +4083,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3853,7 +4101,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3870,7 +4119,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "RSQRT": [
@@ -3889,7 +4139,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3906,7 +4157,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3923,7 +4175,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3940,7 +4193,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3957,7 +4211,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3974,7 +4229,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -3991,7 +4247,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4008,7 +4265,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4025,7 +4283,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4042,7 +4301,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4059,7 +4319,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4076,7 +4337,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "CONCATENATION": [
@@ -4095,7 +4357,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4112,7 +4375,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4129,7 +4393,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4146,7 +4411,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4163,7 +4429,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4180,7 +4447,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4197,7 +4465,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4214,7 +4483,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4231,7 +4501,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4248,7 +4519,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4265,7 +4537,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4282,7 +4555,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "STRIDED_SLICE": [
@@ -4301,7 +4575,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4318,7 +4593,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4335,7 +4611,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4352,7 +4629,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4369,7 +4647,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4386,7 +4665,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4403,7 +4683,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4420,7 +4701,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4437,7 +4719,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4454,7 +4737,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4471,7 +4755,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4488,7 +4773,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "SPLIT": [
@@ -4507,7 +4793,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4524,7 +4811,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4541,7 +4829,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4558,7 +4847,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4575,7 +4865,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4592,7 +4883,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4609,7 +4901,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4626,7 +4919,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4643,7 +4937,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4660,7 +4955,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4677,7 +4973,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4694,7 +4991,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ],
     "CONV_2D_TRANSPOSE": [
@@ -4706,7 +5004,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -4716,7 +5015,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "DRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "weight_tensor_config": {
@@ -4726,7 +5026,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -4736,7 +5037,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -4746,7 +5048,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -4756,7 +5059,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -4766,7 +5070,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -4776,7 +5081,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -4786,7 +5092,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "weight_tensor_config": {
@@ -4796,7 +5103,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "WEIGHT_ONLY"
+            "compute_precision": "FLOAT",
+            "explicit_dequantize": true
         },
         {
             "activation_tensor_config": {
@@ -4813,7 +5121,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4830,24 +5139,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
-        },
-        {
-            "activation_tensor_config": {
-                "num_bits": 8,
-                "symmetric": false,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "weight_tensor_config": {
-                "num_bits": 8,
-                "symmetric": true,
-                "granularity": "CHANNELWISE",
-                "dtype": "INT",
-                "block_size": 0
-            },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4860,11 +5153,30 @@
             "weight_tensor_config": {
                 "num_bits": 8,
                 "symmetric": true,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
+        },
+        {
+            "activation_tensor_config": {
+                "num_bits": 8,
+                "symmetric": false,
+                "granularity": "CHANNELWISE",
+                "dtype": "INT",
+                "block_size": 0
+            },
+            "weight_tensor_config": {
+                "num_bits": 8,
+                "symmetric": true,
                 "granularity": "TENSORWISE",
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4881,7 +5193,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4898,7 +5211,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4915,7 +5229,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4932,7 +5247,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4949,7 +5265,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4966,7 +5283,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -4983,7 +5301,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         },
         {
             "activation_tensor_config": {
@@ -5000,7 +5319,8 @@
                 "dtype": "INT",
                 "block_size": 0
             },
-            "execution_mode": "SRQ"
+            "compute_precision": "INTEGER",
+            "explicit_dequantize": false
         }
     ]
 }

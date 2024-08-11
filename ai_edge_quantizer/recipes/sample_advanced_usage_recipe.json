@@ -16,7 +16,8 @@
         "channel_wise": true,
         "dtype": "INT"
       },
-      "execution_mode": "SRQ",
+      "compute_precision": "INTEGER",
+      "explicit_dequantize": false,
       "skip_checks": false
     }
   },
@@ -31,7 +32,8 @@
         "channel_wise": true,
         "dtype": "INT"
       },
-      "execution_mode": "WEIGHT_ONLY",
+      "compute_precision": "FLOAT",
+      "explicit_dequantize": true,
       "skip_checks": false
     }
   },

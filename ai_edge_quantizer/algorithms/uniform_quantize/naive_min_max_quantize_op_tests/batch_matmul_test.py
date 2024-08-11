@@ -29,7 +29,7 @@ _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(
     "../../../tests/models"
 )
 _TFLOpName = qtyping.TFLOperationName
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
 _OpTestInfo = naive_min_max_test_utils.OpTestInfo
@@ -44,9 +44,7 @@ class BatchMatmulTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
   def setUp(self):
     super().setUp()
     np.random.seed(666)
-    self._test_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, "bmm.tflite"
-    )
+    self._test_model_path = os.path.join(_TEST_DATA_PREFIX_PATH, "bmm.tflite")
     self._op_test_info = _OpTestInfo(
         test_model=tfl_flatbuffer_utils.read_model(self._test_model_path),
         op_tensor_names={},
@@ -61,7 +59,7 @@ class BatchMatmulTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
 
   @parameterized.named_parameters(
       ("activation_int8_asymmetric_srq", 8, False),
-      ("activation_int16_symmetric", 16, True)
+      ("activation_int16_symmetric", 16, True),
   )
   def test_batch_matmul_adjy_false_srq_succeeds(
       self,
@@ -93,7 +91,7 @@ class BatchMatmulTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         subgraph_op_index=subgraph_op_id,
         op_quant_config=qtyping.OpQuantizationConfig(
             activation_tensor_config=activation_tensor_config,
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,  # SRQ.
         ),
     )
     self._test_no_weights_op(
@@ -136,7 +134,7 @@ class BatchMatmulTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         subgraph_op_index=subgraph_op_id,
         op_quant_config=qtyping.OpQuantizationConfig(
             activation_tensor_config=activation_tensor_config,
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,  # SRQ.
         ),
     )
     self._test_no_weights_op(
@@ -173,17 +171,19 @@ class BatchMatmulConstantInputTest(
   @parameterized.product(
       num_bits_weight=(4, 8),
       symmetric_weight=(True, False),
-      execution_mode=(
-          _OpExecutionMode.SRQ,
-          _OpExecutionMode.DRQ,
-          _OpExecutionMode.WEIGHT_ONLY,
+      test_case=(
+          # Tuple holds compute precision, whether to use srq and whether
+          # to use explicit dequantize.
+          (_ComputePrecision.INTEGER, True, False),
+          (_ComputePrecision.INTEGER, False, False),
+          (_ComputePrecision.FLOAT, False, True),
       ),
   )
   def test_batch_matmul_adjy_false_succeeds(
       self,
       num_bits_weight,
       symmetric_weight,
-      execution_mode,
+      test_case,
   ):
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
@@ -195,11 +195,13 @@ class BatchMatmulConstantInputTest(
     op_tensor_names["output"] = (
         "BatchMatMulV3;jax2tf_export_func_/PartitionedCall/BatchMatMulV3"
     )
+    compute_precision, is_srq, explicit_dequantize = test_case
     self._op_test_info.op_tensor_names = op_tensor_names
     self._op_test_info.quantized_dimension = 2
 
     activation_tensor_config = None
-    if execution_mode == _OpExecutionMode.SRQ:
+    # Check if SRQ.
+    if compute_precision == _ComputePrecision.INTEGER and is_srq:
       activation_tensor_config = _DEFAULT_ACTIVATION_QUANT_SETTING
 
     op_info = qtyping.OpInfo(
@@ -213,7 +215,8 @@ class BatchMatmulConstantInputTest(
                 symmetric=symmetric_weight,
                 granularity=qtyping.QuantGranularity.TENSORWISE,
             ),
-            execution_mode=execution_mode,
+            compute_precision=compute_precision,
+            explicit_dequantize=explicit_dequantize,
         ),
     )
     self._test_fc_bmm_conv(
@@ -226,17 +229,19 @@ class BatchMatmulConstantInputTest(
   @parameterized.product(
       num_bits_weight=(4, 8),
       symmetric_weight=(True, False),
-      execution_mode=(
-          _OpExecutionMode.SRQ,
-          _OpExecutionMode.DRQ,
-          _OpExecutionMode.WEIGHT_ONLY,
+      test_case=(
+          # Tuple holds compute precision, whether to use srq and whether
+          # to use explicit dequantize.
+          (_ComputePrecision.INTEGER, True, False),
+          (_ComputePrecision.INTEGER, False, False),
+          (_ComputePrecision.FLOAT, False, True),
       ),
   )
   def test_batch_matmul_adjy_true_succeeds(
       self,
       num_bits_weight,
       symmetric_weight,
-      execution_mode,
+      test_case,
   ):
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
@@ -248,11 +253,13 @@ class BatchMatmulConstantInputTest(
         "BatchMatMulV3;jax2tf_export_func_/PartitionedCall/BatchMatMulV3"
     )
     op_tensor_names["output"] = "Identity_1"
+    compute_precision, is_srq, explicit_dequantize = test_case
     self._op_test_info.op_tensor_names = op_tensor_names
     self._op_test_info.quantized_dimension = 1
 
     activation_tensor_config = None
-    if execution_mode == _OpExecutionMode.SRQ:
+    # Check if SRQ.
+    if compute_precision == _ComputePrecision.INTEGER and is_srq:
       activation_tensor_config = _DEFAULT_ACTIVATION_QUANT_SETTING
 
     op_info = qtyping.OpInfo(
@@ -266,7 +273,8 @@ class BatchMatmulConstantInputTest(
                 symmetric=symmetric_weight,
                 granularity=qtyping.QuantGranularity.TENSORWISE,
             ),
-            execution_mode=execution_mode,
+            compute_precision=compute_precision,
+            explicit_dequantize=explicit_dequantize,
         ),
     )
     self._test_fc_bmm_conv(
@@ -275,6 +283,7 @@ class BatchMatmulConstantInputTest(
         self._op_test_info,
         naive_min_max_quantize.materialize_batch_matmul,
     )
+
 
 if __name__ == "__main__":
   googletest.main()

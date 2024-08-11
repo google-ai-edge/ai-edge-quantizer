@@ -23,7 +23,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _OpName = qtyping.TFLOperationName
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _OpQuantConfig = qtyping.OpQuantizationConfig
@@ -58,7 +58,12 @@ class MNISTTest(parameterized.TestCase):
     self._quantizer = quantizer.Quantizer(self.float_model_path)
 
   @parameterized.product(
-      execution_mode=[_OpExecutionMode.WEIGHT_ONLY, _OpExecutionMode.DRQ],
+      test_case=[
+          # Tuple holds compute precision and whether to use explicit
+          # dequantize.
+          (_ComputePrecision.FLOAT, True),  # WEIGHT_ONLY.
+          (_ComputePrecision.INTEGER, False),  # DRQ.
+      ],
       symmetric_weight=[True, False],
       granularity=[
           qtyping.QuantGranularity.CHANNELWISE,
@@ -66,12 +71,12 @@ class MNISTTest(parameterized.TestCase):
       ],
   )
   def test_mnist_toy_model_int8_weight_only(
-      self, execution_mode, symmetric_weight, granularity
+      self, test_case, symmetric_weight, granularity
   ):
-
+    compute_precision, explicit_dequantize = test_case
     # asym DRQ is not supported
     # TODO: b/335254997 - fail when trying to use unsupported recipe.
-    if execution_mode == _OpExecutionMode.DRQ and not symmetric_weight:
+    if compute_precision == _ComputePrecision.INTEGER and not symmetric_weight:
       return
     self._quantizer.update_quantization_recipe(
         regex='.*',
@@ -82,7 +87,8 @@ class MNISTTest(parameterized.TestCase):
                 symmetric=symmetric_weight,
                 granularity=granularity,
             ),
-            execution_mode=execution_mode,
+            compute_precision=compute_precision,
+            explicit_dequantize=explicit_dequantize,
         ),
     )
     _ = self._quantizer.quantize()
@@ -104,16 +110,20 @@ class MNISTTest(parameterized.TestCase):
     )
 
   @parameterized.product(
-      execution_mode=[_OpExecutionMode.WEIGHT_ONLY, _OpExecutionMode.DRQ],
+      test_case=[
+          # Tuple holds compute precision and whether to use explicit
+          # dequantize.
+          (_ComputePrecision.FLOAT, True),  # WEIGHT_ONLY.
+          (_ComputePrecision.INTEGER, False),  # DRQ.
+      ],
       symmetric_weight=[True, False],
   )
-  def test_mnist_toy_model_int4_weight_only(
-      self, execution_mode, symmetric_weight
-  ):
+  def test_mnist_toy_model_int4_weight_only(self, test_case, symmetric_weight):
 
+    compute_precision, explicit_dequantize = test_case
     # Asym DRQ is not supported.
     # TODO: b/335254997 - Fail when trying to use unsupported recipe.
-    if execution_mode == _OpExecutionMode.DRQ and not symmetric_weight:
+    if compute_precision == _ComputePrecision.INTEGER and not symmetric_weight:
       return
     self._quantizer.update_quantization_recipe(
         regex='.*',
@@ -124,7 +134,8 @@ class MNISTTest(parameterized.TestCase):
                 symmetric=symmetric_weight,
                 granularity=qtyping.QuantGranularity.CHANNELWISE,
             ),
-            execution_mode=execution_mode,
+            compute_precision=compute_precision,
+            explicit_dequantize=explicit_dequantize,
         ),
     )
     _ = self._quantizer.quantize()
@@ -149,7 +160,7 @@ class MNISTTest(parameterized.TestCase):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=16, dtype=qtyping.TensorDataType.FLOAT
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
         ),
     )
     _ = self._quantizer.quantize()

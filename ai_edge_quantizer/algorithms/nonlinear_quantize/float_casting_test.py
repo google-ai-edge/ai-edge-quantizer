@@ -24,7 +24,7 @@ from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("../../tests/models")
 _TFLOpName = qtyping.TFLOperationName
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
 
@@ -62,7 +62,8 @@ class Fp16QuantizeTest(parameterized.TestCase):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=16, dtype=qtyping.TensorDataType.FLOAT
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+            explicit_dequantize=True,
         ),
     )
 
@@ -96,7 +97,8 @@ class Fp16QuantizeTest(parameterized.TestCase):
               weight_tensor_config=_TensorQuantConfig(
                   num_bits=16, dtype=qtyping.TensorDataType.FLOAT
               ),
-              execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+              compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+              explicit_dequantize=True,
           ),
       )
 
@@ -128,7 +130,8 @@ class Fp16QuantizeTest(parameterized.TestCase):
               weight_tensor_config=_TensorQuantConfig(
                   num_bits=8, dtype=qtyping.TensorDataType.FLOAT
               ),
-              execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+              compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+              explicit_dequantize=True,
           ),
       )
 
@@ -160,7 +163,8 @@ class Fp16QuantizeTest(parameterized.TestCase):
               weight_tensor_config=_TensorQuantConfig(
                   num_bits=16, dtype=qtyping.TensorDataType.INT
               ),
-              execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+              compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+              explicit_dequantize=True,
           ),
       )
 
@@ -188,7 +192,8 @@ class Fp16QuantizeTest(parameterized.TestCase):
               weight_tensor_config=_TensorQuantConfig(
                   num_bits=16, dtype=qtyping.TensorDataType.FLOAT
               ),
-              execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+              compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+              explicit_dequantize=True,
           ),
       )
 
@@ -226,7 +231,8 @@ class Fp16QuantizeTest(parameterized.TestCase):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=16, dtype=qtyping.TensorDataType.FLOAT
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+            explicit_dequantize=True,
         ),
     )
 
@@ -251,7 +257,8 @@ class Fp16QuantizeTest(parameterized.TestCase):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=16, dtype=qtyping.TensorDataType.FLOAT
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+            explicit_dequantize=True,
         ),
     )
 
@@ -299,7 +306,7 @@ class Fp16QuantizeTest(parameterized.TestCase):
               weight_tensor_config=_TensorQuantConfig(
                   num_bits=16, dtype=qtyping.TensorDataType.FLOAT
               ),
-              execution_mode=_OpExecutionMode.DRQ,
+              compute_precision=_ComputePrecision.INTEGER,  # DRQ.
           ),
       )
 
@@ -328,7 +335,8 @@ class Fp16QuantizeTest(parameterized.TestCase):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=16, dtype=qtyping.TensorDataType.FLOAT
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+            explicit_dequantize=True,
         ),
     )
 
@@ -421,7 +429,8 @@ class Fp16QuantizeTest(parameterized.TestCase):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=16, dtype=qtyping.TensorDataType.FLOAT
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+            explicit_dequantize=True,
         ),
     )
 

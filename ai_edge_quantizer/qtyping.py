@@ -70,6 +70,13 @@ class OpExecutionMode(str, enum.Enum):
   SRQ = 'SRQ'  # Static range quantization.
 
 
+class ComputePrecision(str, enum.Enum):
+  """The precision of the compute operation."""
+
+  INTEGER = 'INTEGER'
+  FLOAT = 'FLOAT'
+
+
 class TensorDataType(str, enum.Enum):
   INT = 'INT'
   FLOAT = 'FLOAT'
@@ -279,8 +286,9 @@ class OpQuantizationConfig:
       tensors in the op (i.e., runtime tensors).
     weight_tensor_config: The quantization configuration for weight tensor in
       the op.
-    execution_mode: How to execute the op after quantization.
+    compute_precision: The precision of the compute operation.
     skip_checks: Whether to skip op quantization config checks.
+    explicit_dequantize: Whether to add explicit dequantize op.
   """
 
   # Quant config for activation tensors in the op (i.e., runtime tensors).
@@ -294,8 +302,11 @@ class OpQuantizationConfig:
       num_bits=8,
   )
 
-  # How to execute the op after quantization.
-  execution_mode: OpExecutionMode = OpExecutionMode.WEIGHT_ONLY
+  # The precision of the compute operation.
+  compute_precision: ComputePrecision = ComputePrecision.INTEGER
+
+  # Whether to add explicit dequantize op.
+  explicit_dequantize: bool = False
 
   # For advanced users only. If set, the quantizer will ignore all op
   # configuration checks and forcefully quantize this op according to the user
@@ -314,9 +325,10 @@ class OpQuantizationConfig:
           'An op can not be set to have integer activation but float weights!'
       )
     if (
+        # SRQ compliance check for the config.
         self.activation_tensor_config.dtype == TensorDataType.INT
         and self.weight_tensor_config.dtype == TensorDataType.INT
-        and self.execution_mode != OpExecutionMode.SRQ
+        and self.compute_precision != ComputePrecision.INTEGER
     ):
       raise ValueError(
           'Op execution mode must be SRQ (static range quantization) if both'

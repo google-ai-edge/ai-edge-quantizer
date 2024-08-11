@@ -26,7 +26,7 @@ from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 _TFLOpName = qtyping.TFLOperationName
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
 _OpTestInfo = naive_min_max_test_utils.OpTestInfo
@@ -74,17 +74,21 @@ class DepthwiseConv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
           qtyping.QuantGranularity.CHANNELWISE,
           qtyping.QuantGranularity.TENSORWISE,
       ),
-      execution_mode=(
-          _OpExecutionMode.WEIGHT_ONLY,
-          _OpExecutionMode.DRQ,
-      ),
+      test_case=[
+          # Tuple that holds the compute precision and whether to use explicit
+          # dequantize.
+          (_ComputePrecision.FLOAT, True),
+          (_ComputePrecision.INTEGER, False),
+      ],
   )
   def test_materialize_weight_only_drq_depthwise_conv2d_succeeds(
       self,
       symmetric_weight,
       granularity,
-      execution_mode,
+      test_case,
   ):
+    compute_precision, explicit_dequantize = test_case
+
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
     subgraph_op_id = 0
@@ -101,7 +105,8 @@ class DepthwiseConv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
                 symmetric=symmetric_weight,
                 granularity=granularity,
             ),
-            execution_mode=execution_mode,
+            compute_precision=compute_precision,
+            explicit_dequantize=explicit_dequantize,
         ),
     )
     self._test_fc_bmm_conv(
@@ -144,7 +149,7 @@ class DepthwiseConv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
                 symmetric=True,
                 granularity=qtyping.QuantGranularity.CHANNELWISE,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,  # SRQ.
         ),
     )
     self._test_fc_bmm_conv(

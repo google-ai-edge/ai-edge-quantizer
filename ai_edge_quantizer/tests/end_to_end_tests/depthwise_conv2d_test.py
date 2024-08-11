@@ -23,7 +23,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _OpName = qtyping.TFLOperationName
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _OpQuantConfig = qtyping.OpQuantizationConfig
@@ -76,7 +76,8 @@ class DepthwiseConv2dTest(parameterized.TestCase):
                 symmetric=symmetric_weight,
                 granularity=channel_wise_weight,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+            explicit_dequantize=True,
         ),
     )
     quant_result = self._quantizer.quantize()
@@ -138,7 +139,8 @@ class DepthwiseConv2dTest(parameterized.TestCase):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=16, dtype=qtyping.TensorDataType.FLOAT
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY
+            explicit_dequantize=True,
         ),
     )
     quant_result = self._quantizer.quantize()

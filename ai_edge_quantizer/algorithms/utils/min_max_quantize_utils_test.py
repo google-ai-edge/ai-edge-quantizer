@@ -19,7 +19,7 @@ from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.utils import min_max_quantize_utils
 
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _QuantTransformation = qtyping.QuantTransformation
 _TFLOpName = qtyping.TFLOperationName
 _OpQuantConfig = qtyping.OpQuantizationConfig
@@ -30,24 +30,34 @@ _TensorQuantConfig = qtyping.TensorQuantizationConfig
 class MinMaxQuantizeUtilsTest(parameterized.TestCase):
 
   @parameterized.product(
-      execution_mode=[
-          _OpExecutionMode.WEIGHT_ONLY,
-          _OpExecutionMode.DRQ,
-          _OpExecutionMode.SRQ,
+      test_case=[
+          # Tuple holds computation precision, whether to use SRQ and whether
+          # to use explicit dequantize.
+          (_ComputePrecision.FLOAT, False, True),  # WEIGHT_ONLY.
+          (_ComputePrecision.INTEGER, False, False),  # DRQ.
+          (_ComputePrecision.INTEGER, True, False),  # SRQ.
       ],
       is_inbounding_tensor=[True, False],
       is_constant=[True, False],
   )
   def test_get_tensor_transformations(
-      self, execution_mode, is_inbounding_tensor, is_constant
+      self, test_case, is_inbounding_tensor, is_constant
   ):
+    compute_precision, is_srq, explicit_dequantize = test_case
+    weight_tensor_config = _TensorQuantConfig(num_bits=8)
     op_quant_config = qtyping.OpQuantizationConfig(
-        execution_mode=execution_mode,
+        activation_tensor_config=weight_tensor_config if is_srq else None,
+        compute_precision=compute_precision,
+        explicit_dequantize=explicit_dequantize,
     )
     transformations = min_max_quantize_utils.get_tensor_transformations(
         op_quant_config, is_inbounding_tensor, is_constant
     )
-    if execution_mode == _OpExecutionMode.WEIGHT_ONLY:
+    # Check if WEIGHT_ONLY.
+    if (
+        compute_precision == _ComputePrecision.FLOAT
+        and op_quant_config.explicit_dequantize
+    ):
       if is_inbounding_tensor and is_constant:
         self.assertSequenceEqual(
             transformations,
@@ -61,7 +71,8 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             [_QuantTransformation.NO_QUANTIZE],
         )
 
-    if execution_mode == _OpExecutionMode.DRQ:
+    # Check if DRQ.
+    if compute_precision == _ComputePrecision.INTEGER and not is_srq:
       if is_inbounding_tensor and is_constant:
         self.assertSequenceEqual(
             transformations, [_QuantTransformation.QUANTIZE_TENSOR]
@@ -72,7 +83,8 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             [_QuantTransformation.NO_QUANTIZE],
         )
 
-    if execution_mode == _OpExecutionMode.SRQ:
+    # Check if SRQ.
+    if compute_precision == _ComputePrecision.INTEGER and is_srq:
       if is_inbounding_tensor:
         if is_constant:
           self.assertSequenceEqual(
@@ -116,7 +128,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             num_bits=weight_num_bits,
             granularity=granularity,
         ),
-        execution_mode=_OpExecutionMode.DRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # DRQ.
     )
     min_max_quantize_utils.check_drq_config(op_name, op_quant_config)
 
@@ -127,7 +139,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             num_bits=8,
             granularity=qtyping.QuantGranularity.CHANNELWISE,
         ),
-        execution_mode=_OpExecutionMode.DRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # DRQ.
     )
     error_message = "Unsupported op for dynamic range quantization"
     with self.assertRaisesWithPredicateMatch(
@@ -142,7 +154,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             num_bits=2,
             granularity=qtyping.QuantGranularity.TENSORWISE,
         ),
-        execution_mode=_OpExecutionMode.DRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # DRQ.
     )
     error_message = "Only int4/int8 symmetric DRQ is supported for op"
     with self.assertRaisesWithPredicateMatch(
@@ -158,7 +170,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             symmetric=False,
             granularity=qtyping.QuantGranularity.TENSORWISE,
         ),
-        execution_mode=_OpExecutionMode.DRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # DRQ.
     )
     error_message = "Only int4/int8 symmetric DRQ is supported for op"
     with self.assertRaisesWithPredicateMatch(
@@ -195,7 +207,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             num_bits=weight_num_bits,
             granularity=granularity,
         ),
-        execution_mode=_OpExecutionMode.SRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     min_max_quantize_utils.check_srq_config(op_name, op_quant_config)
 
@@ -206,7 +218,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             num_bits=8,
             granularity=qtyping.QuantGranularity.CHANNELWISE,
         ),
-        execution_mode=_OpExecutionMode.SRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     error_message = "Unsupported op for static range quantization"
     with self.assertRaisesWithPredicateMatch(
@@ -223,7 +235,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             num_bits=8,
             granularity=qtyping.QuantGranularity.CHANNELWISE,
         ),
-        execution_mode=_OpExecutionMode.SRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     error_message = "activation_tensor_config is required for SRQ"
     with self.assertRaisesWithPredicateMatch(
@@ -242,7 +254,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             num_bits=8,
             granularity=qtyping.QuantGranularity.CHANNELWISE,
         ),
-        execution_mode=_OpExecutionMode.SRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     error_message = "Only int8/int16 activation SRQ is supported"
     with self.assertRaisesWithPredicateMatch(
@@ -261,7 +273,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             num_bits=8,
             granularity=qtyping.QuantGranularity.CHANNELWISE,
         ),
-        execution_mode=_OpExecutionMode.SRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     error_message = (
         "Int16 activation SRQ requires symmetric activation quantization"
@@ -282,7 +294,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             num_bits=2,
             granularity=qtyping.QuantGranularity.CHANNELWISE,
         ),
-        execution_mode=_OpExecutionMode.SRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     error_message = "Currently only int4/int8 symmetric weight are supported"
     with self.assertRaisesWithPredicateMatch(
@@ -300,7 +312,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             symmetric=False,
             granularity=qtyping.QuantGranularity.CHANNELWISE,
         ),
-        execution_mode=_OpExecutionMode.SRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     error_message = "Currently only int4/int8 symmetric weight are supported"
     with self.assertRaisesWithPredicateMatch(
@@ -320,27 +332,31 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
           _TensorQuantConfig(num_bits=8, symmetric=False),
           _TensorQuantConfig(num_bits=16, symmetric=True),
       ],
-      execution_mode=[
-          _OpExecutionMode.WEIGHT_ONLY,
-          _OpExecutionMode.DRQ,
-          _OpExecutionMode.SRQ,
+      compute_precision=[
+          _ComputePrecision.FLOAT,
+          _ComputePrecision.INTEGER,
       ],
   )
   def test_check_supported_int4_config_succeeds(
-      self, op_name, activation_tensor_config, execution_mode
+      self, op_name, activation_tensor_config, compute_precision
   ):
     # Exclude invalid SRQ config.
     if (
         activation_tensor_config is not None
-        and execution_mode != _OpExecutionMode.SRQ
+        and compute_precision != _ComputePrecision.INTEGER
     ) or (
         activation_tensor_config is None
-        and execution_mode == _OpExecutionMode.SRQ
+        and compute_precision == _ComputePrecision.FLOAT
     ):
       return
     # TODO: b/353365054 - Remove this check after int4 DRQ is supported for
     # conv2d.
-    if execution_mode == _OpExecutionMode.DRQ and op_name == _TFLOpName.CONV_2D:
+    if (
+        # Check if DRQ and CONV_2D.
+        compute_precision == _ComputePrecision.INTEGER
+        and activation_tensor_config is None
+        and op_name == _TFLOpName.CONV_2D
+    ):
       return
     op_quant_config = _OpQuantConfig(
         activation_tensor_config=activation_tensor_config,
@@ -349,14 +365,26 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             symmetric=True,
             granularity=qtyping.QuantGranularity.CHANNELWISE,
         ),
-        execution_mode=execution_mode,
+        compute_precision=compute_precision,
     )
     # Raise error if the config is not supported.
-    if execution_mode == _OpExecutionMode.DRQ:
+    # Check if DRQ.
+    if (
+        compute_precision == _ComputePrecision.INTEGER
+        and op_quant_config.activation_tensor_config is None
+    ):
       min_max_quantize_utils.check_drq_config(op_name, op_quant_config)
-    elif execution_mode == _OpExecutionMode.WEIGHT_ONLY:
+    # Check if WEIGHT_ONLY.
+    elif (
+        compute_precision == _ComputePrecision.FLOAT
+        and op_quant_config.explicit_dequantize
+    ):
       min_max_quantize_utils.check_weight_only_config(op_name)
-    elif execution_mode == _OpExecutionMode.SRQ:
+    # Check if SRQ.
+    if (
+        compute_precision == _ComputePrecision.INTEGER
+        and op_quant_config.activation_tensor_config is not None
+    ):
       min_max_quantize_utils.check_srq_config(op_name, op_quant_config)
 
   @parameterized.product(
@@ -366,21 +394,19 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
           _TensorQuantConfig(num_bits=8, symmetric=False),
           _TensorQuantConfig(num_bits=16, symmetric=True),
       ],
-      execution_mode=[
-          _OpExecutionMode.DRQ,
-          _OpExecutionMode.SRQ,
+      test_case=[
+          # Tuple holds compute precision and whether to use drq.
+          (_ComputePrecision.INTEGER, True),
+          (_ComputePrecision.INTEGER, False),
       ],
   )
   def test_check_unsupported_int4_config_raise_error(
-      self, op_name, activation_tensor_config, execution_mode
+      self, op_name, activation_tensor_config, test_case
   ):
+    compute_precision, is_drq = test_case
     # Exclude invalid SRQ config.
-    if (
-        activation_tensor_config is not None
-        and execution_mode != _OpExecutionMode.SRQ
-    ) or (
-        activation_tensor_config is None
-        and execution_mode == _OpExecutionMode.SRQ
+    if (activation_tensor_config is not None and is_drq) or (
+        activation_tensor_config is None and not is_drq
     ):
       return
     op_quant_config = _OpQuantConfig(
@@ -390,12 +416,13 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             symmetric=True,
             granularity=qtyping.QuantGranularity.CHANNELWISE,
         ),
-        execution_mode=execution_mode,
+        compute_precision=compute_precision,
     )
+
     with self.assertRaises(ValueError):
-      if execution_mode == _OpExecutionMode.DRQ:
+      if is_drq:
         min_max_quantize_utils.check_drq_config(op_name, op_quant_config)
-      elif execution_mode == _OpExecutionMode.SRQ:
+      elif not is_drq:
         min_max_quantize_utils.check_srq_config(op_name, op_quant_config)
 
   def test_materialize_op_with_output_activation_constraint_fails_for_multiple_output_op(

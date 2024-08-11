@@ -25,7 +25,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import test_utils
 
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _AlgorithmName = recipe_manager.AlgorithmName
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("")
@@ -54,7 +54,7 @@ def _add_default_int8xint8_integer_recipe(recipe_manager_object):
               num_bits=8, symmetric=False
           ),
           weight_tensor_config=_TENSOR_QUANT_CONFIG(num_bits=8, symmetric=True),
-          execution_mode=_OpExecutionMode.SRQ,
+          compute_precision=_ComputePrecision.INTEGER,
       ),
   )
 

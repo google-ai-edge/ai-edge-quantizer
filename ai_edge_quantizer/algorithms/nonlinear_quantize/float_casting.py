@@ -46,18 +46,19 @@ def check_op_quantization_config(
     config_check_policy: The policy to check the quantization config.
 
   Raises:
-    ValueError: If the op is not supported or the execution mode is not
-      WEIGHT_ONLY.
+    ValueError: If the op is not supported or the compute_precision is not
+      FLOAT.
   """
   # TODO: b/353780772 - Add config check policy for float casting quantization.
   if config_check_policy is not None and config_check_policy:
     raise ValueError(f"Config check isn't implemented yet for op: {op_name}.")
 
-  if op_quant_config.execution_mode != qtyping.OpExecutionMode.WEIGHT_ONLY:
+  # Check if WEIGHT_ONLY.
+  if op_quant_config.compute_precision != qtyping.ComputePrecision.FLOAT:
     raise ValueError(
         "Currently, only Weight-Only is supported for float casting"
         " quantization. Got unsupported execution mode:"
-        f" {op_quant_config.execution_mode} for op: {op_name}"
+        f" {op_quant_config.compute_precision} for op: {op_name}"
     )
   if op_quant_config.activation_tensor_config is not None:
     raise ValueError(
@@ -100,8 +101,8 @@ def materialize_fc_conv(
     Quantization configuration for the weight tensor of the op.
 
   Raises:
-    ValueError: If the op is not supported or the execution mode is not
-      WEIGHT_ONLY.
+    ValueError: If the op is not supported or the compute precision is not
+      FLOAT.
   """
   input_tensor, weight_tensor, bias_tensor, output_tensor = (
       tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(

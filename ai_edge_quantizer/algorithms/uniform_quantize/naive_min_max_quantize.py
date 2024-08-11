@@ -26,7 +26,7 @@ ALGORITHM_KEY = "min_max_uniform_quantize"
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation
 _OpQuantConstraint = utils.OpQuantConstraint
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 
 
 def check_op_quantization_config(
@@ -51,10 +51,9 @@ def check_op_quantization_config(
         " only), please set algorithm key as 'float_casting'."
     )
 
-  if op_quant_config.execution_mode in [
-      _OpExecutionMode.DRQ,
-      _OpExecutionMode.SRQ,
-      _OpExecutionMode.WEIGHT_ONLY,
+  if op_quant_config.compute_precision in [
+      _ComputePrecision.INTEGER,
+      _ComputePrecision.FLOAT,
   ]:
     # Use policy-based mechanism to validate op.
     utils.check_if_valid_op_config(
@@ -218,7 +217,11 @@ def _materialize_bias_for_conv_ops(
   if bias_tensor is not None:
     bias_quant_params = None
     # Fused bias needs to be quantized for SRQ.
-    if op_info.op_quant_config.execution_mode == qtyping.OpExecutionMode.SRQ:
+    # Check if SRQ.
+    if (
+        op_info.op_quant_config.compute_precision == _ComputePrecision.INTEGER
+        and op_info.op_quant_config.activation_tensor_config is not None
+    ):
       bias_content = tfl_flatbuffer_utils.get_tensor_data(
           bias_tensor,
           graph_info.buffers,
@@ -233,7 +236,9 @@ def _materialize_bias_for_conv_ops(
     # We only quantize bias under SRQ. Setting is_constant=True for SRQ only
     # to avoid quantize bias for DRQ and weight-only cases.
     is_constant = (
-        op_info.op_quant_config.execution_mode == qtyping.OpExecutionMode.SRQ
+        # Check if SRQ.
+        op_info.op_quant_config.compute_precision == _ComputePrecision.INTEGER
+        and op_info.op_quant_config.activation_tensor_config is not None
     )
     op_tensor_params[op_bias_index] = utils.get_tensor_transformation_params(
         tfl_flatbuffer_utils.get_tensor_name(bias_tensor),

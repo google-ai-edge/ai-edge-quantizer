@@ -26,7 +26,7 @@ from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 _TFLOpName = qtyping.TFLOperationName
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
 _OpTestInfo = naive_min_max_test_utils.OpTestInfo
@@ -87,7 +87,7 @@ class AddTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         op_quant_config=qtyping.OpQuantizationConfig(
             activation_tensor_config=activation_tensor_config,
             weight_tensor_config=activation_tensor_config,
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,  # SRQ.
         ),
     )
     self._test_no_weights_op(
@@ -130,7 +130,7 @@ class AddTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         op_quant_config=qtyping.OpQuantizationConfig(
             activation_tensor_config=activation_tensor_config,
             weight_tensor_config=activation_tensor_config,
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,  # SRQ.
         ),
     )
     # We re-use the fc_bmm_conv helper test function here because the constant

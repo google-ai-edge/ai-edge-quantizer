@@ -27,7 +27,7 @@ from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tenso
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 _TFLOpName = qtyping.TFLOperationName
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
 
@@ -80,7 +80,8 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
 
   def _setup_op_test_config(
       self,
-      execution_mode,
+      compute_precision,
+      is_drq,
       op_test_info,
       num_inputs=1,
       num_outputs=1,
@@ -89,7 +90,8 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     # SRQ requires QSVs (min/max).
     input_min, input_max = op_test_info.input_range
     output_min, output_max = op_test_info.output_range
-    if execution_mode == _OpExecutionMode.SRQ:
+    # Check if SRQ.
+    if compute_precision == _ComputePrecision.INTEGER and not is_drq:
       input_qsv = {
           "min": input_min,
           "max": input_max,
@@ -140,7 +142,9 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     ]
     for i in range(num_tensors):
       if (
-          op_quant_config.execution_mode == _OpExecutionMode.SRQ
+          # Check if SRQ.
+          op_quant_config.compute_precision == _ComputePrecision.INTEGER
+          and op_quant_config.activation_tensor_config is not None
           and i not in indices_to_ignore
       ):
         if is_inbounding_tensor:
@@ -230,7 +234,8 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     num_outputs = len(op_info.op.outputs)
     op_quant_config = op_info.op_quant_config
     self._setup_op_test_config(
-        execution_mode=op_quant_config.execution_mode,
+        compute_precision=op_quant_config.compute_precision,
+        is_drq=op_quant_config.activation_tensor_config is None,
         op_test_info=op_test_info,
         num_inputs=num_inputs,
         num_outputs=num_outputs,
@@ -317,7 +322,8 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     """
     op_quant_config = op_info.op_quant_config
     self._setup_op_test_config(
-        execution_mode=op_quant_config.execution_mode,
+        compute_precision=op_quant_config.compute_precision,
+        is_drq=op_quant_config.activation_tensor_config is None,
         op_test_info=op_test_info,
     )
     tensor_quant_params = materialization_func(
@@ -344,7 +350,11 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       )
     # Test input tensor settings
     transformations = [_QuantTransformation.NO_QUANTIZE]
-    if op_quant_config.execution_mode == _OpExecutionMode.SRQ:
+    # Check if SRQ.
+    if (
+        op_quant_config.compute_precision == _ComputePrecision.INTEGER
+        and op_quant_config.activation_tensor_config is not None
+    ):
       transformations = [_QuantTransformation.ADD_QUANTIZE]
     self._test_tensor_transformation_params(
         op_test_info.op_tensor_names["input"],
@@ -357,7 +367,11 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
 
     # Test weight tensor settings.
     transformations = [_QuantTransformation.QUANTIZE_TENSOR]
-    if op_quant_config.execution_mode == _OpExecutionMode.WEIGHT_ONLY:
+    # Check if WEIGHT_ONLY.
+    if (
+        op_quant_config.compute_precision == _ComputePrecision.FLOAT
+        and op_quant_config.explicit_dequantize
+    ):
       transformations = [
           _QuantTransformation.ADD_DEQUANTIZE,
       ]
@@ -378,7 +392,11 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
 
     # Test output tensor settings.
     transformations = [_QuantTransformation.NO_QUANTIZE]
-    if op_quant_config.execution_mode == _OpExecutionMode.SRQ:
+    # Check if SRQ.
+    if (
+        op_quant_config.compute_precision == _ComputePrecision.INTEGER
+        and op_quant_config.activation_tensor_config is not None
+    ):
       transformations = [_QuantTransformation.ADD_DEQUANTIZE]
     self._test_tensor_transformation_params(
         op_test_info.op_tensor_names["output"],
@@ -393,7 +411,11 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     if bias_tensor is not None:
       bias_bit_width = 32
       transformations = [_QuantTransformation.NO_QUANTIZE]
-      if op_quant_config.execution_mode == _OpExecutionMode.SRQ:
+      # Check if SRQ.
+      if (
+          op_quant_config.compute_precision == _ComputePrecision.INTEGER
+          and op_quant_config.activation_tensor_config is not None
+      ):
         transformations = [_QuantTransformation.QUANTIZE_TENSOR]
         if op_quant_config.activation_tensor_config.num_bits == 16:  # pytype: disable=attribute-error
           bias_bit_width = 64

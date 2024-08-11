@@ -227,8 +227,9 @@ class RecipeManager:
     # At the moment, only SRQ requires calibration.
     for op_quant_config in self.get_quantization_recipe():
       if (
-          op_quant_config['op_config']['execution_mode']
-          == qtyping.OpExecutionMode.SRQ
+          op_quant_config['op_config']['compute_precision']
+          == qtyping.ComputePrecision.INTEGER
+          and 'activation_tensor_config' in op_quant_config['op_config']
       ):
         return True
     return False

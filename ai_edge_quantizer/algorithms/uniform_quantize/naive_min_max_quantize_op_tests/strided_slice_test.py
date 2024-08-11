@@ -26,7 +26,7 @@ from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 _TFLOpName = qtyping.TFLOperationName
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
 _OpTestInfo = naive_min_max_test_utils.OpTestInfo
@@ -66,7 +66,7 @@ class StridedSliceTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         activation_tensor_config=_TensorQuantConfig(
             num_bits=activation_num_bits, symmetric=activation_symmetry
         ),
-        execution_mode=_OpExecutionMode.SRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]

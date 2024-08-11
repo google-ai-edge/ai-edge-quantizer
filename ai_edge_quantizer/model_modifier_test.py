@@ -64,12 +64,12 @@ class ModelModifierTest(parameterized.TestCase):
                     'dtype': qtyping.TensorDataType.INT,
                     'num_bits': 8,
                     'symmetric': False,
-                    'granularity': (
-                        qtyping.QuantGranularity.CHANNELWISE
-                    ),
+                    'granularity': qtyping.QuantGranularity.CHANNELWISE,
                     'block_size': 0,
                 },
-                'execution_mode': qtyping.OpExecutionMode.WEIGHT_ONLY,
+                # Equivalent to WEIGHT_ONLY.
+                'compute_precision': qtyping.ComputePrecision.FLOAT,
+                'explicit_dequantize': True,
             },
         },
     ]

@@ -26,7 +26,7 @@ from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 _TFLOpName = qtyping.TFLOperationName
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
 _OpTestInfo = naive_min_max_test_utils.OpTestInfo
@@ -67,10 +67,12 @@ class FullyConnectedTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
           qtyping.QuantGranularity.CHANNELWISE,
           qtyping.QuantGranularity.TENSORWISE,
       ),
-      execution_mode=(
-          _OpExecutionMode.WEIGHT_ONLY,
-          _OpExecutionMode.DRQ,
-          _OpExecutionMode.SRQ,
+      test_case=(
+          # Tuple holds compute precision and whether to use srq and explicit
+          # dequantize.
+          (_ComputePrecision.FLOAT, False, True),
+          (_ComputePrecision.INTEGER, False, False),
+          (_ComputePrecision.INTEGER, True, False),
       ),
   )
   def test_materialize_fully_connected_succeeds(
@@ -78,8 +80,10 @@ class FullyConnectedTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
       num_bits_weight,
       symmetric_weight,
       granularity,
-      execution_mode,
+      test_case,
   ):
+    compute_precision, is_srq, explicit_dequantize = test_case
+
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
     subgraph_op_id = 3
@@ -94,7 +98,8 @@ class FullyConnectedTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     self._op_test_info.op_tensor_names = op_tensor_names
 
     activation_tensor_config = None
-    if execution_mode == _OpExecutionMode.SRQ:
+    # Check if SRQ.
+    if compute_precision == _ComputePrecision.INTEGER and is_srq:
       activation_tensor_config = _DEFAULT_ACTIVATION_QUANT_SETTING
     op_info = qtyping.OpInfo(
         op=fc_op,
@@ -107,7 +112,8 @@ class FullyConnectedTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
                 symmetric=symmetric_weight,
                 granularity=granularity,
             ),
-            execution_mode=execution_mode,
+            compute_precision=compute_precision,
+            explicit_dequantize=explicit_dequantize,
         ),
     )
 

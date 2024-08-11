@@ -29,7 +29,7 @@ _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(
     "../../../tests/models"
 )
 _TFLOpName = qtyping.TFLOperationName
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
 _OpTestInfo = naive_min_max_test_utils.OpTestInfo
@@ -63,18 +63,21 @@ class EmbeddingLookupTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
           _QuantGranularity.TENSORWISE,
           _QuantGranularity.CHANNELWISE,
       ),
-      execution_mode=(
-          _OpExecutionMode.DRQ,
-          _OpExecutionMode.WEIGHT_ONLY,
-      ),
+      test_case=[
+          # Tuple that holds the compute precision and whether to use explicit
+          # dequantize.
+          (_ComputePrecision.INTEGER, False),
+          (_ComputePrecision.FLOAT, True),
+      ],
   )
   def test_embedding_lookup_succeeds(
       self,
       num_bits_weight,
       symmetric_weight,
       granularity,
-      execution_mode,
+      test_case,
   ):
+    compute_precision, explicit_dequantize = test_case
 
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
@@ -99,7 +102,8 @@ class EmbeddingLookupTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
                 symmetric=symmetric_weight,
                 granularity=granularity,
             ),
-            execution_mode=execution_mode,
+            compute_precision=compute_precision,
+            explicit_dequantize=explicit_dequantize,
         ),
     )
     # TODO: b/335913710 - Rename the test function.

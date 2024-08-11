@@ -24,7 +24,7 @@ from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _OpName = qtyping.TFLOperationName
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _OpQuantConfig = qtyping.OpQuantizationConfig
@@ -112,10 +112,10 @@ class MulTest(parameterized.TestCase):
     )
 
   @parameterized.named_parameters(
-      ('drq', _OpExecutionMode.DRQ),
-      ('weight_only', _OpExecutionMode.WEIGHT_ONLY),
+      ('drq', _ComputePrecision.INTEGER),
+      ('weight_only', _ComputePrecision.FLOAT),
   )
-  def test_mul2_fail(self, execution_mode):
+  def test_mul2_fail(self, compute_precision):
     self._custom_setup('single_mul.tflite')
     with self.assertRaisesRegex(ValueError, 'Unsupported op for .*: MUL'):
       self._quantizer.update_quantization_recipe(
@@ -125,7 +125,7 @@ class MulTest(parameterized.TestCase):
               weight_tensor_config=_TensorQuantConfig(
                   num_bits=8, symmetric=False
               ),
-              execution_mode=execution_mode,
+              compute_precision=compute_precision,
           ),
           algorithm_key='min_max_uniform_quantize',
       )

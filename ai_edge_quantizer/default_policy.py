@@ -20,7 +20,7 @@ from ai_edge_quantizer import qtyping
 _TFLOpName = qtyping.TFLOperationName
 _OpQuantizationConfig = qtyping.OpQuantizationConfig
 _TensorQuantizationConfig = qtyping.TensorQuantizationConfig
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _Granularity = qtyping.QuantGranularity
 _INT = qtyping.TensorDataType.INT
 
@@ -35,7 +35,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 dtype=_INT,
                 block_size=64,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -46,7 +47,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 dtype=_INT,
                 block_size=64,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -57,7 +59,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 dtype=_INT,
                 block_size=64,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -68,7 +70,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 dtype=_INT,
                 block_size=64,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -78,7 +80,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -88,7 +90,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -98,7 +100,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -108,7 +110,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -117,7 +119,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -126,7 +129,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -135,7 +139,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -144,7 +149,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -153,7 +159,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -162,7 +169,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -171,7 +179,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -180,22 +189,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
-        ),
-        _OpQuantizationConfig(
-            activation_tensor_config=_TensorQuantizationConfig(
-                num_bits=8,
-                symmetric=True,
-                granularity=_Granularity.CHANNELWISE,
-                dtype=_INT,
-            ),
-            weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=4,
-                symmetric=True,
-                granularity=_Granularity.CHANNELWISE,
-                dtype=_INT,
-            ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -207,10 +202,25 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
             weight_tensor_config=_TensorQuantizationConfig(
                 num_bits=4,
                 symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
+            ),
+            compute_precision=_ComputePrecision.INTEGER,
+        ),
+        _OpQuantizationConfig(
+            activation_tensor_config=_TensorQuantizationConfig(
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
+            ),
+            weight_tensor_config=_TensorQuantizationConfig(
+                num_bits=4,
+                symmetric=True,
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -225,7 +235,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -240,7 +250,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -255,7 +265,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -270,7 +280,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -285,7 +295,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -300,7 +310,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -315,7 +325,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -330,7 +340,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -345,7 +355,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -360,7 +370,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -375,7 +385,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -390,7 +400,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -405,7 +415,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -420,7 +430,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -435,7 +445,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -450,7 +460,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -465,7 +475,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -480,7 +490,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -495,7 +505,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -510,7 +520,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -525,7 +535,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -540,7 +550,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.CONV_2D: [
@@ -552,7 +562,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -562,7 +572,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -571,7 +581,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -580,7 +591,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -589,7 +601,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -598,7 +611,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -607,7 +621,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -616,7 +631,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -625,7 +641,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -634,22 +651,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
-        ),
-        _OpQuantizationConfig(
-            activation_tensor_config=_TensorQuantizationConfig(
-                num_bits=8,
-                symmetric=True,
-                granularity=_Granularity.CHANNELWISE,
-                dtype=_INT,
-            ),
-            weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=4,
-                symmetric=True,
-                granularity=_Granularity.CHANNELWISE,
-                dtype=_INT,
-            ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -661,10 +664,25 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
             weight_tensor_config=_TensorQuantizationConfig(
                 num_bits=4,
                 symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
+            ),
+            compute_precision=_ComputePrecision.INTEGER,
+        ),
+        _OpQuantizationConfig(
+            activation_tensor_config=_TensorQuantizationConfig(
+                num_bits=8,
+                symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
+            ),
+            weight_tensor_config=_TensorQuantizationConfig(
+                num_bits=4,
+                symmetric=True,
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -679,7 +697,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -694,7 +712,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -709,7 +727,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -724,7 +742,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -739,7 +757,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -754,7 +772,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -769,7 +787,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -784,7 +802,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -799,7 +817,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -814,7 +832,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -829,7 +847,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -844,7 +862,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -859,7 +877,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -874,7 +892,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -889,7 +907,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -904,7 +922,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -919,7 +937,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -934,7 +952,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -949,7 +967,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -964,7 +982,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -979,7 +997,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -994,7 +1012,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.EMBEDDING_LOOKUP: [
@@ -1006,7 +1024,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -1016,7 +1034,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -1026,7 +1044,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -1036,7 +1054,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1045,7 +1063,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1054,7 +1073,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1063,7 +1083,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1072,7 +1093,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1081,7 +1103,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1090,7 +1113,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1099,7 +1123,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1108,7 +1133,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
     ],
     _TFLOpName.AVERAGE_POOL_2D: [
@@ -1125,7 +1151,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1140,7 +1166,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1155,7 +1181,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1170,7 +1196,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1185,7 +1211,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1200,7 +1226,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1215,7 +1241,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1230,7 +1256,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1245,7 +1271,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1260,7 +1286,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1275,7 +1301,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1290,7 +1316,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.RESHAPE: [
@@ -1307,7 +1333,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1322,7 +1348,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1337,7 +1363,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1352,7 +1378,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1367,7 +1393,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1382,7 +1408,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1397,7 +1423,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1412,7 +1438,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1427,7 +1453,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1442,7 +1468,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1457,7 +1483,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1472,7 +1498,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.SOFTMAX: [
@@ -1489,7 +1515,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1504,7 +1530,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1519,7 +1545,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1534,7 +1560,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1549,7 +1575,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1564,7 +1590,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1579,7 +1605,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1594,7 +1620,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1609,7 +1635,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1624,7 +1650,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1639,7 +1665,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1654,7 +1680,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.DEPTHWISE_CONV_2D: [
@@ -1666,7 +1692,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -1676,7 +1702,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1685,7 +1711,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1694,7 +1721,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1703,7 +1731,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1712,7 +1741,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1721,7 +1751,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1730,7 +1761,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1739,7 +1771,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -1748,7 +1781,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1763,7 +1797,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1778,22 +1812,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
-        ),
-        _OpQuantizationConfig(
-            activation_tensor_config=_TensorQuantizationConfig(
-                num_bits=8,
-                symmetric=False,
-                granularity=_Granularity.CHANNELWISE,
-                dtype=_INT,
-            ),
-            weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8,
-                symmetric=True,
-                granularity=_Granularity.CHANNELWISE,
-                dtype=_INT,
-            ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1805,10 +1824,25 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
             weight_tensor_config=_TensorQuantizationConfig(
                 num_bits=8,
                 symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
+            ),
+            compute_precision=_ComputePrecision.INTEGER,
+        ),
+        _OpQuantizationConfig(
+            activation_tensor_config=_TensorQuantizationConfig(
+                num_bits=8,
+                symmetric=False,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
+            ),
+            weight_tensor_config=_TensorQuantizationConfig(
+                num_bits=8,
+                symmetric=True,
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1823,7 +1857,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1838,7 +1872,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1853,7 +1887,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1868,7 +1902,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1883,7 +1917,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1898,7 +1932,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1913,7 +1947,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1928,7 +1962,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.TANH: [
@@ -1945,7 +1979,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1960,7 +1994,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1975,7 +2009,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -1990,7 +2024,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2005,7 +2039,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2020,7 +2054,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2035,7 +2069,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2050,7 +2084,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2065,7 +2099,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2080,7 +2114,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2095,7 +2129,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2110,7 +2144,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.TRANSPOSE: [
@@ -2127,7 +2161,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2142,7 +2176,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2157,7 +2191,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2172,7 +2206,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2187,7 +2221,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2202,7 +2236,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2217,7 +2251,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2232,7 +2266,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2247,7 +2281,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2262,7 +2296,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2277,7 +2311,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2292,7 +2326,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.GELU: [
@@ -2309,7 +2343,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2324,7 +2358,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2339,7 +2373,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2354,7 +2388,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2369,7 +2403,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2384,7 +2418,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2399,7 +2433,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2414,7 +2448,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2429,7 +2463,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2444,7 +2478,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2459,7 +2493,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2474,7 +2508,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.ADD: [
@@ -2491,7 +2525,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2506,7 +2540,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2521,7 +2555,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2536,7 +2570,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2551,7 +2585,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2566,7 +2600,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2581,7 +2615,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2596,7 +2630,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2611,7 +2645,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2626,7 +2660,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2641,7 +2675,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2656,7 +2690,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.SUB: [
@@ -2673,7 +2707,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2688,7 +2722,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2703,7 +2737,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2718,7 +2752,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2733,7 +2767,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2748,7 +2782,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2763,7 +2797,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2778,7 +2812,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2793,7 +2827,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2808,7 +2842,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2823,7 +2857,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2838,7 +2872,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.MUL: [
@@ -2855,7 +2889,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2870,7 +2904,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2885,7 +2919,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2900,7 +2934,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2915,7 +2949,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2930,7 +2964,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2945,7 +2979,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2960,7 +2994,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2975,7 +3009,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -2990,7 +3024,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3005,7 +3039,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3020,7 +3054,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.BATCH_MATMUL: [
@@ -3032,7 +3066,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -3042,7 +3076,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -3051,7 +3085,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -3060,7 +3095,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -3069,7 +3105,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -3078,7 +3115,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -3087,7 +3125,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -3096,7 +3135,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -3105,7 +3145,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -3114,7 +3155,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3129,7 +3171,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3144,22 +3186,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
-        ),
-        _OpQuantizationConfig(
-            activation_tensor_config=_TensorQuantizationConfig(
-                num_bits=8,
-                symmetric=False,
-                granularity=_Granularity.CHANNELWISE,
-                dtype=_INT,
-            ),
-            weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8,
-                symmetric=True,
-                granularity=_Granularity.CHANNELWISE,
-                dtype=_INT,
-            ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3171,10 +3198,25 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
             weight_tensor_config=_TensorQuantizationConfig(
                 num_bits=8,
                 symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
+            ),
+            compute_precision=_ComputePrecision.INTEGER,
+        ),
+        _OpQuantizationConfig(
+            activation_tensor_config=_TensorQuantizationConfig(
+                num_bits=8,
+                symmetric=False,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
+            ),
+            weight_tensor_config=_TensorQuantizationConfig(
+                num_bits=8,
+                symmetric=True,
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3189,7 +3231,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3204,7 +3246,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3219,7 +3261,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3234,7 +3276,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3249,7 +3291,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3264,7 +3306,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3279,7 +3321,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3294,7 +3336,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.MEAN: [
@@ -3311,7 +3353,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3326,7 +3368,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3341,7 +3383,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3356,7 +3398,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3371,7 +3413,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3386,7 +3428,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3401,7 +3443,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3416,7 +3458,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3431,7 +3473,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3446,7 +3488,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3461,7 +3503,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3476,7 +3518,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.RSQRT: [
@@ -3493,7 +3535,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3508,7 +3550,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3523,7 +3565,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3538,7 +3580,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3553,7 +3595,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3568,7 +3610,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3583,7 +3625,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3598,7 +3640,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3613,7 +3655,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3628,7 +3670,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3643,7 +3685,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3658,7 +3700,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.CONCATENATION: [
@@ -3675,7 +3717,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3690,7 +3732,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3705,7 +3747,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3720,7 +3762,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3735,7 +3777,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3750,7 +3792,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3765,7 +3807,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3780,7 +3822,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3795,7 +3837,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3810,7 +3852,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3825,7 +3867,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3840,7 +3882,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.STRIDED_SLICE: [
@@ -3857,7 +3899,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3872,7 +3914,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3887,7 +3929,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3902,7 +3944,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3917,7 +3959,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3932,7 +3974,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3947,7 +3989,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3962,7 +4004,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3977,7 +4019,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -3992,7 +4034,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4007,7 +4049,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4022,7 +4064,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.SPLIT: [
@@ -4039,7 +4081,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4054,7 +4096,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4069,7 +4111,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4084,7 +4126,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4099,7 +4141,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4114,7 +4156,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4129,7 +4171,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4144,7 +4186,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4159,7 +4201,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4174,7 +4216,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4189,7 +4231,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4204,7 +4246,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
     _TFLOpName.CONV_2D_TRANSPOSE: [
@@ -4216,7 +4258,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=None,
@@ -4226,7 +4268,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.DRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -4235,7 +4277,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -4244,7 +4287,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -4253,7 +4297,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -4262,7 +4307,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -4271,7 +4317,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -4280,7 +4327,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -4289,7 +4337,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             weight_tensor_config=_TensorQuantizationConfig(
@@ -4298,7 +4347,8 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4313,7 +4363,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4328,22 +4378,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
-        ),
-        _OpQuantizationConfig(
-            activation_tensor_config=_TensorQuantizationConfig(
-                num_bits=8,
-                symmetric=False,
-                granularity=_Granularity.CHANNELWISE,
-                dtype=_INT,
-            ),
-            weight_tensor_config=_TensorQuantizationConfig(
-                num_bits=8,
-                symmetric=True,
-                granularity=_Granularity.CHANNELWISE,
-                dtype=_INT,
-            ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4355,10 +4390,25 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
             weight_tensor_config=_TensorQuantizationConfig(
                 num_bits=8,
                 symmetric=True,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
+            ),
+            compute_precision=_ComputePrecision.INTEGER,
+        ),
+        _OpQuantizationConfig(
+            activation_tensor_config=_TensorQuantizationConfig(
+                num_bits=8,
+                symmetric=False,
+                granularity=_Granularity.CHANNELWISE,
+                dtype=_INT,
+            ),
+            weight_tensor_config=_TensorQuantizationConfig(
+                num_bits=8,
+                symmetric=True,
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4373,7 +4423,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4388,7 +4438,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4403,7 +4453,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4418,7 +4468,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4433,7 +4483,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4448,7 +4498,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4463,7 +4513,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.CHANNELWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
         _OpQuantizationConfig(
             activation_tensor_config=_TensorQuantizationConfig(
@@ -4478,7 +4528,7 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
                 granularity=_Granularity.TENSORWISE,
                 dtype=_INT,
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     ],
 })

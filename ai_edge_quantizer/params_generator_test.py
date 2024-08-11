@@ -29,7 +29,7 @@ from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _TensorDataType = qtyping.TensorDataType
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
@@ -138,7 +138,9 @@ class ParamsGeneratorTest(parameterized.TestCase):
                     'symmetric': False,
                     'granularity': _QuantGranularity.CHANNELWISE,
                 },
-                'execution_mode': _OpExecutionMode.WEIGHT_ONLY,
+                # Equivalent to WEIGHT_ONLY.
+                'compute_precision': _ComputePrecision.FLOAT,
+                'explicit_dequantize': True,
             },
         },
     ]
@@ -275,7 +277,9 @@ class ParamsGeneratorTest(parameterized.TestCase):
                     'symmetric': True,
                     'granularity': _QuantGranularity.CHANNELWISE,
                 },
-                'execution_mode': _OpExecutionMode.DRQ,
+                # Equivalent to DRQ.
+                'compute_precision': _ComputePrecision.INTEGER,
+                'explicit_dequantize': False,
             },
         },
         {
@@ -289,7 +293,9 @@ class ParamsGeneratorTest(parameterized.TestCase):
                     'symmetric': False,
                     'granularity': _QuantGranularity.TENSORWISE,
                 },
-                'execution_mode': _OpExecutionMode.WEIGHT_ONLY,
+                # Equivalent to WEIGHT_ONLY.
+                'compute_precision': _ComputePrecision.FLOAT,
+                'explicit_dequantize': True,
             },
         },
     ]
@@ -339,7 +345,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
                     'symmetric': True,
                     'granularity': _QuantGranularity.CHANNELWISE,
                 },
-                'execution_mode': _OpExecutionMode.DRQ,
+                # Equivalent to DRQ.
+                'compute_precision': _ComputePrecision.INTEGER,
             },
         },
         # Scope that does not exist in the model.
@@ -353,7 +360,9 @@ class ParamsGeneratorTest(parameterized.TestCase):
                     'symmetric': False,
                     'granularity': _QuantGranularity.TENSORWISE,
                 },
-                'execution_mode': _OpExecutionMode.WEIGHT_ONLY,
+                # Equivalent to WEIGHT_ONLY.
+                'compute_precision': _ComputePrecision.FLOAT,
+                'explicit_dequantize': True,
             },
         },
     ]
@@ -406,7 +415,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=8, symmetric=True, granularity=channelwise_weight
             ),
-            execution_mode=_OpExecutionMode.SRQ,
+            # Equivalent to SRQ.
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     )
 
@@ -494,7 +504,9 @@ class ParamsGeneratorTest(parameterized.TestCase):
         operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
         op_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TensorQuantConfig(num_bits=8, symmetric=True),
-            execution_mode=_OpExecutionMode.WEIGHT_ONLY,
+            # Equivalent to WEIGHT_ONLY.
+            compute_precision=_ComputePrecision.FLOAT,
+            explicit_dequantize=True,
         ),
     )
     if the_other_fc_difference == 'DRQ':
@@ -502,7 +514,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
           regex='PartitionedCall_1:0',
           operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
           op_config=qtyping.OpQuantizationConfig(
-              execution_mode=_OpExecutionMode.DRQ,
+              # Equivalent to DRQ.
+              compute_precision=_ComputePrecision.INTEGER,
           ),
       )
     pg = params_generator.ParamsGenerator(model_path)

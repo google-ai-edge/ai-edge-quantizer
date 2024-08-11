@@ -26,7 +26,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 
-_OpExecutionMode = qtyping.OpExecutionMode
+_ComputePrecision = qtyping.ComputePrecision
 _TFLOpName = qtyping.TFLOperationName
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _TensorDataType = qtyping.TensorDataType
@@ -67,7 +67,7 @@ class QuantizerTest(parameterized.TestCase):
     scope_regex = '.*/Dense/.*'
     new_op_config = qtyping.OpQuantizationConfig(
         weight_tensor_config=_TensorQuantConfig(num_bits=4, symmetric=True),
-        execution_mode=_OpExecutionMode.DRQ,
+        compute_precision=_ComputePrecision.INTEGER,  # DRQ.
     )
     self._quantizer.update_quantization_recipe(
         regex=scope_regex,
@@ -81,8 +81,8 @@ class QuantizerTest(parameterized.TestCase):
     added_config = updated_recipe[-1]
     self.assertEqual(added_config['regex'], scope_regex)
     self.assertEqual(
-        added_config['op_config']['execution_mode'],
-        new_op_config.execution_mode,
+        added_config['op_config']['compute_precision'],
+        new_op_config.compute_precision,
     )
 
   def test_load_quantization_recipe_succeeds(self):
