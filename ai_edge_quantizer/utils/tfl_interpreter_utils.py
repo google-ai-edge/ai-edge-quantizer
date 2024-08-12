@@ -250,6 +250,8 @@ def get_constant_tensor_names(
   tfl_interpreter = create_tfl_interpreter(tflite_model, allocate_tensors=False)
   const_tensor_names = []
   for tensor_detail in tfl_interpreter.get_tensor_details():
+    if tensor_detail["dtype"] == np.object_:
+      continue
     try:
       tensor_data = get_tensor_data(tfl_interpreter, tensor_detail)
       if tensor_data.size >= min_constant_size:
