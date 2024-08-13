@@ -77,8 +77,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     )
     self.assertIn("sequential/flatten/Reshape", initial_qsvs)
     input_tensor_qsv = initial_qsvs["sequential/flatten/Reshape"]
-    self.assertEqual(input_tensor_qsv["min"], np.array([[0.0]]))
-    self.assertEqual(input_tensor_qsv["max"], np.array([[6.0]]))
+    self.assertEmpty(input_tensor_qsv)
     self.assertIn(
         "sequential/dense/MatMul;sequential/dense/Relu;sequential/dense/BiasAdd",
         initial_qsvs,
@@ -86,10 +85,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     output_tensor_qsv = initial_qsvs[
         "sequential/dense/MatMul;sequential/dense/Relu;sequential/dense/BiasAdd"
     ]
-    self.assertTupleEqual(output_tensor_qsv["min"].shape, (1, 1))
-    self.assertEqual(output_tensor_qsv["min"], np.array(0.0))
-    self.assertTupleEqual(output_tensor_qsv["max"].shape, (1, 1))
-    self.assertEqual(output_tensor_qsv["max"], np.array(6.0))
+    self.assertEmpty(output_tensor_qsv)
 
     self.assertIn("arith.constant1", initial_qsvs)
     weight_tensor_qsv = initial_qsvs["arith.constant1"]

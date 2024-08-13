@@ -221,19 +221,12 @@ def init_tensor_min_max(
     tensor: Any,
     graph_info: qtyping.GraphInfo,
     op_info: qtyping.OpInfo,
-    init_min_val: float = 0.0,
-    init_max_val: float = 6.0,
 ):
   """Initialize the min/max for a tensor."""
   tensor_data = tfl_flatbuffer_utils.get_tensor_data(tensor, graph_info.buffers)
   # Initial values for non-constant tensors.
   if tensor_data is None:
-    # preserve tensor rank on min/max (e.g., keepdims=True).
-    min_max_shape = [1] * len(tensor.shape)
-    return {
-        "min": np.broadcast_to(init_min_val, min_max_shape),
-        "max": np.broadcast_to(init_max_val, min_max_shape),
-    }
+    return {}
   # Real min/max for constant tensors.
   else:
     quantized_dim = None

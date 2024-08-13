@@ -474,9 +474,6 @@ def init_qsvs(
   Returns:
     QSVs.
   """
-
-  # Set min/max to 0/6 to help stablize the calibration process.
-  init_min_val, init_max_val = 0.0, 6.0
   op_qsvs = {}
 
   inputs_to_ignore = inputs_to_ignore or []
@@ -489,8 +486,6 @@ def init_qsvs(
           tensor,
           graph_info,
           op_info,
-          init_min_val,
-          init_max_val,
       )
   for i, tensor_idx in enumerate(op_info.op.outputs):
     if tensor_idx != -1 and i not in outputs_to_ignore:
@@ -500,8 +495,6 @@ def init_qsvs(
           tensor,
           graph_info,
           op_info,
-          init_min_val,
-          init_max_val,
       )
   return op_qsvs
 

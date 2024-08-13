@@ -107,10 +107,7 @@ class CalibratorTest(googletest.TestCase):
     self.assertLen(model_tensor_qsvs, 4)
     self.assertIn("serving_default_input_1:0", model_tensor_qsvs)  # input
     input_qsv = model_tensor_qsvs["serving_default_input_1:0"]
-    self.assertTupleEqual(input_qsv["min"].shape, (1, 1))
-    self.assertEqual(input_qsv["min"], np.array(0.0))
-    self.assertTupleEqual(input_qsv["max"].shape, (1, 1))
-    self.assertEqual(input_qsv["max"], np.array(6.0))
+    self.assertEmpty(input_qsv)
 
     self.assertIn("sequential/dense/MatMul", model_tensor_qsvs)  # weight
     weight_tensor_qsv = model_tensor_qsvs["sequential/dense/MatMul"]
@@ -139,8 +136,7 @@ class CalibratorTest(googletest.TestCase):
 
     self.assertIn("StatefulPartitionedCall:0", model_tensor_qsvs)  # output
     output_qsv = model_tensor_qsvs["StatefulPartitionedCall:0"]
-    self.assertEqual(output_qsv["min"], [0])
-    self.assertEqual(output_qsv["max"], np.array(6.0))
+    self.assertEmpty(output_qsv)
 
   def test_calibrate_single_fc_success(self):
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
@@ -153,10 +149,10 @@ class CalibratorTest(googletest.TestCase):
     self.assertIn("serving_default_input_1:0", model_tensor_qsvs)  # input
     input_qsv = model_tensor_qsvs["serving_default_input_1:0"]
     self.assertSequenceAlmostEqual(
-        input_qsv["min"].flatten(), [-0.401263], delta=1e-5
+        input_qsv["min"].flatten(), [TEST_MIN_VAL], delta=1e-5
     )
     self.assertSequenceAlmostEqual(
-        input_qsv["max"].flatten(), [3.993684], delta=1e-5
+        input_qsv["max"].flatten(), [TEST_MAX_VAL], delta=1e-5
     )
 
     self.assertIn("sequential/dense/MatMul", model_tensor_qsvs)  # weight
