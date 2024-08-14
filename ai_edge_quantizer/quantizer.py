@@ -226,6 +226,7 @@ class Quantizer:
       signature_test_data: Optional[Iterable[_SignatureInput]] = None,
       error_metrics: str = 'mse',
       signature_key: Optional[str] = None,
+      use_reference_kernel: bool = False,
   ) -> model_validator.ComparisonResult:
     """Numerical validation of the quantized model for a model signature.
 
@@ -243,6 +244,7 @@ class Quantizer:
       error_metrics: Error metrics to be used for comparison.
       signature_key: the signature key to be used for invoking the models. If
         the model doesn't have a signature key, this can be set to None.
+      use_reference_kernel: Whether to use the reference kernel for validation.
 
     Returns:
       The comparison result.
@@ -268,6 +270,7 @@ class Quantizer:
         compare_fn=validation_utils.get_validation_func(error_metrics),
         error_metric=error_metrics,
         signature_key=signature_key,
+        use_reference_kernel=use_reference_kernel,
     )
     return comparison_result
 

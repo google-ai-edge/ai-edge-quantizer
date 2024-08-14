@@ -139,6 +139,7 @@ def compare_model(
     error_metric: str,
     compare_fn: Callable[[Any, Any], float],
     signature_key: Optional[str] = None,
+    use_reference_kernel: bool = False,
 ) -> ComparisonResult:
   """Compares model tensors over a model signature using the compare_fn.
 
@@ -158,12 +159,18 @@ def compare_model(
       single float value.
     signature_key: the signature key to be used for invoking the models. If the
       model doesn't have a signature key, this can be set to None.
+    use_reference_kernel: Whether to use the reference kernel for the
+      interpreter.
 
   Returns:
     A ComparisonResult object.
   """
-  reference_interpreter = utils.create_tfl_interpreter(reference_model)
-  target_interpreter = utils.create_tfl_interpreter(target_model)
+  reference_interpreter = utils.create_tfl_interpreter(
+      tflite_model=reference_model, use_reference_kernel=use_reference_kernel
+  )
+  target_interpreter = utils.create_tfl_interpreter(
+      tflite_model=target_model, use_reference_kernel=use_reference_kernel
+  )
   comparison_results = {}
 
   # TODO: b/330797129 - enable multi-threaded evaluation.

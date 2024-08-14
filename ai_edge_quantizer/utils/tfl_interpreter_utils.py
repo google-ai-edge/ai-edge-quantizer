@@ -28,12 +28,15 @@ from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorf
 def create_tfl_interpreter(
     tflite_model: Union[str, bytearray],
     allocate_tensors: bool = True,
+    use_reference_kernel: bool = False,
 ) -> tf.lite.Interpreter:
   """Creates a TFLite interpreter from a model file.
 
   Args:
     tflite_model: Model file path or bytearray.
     allocate_tensors: Whether to allocate tensors.
+    use_reference_kernel: Whether to use the reference kernel for the
+      interpreter.
 
   Returns:
     A TFLite interpreter.
@@ -43,9 +46,15 @@ def create_tfl_interpreter(
       tflite_model = f.read()
   else:
     tflite_model = bytes(tflite_model)
+  if use_reference_kernel:
+    op_resolver = tf.lite.experimental.OpResolverType.BUILTIN_REF
+  else:
+    op_resolver = (
+        tf.lite.experimental.OpResolverType.BUILTIN_WITHOUT_DEFAULT_DELEGATES
+    )
   tflite_interpreter = tf.lite.Interpreter(
       model_content=tflite_model,
-      experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_WITHOUT_DEFAULT_DELEGATES,
+      experimental_op_resolver_type=op_resolver,
       experimental_preserve_all_tensors=True,
   )
   if allocate_tensors:
@@ -92,8 +101,8 @@ def invoke_interpreter_signature(
       quant_params = qtyping.UniformQuantParams.from_tfl_tensor_details(
           input_detail
       )
-      signature_input[input_name] = (
-          uniform_quantize_tensor.uniform_quantize(input_data, quant_params)
+      signature_input[input_name] = uniform_quantize_tensor.uniform_quantize(
+          input_data, quant_params
       )
   return signature_runner(**signature_input)
 
