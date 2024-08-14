@@ -143,10 +143,9 @@ class MNISTTest(parameterized.TestCase):
     self.assertLess(len(self._quantizer._result.quantized_model), 30000)
 
     comparison_result = self._quantizer.validate(error_metrics='mse')
-    # TODO: b/346787369 - Update the weight tolerance for int4.
     self._check_comparison_result(
         comparison_result,
-        weight_tolerance=1000,
+        weight_tolerance=1e-3,
         logits_tolerance=2,
         output_tolerance=1e-2,
     )
