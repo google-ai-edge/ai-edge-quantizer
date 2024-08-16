@@ -93,7 +93,7 @@ class QuantizerTest(parameterized.TestCase):
     # Load a different recipe.
     new_recipe_path = os.path.join(
         TEST_DATA_PREFIX_PATH,
-        'recipes/default_af32w8int_recipe.json',
+        'recipes/dynamic_wi8_afp32_recipe.json',
     )
     with open(new_recipe_path) as json_file:
       new_recipe = json.load(json_file)
@@ -133,7 +133,7 @@ class QuantizerTest(parameterized.TestCase):
     )
 
   @parameterized.parameters(
-      'recipes/default_af32w8int_recipe.json',
+      'recipes/dynamic_wi8_afp32_recipe.json',
       'recipes/default_af32w8float_recipe.json',
   )
   def test_calibrate_nonrequired_recipe_succeeds(self, recipe_path):

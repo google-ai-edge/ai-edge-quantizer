@@ -93,7 +93,7 @@ class DepthwiseConv2dTest(parameterized.TestCase):
 
   def test_depthwise_conv2d_model_int8_drq(self):
     recipe_path = test_utils.get_path_to_datafile(
-        '../../recipes/default_af32w8int_recipe.json'
+        '../../recipes/dynamic_wi8_afp32_recipe.json'
     )
     self._quantizer.load_quantization_recipe(recipe_path)
 
