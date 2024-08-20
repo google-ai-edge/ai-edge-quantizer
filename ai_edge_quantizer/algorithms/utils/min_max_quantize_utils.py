@@ -260,8 +260,8 @@ def init_tensor_min_max(
           ),
       )
       return {
-          "min": np.min(reshaped_tensor_data, axis=(2), keepdims=True),
-          "max": np.max(reshaped_tensor_data, axis=(2), keepdims=True),
+          "min": np.min(reshaped_tensor_data, axis=(0, 1, 2), keepdims=True),
+          "max": np.max(reshaped_tensor_data, axis=(0, 1, 2), keepdims=True),
       }
     if (
         op_info.op_quant_config.weight_tensor_config is not None
