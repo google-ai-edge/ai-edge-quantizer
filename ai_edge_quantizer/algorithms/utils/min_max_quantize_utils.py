@@ -89,7 +89,8 @@ def check_subchannel_config(
 ):
   """Checks the op quantization config for subchannel quantization."""
   if (
-      op_quant_config.weight_tensor_config.granularity
+      op_quant_config.weight_tensor_config is not None
+      and op_quant_config.weight_tensor_config.granularity
       == qtyping.QuantGranularity.BLOCKWISE
   ):
     if op_name not in _SUPPORTED_SUBCHANNEL_OPS:
@@ -162,6 +163,8 @@ def check_drq_config(
 ) -> None:
   """Checks the op quantization config for dynamic range quantization."""
   weight_config = op_quant_config.weight_tensor_config
+  if weight_config is None:
+    raise ValueError("Weight tensor quantization is required for DRQ.")
   if op_name not in _SUPPORTED_DRQ_OPS:
     raise ValueError(
         f"Unsupported op for dynamic range quantization: {op_name} "
@@ -186,6 +189,8 @@ def check_srq_config(
     )
   if act_config is None:
     raise ValueError("activation_tensor_config is required for SRQ.")
+  if weight_config is None:
+    raise ValueError("weight_tensor_config is required for SRQ.")
   if act_config.dtype != qtyping.TensorDataType.INT:
     raise ValueError("SRQ requires activation tensor to be int type.")
   if act_config.num_bits not in (8, 16):
@@ -231,7 +236,8 @@ def init_tensor_min_max(
   else:
     quantized_dim = None
     if (
-        op_info.op_quant_config.weight_tensor_config.granularity
+        op_info.op_quant_config.weight_tensor_config is not None
+        and op_info.op_quant_config.weight_tensor_config.granularity
         == qtyping.QuantGranularity.BLOCKWISE
     ):
       # TODO(b/346612503): emulate subchannel only supports fully connected,
@@ -258,7 +264,8 @@ def init_tensor_min_max(
           "max": np.max(reshaped_tensor_data, axis=(2), keepdims=True),
       }
     if (
-        op_info.op_quant_config.weight_tensor_config.granularity
+        op_info.op_quant_config.weight_tensor_config is not None
+        and op_info.op_quant_config.weight_tensor_config.granularity
         == qtyping.QuantGranularity.CHANNELWISE
     ):
       if op_info.op_name == _TFLOpName.BATCH_MATMUL:
@@ -885,7 +892,8 @@ def get_tensor_transformations(
     else:
       transformations = [_QuantTransformation.NO_QUANTIZE]
   elif (
-      op_quant_config.weight_tensor_config.granularity
+      op_quant_config.weight_tensor_config is not None
+      and op_quant_config.weight_tensor_config.granularity
       == qtyping.QuantGranularity.BLOCKWISE
       and is_constant
   ):

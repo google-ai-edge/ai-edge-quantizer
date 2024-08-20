@@ -43,7 +43,10 @@ def _sample_materialize_func(*_, **__):
 
 
 def _sample_check_op_config_func(op_name, op_config, _):
-  if op_config.weight_tensor_config.num_bits == 17:
+  if (
+      op_config.weight_tensor_config is not None
+      and op_config.weight_tensor_config.num_bits == 17
+  ):
     raise ValueError(f'Unsupported number of bits for op: {op_name}.')
 
 
@@ -56,7 +59,7 @@ def _add_default_int8xint8_integer_recipe(recipe_manager_object):
           activation_tensor_config=_TensorQuantConfig(
               num_bits=8, symmetric=False
           ),
-          weight_tensor_config=_TensorQuantConfig(num_bits=8, symmetric=True),
+          weight_tensor_config=_TensorQuantConfig(num_bits=8),
           compute_precision=_ComputePrecision.INTEGER,  # SRQ.
       ),
   )
@@ -98,6 +101,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         operation_name=_TFLOpName.ALL_SUPPORTED,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8),
             compute_precision=_ComputePrecision.INTEGER,  # DRQ.
         ),
     )
@@ -108,6 +112,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         operation_name=_TFLOpName.FULLY_CONNECTED,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8),
             compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
             explicit_dequantize=True,
         ),
@@ -148,7 +153,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     # DRQ check.
     self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
 
-    # Check conflicts handling
+    # Check conflicts handling.
     # Int8 Weight-only for FC under "Dense", this should only overwrite FC but
     # leave others unchanged.
     self._recipe_manager.add_quantization_config(
@@ -156,6 +161,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         operation_name=_TFLOpName.FULLY_CONNECTED,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8),
             compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
         ),
     )
@@ -184,18 +190,20 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         _TFLOpName.FULLY_CONNECTED, 'model/Dense/op'
     )
     self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
     # DRQ check.
     self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 4)
+    self.assertEqual(weight_tensor_config.num_bits, 4)
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.BATCH_MATMUL, 'model/Dense/op'
     )
     self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     # DRQ check.
     self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 4)
+    self.assertEqual(weight_tensor_config.num_bits, 4)
 
-    # Overwrite all FC
+    # Overwrite all FC.
     self._recipe_manager.add_quantization_config(
         regex='.*',
         operation_name=_TFLOpName.FULLY_CONNECTED,
@@ -204,22 +212,26 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
             weight_tensor_config=_TensorQuantConfig(num_bits=3),
         ),
     )
-    # FC config is overridden
+    # FC config is overridden.
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.FULLY_CONNECTED, 'model/Dense_3/op'
     )
     self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 3)
-    # but not bmm
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
+    self.assertEqual(weight_tensor_config.num_bits, 3)
+    # No overridden for batch matmul.
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.BATCH_MATMUL, 'model/Dense_3/op'
     )
     self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 4)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
+    self.assertEqual(weight_tensor_config.num_bits, 4)
 
   def test_add_unsupported_quantization_config(self):
     error_message = 'Unsupported operation'
-    # Add unregistered operation
+    # Add unregistered operations.
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
@@ -228,6 +240,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
           operation_name=_TFLOpName.CUSTOM_OP,
           algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
           op_config=qtyping.OpQuantizationConfig(
+              weight_tensor_config=_TensorQuantConfig(num_bits=8),
               compute_precision=_ComputePrecision.INTEGER,  # DRQ.
           ),
       )
@@ -240,6 +253,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
           operation_name=_TFLOpName.FULLY_CONNECTED,
           algorithm_key='AWQ',
           op_config=qtyping.OpQuantizationConfig(
+              weight_tensor_config=_TensorQuantConfig(num_bits=8),
               compute_precision=_ComputePrecision.INTEGER,  # DRQ.
           ),
       )
@@ -276,7 +290,9 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     )
     self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertIsNone(op_config.activation_tensor_config)
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 17)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
+    self.assertEqual(weight_tensor_config.num_bits, 17)
     # DRQ check.
     self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
 
@@ -295,10 +311,12 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         op_act_config.granularity,
         _QuantGranularity.TENSORWISE,
     )
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 8)
-    self.assertEqual(op_config.weight_tensor_config.symmetric, True)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
+    self.assertEqual(weight_tensor_config.num_bits, 8)
+    self.assertEqual(weight_tensor_config.symmetric, True)
     self.assertEqual(
-        op_config.weight_tensor_config.granularity,
+        weight_tensor_config.granularity,
         _QuantGranularity.TENSORWISE,
     )
 
@@ -309,6 +327,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TensorQuantConfig(num_bits=3),
+            compute_precision=_ComputePrecision.INTEGER,  # DRQ.
         ),
     )
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
@@ -316,7 +335,9 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     )
     self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertIsNone(op_config.activation_tensor_config)
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 3)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
+    self.assertEqual(weight_tensor_config.num_bits, 3)
     # WEIGHT_ONLY check.
     self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
 
@@ -339,7 +360,8 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     )
     self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertIsNone(op_config.activation_tensor_config)
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 3)
+    self.assertIsNotNone(weight_tensor_config)
+    self.assertEqual(weight_tensor_config.num_bits, 3)
     # WEIGHT_ONLY check.
     self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
 
@@ -351,16 +373,18 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     op_act_config = op_config.activation_tensor_config
     self.assertIsNotNone(op_act_config)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
     self.assertEqual(op_act_config.num_bits, 16)
     self.assertEqual(op_act_config.symmetric, True)
     self.assertEqual(
         op_act_config.granularity,
         _QuantGranularity.TENSORWISE,
     )
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 8)
-    self.assertEqual(op_config.weight_tensor_config.symmetric, True)
+    self.assertEqual(weight_tensor_config.num_bits, 8)
+    self.assertEqual(weight_tensor_config.symmetric, True)
     self.assertEqual(
-        op_config.weight_tensor_config.granularity,
+        weight_tensor_config.granularity,
         _QuantGranularity.TENSORWISE,
     )
 
@@ -373,6 +397,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         operation_name=_TFLOpName.BATCH_MATMUL,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8),
             compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
             explicit_dequantize=True,
         ),
@@ -384,6 +409,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         operation_name=_TFLOpName.FULLY_CONNECTED,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8),
             compute_precision=_ComputePrecision.INTEGER,  # DRQ.
         ),
     )
@@ -553,9 +579,11 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         _TFLOpName.CONV_2D, 'model/Dense/op'
     )
     self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
     # WEIGHT_ONLY check.
-    self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 8)
+    self.assertEqual(op_config.compute_precision, _ComputePrecision.FLOAT)
+    self.assertEqual(weight_tensor_config.num_bits, 8)
 
   def test_load_from_full_quantization_config(self):
     full_quantization_config = [
@@ -597,18 +625,22 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         _TFLOpName.BATCH_MATMUL, 'model/Dense10/op'
     )
     self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
     # WEIGHT_ONLY check.
     self.assertEqual(op_config.compute_precision, _ComputePrecision.FLOAT)
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 8)
+    self.assertEqual(weight_tensor_config.num_bits, 8)
 
     # Dense will be overwritten by the last setting
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.FULLY_CONNECTED, 'model/Dense/op'
     )
     self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
     # DRQ check.
     self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 4)
+    self.assertEqual(weight_tensor_config.num_bits, 4)
 
   def test_get_unsupported_op_fall_back_to_default(self):
     self._recipe_manager.add_quantization_config(
@@ -688,9 +720,11 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     )
     self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertIsNone(op_config.activation_tensor_config)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
     # WEIGHT_ONLY check.
     self.assertEqual(op_config.compute_precision, _ComputePrecision.FLOAT)
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 8)
+    self.assertEqual(weight_tensor_config.num_bits, 8)
 
     # Dense will be overwritten by the last setting
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
@@ -698,9 +732,11 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     )
     self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
     self.assertIsNone(op_config.activation_tensor_config)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
     # DRQ check.
     self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 4)
+    self.assertEqual(weight_tensor_config.num_bits, 4)
 
     # Other ops will have default quantization settings
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
@@ -710,9 +746,11 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     op_act_config = op_config.activation_tensor_config
     self.assertIsNotNone(op_act_config)
     self.assertEqual(op_act_config.num_bits, 8)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
     # SRQ check.
     self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
-    self.assertEqual(op_config.weight_tensor_config.num_bits, 8)
+    self.assertEqual(weight_tensor_config.num_bits, 8)
 
   def test_need_calibration_false(self):
     self._recipe_manager.add_quantization_config(
@@ -720,6 +758,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         operation_name=_TFLOpName.FULLY_CONNECTED,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8),
             compute_precision=_ComputePrecision.INTEGER,  # DRQ.
         ),
     )
@@ -728,6 +767,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         operation_name=_TFLOpName.CONV_2D,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8),
             compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
             explicit_dequantize=True,
         ),
@@ -740,6 +780,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         operation_name=_TFLOpName.FULLY_CONNECTED,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8),
             compute_precision=_ComputePrecision.INTEGER,  # DRQ.
         ),
     )
@@ -748,6 +789,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         operation_name=_TFLOpName.CONV_2D,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8),
             compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
         ),
     )
@@ -756,6 +798,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         operation_name=_TFLOpName.BATCH_MATMUL,
         algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
         op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8),
             activation_tensor_config=_TensorQuantConfig(num_bits=8),
             compute_precision=_ComputePrecision.INTEGER,  # SRQ.
         ),

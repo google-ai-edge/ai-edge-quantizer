@@ -297,15 +297,14 @@ class OpQuantizationConfig:
   # Quantization config for weight tensor in the op.
   # Bias tensor quantization is deduced from activation/weight config.
   # e.g., int8A X int8W => int32 bias.
-  weight_tensor_config: TensorQuantizationConfig = TensorQuantizationConfig(
-      dtype=TensorDataType.INT,
-      num_bits=8,
-  )
+  weight_tensor_config: Optional[TensorQuantizationConfig] = None
 
   # The precision of the compute operation.
-  compute_precision: ComputePrecision = ComputePrecision.INTEGER
+  compute_precision: ComputePrecision = ComputePrecision.FLOAT
 
-  # Whether to add explicit dequantize op.
+  # Whether to add explicit dequantize op if compute precision is FLOAT, but
+  # weight is quantized.
+  # TODO: b/359647578 - Set default to True.
   explicit_dequantize: bool = False
 
   # For advanced users only. If set, the quantizer will ignore all op
@@ -314,7 +313,10 @@ class OpQuantizationConfig:
   skip_checks: bool = False
 
   def __post_init__(self):
-    if self.activation_tensor_config is None:
+    if (
+        self.activation_tensor_config is None
+        or self.weight_tensor_config is None
+    ):
       return
     # Make sure the setting is valid.
     if (

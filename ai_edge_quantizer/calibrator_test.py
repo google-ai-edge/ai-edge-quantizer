@@ -99,6 +99,7 @@ class CalibratorTest(googletest.TestCase):
                 num_bits=4,
                 granularity=qtyping.QuantGranularity.CHANNELWISE,
             ),
+            compute_precision=_ComputePrecision.INTEGER,
         ),
     )
     self._calibrator._initialize_model_qsvs(self._recipe_manager)

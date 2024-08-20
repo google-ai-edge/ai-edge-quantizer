@@ -69,14 +69,19 @@ def check_op_quantization_config(
     raise ValueError(
         f"Unsupported op: {op_name} for float casting quantization."
     )
+  if op_quant_config.weight_tensor_config is None:
+    raise ValueError(
+        "Weight tensor quantization config is required for float casting"
+        " quantization."
+    )
   if (
       op_quant_config.weight_tensor_config.num_bits != 16
       or op_quant_config.weight_tensor_config.dtype
       != qtyping.TensorDataType.FLOAT
   ):
     raise ValueError(
-        "Currently, float casting quantization requires number of bits to be"
-        " set as 16, dtype as float, got"
+        "Currently, float casting quantization config requires number of bits"
+        " to be set as 16, dtype as float, got"
         f" {op_quant_config.weight_tensor_config.num_bits} and"
         f" {op_quant_config.weight_tensor_config.dtype} ."
     )

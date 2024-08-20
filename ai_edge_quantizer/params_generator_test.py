@@ -535,7 +535,10 @@ class ParamsGeneratorTest(parameterized.TestCase):
     self._recipe_manager.add_quantization_config(
         regex='PartitionedCall:0',
         operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
-        op_config=qtyping.OpQuantizationConfig(),
+        op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8),
+            compute_precision=_ComputePrecision.INTEGER,
+        ),
     )
     # Setup the quantization config for the second FC (weight shared with the
     # first FC).
@@ -547,6 +550,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
           operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
           op_config=qtyping.OpQuantizationConfig(
               weight_tensor_config=_TensorQuantConfig(num_bits=4),
+              compute_precision=_ComputePrecision.INTEGER,
           ),
       )
     pg = params_generator.ParamsGenerator(model_path)

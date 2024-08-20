@@ -116,8 +116,8 @@ class Fp16QuantizeTest(parameterized.TestCase):
       self, op_name
   ):
     error_message = (
-        "float casting quantization requires number of bits to be set as 16,"
-        " dtype as float"
+        "float casting quantization config requires number of bits to be set as"
+        " 16, dtype as float"
     )
     # Wrong bit width.
     with self.assertRaisesWithPredicateMatch(
@@ -149,8 +149,8 @@ class Fp16QuantizeTest(parameterized.TestCase):
       self, op_name
   ):
     error_message = (
-        "float casting quantization requires number of bits to be set as 16,"
-        " dtype as float"
+        "float casting quantization config requires number of bits to be set as"
+        " 16, dtype as float"
     )
     # Wrong dtype.
     with self.assertRaisesWithPredicateMatch(
@@ -163,6 +163,36 @@ class Fp16QuantizeTest(parameterized.TestCase):
               weight_tensor_config=_TensorQuantConfig(
                   num_bits=16, dtype=qtyping.TensorDataType.INT
               ),
+              compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+              explicit_dequantize=True,
+          ),
+      )
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="invalid_fc",
+          op_name=_TFLOpName.FULLY_CONNECTED,
+      ),
+      dict(
+          testcase_name="invalid_conv2d",
+          op_name=_TFLOpName.CONV_2D,
+      ),
+  )
+  def test_check_op_quantization_config_no_weight_config_raises_exception(
+      self, op_name
+  ):
+    error_message = (
+        "Weight tensor quantization config is required for float casting"
+        " quantization."
+    )
+    # No weight quantization config.
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda err: error_message in str(err)
+    ):
+      float_casting.check_op_quantization_config(
+          op_name,
+          qtyping.OpQuantizationConfig(
+              activation_tensor_config=None,
               compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
               explicit_dequantize=True,
           ),
@@ -530,6 +560,7 @@ class Fp16QuantizeTest(parameterized.TestCase):
     # Check quantization params.
     quantization_params = op_params.parameters
     self.assertIsNotNone(quantization_params)
+    self.assertIsNotNone(tensor_quant_config)
     self.assertEqual(quantization_params.num_bits, tensor_quant_config.num_bits)
     quantized_data = quantization_params.quantized_data
     self.assertIsNotNone(quantized_data)

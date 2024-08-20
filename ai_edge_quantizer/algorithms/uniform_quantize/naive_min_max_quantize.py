@@ -44,6 +44,11 @@ def check_op_quantization_config(
   Raises:
     ValueError: If the op quantization config is invalid.
   """
+  if op_quant_config.weight_tensor_config is None:
+    raise ValueError(
+        "Weight tensor quantization is required for min/max uniform"
+        " quantization."
+    )
   if op_quant_config.weight_tensor_config.dtype != qtyping.TensorDataType.INT:
     raise ValueError(
         "Weights need to have integer type for min/max uniform quantization. If"
