@@ -1006,7 +1006,7 @@ def _get_tensor_quant_params(
   if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
     quantized_vars = (
         uniform_quantize_tensor.uniform_quantize_for_emulated_subchannel(
-            tensor_content, quant_params
+            tensor_content, quant_params, tensor_quant_config.block_size
         )
     )
   else:

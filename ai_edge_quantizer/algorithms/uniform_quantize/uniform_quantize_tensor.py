@@ -122,6 +122,7 @@ def fix_quantization_params_rank(
 def uniform_quantize_for_emulated_subchannel(
     tensor_data: np.ndarray,
     quantization_params: qtyping.UniformQuantParams,
+    block_size: int,
 ) -> np.ndarray:
   """Uniform quantize a tensor for emulated subchannel.
 
@@ -131,6 +132,7 @@ def uniform_quantize_for_emulated_subchannel(
   Args:
     tensor_data: The tensor to be quantized.
     quantization_params: The quantization parameters.
+    block_size: The block size of the emulated subchannel.
 
   Returns:
     The quantized tensor.
@@ -143,8 +145,8 @@ def uniform_quantize_for_emulated_subchannel(
       np.transpose(tensor_data, (1, 0)),
       (
           1,
-          scales.shape[1],
-          int(tensor_data.shape[1] / scales.shape[1]),
+          int(tensor_data.shape[1] / block_size),
+          block_size,
           tensor_data.shape[0],
       ),
   )
