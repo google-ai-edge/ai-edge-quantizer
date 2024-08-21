@@ -66,14 +66,19 @@ class QuantizationResult:
 
     Raises:
       RuntimeError: If no quantized model is available.
+      FileExistsError: If the model already exists in the folder.
     """
     if self.quantized_model is None:
       raise RuntimeError(
           'No quantized model to save. Make sure .quantize() is called.'
       )
     model_save_path = os.path.join(
-        save_folder, model_name + '_quantized.tflite'
+        save_folder, f'{model_name}.tflite'
     )
+    if gfile.Exists(model_save_path):
+      raise FileExistsError(
+          f'The model {model_save_path} already exists in the folder.'
+      )
     with gfile.GFile(model_save_path, 'wb') as output_file_handle:
       output_file_handle.write(self.quantized_model)
 

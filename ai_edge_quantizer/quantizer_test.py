@@ -49,6 +49,7 @@ class QuantizerTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
+    self._tmp_save_path = self.create_tempdir().full_path
     self._test_model_path = os.path.join(
         TEST_DATA_PREFIX_PATH, 'tests/models/conv_fc_mnist.tflite'
     )
@@ -197,11 +198,12 @@ class QuantizerTest(parameterized.TestCase):
 
   def test_save_succeeds(self):
     model_name = 'test_model'
-    save_path = '/tmp/'
     self._quantizer.load_quantization_recipe(self._test_recipe_path)
     result = self._quantizer.quantize()
-    result.save(save_path, model_name)
-    saved_recipe_path = os.path.join(save_path, model_name + '_recipe.json')
+    result.save(self._tmp_save_path, model_name)
+    saved_recipe_path = os.path.join(
+        self._tmp_save_path, model_name + '_recipe.json'
+    )
     with open(saved_recipe_path) as json_file:
       saved_recipe = json.load(json_file)
     self.assertEqual(saved_recipe, self._test_recipe)
@@ -211,7 +213,7 @@ class QuantizerTest(parameterized.TestCase):
     with self.assertRaisesWithPredicateMatch(
         RuntimeError, lambda err: error_message in str(err)
     ):
-      self._quantizer._result.save('/tmp/', 'test_model')
+      self._quantizer._result.save(self._tmp_save_path, 'test_model')
 
   def test_compare_succeeds(self):
     self._quantizer.quantize()
