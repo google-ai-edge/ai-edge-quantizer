@@ -842,6 +842,16 @@ class ParamsGeneratorTest(parameterized.TestCase):
         expected,
     )
 
+  def test_model_with_duplicated_tensor_names_fails(self):
+    model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, 'tests/models/duplicated_tensor_names.tflite'
+    )
+    error_message = 'Tensor name test_same_name is not unique in the model.'
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda err: error_message in str(err)
+    ):
+      params_generator.ParamsGenerator(model_path)
+
   def _test_tensor_transformation_params(
       self,
       subgraph_op_id,

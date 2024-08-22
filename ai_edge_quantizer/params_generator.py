@@ -32,6 +32,7 @@ class ParamsGenerator:
 
   def __init__(self, float_tflite: Union[str, bytearray]):
     self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
+    self._check_tensor_names_are_unique()
     self.buffer_to_tensors: dict[int, list[Any]] = (
         tfl_flatbuffer_utils.buffer_to_tensors(self.flatbuffer_model)
     )
@@ -108,6 +109,20 @@ class ParamsGenerator:
 
     self._post_process_results()
     return self.model_quant_results
+
+  def _check_tensor_names_are_unique(self):
+    """Checks if the tensor names are unique in the model."""
+    global_tensor_names = set()
+    for subgraph in self.flatbuffer_model.subgraphs:
+      for tensor in subgraph.tensors:
+        tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
+        if tensor_name in global_tensor_names:
+          raise ValueError(
+              'Tensor name %s is not unique in the model. Please check your'
+              ' model and rename the tensor as ParamsGenerator assumes tensor'
+              ' names are unique.' % tensor_name
+          )
+        global_tensor_names.add(tensor_name)
 
   def _post_process_results(self) -> None:
     """Post process the quantization results.
@@ -337,7 +352,8 @@ def _same_tensor_params_except_id(
   """Check if two op to tensor params are the same except for subgraph_op_id."""
   return params1.transformations == params2.transformations and (
       params1.parameters == params2.parameters
-      or params1.parameters is None and params2.parameters is None
+      or params1.parameters is None
+      and params2.parameters is None
   )
 
 
