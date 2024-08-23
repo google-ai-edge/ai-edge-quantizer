@@ -281,7 +281,10 @@ class Quantizer:
 
   def _check_is_float_model(self, float_model: Union[str, bytearray]):
     """Checks that the model is float and not already quantized."""
-    tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(float_model)
+    # TODO(b/361411326): Remove TFLite dependency later
+    tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
+        float_model, allocate_tensors=False
+    )
     for tensor_detail in tfl_interpreter.get_tensor_details():
       if tfl_interpreter_utils.is_tensor_quantized(tensor_detail):
         raise ValueError('Provided model is already quantized.')
