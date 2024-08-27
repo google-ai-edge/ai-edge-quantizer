@@ -1,6 +1,6 @@
 # AI Edge Quantizer
 
-A quantizer for advanced developers to quantize converted AI Edge models. It aims to
+A quantizer for advanced developers to quantize converted LiteRT models. It aims to
 facilitate advanced users to strive for optimal performance on resource
 demanding models (e.g., GenAI models).
 
@@ -19,32 +19,82 @@ Nightly Release    | [![](https://github.com/google-ai-edge/ai-edge-quantizer/ac
  * Operating system: Linux, MacOS
  * TensorFlow: [![tf-nightly](https://img.shields.io/badge/tf--nightly-latest-blue)](https://pypi.org/project/tf-nightly/)
 
-### Python Virtual Env
+### Install
 
-Set up a Python virtualenv:
-
+Stable version:
 ```bash
-python -m venv --prompt ai-edge-quantizer venv
-source venv/bin/activate
+pip install ai-edge-quantizer
 ```
 
-### Build PyPi Package at Local
-
+Nightly version:
 ```bash
-pip install wheel
-python setup.py bdist_wheel
+pip install ai-edge-quantizer-nightly
 ```
 
-It will build a PyPi package `ai_edge_quantizer-0.0.1-py3-none-any.whl` unde
-the `dist` folder, which you could install at local using command:
+## API Usage
 
-```bash
-pip install dist/ai_edge_quantizer-0.0.1-py3-none-any.whl
+The quantizer requires two inputs:
+
+1. An unquantized source LiteRT model (with FP32 data type in the FlatBuffers format with `.tflite` extension)
+2. A quantization recipe (details below)
+
+and outputs a quantized LiteRT model that's ready for deployment on edge devices.
+
+### Basic Usage
+
+In a nutshell, the quantizer works according to the following steps:
+
+1. Instantiate a `Quantizer` class. This is the entry point to the quantizer's functionalities that the user accesses.
+2. Load a desired quantization recipe (details in subsection).
+3. Quantize (and save) the model. This is where most of the quantizer's internal logic works.
+
+```python
+qt = quantizer.Quantizer("path/to/input/tflite")
+qt.load_quantization_recipe(recipe.dynamic_wi8_afp32())
+qt.quantize().save("/path/to/output/tflite")
 ```
 
-### Run Unit Tests
+TODO(b/354275253, b/362387762): Update colab path
+Please visit the [MNIST colab]() for the simplest quick start guide on those 3 steps, and the [ISNET colab]() with more details on advanced features.
 
-```bash
-pip install -r requirements.txt
-python -m unittest discover --pattern *_test.py
-```
+#### LiteRT Model
+
+Please refer to the [LiteRT model documentation](https://ai.google.dev/edge/lite) for ways to generate LiteRT models. The input source model should be an unquantized FP32 model in the FlatBuffers format with `.tflite` extension.
+
+#### Quantization Recipe
+
+The user needs to specify a quantization recipe using AI Edge Quantizer's API to apply to the source model. The quantization recipe encodes all information on how a model is to be quantized, such as number of bits, data type, symmetry, scope name, etc.
+
+Essentially, a quantization recipe is defined as a collection of the following command:
+
+_“Apply **Quantization Algorithm X** on **Operator Y** under **Scope Z** with **ConfigN**”._
+
+For example:
+
+_"**Uniformly quantize** the **FullyConnected op** under scope **'dense1/'** with **INT8 symmetric with Dynamic Quantization**"._
+
+All the unspecified ops will be kept as FP32 (unquantized). The scope of an operator in TFLite is defined as the output tensor name of the op, which preserves the hierarchical model information from the source model (e.g., scope in TF). The best way to obtain scope name is by visualizing the model with [Model Explorer](https://github.com/google-ai-edge/model-explorer).
+
+TODO(b/362387762): Update colab path
+The simplest recipe to get started with is provided in [recipe.py](ai_edge_quantizer/recipe.py):`dynamic_wi8_afp32()`. This is demonstrated in the [MNIST colab]() example.
+
+#### Deployment
+Please refer to the [LiteRT deployment documentation](https://ai.google.dev/edge/lite/inference) for ways to deploy a quantized LiteRT model.
+
+### Advanced Recipes
+
+There are many ways the user can configure and customize the quantization recipe beyond using a template in [recipe.py](ai_edge_quantizer/recipe.py). For example, the user can configure the recipe to achieve these features:
+
+* Selective quantization (exclude selected ops from being quantized)
+* Flexible mixed scheme quantization (mixture of different precision, compute precision, scope, op, config, etc)
+* 4-bit weight quantization
+
+TODO(b/354275253): Update colab path
+These recipes are explored and constructed in the [ISNET colab]() example.
+
+For specifics of the recipe schema, please refer to [recipe_manager.py](ai_edge_quantizer/recipe_manager.py):`OpQuantizationRecipe` which is the source of truth.
+
+For advanced usage involving mixed quantization, the following API may be useful:
+
+* Use [quantizer.py](ai_edge_quantizer/quantizer.py):`Quantizer:load_quantization_recipe()` to load a custom recipe.
+* Use [quantizer.py](ai_edge_quantizer/quantizer.py):`Quantizer:update_quantization_recipe()` to add or override (if there's a conflict in the same scope) specific parts of the recipe.

@@ -240,19 +240,13 @@ class TensorQuantizationConfig:
     granularity: Whether to perform per-tensor, per-channel or per-block
       quantization.
     dtype: The data type of the tensor.
-    block_size: The block size for blockwise quantization.
+    block_size: The block size for blockwise quantization, ignored otherwise.
   """
 
-  # Number of bits to quantize to (e.g. 8 for int8).
   num_bits: int
-  # Whether to perform symmetric or asymmetric quantization. In the symmetric
-  # quantization mode, the zero point is always 0.
   symmetric: bool = True
-  # The channel configuration for the tensor.
   granularity: QuantGranularity = QuantGranularity.TENSORWISE
-  # The data type of the tensor.
   dtype: TensorDataType = TensorDataType.INT
-  # The block size for blockwise quantization.
   block_size: int = 0
 
   def to_dict(self) -> dict[str, Any]:
@@ -278,8 +272,7 @@ class TensorQuantizationConfig:
 class OpQuantizationConfig:
   """Configuration class to control the quantization process behavior.
 
-  Default as float activation and weights. The default execution mode is
-  WEIGHT_ONLY.
+  Default to float activations and weights.
 
   Attributes:
     activation_tensor_config: The quantization configuration for activation
@@ -287,29 +280,21 @@ class OpQuantizationConfig:
     weight_tensor_config: The quantization configuration for weight tensor in
       the op.
     compute_precision: The precision of the compute operation.
+    explicit_dequantize: Whether to add explicit dequantize op if compute
+      precision is FLOAT, but weight is quantized.
     skip_checks: Whether to skip op quantization config checks.
-    explicit_dequantize: Whether to add explicit dequantize op.
+      For advanced users only. If set, the quantizer will ignore all op
+      configuration checks and forcefully quantize this op according to the user
+      instructions even if it's not supported in the TFLite runtime.
   """
 
-  # Quant config for activation tensors in the op (i.e., runtime tensors).
   activation_tensor_config: Optional[TensorQuantizationConfig] = None
-
-  # Quantization config for weight tensor in the op.
   # Bias tensor quantization is deduced from activation/weight config.
   # e.g., int8A X int8W => int32 bias.
   weight_tensor_config: Optional[TensorQuantizationConfig] = None
-
-  # The precision of the compute operation.
   compute_precision: ComputePrecision = ComputePrecision.FLOAT
-
-  # Whether to add explicit dequantize op if compute precision is FLOAT, but
-  # weight is quantized.
   # TODO: b/359647578 - Set default to True.
   explicit_dequantize: bool = False
-
-  # For advanced users only. If set, the quantizer will ignore all op
-  # configuration checks and forcefully quantize this op according to the user
-  # instructions even if it's not supported in the TFLite runtime.
   skip_checks: bool = False
 
   def __post_init__(self):

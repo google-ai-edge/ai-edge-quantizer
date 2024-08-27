@@ -37,18 +37,27 @@ _TensorQuantizationConfig = qtyping.TensorQuantizationConfig
 
 @dataclasses.dataclass
 class OpQuantizationRecipe:
-  """Dataclass for quantization configuration under a scope."""
+  """Dataclass for quantization configuration under a scope.
 
-  # Regular expression for scope name matching.
+  This class is the main entry point to a recipe schema. There could be a single
+  instance of this associated with a model (with `regex=.*` if the full model is
+  to be quantized with the same spec), or multiple instances targeting different
+  `regex` or `operation`.
+
+  Attributes:
+    regex: Regular expression for scope name matching.
+      Any op that matches `regex` will be quantized according to this instance.
+      The narrowest scope would be the full output tensor name of an op.
+      The widest scope would be '.*' which applies to the full model.
+    operation: Target TFL operation. * for any supported TFLite operation.
+    algorithm_key: Algorithm key to be applied.
+      This can be any one of the strings as enumerated in `AlgorithmName`.
+    op_config: Quantization configuration to be applied for the op.
+  """
+
   regex: str
-
-  # Target TFL operation. * for any supported TFL operation.
   operation: _TFLOpName
-
-  # Algorithm key to be applied.
   algorithm_key: str
-
-  # Quantization configuration to be applied for the op.
   op_config: _OpQuantizationConfig = dataclasses.field(
       default_factory=_OpQuantizationConfig
   )
@@ -57,7 +66,8 @@ class OpQuantizationRecipe:
 class RecipeManager:
   """Sets the quantization recipe for target model.
 
-  Very similar design as mojax/flax_quantizer/configurator.py
+  This class is internal to Quantizer to help manage loading recipes and
+  resolving conflicts between recipes input by the user.
   """
 
   def __init__(self):
