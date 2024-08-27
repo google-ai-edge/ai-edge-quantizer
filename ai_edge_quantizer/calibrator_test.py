@@ -212,5 +212,24 @@ class CalibratorTest(googletest.TestCase):
     self.assertLen(test_calibrator.get_cached_output(), 10)
 
 
+class CalibratorAlreadyQuantizedModelTest(googletest.TestCase):
+
+  def test_check_is_float_model_succeeds_when_model_is_float(self):
+    test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, "tests/models/conv_fc_mnist.tflite"
+    )
+    _ = calibrator.Calibrator(test_model_path)
+
+  def test_check_is_float_model_raises_error_when_model_is_quantized(self):
+    test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, "tests/models/mnist_quantized.tflite"
+    )
+    with self.assertRaisesRegex(
+        ValueError,
+        "The input model for calibration is not a float model.",
+    ):
+      _ = calibrator.Calibrator(test_model_path)
+
+
 if __name__ == "__main__":
   googletest.main()

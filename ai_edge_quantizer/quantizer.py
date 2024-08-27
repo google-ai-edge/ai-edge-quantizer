@@ -28,7 +28,6 @@ from ai_edge_quantizer import params_generator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import test_utils
-from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 
@@ -109,7 +108,6 @@ class Quantizer:
       quantization_recipe: Quantization recipe in .json filepath or loaded json
         format.
     """
-    self._check_is_float_model(float_model)
     self.float_model: Union[str, bytearray] = float_model
     self._recipe_manager: recipe_manager.RecipeManager = (
         recipe_manager.RecipeManager()
@@ -278,16 +276,6 @@ class Quantizer:
         use_reference_kernel=use_reference_kernel,
     )
     return comparison_result
-
-  def _check_is_float_model(self, float_model: Union[str, bytearray]):
-    """Checks that the model is float and not already quantized."""
-    # TODO(b/361411326): Remove TFLite dependency later
-    tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
-        float_model, allocate_tensors=False
-    )
-    for tensor_detail in tfl_interpreter.get_tensor_details():
-      if tfl_interpreter_utils.is_tensor_quantized(tensor_detail):
-        raise ValueError('Provided model is already quantized.')
 
   def _get_quantization_params(
       self, calibration_result: Optional[_CalibrationResult] = None

@@ -263,3 +263,14 @@ def has_same_quantization(tensor1: Any, tensor2: Any) -> bool:
   return (
       same_type and same_scale and same_zero_point and same_quantized_dimension
   )
+
+
+def is_float_model(flatbuffer_model: Any) -> bool:
+  """Checks that the model is float and not already quantized."""
+  for subgraph in flatbuffer_model.subgraphs:
+    for tensor in subgraph.tensors:
+      if tensor.quantization is None:
+        continue
+      if tensor.quantization.scale is not None:
+        return False
+  return True

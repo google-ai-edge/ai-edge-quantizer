@@ -168,6 +168,20 @@ class FlatbufferUtilsTest(googletest.TestCase):
         tfl_flatbuffer_utils.has_same_quantization(tensor0, tensor1)
     )
 
+  def test_check_is_float_model_true_when_model_is_float(self):
+    test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, "conv_fc_mnist.tflite"
+    )
+    model = tfl_flatbuffer_utils.read_model(test_model_path)
+    self.assertTrue(tfl_flatbuffer_utils.is_float_model(model))
+
+  def test_check_is_float_model_false_when_model_is_quantized(self):
+    test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, "mnist_quantized.tflite"
+    )
+    model = tfl_flatbuffer_utils.read_model(test_model_path)
+    self.assertFalse(tfl_flatbuffer_utils.is_float_model(model))
+
 
 if __name__ == "__main__":
   googletest.main()
