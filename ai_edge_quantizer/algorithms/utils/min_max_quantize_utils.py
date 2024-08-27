@@ -25,6 +25,7 @@ from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation
+_IntType = uniform_quantize_tensor.IntType
 
 _SUPPORTED_WEIGHT_ONLY_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
@@ -843,12 +844,21 @@ def materialize_op_with_output_activation_constraint(
           "Output activation constraints dictionary does not contain entity"
           f" for activation num bits {activation_num_bits}."
       )
+    fixed_quant_params = output_activation_constraints[activation_num_bits]
     op_tensor_params = qtyping.OpToTensorParams(
         subgraph_op_id=output_tensor_params.producer.subgraph_op_id,
         transformations=output_tensor_params.producer.transformations,
-        parameters=output_activation_constraints[activation_num_bits],
+        parameters=fixed_quant_params,
     )
     output_tensor_params.producer = op_tensor_params
+    # Update the tensor_name_to_qsv map using the output activation constraints.
+    min_val, max_val = _get_min_max_from_quant_params(
+        activation_num_bits,
+        activation_tensor_config.symmetric,
+        fixed_quant_params,
+    )
+    tensor_name_to_qsv[output_tensor_params.tensor_name]["min"] = min_val
+    tensor_name_to_qsv[output_tensor_params.tensor_name]["max"] = max_val
 
   return tensor_params
 
@@ -1047,3 +1057,25 @@ def _get_bmm_weight_quantized_dim(
   if adj_y:
     return rank - 2
   return rank - 1
+
+
+def _get_min_max_from_quant_params(
+    num_bits: int,
+    symmetric: bool,
+    tensor_params: qtyping.UniformQuantParams,
+) -> tuple[float, float]:
+  """Recalculate min/max from tensor quantization params."""
+  q_min, q_max = uniform_quantize_tensor.get_quantized_range(
+      _IntType(num_bits, True)
+  )
+  float_min = uniform_quantize_tensor.uniform_dequantize(
+      np.array(q_min), tensor_params
+  )
+  float_max = uniform_quantize_tensor.uniform_dequantize(
+      np.array(q_max), tensor_params
+  )
+  # We use qmax values to compute scale for symmetric quantization (see
+  # uniform_quantize_tensor.tensor_zp_scale_from_min_max).
+  if symmetric:
+    float_min = -float_max
+  return (float_min, float_max)
