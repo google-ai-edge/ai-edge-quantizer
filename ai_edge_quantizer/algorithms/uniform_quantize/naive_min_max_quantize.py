@@ -187,6 +187,7 @@ def materialize_embedding_lookup(
       op_info,
       graph_info,
       tensor_name_to_qsv,
+      inputs_to_ignore=[0],  # Lookup index does not need to be quantized.
   )
 
 
