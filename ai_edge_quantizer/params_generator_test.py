@@ -164,9 +164,10 @@ class ParamsGeneratorTest(parameterized.TestCase):
         [_QuantTransformation.NO_QUANTIZE],
         is_inbounding_tensor=True,
     )
-    # Input tensor will have no source op
+    # Input tensor is produced from the virtual Input op.
     transformation_config = tensor_quantization_params[tensor_name]
-    self.assertIsNone(transformation_config.producer)
+    self.assertIsNotNone(transformation_config.producer)
+    self.assertEqual(transformation_config.producer.subgraph_op_id, -1)
 
     # Intermediate tensor will have no_quantize at the both end
     tensor_name = 'sequential/average_pooling2d/AvgPool'
@@ -258,9 +259,11 @@ class ParamsGeneratorTest(parameterized.TestCase):
         [_QuantTransformation.NO_QUANTIZE],
         is_inbounding_tensor=False,
     )
-    # Output tensor will have no target op
+    # Output tensor is consumed by the virtual Output op.
     transformation_config = tensor_quantization_params[tensor_name]
-    self.assertIsNone(transformation_config.consumers)
+    self.assertLen(transformation_config.consumers, 1)
+    consumer = transformation_config.consumers[0]
+    self.assertEqual(consumer.subgraph_op_id, -1)
 
   # TODO: b/330770656 - expand the test to cover mixed activation precision.
   def test_generate_config_selective(self):
@@ -444,28 +447,50 @@ class ParamsGeneratorTest(parameterized.TestCase):
     )
     self.assertLen(quant_params, 4)
 
-    # Input tensor
+    # Input tensor producer (from the virtual input op).
+    self._test_tensor_transformation_params(
+        -1,  # virtual input op.
+        quant_params,
+        'serving_default_input_1:0',
+        [_QuantTransformation.ADD_DEQUANTIZE],
+        num_bits=8,
+        granularity=_QuantGranularity.TENSORWISE,
+        symmetric=act_symmetric,
+        is_inbounding_tensor=False,
+    )
+    # Input tensor consumer.
     self._test_tensor_transformation_params(
         0,
         quant_params,
         'serving_default_input_1:0',
-        [_QuantTransformation.QUANTIZE_TENSOR],
+        [_QuantTransformation.ADD_QUANTIZE],
         num_bits=8,
         granularity=_QuantGranularity.TENSORWISE,
         symmetric=act_symmetric,
         is_inbounding_tensor=True,
     )
 
-    # output tensor
+    # output tensor producer.
     self._test_tensor_transformation_params(
         0,
         quant_params,
         'StatefulPartitionedCall:0',
-        [_QuantTransformation.QUANTIZE_TENSOR],
+        [_QuantTransformation.ADD_DEQUANTIZE],
         num_bits=8,
         granularity=_QuantGranularity.TENSORWISE,
         symmetric=act_symmetric,
         is_inbounding_tensor=False,
+    )
+    # output tensor consumer (into the virtual output op).
+    self._test_tensor_transformation_params(
+        -1,  # virtual output op.
+        quant_params,
+        'StatefulPartitionedCall:0',
+        [_QuantTransformation.ADD_QUANTIZE],
+        num_bits=8,
+        granularity=_QuantGranularity.TENSORWISE,
+        symmetric=act_symmetric,
+        is_inbounding_tensor=True,
     )
 
     # weights

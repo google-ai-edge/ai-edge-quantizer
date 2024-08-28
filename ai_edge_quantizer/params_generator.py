@@ -16,7 +16,6 @@
 """Generate model tensor level quantization config."""
 
 import copy
-import dataclasses
 from typing import Any, Optional, Union
 
 from ai_edge_quantizer import algorithm_manager
@@ -25,6 +24,7 @@ from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 _QuantTrans = qtyping.QuantTransformation
+_OpName = qtyping.TFLOperationName
 
 
 class ParamsGenerator:
@@ -77,15 +77,26 @@ class ParamsGenerator:
       graph_info = qtyping.GraphInfo(
           subgraph.tensors, self.flatbuffer_model.buffers
       )
+      # Add input/output operators to the subgraph.
+      subgraph.operators += self._get_input_output_operators(subgraph)
       for subgraph_op_id, op in enumerate(subgraph.operators):
-        op_code = op_codes[op.opcodeIndex].builtinCode
+        op_code = None
+        if not isinstance(op, qtyping.IOOperator):
+          op_code = op_codes[op.opcodeIndex].builtinCode
         # Do not quantize unknown ops.
-        if op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME:
+        if (
+            op_code is not None
+            and op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME
+        ):
           op_quant_results = self._get_params_for_no_quant_op(
               subgraph_op_id, op, subgraph.tensors
           )
         else:
-          op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
+          if isinstance(op, qtyping.IOOperator):
+            op_key = op.op_key
+            subgraph_op_id = -1  # Virtual op, no real id.
+          else:
+            op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
           # Step1: query the quantization_recipe to get op config.
           op_scope = self._get_op_scope(op, subgraph.tensors)
           algorithm_name, op_quant_config = (
@@ -112,7 +123,6 @@ class ParamsGenerator:
             )
         # Step3: update the results.
         self._update_model_quant_results(op_quant_results)
-
     self._post_process_results()
     return self.model_quant_results
 
@@ -130,6 +140,29 @@ class ParamsGenerator:
           )
         global_tensor_names.add(tensor_name)
 
+  def _get_input_output_operators(
+      self, subgraph: Any
+  ) -> list[qtyping.IOOperator]:
+    """Get the input/output operators for the subgraph.
+
+    Args:
+      subgraph: the subgraph object.
+
+    Returns:
+      Input and output operators for the subgraph.
+    """
+    input_op = qtyping.IOOperator(
+        inputs=[],
+        outputs=subgraph.inputs,
+        op_key=_OpName.INPUT,
+    )
+    output_op = qtyping.IOOperator(
+        inputs=subgraph.outputs,
+        outputs=[],
+        op_key=_OpName.OUTPUT,
+    )
+    return [input_op, output_op]
+
   def _post_process_results(self) -> None:
     """Post process the quantization results.
 
@@ -138,9 +171,6 @@ class ParamsGenerator:
       quantization settings.
     """
     self._check_buffer_sharing()
-    # Modify quantization tensor for I/O tensors.
-    for _, tensor_params in self.model_quant_results.items():
-      self._modify_io_tensor_transformations(tensor_params)
 
   def _update_model_quant_results(
       self,
@@ -274,53 +304,6 @@ class ParamsGenerator:
               ' sure the two tensors have the same quantization settings.'
           )
           raise RuntimeError(error_msg)
-
-  def _modify_io_tensor_transformations(
-      self,
-      tensor_params: qtyping.TensorTransformationParams,
-  ) -> None:
-    """Modify quantization information for I/O tensors.
-
-    This will not be trigged by weight-only/DRQ because they do not quantize
-    activation tensors.
-
-    Selective SRQ & emulated SRQ will be okay because only the I/O tensors will
-    be left as quantized, if applicable. This is the intended behavior if user
-    choose SRQ ops to contain I/O tensors.
-
-    Args:
-      tensor_params: Tensor level quantization params for the tensor.
-    """
-    # Change ADD_QUANTIZE to QUANTIZE_TENSOR for input/constant tensors.
-    if tensor_params.producer is None and tensor_params.consumers is not None:
-      new_consumers = []
-      for consumer in tensor_params.consumers:
-        if consumer.transformations == [
-            _QuantTrans.ADD_QUANTIZE
-        ] or consumer.transformations == [_QuantTrans.QUANTIZE_TENSOR]:
-          new_consumers.append(
-              dataclasses.replace(
-                  consumer,
-                  transformations=[_QuantTrans.QUANTIZE_TENSOR],
-              )
-          )
-        else:
-          # Do not modify if one of the consumers require transformations other
-          # than ADD_QUANTIZE.
-          return
-      tensor_params.consumers = new_consumers
-    # Change ADD_DEQUANTIZE to QUANTIZE_TENSOR for output tensors.
-    elif (
-        tensor_params.consumers is None
-        and tensor_params.producer is not None
-        and tensor_params.producer.transformations
-        == [_QuantTrans.ADD_DEQUANTIZE]
-    ):
-      tensor_params.producer = qtyping.OpToTensorParams(
-          subgraph_op_id=tensor_params.producer.subgraph_op_id,
-          transformations=[_QuantTrans.QUANTIZE_TENSOR],
-          parameters=tensor_params.producer.parameters,
-      )
 
 
 def _compatible_tensor_transformation_params(

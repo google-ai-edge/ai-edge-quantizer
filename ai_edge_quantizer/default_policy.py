@@ -4532,3 +4532,69 @@ DEFAULT_CONFIG_CHECK_POLICY = qtyping.ConfigCheckPolicyDict({
         ),
     ],
 })
+
+# Add configurations for virtual input/output ops.
+valid_io_activation_configs = [
+    None,
+    _TensorQuantizationConfig(
+        num_bits=8,
+        symmetric=True,
+        granularity=_Granularity.TENSORWISE,
+        dtype=_INT,
+    ),
+    _TensorQuantizationConfig(
+        num_bits=8,
+        symmetric=False,
+        granularity=_Granularity.TENSORWISE,
+        dtype=_INT,
+    ),
+    _TensorQuantizationConfig(
+        num_bits=16,
+        symmetric=True,
+        granularity=_Granularity.TENSORWISE,
+        dtype=_INT,
+    ),
+]
+# Virtual input/output ops do not have any weights. All weight configs
+# are valid so configs of inputs/outputs can be picked up by ALL_SUPPORTED.
+valid_io_weight_configs = []
+for num_bits in [4, 8]:
+  for symmetric in [True, False]:
+    for granularity in [
+        _Granularity.TENSORWISE,
+        _Granularity.CHANNELWISE,
+    ]:
+      valid_io_weight_configs.append(
+          _TensorQuantizationConfig(
+              num_bits=num_bits,
+              symmetric=symmetric,
+              granularity=granularity,
+              dtype=_INT,
+          )
+      )
+
+valid_io_op_configs = []
+for valid_activation_config in valid_io_activation_configs:
+  for valid_weight_config in valid_io_weight_configs:
+    for compute_precision in [
+        _ComputePrecision.INTEGER,
+        _ComputePrecision.FLOAT,
+    ]:
+      # Exclude float compute precision with valid activation config.
+      if (
+          valid_activation_config is not None
+          and compute_precision == _ComputePrecision.FLOAT
+      ):
+        continue
+      for explicit_dequantize in [True, False]:
+        valid_io_op_configs.append(
+            _OpQuantizationConfig(
+                activation_tensor_config=valid_activation_config,
+                weight_tensor_config=valid_weight_config,
+                compute_precision=compute_precision,
+                explicit_dequantize=explicit_dequantize,
+            )
+        )
+
+DEFAULT_CONFIG_CHECK_POLICY[_TFLOpName.INPUT] = valid_io_op_configs
+DEFAULT_CONFIG_CHECK_POLICY[_TFLOpName.OUTPUT] = valid_io_op_configs

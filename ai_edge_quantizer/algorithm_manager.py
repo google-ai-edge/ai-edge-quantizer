@@ -66,6 +66,8 @@ register_config_check_policy_func(
 
 for op_name, materialize_func in zip(
     (
+        _TFLOpName.INPUT,
+        _TFLOpName.OUTPUT,
         _TFLOpName.FULLY_CONNECTED,
         _TFLOpName.BATCH_MATMUL,
         _TFLOpName.CONV_2D,
@@ -88,6 +90,8 @@ for op_name, materialize_func in zip(
         _TFLOpName.SPLIT,
     ),
     (
+        naive_min_max_quantize.materialize_input,
+        naive_min_max_quantize.materialize_output,
         naive_min_max_quantize.materialize_fc_conv,
         naive_min_max_quantize.materialize_batch_matmul,
         naive_min_max_quantize.materialize_fc_conv,

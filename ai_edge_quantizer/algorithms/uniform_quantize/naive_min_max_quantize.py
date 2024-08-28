@@ -67,6 +67,32 @@ def check_op_quantization_config(
   utils.check_subchannel_config(op_name, op_quant_config)
 
 
+def materialize_input(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in the virtual input op."""
+  return utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+  )
+
+
+def materialize_output(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in the virtual output op."""
+  return utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+  )
+
+
 def materialize_add(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,

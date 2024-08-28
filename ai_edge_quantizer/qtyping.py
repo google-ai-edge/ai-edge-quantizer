@@ -33,6 +33,8 @@ class TFLOperationName(str, enum.Enum):
   """TF Lite operation names."""
 
   ALL_SUPPORTED = '*'
+  INPUT = 'INPUT'
+  OUTPUT = 'OUTPUT'
   FULLY_CONNECTED = 'FULLY_CONNECTED'
   BATCH_MATMUL = 'BATCH_MATMUL'
   DEPTHWISE_CONV_2D = 'DEPTHWISE_CONV_2D'
@@ -458,3 +460,18 @@ def _compare_array_or_none(
     return False  # Only one is None, so they're different.
   else:
     return np.array_equal(obj1, obj2)
+
+
+@dataclasses.dataclass(frozen=True)
+class IOOperator:
+  """IOOperator class to represent the input and output for a subgraph.
+
+  Attributes:
+    inputs: The input tensor ids of the op.
+    outputs: The output tensor ids of the op.
+    op_key: The op key of the op (input or output).
+  """
+
+  inputs: list[int]
+  outputs: list[int]
+  op_key: TFLOperationName
