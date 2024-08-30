@@ -116,8 +116,6 @@ The table below outlines the allowed configurations for available recipes.
 | | dtype | INT | INT | INT | INT | INT | INT | INT | INT |
 | explicit\_dequantize | | FALSE | FALSE | FALSE | FALSE | FALSE | FALSE | TRUE | TRUE |
 | compute\_precision || INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | FLOAT | FLOAT |
-|     |     |     |     |     |     |    |    |    |    |
-| --- | --- | --- | --- | --- | --- |--- |--- |--- |--- |
 
 
 **Operators Supporting Quantization**
@@ -145,4 +143,3 @@ The table below outlines the allowed configurations for available recipes.
 |CONCATENATION    |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |STRIDED_SLICE    |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |SPLIT            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-| --- | --- | --- | --- | --- | --- |--- |--- |--- |
