@@ -16,6 +16,7 @@
 import collections
 from absl.testing import parameterized
 from tensorflow.python.platform import googletest
+from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.utils import min_max_quantize_utils
 
@@ -24,6 +25,7 @@ _QuantTransformation = qtyping.QuantTransformation
 _TFLOpName = qtyping.TFLOperationName
 _OpQuantConfig = qtyping.OpQuantizationConfig
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
+_DEFAULT_CONFIG_CHECK_POLICY = default_policy.DEFAULT_CONFIG_CHECK_POLICY
 
 
 # TODO: b/335008966 - increase test coverage.
@@ -101,12 +103,26 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
 
   @parameterized.parameters((_TFLOpName.FULLY_CONNECTED), (_TFLOpName.CONV_2D))
   def test_check_weight_only_config_succeeds(self, op_name):
-    min_max_quantize_utils.check_weight_only_config(op_name)
+    self.assertIn(op_name, _DEFAULT_CONFIG_CHECK_POLICY.keys())
 
   @parameterized.parameters((_TFLOpName.RESHAPE), (_TFLOpName.AVERAGE_POOL_2D))
-  def test_check_weight_only_config_fails(self, op_name):
-    with self.assertRaises(ValueError):
-      min_max_quantize_utils.check_weight_only_config(op_name)
+  def test_check_weight_only_config_raises_when_invalid_config(self, op_name):
+    op_quant_config = _OpQuantConfig(
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=8,
+        ),
+        compute_precision=_ComputePrecision.FLOAT,
+    )
+    error_message = (
+        f"Quantization config for op: {op_name} with config:"
+        f" {op_quant_config} was not found in the policy."
+    )
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda err: error_message in str(err)
+    ):
+      min_max_quantize_utils.check_if_valid_op_config(
+          op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
+      )
 
   @parameterized.product(
       op_name=(_TFLOpName.FULLY_CONNECTED, _TFLOpName.CONV_2D),
@@ -130,7 +146,9 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         ),
         compute_precision=_ComputePrecision.INTEGER,  # DRQ.
     )
-    min_max_quantize_utils.check_drq_config(op_name, op_quant_config)
+    min_max_quantize_utils.check_if_valid_op_config(
+        op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
+    )
 
   @parameterized.parameters((_TFLOpName.RESHAPE), (_TFLOpName.AVERAGE_POOL_2D))
   def test_check_drq_config_unsupported_op_raise_error(self, op_name):
@@ -141,11 +159,16 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         ),
         compute_precision=_ComputePrecision.INTEGER,  # DRQ.
     )
-    error_message = "Unsupported op for dynamic range quantization"
+    error_message = (
+        f"Quantization config for op: {op_name} with config:"
+        f" {op_quant_config} was not found in the policy."
+    )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_drq_config(op_name, op_quant_config)
+      min_max_quantize_utils.check_if_valid_op_config(
+          op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
+      )
 
   @parameterized.parameters((_TFLOpName.FULLY_CONNECTED), (_TFLOpName.CONV_2D))
   def test_check_drq_config_wrong_bits_raise_error(self, op_name):
@@ -156,11 +179,16 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         ),
         compute_precision=_ComputePrecision.INTEGER,  # DRQ.
     )
-    error_message = "Only int4/int8 symmetric DRQ is supported for op"
+    error_message = (
+        f"Quantization config for op: {op_name} with config:"
+        f" {op_quant_config} was not found in the policy."
+    )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_drq_config(op_name, op_quant_config)
+      min_max_quantize_utils.check_if_valid_op_config(
+          op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
+      )
 
   @parameterized.parameters((_TFLOpName.FULLY_CONNECTED), (_TFLOpName.CONV_2D))
   def test_check_drq_config_asymmetric_weights_raise_error(self, op_name):
@@ -172,11 +200,16 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         ),
         compute_precision=_ComputePrecision.INTEGER,  # DRQ.
     )
-    error_message = "Only int4/int8 symmetric DRQ is supported for op"
+    error_message = (
+        f"Quantization config for op: {op_name} with config:"
+        f" {op_quant_config} was not found in the policy."
+    )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_drq_config(op_name, op_quant_config)
+      min_max_quantize_utils.check_if_valid_op_config(
+          op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
+      )
 
   @parameterized.product(
       op_name=(_TFLOpName.FULLY_CONNECTED, _TFLOpName.CONV_2D),
@@ -209,7 +242,9 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         ),
         compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
-    min_max_quantize_utils.check_srq_config(op_name, op_quant_config)
+    min_max_quantize_utils.check_if_valid_op_config(
+        op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
+    )
 
   def test_check_srq_config_unsupported_op_raise_error(self):
     op_quant_config = _OpQuantConfig(
@@ -220,29 +255,15 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         ),
         compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
-    error_message = "Unsupported op for static range quantization"
-    with self.assertRaisesWithPredicateMatch(
-        ValueError, lambda err: error_message in str(err)
-    ):
-      min_max_quantize_utils.check_srq_config(
-          _TFLOpName.CUSTOM_OP, op_quant_config
-      )
-
-  def test_check_srq_config_no_act_config_raise_error(self):
-    op_quant_config = _OpQuantConfig(
-        activation_tensor_config=None,
-        weight_tensor_config=_TensorQuantConfig(
-            num_bits=8,
-            granularity=qtyping.QuantGranularity.CHANNELWISE,
-        ),
-        compute_precision=_ComputePrecision.INTEGER,  # SRQ.
+    error_message = (
+        f"Unsupported op for {op_quant_config.compute_precision}:"
+        f" {_TFLOpName.CUSTOM_OP}"
     )
-    error_message = "activation_tensor_config is required for SRQ"
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_srq_config(
-          _TFLOpName.FULLY_CONNECTED, op_quant_config
+      min_max_quantize_utils.check_if_valid_op_config(
+          _TFLOpName.CUSTOM_OP, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
       )
 
   def test_check_srq_config_wrong_act_bits_config_raise_error(self):
@@ -256,12 +277,17 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         ),
         compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
-    error_message = "Only int8/int16 activation SRQ is supported"
+    error_message = (
+        f"Quantization config for op: {_TFLOpName.FULLY_CONNECTED} with config:"
+        f" {op_quant_config} was not found in the policy."
+    )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_srq_config(
-          _TFLOpName.FULLY_CONNECTED, op_quant_config
+      min_max_quantize_utils.check_if_valid_op_config(
+          _TFLOpName.FULLY_CONNECTED,
+          op_quant_config,
+          _DEFAULT_CONFIG_CHECK_POLICY,
       )
 
   def test_check_srq_config_asym_int16_act_raise_error(self):
@@ -276,13 +302,16 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     error_message = (
-        "Int16 activation SRQ requires symmetric activation quantization"
+        f"Quantization config for op: {_TFLOpName.FULLY_CONNECTED} with config:"
+        f" {op_quant_config} was not found in the policy."
     )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_srq_config(
-          _TFLOpName.FULLY_CONNECTED, op_quant_config
+      min_max_quantize_utils.check_if_valid_op_config(
+          _TFLOpName.FULLY_CONNECTED,
+          op_quant_config,
+          _DEFAULT_CONFIG_CHECK_POLICY,
       )
 
   def test_check_srq_config_wrong_weight_bits_raise_error(self):
@@ -296,12 +325,17 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         ),
         compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
-    error_message = "Currently only int4/int8 symmetric weight are supported"
+    error_message = (
+        f"Quantization config for op: {_TFLOpName.FULLY_CONNECTED} with config:"
+        f" {op_quant_config} was not found in the policy."
+    )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_srq_config(
-          _TFLOpName.FULLY_CONNECTED, op_quant_config
+      min_max_quantize_utils.check_if_valid_op_config(
+          _TFLOpName.FULLY_CONNECTED,
+          op_quant_config,
+          _DEFAULT_CONFIG_CHECK_POLICY,
       )
 
   def test_check_srq_config_asym_weight_raise_error(self):
@@ -314,12 +348,17 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         ),
         compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
-    error_message = "Currently only int4/int8 symmetric weight are supported"
+    error_message = (
+        f"Quantization config for op: {_TFLOpName.FULLY_CONNECTED} with config:"
+        f" {op_quant_config} was not found in the policy."
+    )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_srq_config(
-          _TFLOpName.FULLY_CONNECTED, op_quant_config
+      min_max_quantize_utils.check_if_valid_op_config(
+          _TFLOpName.FULLY_CONNECTED,
+          op_quant_config,
+          _DEFAULT_CONFIG_CHECK_POLICY,
       )
 
   @parameterized.product(
@@ -373,19 +412,23 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision == _ComputePrecision.INTEGER
         and op_quant_config.activation_tensor_config is None
     ):
-      min_max_quantize_utils.check_drq_config(op_name, op_quant_config)
+      min_max_quantize_utils.check_if_valid_op_config(
+          op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
+      )
     # Check if WEIGHT_ONLY.
     elif (
         compute_precision == _ComputePrecision.FLOAT
         and op_quant_config.explicit_dequantize
     ):
-      min_max_quantize_utils.check_weight_only_config(op_name)
+      self.assertIn(op_name, _DEFAULT_CONFIG_CHECK_POLICY.keys())
     # Check if SRQ.
     if (
         compute_precision == _ComputePrecision.INTEGER
         and op_quant_config.activation_tensor_config is not None
     ):
-      min_max_quantize_utils.check_srq_config(op_name, op_quant_config)
+      min_max_quantize_utils.check_if_valid_op_config(
+          op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
+      )
 
   @parameterized.product(
       op_name=[_TFLOpName.BATCH_MATMUL],
@@ -421,9 +464,13 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
 
     with self.assertRaises(ValueError):
       if is_drq:
-        min_max_quantize_utils.check_drq_config(op_name, op_quant_config)
+        min_max_quantize_utils.check_if_valid_op_config(
+            op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
+        )
       elif not is_drq:
-        min_max_quantize_utils.check_srq_config(op_name, op_quant_config)
+        min_max_quantize_utils.check_if_valid_op_config(
+            op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
+        )
 
   def test_materialize_op_with_output_activation_constraint_fails_for_multiple_output_op(
       self,
