@@ -98,3 +98,51 @@ For advanced usage involving mixed quantization, the following API may be useful
 
 * Use [quantizer.py](ai_edge_quantizer/quantizer.py):`Quantizer:load_quantization_recipe()` to load a custom recipe.
 * Use [quantizer.py](ai_edge_quantizer/quantizer.py):`Quantizer:update_quantization_recipe()` to add or override (if there's a conflict in the same scope) specific parts of the recipe.
+
+### Operator coverage
+
+The table below outlines the allowed configurations for available recipes.
+
+|     |     |     |     |     |     |    |    |    |    |
+| --- | --- | --- | --- | --- | --- |--- |--- |--- |--- |
+| **Config** | | DYNAMIC_WI8_AFP32 | DYNAMIC_WI4_AFP32 | STATIC_WI8_AI16 | STATIC_WI4_AI16 | STATIC_WI8_AI8 | STATIC_WI4_AI8 | WEIGHTONLY_WI8_AFP32 | WEIGHTONLY_WI4_AFP32 |
+|activation| num\_bits | None | None | 16 | 16 | 8 | 8 | None | None |
+| | symmetric |None | None | TRUE | TRUE | [TRUE, FALSE] | [TRUE, FALSE] | None | None |
+| | granularity |None | None | TENSORWISE | TENSORWISE | TENSORWISE | TENSORWISE | None | None |
+| | dtype| None | None |INT | INT | INT | INT | None | None |
+| weight | num\_bits | 8 | 4 | 8 | 4 | 8 | 4 | 8 | 4 |
+| | symmetric | TRUE | TRUE | TRUE | TRUE | TRUE | TRUE | [TRUE, FALSE] | [TRUE, FALSE] |
+| | granularity | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] |
+| | dtype | INT | INT | INT | INT | INT | INT | INT | INT |
+| explicit\_dequantize | | FALSE | FALSE | FALSE | FALSE | FALSE | FALSE | TRUE | TRUE |
+| compute\_precision || INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | FLOAT | FLOAT |
+|     |     |     |     |     |     |    |    |    |    |
+| --- | --- | --- | --- | --- | --- |--- |--- |--- |--- |
+
+
+**Operators Supporting Quantization**
+
+|     |     |     |     |     |     |    |    |    |
+| --- | --- | --- | --- | --- | --- |--- |--- |--- |
+| **Config** | DYNAMIC_WI8_AFP32 | DYNAMIC_WI4_AFP32 | STATIC_WI8_AI16 | STATIC_WI4_AI16 | STATIC_WI8_AI8 | STATIC_WI4_AI8 | WEIGHTONLY_WI8_AFP32 | WEIGHTONLY_WI4_AFP32 |
+|FULLY_CONNECTED  |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|
+|CONV_2D          |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|    |
+|BATCH_MATMUL     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |<div align="center"> &check; </div>|    |
+|EMBEDDING_LOOKUP |<div align="center"> &check; </div>|<div align="center"> &check; </div>|     |     |     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|    |
+|DEPTHWISE_CONV_2D|<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |<div align="center"> &check; </div>|    |
+|AVERAGE_POOL_2D  |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|RESHAPE          |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|SOFTMAX          |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|TANH             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|TRANSPOSE        |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|GELU             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|ADD              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|CONV_2D_TRANSPOSE|<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|SUB              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|MUL              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|MEAN             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|RSQRT            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|CONCATENATION    |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|STRIDED_SLICE    |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|SPLIT            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+| --- | --- | --- | --- | --- | --- |--- |--- |--- |
