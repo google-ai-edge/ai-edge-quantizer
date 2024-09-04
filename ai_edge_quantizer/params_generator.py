@@ -78,49 +78,47 @@ class ParamsGenerator:
           subgraph.tensors, self.flatbuffer_model.buffers
       )
       # Add input/output operators to the subgraph.
-      subgraph.operators += self._get_input_output_operators(subgraph)
+      subgraph.operators += (
+          tfl_flatbuffer_utils.get_subgraph_input_output_operators(subgraph)
+      )
       for subgraph_op_id, op in enumerate(subgraph.operators):
-        op_code = None
-        if not isinstance(op, qtyping.IOOperator):
+        # Get the op key.
+        if isinstance(op, qtyping.IOOperator):
+          op_key = op.op_key
+          subgraph_op_id = -1  # Virtual op, no real id.
+        else:
           op_code = op_codes[op.opcodeIndex].builtinCode
-        # Do not quantize unknown ops.
-        if (
-            op_code is not None
-            and op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME
-        ):
+          # Do not quantize unknown ops.
+          if op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME:
+            op_quant_results = self._get_params_for_no_quant_op(
+                subgraph_op_id, op, subgraph.tensors
+            )
+            self._update_model_quant_results(op_quant_results)
+            continue
+          op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
+
+        # Step1: query the quantization_recipe to get op config.
+        op_scope = self._get_op_scope(op, subgraph.tensors)
+        algorithm_name, op_quant_config = (
+            model_recipe_manager.get_quantization_configs(op_key, op_scope)
+        )
+        if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
           op_quant_results = self._get_params_for_no_quant_op(
               subgraph_op_id, op, subgraph.tensors
           )
         else:
-          if isinstance(op, qtyping.IOOperator):
-            op_key = op.op_key
-            subgraph_op_id = -1  # Virtual op, no real id.
-          else:
-            op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
-          # Step1: query the quantization_recipe to get op config.
-          op_scope = self._get_op_scope(op, subgraph.tensors)
-          algorithm_name, op_quant_config = (
-              model_recipe_manager.get_quantization_configs(op_key, op_scope)
+          op_info = qtyping.OpInfo(op, op_key, subgraph_op_id, op_quant_config)
+          # Step2: query algorithm_manager to get/call the related function.
+          materialize_func = algorithm_manager.get_quantization_func(
+              algorithm_name,
+              op_key,
+              qtyping.QuantizeMode.MATERIALIZE,
           )
-          if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
-            op_quant_results = self._get_params_for_no_quant_op(
-                subgraph_op_id, op, subgraph.tensors
-            )
-          else:
-            op_info = qtyping.OpInfo(
-                op, op_key, subgraph_op_id, op_quant_config
-            )
-            # Step2: query algorithm_manager to get/call the related function.
-            materialize_func = algorithm_manager.get_quantization_func(
-                algorithm_name,
-                op_key,
-                qtyping.QuantizeMode.MATERIALIZE,
-            )
-            op_quant_results = materialize_func(
-                op_info,
-                graph_info,
-                model_qsvs,
-            )
+          op_quant_results = materialize_func(
+              op_info,
+              graph_info,
+              model_qsvs,
+          )
         # Step3: update the results.
         self._update_model_quant_results(op_quant_results)
     self._post_process_results()
@@ -139,29 +137,6 @@ class ParamsGenerator:
               ' names are unique.' % tensor_name
           )
         global_tensor_names.add(tensor_name)
-
-  def _get_input_output_operators(
-      self, subgraph: Any
-  ) -> list[qtyping.IOOperator]:
-    """Get the input/output operators for the subgraph.
-
-    Args:
-      subgraph: the subgraph object.
-
-    Returns:
-      Input and output operators for the subgraph.
-    """
-    input_op = qtyping.IOOperator(
-        inputs=[],
-        outputs=subgraph.inputs,
-        op_key=_OpName.INPUT,
-    )
-    output_op = qtyping.IOOperator(
-        inputs=subgraph.outputs,
-        outputs=[],
-        op_key=_OpName.OUTPUT,
-    )
-    return [input_op, output_op]
 
   def _post_process_results(self) -> None:
     """Post process the quantization results.

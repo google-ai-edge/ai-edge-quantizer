@@ -274,3 +274,27 @@ def is_float_model(flatbuffer_model: Any) -> bool:
       if tensor.quantization.scale is not None:
         return False
   return True
+
+
+def get_subgraph_input_output_operators(
+    subgraph: Any,
+) -> list[qtyping.IOOperator]:
+  """Get the input/output operators for the subgraph.
+
+  Args:
+    subgraph: The subgraph object.
+
+  Returns:
+    Input and output operators for the subgraph.
+  """
+  input_op = qtyping.IOOperator(
+      inputs=[],
+      outputs=subgraph.inputs,
+      op_key=qtyping.TFLOperationName.INPUT,
+  )
+  output_op = qtyping.IOOperator(
+      inputs=subgraph.outputs,
+      outputs=[],
+      op_key=qtyping.TFLOperationName.OUTPUT,
+  )
+  return [input_op, output_op]

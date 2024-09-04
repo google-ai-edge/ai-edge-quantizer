@@ -18,6 +18,7 @@
 import os
 import numpy as np
 from tensorflow.python.platform import googletest
+from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -181,6 +182,18 @@ class FlatbufferUtilsTest(googletest.TestCase):
     )
     model = tfl_flatbuffer_utils.read_model(test_model_path)
     self.assertFalse(tfl_flatbuffer_utils.is_float_model(model))
+
+  def test_get_subgraph_input_output_operators(self):
+    subgraph = self._test_model.subgraphs[0]
+    input_op, output_op = (
+        tfl_flatbuffer_utils.get_subgraph_input_output_operators(subgraph)
+    )
+    self.assertEqual(input_op.op_key, qtyping.TFLOperationName.INPUT)
+    self.assertEmpty(input_op.inputs)
+    self.assertListEqual(list(input_op.outputs), [0])
+    self.assertEqual(output_op.op_key, qtyping.TFLOperationName.OUTPUT)
+    self.assertListEqual(list(output_op.inputs), [12])
+    self.assertEmpty(output_op.outputs)
 
 
 if __name__ == "__main__":

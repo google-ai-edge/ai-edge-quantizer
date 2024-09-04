@@ -130,11 +130,18 @@ class Calibrator:
         graph_info = qtyping.GraphInfo(
             subgraph.tensors, self._flatbuffer_model.buffers
         )
+        # Add input/output operators to the subgraph.
+        subgraph.operators += (
+            tfl_flatbuffer_utils.get_subgraph_input_output_operators(subgraph)
+        )
         for op in subgraph.operators:
-          op_code = op_codes[op.opcodeIndex].builtinCode
-          if op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME:
-            continue
-          op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
+          if isinstance(op, qtyping.IOOperator):
+            op_key = op.op_key
+          else:
+            op_code = op_codes[op.opcodeIndex].builtinCode
+            if op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME:
+              continue
+            op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
           # Step2.1: query the quantization_recipe to get op quantization
           # settings.
           op_scope = self._get_op_scope(op, subgraph.tensors)
