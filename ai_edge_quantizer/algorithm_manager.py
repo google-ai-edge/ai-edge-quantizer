@@ -140,12 +140,14 @@ for op_name, materialize_func in zip(
         _TFLOpName.CONV_2D,
         _TFLOpName.DEPTHWISE_CONV_2D,
         _TFLOpName.CONV_2D_TRANSPOSE,
+        _TFLOpName.EMBEDDING_LOOKUP,
     ),
     (
         float_casting.materialize_fc_conv,
         float_casting.materialize_fc_conv,
         float_casting.materialize_fc_conv,
         float_casting.materialize_conv2d_transpose,
+        float_casting.materialize_embedding_lookup,
     ),
 ):
   register_quantized_op(

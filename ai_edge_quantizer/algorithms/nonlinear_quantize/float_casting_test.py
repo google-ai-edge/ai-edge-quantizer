@@ -54,6 +54,10 @@ class Fp16QuantizeTest(parameterized.TestCase):
           testcase_name="conv2d",
           op_name=_TFLOpName.CONV_2D,
       ),
+      dict(
+          testcase_name="embedding_lookup",
+          op_name=_TFLOpName.EMBEDDING_LOOKUP,
+      ),
   )
   def test_check_op_quantization_config_succeeds(self, op_name):
     float_casting.check_op_quantization_config(
@@ -75,6 +79,10 @@ class Fp16QuantizeTest(parameterized.TestCase):
       dict(
           testcase_name="invalid_conv2d",
           op_name=_TFLOpName.CONV_2D,
+      ),
+      dict(
+          testcase_name="invalid_embedding_lookup",
+          op_name=_TFLOpName.EMBEDDING_LOOKUP,
       ),
   )
   def test_check_op_quantization_config_invalid_activation_tensor_config_raises_exception(
@@ -111,6 +119,10 @@ class Fp16QuantizeTest(parameterized.TestCase):
           testcase_name="invalid_conv2d",
           op_name=_TFLOpName.CONV_2D,
       ),
+      dict(
+          testcase_name="invalid_embedding_lookup",
+          op_name=_TFLOpName.EMBEDDING_LOOKUP,
+      ),
   )
   def test_check_op_quantization_config_invalid_bit_width_raises_exception(
       self, op_name
@@ -144,6 +156,10 @@ class Fp16QuantizeTest(parameterized.TestCase):
           testcase_name="invalid_conv2d",
           op_name=_TFLOpName.CONV_2D,
       ),
+      dict(
+          testcase_name="invalid_embedding_lookup",
+          op_name=_TFLOpName.EMBEDDING_LOOKUP,
+      ),
   )
   def test_check_op_quantization_config_invalid_dtype_raises_exception(
       self, op_name
@@ -176,6 +192,10 @@ class Fp16QuantizeTest(parameterized.TestCase):
       dict(
           testcase_name="invalid_conv2d",
           op_name=_TFLOpName.CONV_2D,
+      ),
+      dict(
+          testcase_name="invalid_embedding_lookup",
+          op_name=_TFLOpName.EMBEDDING_LOOKUP,
       ),
   )
   def test_check_op_quantization_config_no_weight_config_raises_exception(
@@ -317,6 +337,10 @@ class Fp16QuantizeTest(parameterized.TestCase):
           testcase_name="invalid_conv2d",
           op_name=_TFLOpName.CONV_2D,
       ),
+      dict(
+          testcase_name="invalid_embedding_lookup",
+          op_name=_TFLOpName.EMBEDDING_LOOKUP,
+      ),
   )
   def test_check_op_quantization_config_invalid_execution_mode_raises_exception(
       self, op_name
@@ -391,7 +415,6 @@ class Fp16QuantizeTest(parameterized.TestCase):
 
     num_configs = 4 if bias_tensor is not None else 3
     self.assertLen(tensor_quant_params, num_configs)
-    print(f"tensor_quant_params: {tensor_quant_params}")
 
     # Test input tensor params.
     self._test_fp16_nonweight_tensor_transformation_params(
@@ -471,6 +494,49 @@ class Fp16QuantizeTest(parameterized.TestCase):
     )
     op_tensor_names["input"] = "serving_default_input_1:0"
     op_tensor_names["output"] = "StatefulPartitionedCall:0"
+    self._test_fc_conv(
+        op_info,
+        graph_info,
+        op_tensor_names,
+        float_casting.materialize_fc_conv,
+    )
+
+  def test_embedding_lookup_weight_only_succeeds(self):
+    test_model_path = os.path.join(
+        _TEST_DATA_PREFIX_PATH, "embedding_lookup.tflite"
+    )
+
+    test_model = tfl_flatbuffer_utils.read_model(test_model_path)
+    graph_info = qtyping.GraphInfo(
+        subgraph_tensors=test_model.subgraphs[0].tensors,
+        buffers=test_model.buffers,
+    )
+
+    subgraph0 = test_model.subgraphs[0]
+    subgraph_op_id = 0
+    op = subgraph0.operators[subgraph_op_id]
+
+    op_info = qtyping.OpInfo(
+        op=op,
+        op_name=_TFLOpName.EMBEDDING_LOOKUP,
+        subgraph_op_index=subgraph_op_id,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=16, dtype=qtyping.TensorDataType.FLOAT
+            ),
+            compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+            explicit_dequantize=True,
+        ),
+    )
+
+    op_tensor_names = {}
+    op_tensor_names["weight"] = (
+        "jax2tf_export_func_/...y_yz-_...z/pjit__einsum_/MatMul;jax2tf_export_func_/pjit__one_hot_/Equal;jax2tf_export_func_/pjit__one_hot_/Cast_1"
+    )
+    op_tensor_names["input"] = "inputs"
+    op_tensor_names["output"] = "Identity_1"
+
+    # TODO: b/335913710 - Rename the test function.
     self._test_fc_conv(
         op_info,
         graph_info,

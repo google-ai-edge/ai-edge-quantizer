@@ -30,6 +30,7 @@ SUPPORTED_WEIGHT_QUANT_OPS = frozenset([
     _TFLOpName.CONV_2D,
     _TFLOpName.DEPTHWISE_CONV_2D,
     _TFLOpName.CONV_2D_TRANSPOSE,
+    _TFLOpName.EMBEDDING_LOOKUP,
 ])
 
 
@@ -151,6 +152,14 @@ def materialize_fc_conv(
     )
     op_tensor_params.append(bias_quant_params)
   return op_tensor_params
+
+
+def materialize_embedding_lookup(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    _: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  return materialize_fc_conv(op_info, graph_info, _)
 
 
 def materialize_conv2d_transpose(
