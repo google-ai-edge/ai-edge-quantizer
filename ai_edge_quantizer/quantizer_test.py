@@ -215,6 +215,18 @@ class QuantizerTest(parameterized.TestCase):
     ):
       self._quantizer._result.save(self._tmp_save_path, 'test_model')
 
+  def test_export_model_succeeds(self):
+    model_name = 'exported_model'
+    self._quantizer.load_quantization_recipe(self._test_recipe_path)
+    result = self._quantizer.quantize()
+
+    exported_model_path = os.path.join(
+        self._tmp_save_path, model_name + '.tflite'
+    )
+    self.assertFalse(os.path.exists(exported_model_path))
+    result.export_model(exported_model_path)
+    self.assertTrue(os.path.exists(exported_model_path))
+
   def test_compare_succeeds(self):
     self._quantizer.quantize()
     validation_result = self._quantizer.validate()

@@ -71,9 +71,7 @@ class QuantizationResult:
       raise RuntimeError(
           'No quantized model to save. Make sure .quantize() is called.'
       )
-    model_save_path = os.path.join(
-        save_folder, f'{model_name}.tflite'
-    )
+    model_save_path = os.path.join(save_folder, f'{model_name}.tflite')
     if gfile.Exists(model_save_path):
       raise FileExistsError(
           f'The model {model_save_path} already exists in the folder.'
@@ -85,6 +83,23 @@ class QuantizationResult:
     recipe_save_path = os.path.join(save_folder, model_name + '_recipe.json')
     with gfile.GFile(recipe_save_path, 'w') as output_file_handle:
       output_file_handle.write(recipe)
+
+  def export_model(self, filepath: str) -> None:
+    """Exports the quantized model to a .tflite flatbuffer.
+
+    Args:
+      filepath: Path (including file name) that the exported model should be
+        serialized to.
+
+    Raises:
+      RuntimeError: If no quantized model is available.
+    """
+    if self.quantized_model is None:
+      raise RuntimeError(
+          'No quantized model to save. Make sure .quantize() is called.'
+      )
+    with gfile.GFile(filepath, 'wb') as output_file_handle:
+      output_file_handle.write(self.quantized_model)
 
 
 class Quantizer:
@@ -253,9 +268,7 @@ class Quantizer:
       The comparison result.
     """
     if signature_test_data is None:
-      test_data = test_utils.create_random_normal_input_data(
-          self.float_model
-      )
+      test_data = test_utils.create_random_normal_input_data(self.float_model)
       if signature_key is not None:
         signature_test_data = test_data[signature_key]
       else:
@@ -307,7 +320,5 @@ class Quantizer:
     Returns:
       The quantized model.
     """
-    model_modifier_instance = model_modifier.ModelModifier(
-        self.float_model
-    )
+    model_modifier_instance = model_modifier.ModelModifier(self.float_model)
     return model_modifier_instance.modify_model(quant_params)
