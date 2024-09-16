@@ -11,7 +11,7 @@ Build Type         |    Status     |
 Unit Tests (Linux) | [![](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_unittests.yml/badge.svg?branch=main)](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_unittests.yml) |
 Nightly Release    | [![](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_release.yml/badge.svg?branch=main)](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_release.yml) |
 
-## Development Manual
+## Installation
 
 ### Requirements and Dependencies
 
@@ -21,12 +21,8 @@ Nightly Release    | [![](https://github.com/google-ai-edge/ai-edge-quantizer/ac
 
 ### Install
 
-Stable version:
-```bash
-pip install ai-edge-quantizer
-```
+Nightly PyPi package:
 
-Nightly version:
 ```bash
 pip install ai-edge-quantizer-nightly
 ```
@@ -54,11 +50,11 @@ qt.load_quantization_recipe(recipe.dynamic_wi8_afp32())
 qt.quantize().export_model("/path/to/output/tflite")
 ```
 
-Please visit the [Getting Started colab](colabs/getting_started.ipynb) for the simplest quick start guide on those 3 steps, and the [Selective Quantization colab](colabs/selective_quantization_isnet.ipynb) with more details on advanced features.
+Please see the [getting started colab](colabs/getting_started.ipynb) for the simplest quick start guide on those 3 steps, and the [selective quantization colab](colabs/selective_quantization_isnet.ipynb) with more details on advanced features.
 
 #### LiteRT Model
 
-Please refer to the [LiteRT model documentation](https://ai.google.dev/edge/lite) for ways to generate LiteRT models. The input source model should be an unquantized FP32 model in the FlatBuffers format with `.tflite` extension.
+Please refer to the [LiteRT documentation](https://ai.google.dev/edge/litert) for ways to generate LiteRT models from Jax, PyTorch and TensorFlow. The input source model should be an unquantized FP32 model in the FlatBuffers format with `.tflite` extension.
 
 #### Quantization Recipe
 
@@ -72,12 +68,12 @@ For example:
 
 _\"**Uniformly quantize** the **FullyConnected op** under scope **'dense1/'** with **INT8 symmetric with Dynamic Quantization**"._
 
-All the unspecified ops will be kept as FP32 (unquantized). The scope of an operator in TFLite is defined as the output tensor name of the op, which preserves the hierarchical model information from the source model (e.g., scope in TF). The best way to obtain scope name is by visualizing the model with [Model Explorer](https://github.com/google-ai-edge/model-explorer).
+All the unspecified ops will be kept as FP32 (unquantized). The scope of an operator in TFLite is defined as the output tensor name of the op, which preserves the hierarchical model information from the source model (e.g., scope in TF). The best way to obtain scope name is by visualizing the model with [Model Explorer](https://ai.google.dev/edge/model-explorer).
 
-The simplest recipe to get started with is provided in [recipe.py](ai_edge_quantizer/ai_edge_quantizer/recipe.py):`dynamic_wi8_afp32()`. This is demonstrated in the [Getting Started colab](colabs/getting_started.ipynb) example.
+The simplest recipe to get started with is using existing recipes from [recipe.py](ai_edge_quantizer/recipe.py). This is demonstrated in the [getting started colab](colabs/getting_started.ipynb) example.
 
 #### Deployment
-Please refer to the [LiteRT deployment documentation](https://ai.google.dev/edge/lite/inference) for ways to deploy a quantized LiteRT model.
+Please refer to the [LiteRT deployment documentation](https://ai.google.dev/edge/litert/inference) for ways to deploy a quantized LiteRT model.
 
 ### Advanced Recipes
 
@@ -87,14 +83,14 @@ There are many ways the user can configure and customize the quantization recipe
 * Flexible mixed scheme quantization (mixture of different precision, compute precision, scope, op, config, etc)
 * 4-bit weight quantization
 
-The [Selective Quantization colab](colabs/selective_quantization_isnet.ipynb) shows some of these more advanced features.
+The [selective quantization colab](colabs/selective_quantization_isnet.ipynb) shows some of these more advanced features.
 
-For specifics of the recipe schema, please refer to [recipe_manager.py](ai_edge_quantizer/recipe_manager.py):`OpQuantizationRecipe` which is the source of truth.
+For specifics of the recipe schema, please refer to the `OpQuantizationRecipe` in [recipe_manager.py].
 
 For advanced usage involving mixed quantization, the following API may be useful:
 
-* Use [quantizer.py](ai_edge_quantizer/quantizer.py):`Quantizer:load_quantization_recipe()` to load a custom recipe.
-* Use [quantizer.py](ai_edge_quantizer/quantizer.py):`Quantizer:update_quantization_recipe()` to add or override (if there's a conflict in the same scope) specific parts of the recipe.
+* Use `Quantizer:load_quantization_recipe()` in [quantizer.py](ai_edge_quantizer/quantizer.py) to load a custom recipe.
+* Use `Quantizer:update_quantization_recipe()` in [quantizer.py](ai_edge_quantizer/quantizer.py) to extend or override specific parts of the recipe.
 
 ### Operator coverage
 
