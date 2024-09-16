@@ -51,11 +51,10 @@ In a nutshell, the quantizer works according to the following steps:
 ```python
 qt = quantizer.Quantizer("path/to/input/tflite")
 qt.load_quantization_recipe(recipe.dynamic_wi8_afp32())
-qt.quantize().save("/path/to/output/tflite")
+qt.quantize().export_model("/path/to/output/tflite")
 ```
 
-TODO(b/354275253, b/362387762): Update colab path
-Please visit the [MNIST colab]() for the simplest quick start guide on those 3 steps, and the [ISNET colab]() with more details on advanced features.
+Please visit the [Getting Started colab](colabs/getting_started.ipynb) for the simplest quick start guide on those 3 steps, and the [Selective Quantization colab](colabs/selective_quantization_isnet.ipynb) with more details on advanced features.
 
 #### LiteRT Model
 
@@ -71,12 +70,11 @@ _“Apply **Quantization Algorithm X** on **Operator Y** under **Scope Z** with 
 
 For example:
 
-_"**Uniformly quantize** the **FullyConnected op** under scope **'dense1/'** with **INT8 symmetric with Dynamic Quantization**"._
+_\"**Uniformly quantize** the **FullyConnected op** under scope **'dense1/'** with **INT8 symmetric with Dynamic Quantization**"._
 
 All the unspecified ops will be kept as FP32 (unquantized). The scope of an operator in TFLite is defined as the output tensor name of the op, which preserves the hierarchical model information from the source model (e.g., scope in TF). The best way to obtain scope name is by visualizing the model with [Model Explorer](https://github.com/google-ai-edge/model-explorer).
 
-TODO(b/362387762): Update colab path
-The simplest recipe to get started with is provided in [recipe.py](ai_edge_quantizer/recipe.py):`dynamic_wi8_afp32()`. This is demonstrated in the [MNIST colab]() example.
+The simplest recipe to get started with is provided in [recipe.py](ai_edge_quantizer/ai_edge_quantizer/recipe.py):`dynamic_wi8_afp32()`. This is demonstrated in the [Getting Started colab](colabs/getting_started.ipynb) example.
 
 #### Deployment
 Please refer to the [LiteRT deployment documentation](https://ai.google.dev/edge/lite/inference) for ways to deploy a quantized LiteRT model.
@@ -89,8 +87,7 @@ There are many ways the user can configure and customize the quantization recipe
 * Flexible mixed scheme quantization (mixture of different precision, compute precision, scope, op, config, etc)
 * 4-bit weight quantization
 
-TODO(b/354275253): Update colab path
-These recipes are explored and constructed in the [ISNET colab]() example.
+The [Selective Quantization colab](colabs/selective_quantization_isnet.ipynb) shows some of these more advanced features.
 
 For specifics of the recipe schema, please refer to [recipe_manager.py](ai_edge_quantizer/recipe_manager.py):`OpQuantizationRecipe` which is the source of truth.
 
