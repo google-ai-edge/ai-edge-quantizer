@@ -58,7 +58,6 @@ class TFLOperationName(str, enum.Enum):
   SPLIT = 'SPLIT'
 
 
-# Use same code number as MOJAX for compatibility.
 class QuantizeMode(enum.Enum):
   CALIBRATE = 2
   MATERIALIZE = 3
