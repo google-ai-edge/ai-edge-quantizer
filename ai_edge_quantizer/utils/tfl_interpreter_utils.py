@@ -141,6 +141,7 @@ def invoke_interpreter_once(
 def get_tensor_data(
     tflite_interpreter: Any,
     tensor_detail: dict[str, Any],
+    subgraph_index: int = 0,
     dequantize: bool = True,
 ) -> np.ndarray:
   """Gets the tensor data from a TFLite interpreter.
@@ -148,12 +149,15 @@ def get_tensor_data(
   Args:
     tflite_interpreter: A TFLite interpreter.
     tensor_detail: A dictionary of tensor details.
+    subgraph_index: The index of the subgraph that the tensor belongs to.
     dequantize: Whether to dequantize the quantized tensor data.
 
   Returns:
     The tensor data.
   """
-  tensor_data = tflite_interpreter.get_tensor(tensor_detail["index"])
+  tensor_data = tflite_interpreter.get_tensor(
+      tensor_detail["index"], subgraph_index
+  )
   if is_tensor_quantized(tensor_detail) and dequantize:
     quant_params = qtyping.UniformQuantParams.from_tfl_tensor_details(
         tensor_detail
@@ -166,42 +170,46 @@ def get_tensor_data(
 
 
 def get_tensor_name_to_content_map(
-    tflite_interpreter: Any, dequantize: bool = False
+    tflite_interpreter: Any, subgraph_index: int = 0, dequantize: bool = False
 ) -> dict[str, Any]:
-  """Gets internal tensors from a TFLite interpreter.
+  """Gets internal tensors from a TFLite interpreter for a given subgraph.
 
   Note the data will be copied to the returned dictionary, increasing the
   memory usage.
 
   Args:
     tflite_interpreter: A TFLite interpreter.
+    subgraph_index: The index of the subgraph that the tensor belongs to.
     dequantize: Whether to dequantize the tensor data.
 
   Returns:
     A dictionary of internal tensors.
   """
   tensors = {}
-  for tensor_detail in tflite_interpreter.get_tensor_details():
+  for tensor_detail in tflite_interpreter.get_tensor_details(subgraph_index):
     # Don't return temporary, unnamed tensors
     if not tensor_detail["name"]:
       continue
     tensors[tensor_detail["name"]] = get_tensor_data(
-        tflite_interpreter, tensor_detail, dequantize
+        tflite_interpreter, tensor_detail, subgraph_index, dequantize
     )
   return tensors
 
 
-def get_tensor_name_to_details_map(tflite_interpreter: Any) -> dict[str, Any]:
-  """Gets internal tensors from a TFLite interpreter.
+def get_tensor_name_to_details_map(
+    tflite_interpreter: Any, subgraph_index: int = 0
+) -> dict[str, Any]:
+  """Gets internal tensors from a TFLite interpreter for a given subgraph.
 
   Args:
     tflite_interpreter: A TFLite interpreter.
+    subgraph_index: The index of the subgraph that the tensor belongs to.
 
   Returns:
     A dictionary of internal tensors.
   """
   tensor_name_to_detail = {}
-  for tensor_detail in tflite_interpreter.get_tensor_details():
+  for tensor_detail in tflite_interpreter.get_tensor_details(subgraph_index):
     # Don't return temporary, unnamed tensors
     if not tensor_detail["name"]:
       continue
@@ -209,47 +217,61 @@ def get_tensor_name_to_details_map(tflite_interpreter: Any) -> dict[str, Any]:
   return tensor_name_to_detail
 
 
-def get_input_tensor_names(tflite_model: Union[str, bytearray]) -> list[str]:
-  """Gets input tensor names from a TFLite model.
+def get_input_tensor_names(
+    tflite_model: Union[str, bytearray], signature_name: Optional[str] = None
+) -> list[str]:
+  """Gets input tensor names from a TFLite model for a signature.
 
   Args:
     tflite_model: Model file path or bytearray.
+    signature_name: The signature name that the input tensors belong to.
 
   Returns:
     A list of input tensor names.
   """
 
   tfl_interpreter = create_tfl_interpreter(tflite_model, allocate_tensors=False)
+  signature_runner = tfl_interpreter.get_signature_runner(signature_name)
   input_tensor_names = []
-
-  for input_detail in tfl_interpreter.get_input_details():
+  for _, input_detail in signature_runner.get_input_details().items():
     input_tensor_names.append(input_detail["name"])
   return input_tensor_names
 
 
-def get_output_tensor_names(tflite_model: Union[str, bytearray]) -> list[str]:
-  """Gets output tensor names from a TFLite model.
+def get_output_tensor_names(
+    tflite_model: Union[str, bytearray], signature_name: Optional[str] = None
+) -> list[str]:
+  """Gets output tensor names from a TFLite model for a signature.
 
   Args:
     tflite_model: Model file path or bytearray.
+    signature_name: The signature name that the output tensors belong to.
 
   Returns:
     A list of output tensor names.
   """
   tfl_interpreter = create_tfl_interpreter(tflite_model, allocate_tensors=False)
+  signature_runner = tfl_interpreter.get_signature_runner(signature_name)
   output_tensor_names = []
-  for output_detail in tfl_interpreter.get_output_details():
+  for _, output_detail in signature_runner.get_output_details().items():
     output_tensor_names.append(output_detail["name"])
   return output_tensor_names
 
 
 def get_constant_tensor_names(
-    tflite_model: Union[str, bytearray], min_constant_size: int = 1
+    tflite_model: Union[str, bytearray],
+    subgraph_index: int = 0,
+    min_constant_size: int = 1,
 ) -> list[str]:
-  """Gets constant tensor names from a TFLite model.
+  """Gets constant tensor names from a TFLite model for a subgraph.
+
+  Note that this function acts on subgraph level, not signature level. This is
+  because it is non-trivial to track constant tensors for a signature without
+  running it.
 
   Args:
     tflite_model: Model file path or bytearray.
+    subgraph_index: The index of the subgraph that the tensor belongs to.
     min_constant_size: The minimum size of a constant tensor.
 
   Returns:
@@ -258,13 +280,32 @@ def get_constant_tensor_names(
   """
   tfl_interpreter = create_tfl_interpreter(tflite_model, allocate_tensors=False)
   const_tensor_names = []
-  for tensor_detail in tfl_interpreter.get_tensor_details():
+  for tensor_detail in tfl_interpreter.get_tensor_details(subgraph_index):
     if tensor_detail["dtype"] == np.object_:
       continue
     try:
-      tensor_data = get_tensor_data(tfl_interpreter, tensor_detail)
+      tensor_data = get_tensor_data(
+          tfl_interpreter, tensor_detail, subgraph_index
+      )
       if tensor_data.size >= min_constant_size:
         const_tensor_names.append(tensor_detail["name"])
     except ValueError:
       continue
   return const_tensor_names
+
+
+def get_signature_main_subgraph_index(
+    tflite_interpreter: tf.lite.Interpreter,
+    signature_key: Optional[str] = None,
+) -> int:
+  """Gets the main subgraph index of a signature.
+
+  Args:
+    tflite_interpreter: A TFLite interpreter.
+    signature_key: The signature key.
+
+  Returns:
+    The main subgraph index of the signature.
+  """
+  signature_runner = tflite_interpreter.get_signature_runner(signature_key)
+  return signature_runner._subgraph_index  # pylint:disable=protected-access

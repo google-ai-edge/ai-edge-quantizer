@@ -57,6 +57,7 @@ class QuantizerTest(parameterized.TestCase):
         TEST_DATA_PREFIX_PATH,
         'recipes/default_af32w8float_recipe.json',
     )
+    self._signature_key = 'None'
     with open(self._test_recipe_path) as json_file:
       self._test_recipe = json.load(json_file)
     self._quantizer = quantizer.Quantizer(
@@ -232,7 +233,8 @@ class QuantizerTest(parameterized.TestCase):
     validation_result = self._quantizer.validate()
     self.assertIsNotNone(validation_result)
     self.assertIn(
-        'sequential/dense_1/MatMul', validation_result.intermediate_tensors
+        'sequential/dense_1/MatMul',
+        validation_result.intermediate_tensors[self._signature_key],
     )
 
 
@@ -247,6 +249,7 @@ class QuantizerBytearrayInputs(googletest.TestCase):
         TEST_DATA_PREFIX_PATH,
         'recipes/default_af32w8float_recipe.json',
     )
+    self._signature_key = 'None'
     with open(self._test_model_path, 'rb') as f:
       model_content = bytearray(f.read())
     with open(self._test_recipe_path, 'r') as f:
@@ -260,7 +263,8 @@ class QuantizerBytearrayInputs(googletest.TestCase):
     validation_result = self._quantizer.validate()
     self.assertIsNotNone(validation_result)
     self.assertIn(
-        'sequential/dense_1/MatMul', validation_result.intermediate_tensors
+        'sequential/dense_1/MatMul',
+        validation_result.intermediate_tensors[self._signature_key],
     )
 
   def test_compare_succeeds(self):
@@ -268,7 +272,8 @@ class QuantizerBytearrayInputs(googletest.TestCase):
     validation_result = self._quantizer.validate()
     self.assertIsNotNone(validation_result)
     self.assertIn(
-        'sequential/dense_1/MatMul', validation_result.intermediate_tensors
+        'sequential/dense_1/MatMul',
+        validation_result.intermediate_tensors[self._signature_key],
     )
 
 
