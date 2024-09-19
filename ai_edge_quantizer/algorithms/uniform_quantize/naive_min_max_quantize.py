@@ -132,14 +132,17 @@ def materialize_mul(
   )
 
 
-def materialize_softmax(
+def materialize_softmax_and_logistic(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
 ) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.softmax."""
+  """Materialize tensors in tfl.softmax and tfl.logistic."""
   # Hard code scales and zp values as they are hard coded in TFL kernels.
-  # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/kernels/activations.cc#L548
+  # Softmax:
+  #   https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/kernels/activations.cc#L548
+  # Logistic:
+  #   https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/kernels/activations.cc#L421
   output_activation_constraints = {
       8: qtyping.UniformQuantParams(
           num_bits=8,

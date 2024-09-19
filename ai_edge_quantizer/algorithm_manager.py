@@ -88,6 +88,7 @@ for op_name, materialize_func in zip(
         _TFLOpName.CONCATENATION,
         _TFLOpName.STRIDED_SLICE,
         _TFLOpName.SPLIT,
+        _TFLOpName.LOGISTIC,  # Sigmoid
     ),
     (
         naive_min_max_quantize.materialize_input,
@@ -100,7 +101,7 @@ for op_name, materialize_func in zip(
         naive_min_max_quantize.materialize_reshape,
         naive_min_max_quantize.materialize_average_pool_2d,
         naive_min_max_quantize.materialize_embedding_lookup,
-        naive_min_max_quantize.materialize_softmax,
+        naive_min_max_quantize.materialize_softmax_and_logistic,
         naive_min_max_quantize.materialize_tanh,
         naive_min_max_quantize.materialize_transpose,
         naive_min_max_quantize.materialize_gelu,
@@ -112,6 +113,7 @@ for op_name, materialize_func in zip(
         naive_min_max_quantize.materialize_concatenation,
         naive_min_max_quantize.materialize_strided_slice,
         naive_min_max_quantize.materialize_split,
+        naive_min_max_quantize.materialize_softmax_and_logistic,
     ),
 ):
   register_quantized_op(

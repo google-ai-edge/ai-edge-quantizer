@@ -42,13 +42,13 @@ _DEFAULT_WEIGHT_QUANT_SETTING = (
 )
 
 
-class ReshapeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
+class LogisticTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
 
   def setUp(self):
     super().setUp()
     np.random.seed(666)
     self._test_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, "conv_fc_mnist.tflite"
+        _TEST_DATA_PREFIX_PATH, "single_fc_bias_logistic.tflite"
     )
     self._op_test_info = _OpTestInfo(
         test_model=tfl_flatbuffer_utils.read_model(self._test_model_path),
@@ -72,7 +72,7 @@ class ReshapeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
           )
       ),
   )
-  def test_materialize_softmax_succeeds(self, activation_tensor_config):
+  def test_materialize_logistics_succeeds(self, activation_tensor_config):
     op_quant_config = qtyping.OpQuantizationConfig(
         activation_tensor_config=activation_tensor_config,
         weight_tensor_config=_DEFAULT_WEIGHT_QUANT_SETTING,
@@ -80,18 +80,18 @@ class ReshapeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     )
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
-    subgraph_op_id = 5
+    subgraph_op_id = 1
     op = subgraph0.operators[subgraph_op_id]
     op_info = qtyping.OpInfo(
         op=op,
-        op_name=qtyping.TFLOperationName.SOFTMAX,
+        op_name=qtyping.TFLOperationName.LOGISTIC,
         subgraph_op_index=subgraph_op_id,
         op_quant_config=op_quant_config,
     )
 
     # Test settings.
     op_tensor_names = {}
-    op_tensor_names["input"] = "sequential/dense_1/MatMul"
+    op_tensor_names["input"] = "model/dense/MatMul2"
     op_tensor_names["output"] = "StatefulPartitionedCall:0"
     self._op_test_info.op_tensor_names = op_tensor_names
     self._test_no_weights_op(
