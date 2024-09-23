@@ -13,8 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Tests for tfl_interpreter_utils."""
-
 import os
 import numpy as np
 from tensorflow.python.platform import googletest
@@ -25,7 +23,7 @@ from ai_edge_quantizer.utils import tfl_interpreter_utils
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("../tests/models")
 
 
-class TflUtilsTest(googletest.TestCase):
+class TflUtilsSingleSignatureModelTest(googletest.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -168,6 +166,166 @@ class TflUtilsQuantizedModelTest(googletest.TestCase):
     self.assertEqual(
         self._signature_input_data["conv2d_input"].dtype, np.float32
     )
+
+
+class TflUtilsMultiSignatureModelTest(googletest.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    np.random.seed(0)
+    self._test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, "two_signatures.tflite"
+    )
+    self._signature_input_data = {"x": np.array([2.0]).astype(np.float32)}
+
+  def test_create_tfl_interpreter(self):
+    tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
+        self._test_model_path
+    )
+    self.assertIsNotNone(tfl_interpreter)
+
+  def test_get_input_tensor_names(self):
+    signature_name = "add"
+    input_tensor_names = tfl_interpreter_utils.get_input_tensor_names(
+        self._test_model_path, signature_name
+    )
+    self.assertEqual(
+        input_tensor_names,
+        ["add_x:0"],
+    )
+
+    signature_name = "multiply"
+    input_tensor_names = tfl_interpreter_utils.get_input_tensor_names(
+        self._test_model_path, signature_name
+    )
+    self.assertEqual(
+        input_tensor_names,
+        ["multiply_x:0"],
+    )
+
+  def test_get_output_tensor_names(self):
+    signature_name = "add"
+    input_tensor_names = tfl_interpreter_utils.get_output_tensor_names(
+        self._test_model_path, signature_name
+    )
+    self.assertEqual(
+        input_tensor_names,
+        ["PartitionedCall:0"],
+    )
+
+    signature_name = "multiply"
+    input_tensor_names = tfl_interpreter_utils.get_output_tensor_names(
+        self._test_model_path, signature_name
+    )
+    self.assertEqual(
+        input_tensor_names,
+        ["PartitionedCall_1:0"],
+    )
+
+  def test_get_constant_tensor_names(self):
+    subgraph0_const_tensor_names = (
+        tfl_interpreter_utils.get_constant_tensor_names(
+            self._test_model_path, 0
+        )
+    )
+    self.assertEqual(subgraph0_const_tensor_names, ["Add/y"])
+
+    subgraph1_const_tensor_names = (
+        tfl_interpreter_utils.get_constant_tensor_names(
+            self._test_model_path, 1
+        )
+    )
+    self.assertEqual(subgraph1_const_tensor_names, ["Mul/y"])
+
+  def test_get_signature_main_subgraph_index(self):
+    tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
+        self._test_model_path
+    )
+    add_subgraph_index = (
+        tfl_interpreter_utils.get_signature_main_subgraph_index(
+            tfl_interpreter, "add"
+        )
+    )
+    self.assertEqual(add_subgraph_index, 0)
+    multiply_subgraph_index = (
+        tfl_interpreter_utils.get_signature_main_subgraph_index(
+            tfl_interpreter, "multiply"
+        )
+    )
+    self.assertEqual(multiply_subgraph_index, 1)
+
+  def test_get_tensor_data(self):
+    tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
+        self._test_model_path
+    )
+    # Invoke the ADD signature.
+    tfl_interpreter_utils.invoke_interpreter_signature(
+        tfl_interpreter, self._signature_input_data, "add"
+    )
+    output_details = {"index": 2, "quantization_parameters": {"scales": []}}
+    output_data = tfl_interpreter_utils.get_tensor_data(
+        tfl_interpreter, output_details, subgraph_index=0
+    )  # The ADD signature is in the first subgraph.
+    self.assertEqual(output_data, [12.0])  # 10 + 2
+
+    # Invoke the MULTIPLY signature.
+    tfl_interpreter_utils.invoke_interpreter_signature(
+        tfl_interpreter, self._signature_input_data, "multiply"
+    )
+    output_data = tfl_interpreter_utils.get_tensor_data(
+        tfl_interpreter, output_details, subgraph_index=1
+    )  # The Multiply signature is in the second subgraph.
+    self.assertEqual(output_data, [20.0])  # 10 * 2
+
+  def test_get_tensor_name_to_content_map(self):
+    tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
+        self._test_model_path
+    )
+    # Invoke all signatures.
+    tfl_interpreter_utils.invoke_interpreter_signature(
+        tfl_interpreter, self._signature_input_data, "multiply"
+    )
+    tfl_interpreter_utils.invoke_interpreter_signature(
+        tfl_interpreter, self._signature_input_data, "add"
+    )
+
+    # Test tensors belonging to the ADD signature.
+    add_subgraph_index = (
+        tfl_interpreter_utils.get_signature_main_subgraph_index(
+            tfl_interpreter, "add"
+        )
+    )
+    add_tensor_content = tfl_interpreter_utils.get_tensor_name_to_content_map(
+        tfl_interpreter, add_subgraph_index
+    )
+
+    add_input_content = add_tensor_content["add_x:0"]
+    self.assertSequenceAlmostEqual(
+        self._signature_input_data["x"].flatten(), add_input_content.flatten()
+    )
+    weight_content = add_tensor_content["Add/y"]
+    self.assertEqual(weight_content, 10)
+    add_output_content = add_tensor_content["PartitionedCall:0"]
+    self.assertEqual(add_output_content, [12.0])
+
+    # Test tensors belonging to the MULTIPLY signature.
+    multiply_subgraph_index = (
+        tfl_interpreter_utils.get_signature_main_subgraph_index(
+            tfl_interpreter, "multiply"
+        )
+    )
+    mul_tensor_content = tfl_interpreter_utils.get_tensor_name_to_content_map(
+        tfl_interpreter, multiply_subgraph_index
+    )
+    multiply_input_content = mul_tensor_content["multiply_x:0"]
+    self.assertSequenceAlmostEqual(
+        self._signature_input_data["x"].flatten(),
+        multiply_input_content.flatten(),
+    )
+    weight_content = mul_tensor_content["Mul/y"]
+    self.assertEqual(weight_content, 10)
+    multiply_output_content = mul_tensor_content["PartitionedCall_1:0"]
+    self.assertEqual(multiply_output_content, [20.0])
 
 
 if __name__ == "__main__":
