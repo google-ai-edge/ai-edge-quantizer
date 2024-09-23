@@ -16,6 +16,7 @@
 """Tests for model_modifier."""
 
 import os
+import tracemalloc
 from tensorflow.python.platform import googletest
 from absl.testing import parameterized
 from ai_edge_quantizer import model_modifier
@@ -40,21 +41,7 @@ class ModelModifierTest(parameterized.TestCase):
     self._model_buffer: bytearray = tfl_flatbuffer_utils.get_model_buffer(
         self._model_path
     )
-
-  def test_process_constant_map(self):
-    constant_size = self._model_modifier._process_constant_map(
-        self._model_modifier._flatbuffer_model
-    )
-    self.assertEqual(constant_size, 202540)
-    pass
-
-  def test_modify_model(self):
-    """Test modidfy Model."""
-    recipe_manager_instance = recipe_manager.RecipeManager()
-    params_generator_instance = params_generator.ParamsGenerator(
-        self._model_path
-    )
-    global_recipe = [
+    self._global_recipe = [
         {
             'regex': '.*',
             'operation': 'FULLY_CONNECTED',
@@ -73,7 +60,23 @@ class ModelModifierTest(parameterized.TestCase):
             },
         },
     ]
-    recipe_manager_instance.load_quantization_recipe(global_recipe)
+
+  def test_process_constant_map_succeeds(self):
+    constant_size = self._model_modifier._process_constant_map(
+        flatbuffer_utils.read_model_from_bytearray(
+            self._model_modifier._model_bytearray
+        )
+    )
+    self.assertEqual(constant_size, 202540)
+    pass
+
+  def test_modify_model_succeeds_with_recipe(self):
+    recipe_manager_instance = recipe_manager.RecipeManager()
+    params_generator_instance = params_generator.ParamsGenerator(
+        self._model_path
+    )
+
+    recipe_manager_instance.load_quantization_recipe(self._global_recipe)
     tensor_quantization_params = (
         params_generator_instance.generate_quantization_parameters(
             recipe_manager_instance
@@ -84,6 +87,44 @@ class ModelModifierTest(parameterized.TestCase):
     )
     flatbuffer_utils.convert_bytearray_to_object(new_model_binary)
     self.assertLess(new_model_binary, self._model_buffer)
+
+  def test_modify_model_preserves_original_model(self):
+    recipe_manager_instance = recipe_manager.RecipeManager()
+    params_generator_instance = params_generator.ParamsGenerator(
+        self._model_path
+    )
+
+    recipe_manager_instance.load_quantization_recipe(self._global_recipe)
+    tensor_quantization_params = (
+        params_generator_instance.generate_quantization_parameters(
+            recipe_manager_instance
+        )
+    )
+    self.assertEqual(self._model_modifier._model_bytearray, self._model_buffer)
+    self._model_modifier.modify_model(tensor_quantization_params)
+    self.assertEqual(self._model_modifier._model_bytearray, self._model_buffer)
+
+  def test_modify_model_peak_memory_usage_in_acceptable_range(self):
+    """Test ModifyModel peak memory usage."""
+
+    recipe_manager_instance = recipe_manager.RecipeManager()
+    params_generator_instance = params_generator.ParamsGenerator(
+        self._model_path
+    )
+
+    recipe_manager_instance.load_quantization_recipe(self._global_recipe)
+    tensor_quantization_params = (
+        params_generator_instance.generate_quantization_parameters(
+            recipe_manager_instance
+        )
+    )
+
+    tracemalloc.start()
+    self._model_modifier.modify_model(tensor_quantization_params)
+    _, mem_peak = tracemalloc.get_traced_memory()
+
+    loosen_mem_use_factor = 4.5
+    self.assertLess(mem_peak / len(self._model_buffer), loosen_mem_use_factor)
 
 
 if __name__ == '__main__':

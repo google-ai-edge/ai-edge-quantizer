@@ -38,10 +38,17 @@ class ModelModifier:
     Args:
       float_tflite: the original TFlite model in bytearray or file path
     """
-    self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
+
+    if isinstance(float_tflite, str):
+      self._model_bytearray = tfl_flatbuffer_utils.get_model_buffer(
+          float_tflite
+      )
+    else:
+      self._model_bytearray = float_tflite
+
     self._constant_map = []
-    self._transformation_instruction_generator = transformation_instruction_generator.TransformationInstructionsGenerator(
-        float_tflite
+    self._transformation_instruction_generator = (
+        transformation_instruction_generator.TransformationInstructionsGenerator()
     )
     self._transformation_performer = (
         transformation_performer.TransformationPerformer()
@@ -59,10 +66,15 @@ class ModelModifier:
     Returns:
       a byte buffer that represents the serialized tflite model
     """
-    instructions = self._transformation_instruction_generator.quant_params_to_transformation_insts(
-        params
+
+    quantized_model = copy.deepcopy(
+        flatbuffer_utils.read_model_from_bytearray(self._model_bytearray)
     )
-    quantized_model = copy.deepcopy(self._flatbuffer_model)
+
+    instructions = self._transformation_instruction_generator.quant_params_to_transformation_insts(
+        params, quantized_model
+    )
+
     self._transformation_performer.transform_graph(
         instructions, quantized_model
     )

@@ -28,6 +28,7 @@ from ai_edge_quantizer import params_generator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import test_utils
+from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import validation_utils
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 
@@ -123,7 +124,13 @@ class Quantizer:
       quantization_recipe: Quantization recipe in .json filepath or loaded json
         format.
     """
-    self.float_model: Union[str, bytearray] = float_model
+    # Turn the `float model` into bytearray for memory efficiency.
+    self.float_model: bytearray = (
+        tfl_flatbuffer_utils.get_model_buffer(float_model)
+        if isinstance(float_model, str)
+        else float_model
+    )
+
     self._recipe_manager: recipe_manager.RecipeManager = (
         recipe_manager.RecipeManager()
     )
