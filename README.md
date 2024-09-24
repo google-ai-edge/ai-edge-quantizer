@@ -54,7 +54,7 @@ Please see the [getting started colab](colabs/getting_started.ipynb) for the sim
 
 #### LiteRT Model
 
-Please refer to the [LiteRT documentation](https://ai.google.dev/edge/litert) for ways to generate LiteRT models from Jax, PyTorch and TensorFlow. The input source model should be an unquantized FP32 model in the FlatBuffers format with `.tflite` extension.
+Please refer to the [LiteRT documentation](https://ai.google.dev/edge/litert) for ways to generate LiteRT models from Jax, PyTorch and TensorFlow. The input source model should be an FP32 (unquantized) model in the FlatBuffers format with `.tflite` extension.
 
 #### Quantization Recipe
 
@@ -136,3 +136,4 @@ The table below outlines the allowed configurations for available recipes.
 |CONCATENATION    |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |STRIDED_SLICE    |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |SPLIT            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|LOGISTIC         |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
