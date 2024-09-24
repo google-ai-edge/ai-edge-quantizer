@@ -22,6 +22,7 @@ import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
+from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation
@@ -559,8 +560,8 @@ def _merge_materialized_tensors(
     ignored_input_tensor_params: Sequence[qtyping.TensorTransformationParams],
     ignored_output_tensor_params: Sequence[qtyping.TensorTransformationParams],
     op_info: qtyping.OpInfo,
-    inputs_to_ignore: Optional[Sequence[int]],
-    outputs_to_ignore: Optional[Sequence[int]],
+    inputs_to_ignore: Sequence[int],
+    outputs_to_ignore: Sequence[int],
 ) -> list[qtyping.TensorTransformationParams]:
   """Merge materialized tensors.
 
@@ -582,8 +583,6 @@ def _merge_materialized_tensors(
   Returns:
     Full list of transformation params for the op.
   """
-  inputs_to_ignore = inputs_to_ignore or []
-  outputs_to_ignore = outputs_to_ignore or []
   if not inputs_to_ignore and not outputs_to_ignore:
     return tensor_params
 
@@ -625,6 +624,65 @@ def _merge_materialized_tensors(
   return result_tensor_params
 
 
+def _tensor_indices_with_dtype(
+    tensors: Sequence[int],
+    subgraph_tensors: Sequence[schema_py_generated.TensorT],
+    tensor_dtype_codes: Sequence[int],
+) -> list[int]:
+  """Get the indices of tensors with any of the given dtype.
+
+  Args:
+    tensors: A list of tensors (indices) from the subgraph.
+    subgraph_tensors: A list of tensors in the subgraph.
+    tensor_dtype_codes: A list of tensor dtype codes.
+
+  Returns:
+    A list of indices of tensors with the given dtype.
+  """
+  selected_indices = []
+  for i, tensor_index in enumerate(tensors):
+    tensor = subgraph_tensors[tensor_index]
+    if tensor.type in tensor_dtype_codes:
+      selected_indices.append(i)
+  return selected_indices
+
+
+def _add_non_match_tensors_to_ignored_lists(
+    op: schema_py_generated.OperatorT,
+    subgraph_tensors: Sequence[schema_py_generated.TensorT],
+    dtypes_to_keep: Sequence[int],
+    inputs_to_ignore: Sequence[int],
+    outputs_to_ignore: Sequence[int],
+) -> tuple[list[int], list[int]]:
+  """Include tensors (indices) of data types other than the specified dtype in the ignored lists.
+
+  Args:
+    op: The op to be processed.
+    subgraph_tensors: A list of tensors in the subgraph.
+    dtypes_to_keep: A list of tensor dtype codes that need to be kept (not in
+      the ignored lists).
+    inputs_to_ignore: Input tensor indices to ignore.
+    outputs_to_ignore: Output tensor indices to ignore.
+
+  Returns:
+    A tuple of updated inputs_to_ignore and outputs_to_ignore.
+  """
+  input_indices = set(range(len(op.inputs)))
+  inputs_to_keep = set(
+      _tensor_indices_with_dtype(op.inputs, subgraph_tensors, dtypes_to_keep)
+  )
+  inputs_to_keep -= set(inputs_to_ignore)  # remove already ignored tensors.
+  inputs_to_ignore = list(input_indices - inputs_to_keep)
+
+  output_indices = set(range(len(op.outputs)))
+  outputs_to_keep = set(
+      _tensor_indices_with_dtype(op.outputs, subgraph_tensors, dtypes_to_keep)
+  )
+  outputs_to_keep -= set(outputs_to_ignore)  # remove already ignored tensors.
+  outputs_to_ignore = list(output_indices - outputs_to_keep)
+  return inputs_to_ignore, outputs_to_ignore
+
+
 def materialize_standard_op(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
@@ -652,6 +710,18 @@ def materialize_standard_op(
     [input_tensor_0_params, ..., input_tensor_n_params,
     output_tensor_0_params, ..., output_tensor_m_params].
   """
+  inputs_to_ignore = inputs_to_ignore or []
+  outputs_to_ignore = outputs_to_ignore or []
+  # Filter out non-fp32 tensors (e.g., int32 indices).
+  fp32_type_code = 0  # See schema_py_generated.py for type code.
+  inputs_to_ignore, outputs_to_ignore = _add_non_match_tensors_to_ignored_lists(
+      op_info.op,
+      graph_info.subgraph_tensors,
+      [fp32_type_code],
+      inputs_to_ignore,
+      outputs_to_ignore,
+  )
+
   # Process op inputs and outputs.
   ignored_input_tensors, input_tensors, inputs_to_ignore = (
       _split_tensors_by_indices(
@@ -664,7 +734,9 @@ def materialize_standard_op(
       )
   )
   # Materialize op tensors.
-  if constraint == OpQuantConstraint.SAME_AS_INPUT_SCALE:
+  if not input_tensors and not output_tensors:
+    tensor_params = []  # Every tensor is ignored.
+  elif constraint == OpQuantConstraint.SAME_AS_INPUT_SCALE:
     tensor_params = _materialize_standard_op_with_same_as_input_scale(
         input_tensors, output_tensors, op_info, graph_info, tensor_name_to_qsv
     )
@@ -684,7 +756,6 @@ def materialize_standard_op(
   ignored_output_tensor_params = _materialize_ignored_tensors(
       ignored_output_tensors, op_info, is_inbounding_tensor=False
   )
-
   # Combine all tensor params keeping the original order.
   return _merge_materialized_tensors(
       tensor_params,

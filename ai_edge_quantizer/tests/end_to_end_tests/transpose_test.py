@@ -15,6 +15,8 @@
 
 """E2E tests for the quantizer for model with transpose."""
 
+from typing import Any
+
 from absl.testing import parameterized
 import numpy as np
 
@@ -22,6 +24,7 @@ from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
+from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 _OpExecutionMode = qtyping.OpExecutionMode
 _OpName = qtyping.TFLOperationName
@@ -31,22 +34,28 @@ _OpQuantConfig = qtyping.OpQuantizationConfig
 _RNG = np.random.default_rng(66)
 
 
-def _get_dummy_data(num_samples):
+def _get_dummy_data(
+    num_samples: int, dtype: np.dtype = np.float32
+) -> list[dict[str, Any]]:
   data = []
   for _ in range(num_samples):
-    data.append({'input_2': _RNG.uniform(size=(1, 2, 3, 4)).astype(np.float32)})
+    data.append({'input_2': _RNG.uniform(size=(1, 2, 3, 4)).astype(dtype)})
   return data
 
 
-def _get_calibration_data(num_samples: int = 128):
-  return _get_dummy_data(num_samples)
+def _get_calibration_data(
+    num_samples: int = 128, dtype: np.dtype = np.float32
+) -> list[dict[str, Any]]:
+  return _get_dummy_data(num_samples, dtype)
 
 
-def _get_test_data(num_samples: int = 8):
-  return _get_dummy_data(num_samples)
+def _get_test_data(
+    num_samples: int = 8, dtype: np.dtype = np.float32
+) -> list[dict[str, Any]]:
+  return _get_dummy_data(num_samples, dtype)
 
 
-class TransposeTest(parameterized.TestCase):
+class FloatTransposeTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -55,28 +64,87 @@ class TransposeTest(parameterized.TestCase):
     )
     self._quantizer = quantizer.Quantizer(self.float_model_path)
 
-  @parameterized.parameters(
-      '../../recipes/default_a8w8_recipe.json',
-      '../../recipes/default_a16w8_recipe.json',
+  @parameterized.named_parameters(
+      dict(
+          testcase_name='a8w8',
+          recipe_path='../../recipes/default_a8w8_recipe.json',
+          input_output_dtype_code=9,  # int8.
+      ),
+      dict(
+          testcase_name='a16w8',
+          recipe_path='../../recipes/default_a16w8_recipe.json',
+          input_output_dtype_code=7,  # int16.
+      ),
   )
-  def test_transpose_model_full_integer(self, recipe_path):
+  def test_transpose_model_full_integer(
+      self, recipe_path, input_output_dtype_code
+  ):
     recipe_path = test_utils.get_path_to_datafile(recipe_path)
     self._quantizer.load_quantization_recipe(recipe_path)
     self.assertTrue(self._quantizer.need_calibration)
     calibration_result = self._quantizer.calibrate(_get_calibration_data())
-    _ = self._quantizer.quantize(calibration_result)
+    quantization_result = self._quantizer.quantize(calibration_result)
+
+    # Check tensor dtypes.
+    quantized_model = tfl_flatbuffer_utils.read_model(
+        bytearray(quantization_result.quantized_model)
+    )
+    self.assertLen(quantized_model.subgraphs, 1)
+    subgraph = quantized_model.subgraphs[0]
+    subgraph_tensors = subgraph.tensors
+    input_tensor = subgraph_tensors[subgraph.inputs[0]]
+    output_tensor = subgraph_tensors[subgraph.outputs[0]]
+    # Check input/output tensor type.
+    # See schema_py_generated.py for type code.
+    self.assertEqual(input_tensor.type, input_output_dtype_code)
+    self.assertEqual(output_tensor.type, input_output_dtype_code)
 
     comparison_result = self._quantizer.validate(
         error_metrics='mse', signature_test_data=_get_test_data()
     )
     self._check_comparison_result(comparison_result, output_tolerance=1e-4)
 
-  # TODO: b/345503484 - Check weight tensor type of the quantized model.
   def _check_comparison_result(self, comparison_result, output_tolerance):
     # TODO: b/357959309 - Use comparison result directly for testing.
     comparison_result = comparison_result.get_all_tensor_results()
     output_mse = comparison_result['PartitionedCall:0']
     self.assertLess(output_mse, output_tolerance)
+
+
+class IntegerTransposeTest(parameterized.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    self.model_path = test_utils.get_path_to_datafile(
+        '../models/single_transpose_int32.tflite'
+    )
+    self._quantizer = quantizer.Quantizer(self.model_path)
+
+  @parameterized.parameters(
+      '../../recipes/default_a8w8_recipe.json',
+      '../../recipes/default_a16w8_recipe.json',
+  )
+  def test_quantize_integer_transpose(self, recipe_path):
+    recipe_path = test_utils.get_path_to_datafile(recipe_path)
+    self._quantizer.load_quantization_recipe(recipe_path)
+    self.assertTrue(self._quantizer.need_calibration)
+    calibration_result = self._quantizer.calibrate(
+        _get_calibration_data(dtype=np.int32)
+    )
+    quantization_result = self._quantizer.quantize(calibration_result)
+    quantized_model = tfl_flatbuffer_utils.read_model(
+        bytearray(quantization_result.quantized_model)
+    )
+    self.assertLen(quantized_model.subgraphs, 1)
+    subgraph = quantized_model.subgraphs[0]
+    subgraph_tensors = subgraph.tensors
+    self.assertLen(subgraph.inputs, 1)
+    input_tensor = subgraph_tensors[subgraph.inputs[0]]
+    output_tensor = subgraph_tensors[subgraph.outputs[0]]
+    # Check input/output tensor type.
+    # See schema_py_generated.py for type code.
+    self.assertEqual(input_tensor.type, 2)  # int32.
+    self.assertEqual(output_tensor.type, 2)  # int32.
 
 
 if __name__ == '__main__':

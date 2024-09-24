@@ -44,6 +44,13 @@ def _single_fc_model_representative_dataset_gen(num_samples=5):
     yield {'input_1': np.random.rand(1, 8).astype(np.float32)}
 
 
+def _int_transpose_model_representative_dataset_gen(num_samples=5):
+  data = []
+  for _ in range(num_samples):
+    data.append({'input_2': np.random.rand(1, 2, 3, 4).astype(np.int32)})
+  return data
+
+
 class ParamsGeneratorTest(parameterized.TestCase):
 
   def setUp(self):
@@ -876,6 +883,79 @@ class ParamsGeneratorTest(parameterized.TestCase):
         ValueError, lambda err: error_message in str(err)
     ):
       params_generator.ParamsGenerator(model_path)
+
+  def test_quantize_integer_input_output(self):
+    model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, 'tests/models/single_transpose_int32.tflite'
+    )
+    self._recipe_manager.add_quantization_config(
+        regex='.*',
+        operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+        op_config=qtyping.OpQuantizationConfig(
+            activation_tensor_config=_TensorQuantConfig(
+                num_bits=8, symmetric=False
+            ),
+            weight_tensor_config=_TensorQuantConfig(num_bits=8, symmetric=True),
+            # Equivalent to SRQ.
+            compute_precision=_ComputePrecision.INTEGER,
+        ),
+    )
+    pg = params_generator.ParamsGenerator(model_path)
+
+    # Calibrate then quantize.
+    model_calibrator = calibrator.Calibrator(model_path)
+    model_calibrator.calibrate(
+        _int_transpose_model_representative_dataset_gen(), self._recipe_manager
+    )
+    model_qsvs = model_calibrator.get_model_qsvs()
+    quant_params = pg.generate_quantization_parameters(
+        self._recipe_manager,
+        model_qsvs,
+    )
+    self.assertLen(quant_params, 3)
+
+    self._test_tensor_transformation_params(
+        -1,  # virtual input op.
+        quant_params,
+        'serving_default_input_2:0',
+        [_QuantTransformation.NO_QUANTIZE],
+        is_inbounding_tensor=False,
+    )
+    # Input tensor consumer.
+    self._test_tensor_transformation_params(
+        0,
+        quant_params,
+        'serving_default_input_2:0',
+        [_QuantTransformation.NO_QUANTIZE],
+        is_inbounding_tensor=True,
+    )
+
+    # Output tensor producer.
+    self._test_tensor_transformation_params(
+        0,
+        quant_params,
+        'PartitionedCall:0',
+        [_QuantTransformation.NO_QUANTIZE],
+        is_inbounding_tensor=False,
+    )
+    # output tensor consumer (into the virtual output op).
+    self._test_tensor_transformation_params(
+        -1,  # virtual output op.
+        quant_params,
+        'PartitionedCall:0',
+        [_QuantTransformation.NO_QUANTIZE],
+        is_inbounding_tensor=True,
+    )
+
+    # perm
+    self._test_tensor_transformation_params(
+        0,
+        quant_params,
+        'sequential_1/permute_1/transpose/perm',
+        [_QuantTransformation.NO_QUANTIZE],
+        is_inbounding_tensor=True,
+    )
 
   def _test_tensor_transformation_params(
       self,
