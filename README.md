@@ -10,6 +10,7 @@ Build Type         |    Status     |
 -----------        | --------------|
 Unit Tests (Linux) | [![](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_unittests.yml/badge.svg?branch=main)](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_unittests.yml) |
 Nightly Release    | [![](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_release.yml/badge.svg?branch=main)](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_release.yml) |
+Nightly Colab      | [![](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_colabs.yml/badge.svg?branch=main)](https://github.com/google-ai-edge/ai-edge-quantizer/actions/workflows/nightly_colabs.yml) |
 
 ## Installation
 
