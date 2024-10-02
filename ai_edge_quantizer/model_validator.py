@@ -28,6 +28,9 @@ from ai_edge_quantizer.utils import tfl_interpreter_utils as utils
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 
 
+_DEFAULT_SIGNATURE_KEY = utils.DEFAULT_SIGNATURE_KEY
+
+
 @dataclasses.dataclass(frozen=True)
 class SingleSignatureComparisonResult:
   """Comparison result for a single signature.
@@ -59,18 +62,16 @@ class ComparisonResult:
     self._comparison_results: dict[str, SingleSignatureComparisonResult] = {}
 
   def get_signature_comparison_result(
-      self, signature_key: Optional[str] = None
+      self, signature_key: str = _DEFAULT_SIGNATURE_KEY
   ) -> SingleSignatureComparisonResult:
     """Get the comparison result for a signature.
 
     Args:
-      signature_key: The signature key to be used for invoking the models. If
-        the model only has one signature, this can be set to None.
+      signature_key: The signature key to be used for invoking the models.
 
     Returns:
       A SingleSignatureComparisonResult object.
     """
-    signature_key = str(signature_key)
     if signature_key not in self._comparison_results:
       raise ValueError(
           f'{signature_key} is not in the comparison_results. Available'
@@ -87,7 +88,7 @@ class ComparisonResult:
       source_model: Union[str, bytearray],
       error_metric: str,
       comparison_result: dict[str, float],
-      signature_key: Optional[str] = None,
+      signature_key: str = _DEFAULT_SIGNATURE_KEY,
   ):
     """Add a new signature result to the comparison result.
 
@@ -96,7 +97,6 @@ class ComparisonResult:
       error_metric: The name of the error metric used for comparison.
       comparison_result: A dictionary of tensor name and its value.
       signature_key: The model signature that the comparison_result belongs to.
-        If the model only has one signature, this can be set to None.
 
     Raises:
       ValueError: If the signature_key is already in the comparison_results.
@@ -125,8 +125,7 @@ class ComparisonResult:
     ):
       constant_tensor_results[name] = result.pop(name)
 
-    key = str(signature_key)
-    self._comparison_results[key] = SingleSignatureComparisonResult(
+    self._comparison_results[signature_key] = SingleSignatureComparisonResult(
         error_metric=error_metric,
         input_tensors=input_tensor_results,
         output_tensors=output_tensor_results,

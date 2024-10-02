@@ -273,5 +273,90 @@ class QuantizerBytearrayInputs(googletest.TestCase):
     )
 
 
+# TODO: b/364974841 - Add more tests after multiple signatures are supported
+# for calibrate and quantize.
+class QuantizerMultiSignatureModelTest(parameterized.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    self._tmp_save_path = self.create_tempdir().full_path
+    self._test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, 'tests/models/two_signatures.tflite'
+    )
+    self._test_recipe_path = os.path.join(
+        TEST_DATA_PREFIX_PATH,
+        'recipes/default_a8w8_recipe.json',
+    )
+    with open(self._test_recipe_path) as json_file:
+      self._test_recipe = json.load(json_file)
+    self._calibration_result = {
+        'add_x:0': {'min': -2.0, 'max': 2.0},
+        'PartitionedCall:0': {'min': -8.0, 'max': 12.0},
+        'multiply_x:0': {'min': -2.0, 'max': 2.0},
+        'PartitionedCall_1:0': {'min': -20.0, 'max': 20.0},
+    }
+    self._quantizer = quantizer.Quantizer(
+        self._test_model_path, self._test_recipe_path
+    )
+
+  @parameterized.named_parameters(
+      ('default_random_data', None),
+      (
+          'specific_data',
+          {
+              'add': [{'x': np.array([2.0]).astype(np.float32)}],
+              'multiply': [{'x': np.array([1.0]).astype(np.float32)}],
+          },
+      ),
+  )
+  def test_validate_multiple_signatures_succeeds(self, test_data):
+    self._quantizer.quantize(self._calibration_result)
+    validation_result = self._quantizer.validate(test_data)
+    available_signatures = validation_result.available_signature_keys()
+    self.assertLen(available_signatures, 2)
+
+    add_result = validation_result.get_signature_comparison_result('add')
+    self.assertEqual('mse', add_result.error_metric)
+    self.assertIn('add_x:0', add_result.input_tensors)
+    self.assertIn('PartitionedCall:0', add_result.output_tensors)
+    self.assertIn('Add/y', add_result.constant_tensors)
+    self.assertEmpty(add_result.intermediate_tensors)
+
+    mul_result = validation_result.get_signature_comparison_result('multiply')
+    self.assertEqual('mse', mul_result.error_metric)
+    self.assertIn('multiply_x:0', mul_result.input_tensors)
+    self.assertIn('PartitionedCall_1:0', mul_result.output_tensors)
+    self.assertIn('Mul/y', mul_result.constant_tensors)
+    self.assertEmpty(mul_result.intermediate_tensors)
+
+  def test_validate_add_signature_succeeds(self):
+    test_data = {'add': [{'x': np.array([2.0]).astype(np.float32)}]}
+    self._quantizer.quantize(self._calibration_result)
+    validation_result = self._quantizer.validate(test_data)
+    available_signatures = validation_result.available_signature_keys()
+    self.assertLen(available_signatures, 1)
+    self.assertIn('add', available_signatures)
+    add_result = validation_result.get_signature_comparison_result('add')
+    self.assertEqual('mse', add_result.error_metric)
+    self.assertIn('add_x:0', add_result.input_tensors)
+    self.assertIn('PartitionedCall:0', add_result.output_tensors)
+    self.assertIn('Add/y', add_result.constant_tensors)
+    self.assertEmpty(add_result.intermediate_tensors)
+
+  def test_validate_multiply_signature_succeeds(self):
+    test_data = {'multiply': [{'x': np.array([1.0]).astype(np.float32)}]}
+    self._quantizer.quantize(self._calibration_result)
+    validation_result = self._quantizer.validate(test_data)
+    available_signatures = validation_result.available_signature_keys()
+    self.assertLen(available_signatures, 1)
+    self.assertIn('multiply', available_signatures)
+    mul_result = validation_result.get_signature_comparison_result('multiply')
+    self.assertEqual('mse', mul_result.error_metric)
+    self.assertIn('multiply_x:0', mul_result.input_tensors)
+    self.assertIn('PartitionedCall_1:0', mul_result.output_tensors)
+    self.assertIn('Mul/y', mul_result.constant_tensors)
+    self.assertEmpty(mul_result.intermediate_tensors)
+
+
 if __name__ == '__main__':
   googletest.main()

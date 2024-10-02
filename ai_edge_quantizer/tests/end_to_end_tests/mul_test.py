@@ -47,7 +47,7 @@ def _get_calibration_data(num_inputs, num_samples: int = 512):
 
 
 def _get_test_data(num_inputs, num_samples: int = 8):
-  return _get_dummy_data(num_inputs, num_samples)
+  return {'serving_default': _get_dummy_data(num_inputs, num_samples)}
 
 
 class MulTest(parameterized.TestCase):
@@ -76,7 +76,7 @@ class MulTest(parameterized.TestCase):
     # there are no weights in the model file.
 
     comparion_result = self._quantizer.validate(
-        error_metrics='mse', signature_test_data=_get_test_data(num_inputs=2)
+        error_metrics='mse', test_data=_get_test_data(num_inputs=2)
     )
     self._check_comparion_result(
         comparion_result,
@@ -104,7 +104,7 @@ class MulTest(parameterized.TestCase):
     )
 
     comparion_result = self._quantizer.validate(
-        error_metrics='mse', signature_test_data=_get_test_data(num_inputs=1)
+        error_metrics='mse', test_data=_get_test_data(num_inputs=1)
     )
     self._check_comparion_result(
         comparion_result,

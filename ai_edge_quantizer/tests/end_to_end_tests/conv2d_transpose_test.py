@@ -45,7 +45,7 @@ def _get_calibration_data(num_samples: int = 128):
 
 
 def _get_test_data(num_samples: int = 8):
-  return _get_dummy_data(num_samples)
+  return {'serving_default': _get_dummy_data(num_samples)}
 
 
 class Conv2DTransposeTest(parameterized.TestCase):
@@ -122,7 +122,7 @@ class Conv2DTransposeTest(parameterized.TestCase):
     self.assertLess(len(quant_result.quantized_model), 10000)
 
     comparion_result = self._quantizer.validate(
-        error_metrics='mse', signature_test_data=_get_test_data()
+        error_metrics='mse', test_data=_get_test_data()
     )
     self._check_comparion_result(
         comparion_result,

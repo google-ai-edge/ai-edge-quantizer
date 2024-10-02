@@ -24,6 +24,8 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 
+DEFAULT_SIGNATURE_KEY = "serving_default"
+
 
 def create_tfl_interpreter(
     tflite_model: Union[str, bytearray],

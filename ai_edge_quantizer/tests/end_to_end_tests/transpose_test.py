@@ -52,7 +52,7 @@ def _get_calibration_data(
 def _get_test_data(
     num_samples: int = 8, dtype: np.dtype = np.float32
 ) -> list[dict[str, Any]]:
-  return _get_dummy_data(num_samples, dtype)
+  return {'serving_default': _get_dummy_data(num_samples, dtype)}
 
 
 class FloatTransposeTest(parameterized.TestCase):
@@ -100,7 +100,7 @@ class FloatTransposeTest(parameterized.TestCase):
     self.assertEqual(output_tensor.type, input_output_dtype_code)
 
     comparison_result = self._quantizer.validate(
-        error_metrics='mse', signature_test_data=_get_test_data()
+        error_metrics='mse', test_data=_get_test_data()
     )
     self._check_comparison_result(comparison_result, output_tolerance=1e-4)
 

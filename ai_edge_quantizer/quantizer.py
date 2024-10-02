@@ -248,9 +248,8 @@ class Quantizer:
 
   def validate(
       self,
-      signature_test_data: Optional[Iterable[_SignatureInput]] = None,
+      test_data: Optional[dict[str, Iterable[_SignatureInput]]] = None,
       error_metrics: str = 'mse',
-      signature_key: Optional[str] = None,
       use_reference_kernel: bool = False,
   ) -> model_validator.ComparisonResult:
     """Numerical validation of the quantized model for a model signature.
@@ -264,37 +263,28 @@ class Quantizer:
     json_save_path is provided.
 
     Args:
-      signature_test_data: Test data to be used for comparison for a model
-        signature.
+      test_data: A dictionary of signature key and its correspending test input
+        data that will be used for validation. If set to None, random normal
+        distributed data will be used for all signatures in the model.
       error_metrics: Error metrics to be used for comparison.
-      signature_key: the signature key to be used for invoking the models. If
-        the model doesn't have a signature key, this can be set to None.
       use_reference_kernel: Whether to use the reference kernel for validation.
 
     Returns:
       The comparison result.
     """
-    if signature_test_data is None:
-      test_data = test_utils.create_random_normal_input_data(self.float_model)
-      if signature_key is not None:
-        signature_test_data = test_data[signature_key]
-      else:
-        if len(test_data) != 1:
-          raise ValueError(
-              'The model has multiple signatures but no signature key is'
-              ' provided for comparison.'
-          )
-        signature_test_data = list(test_data.values())[0]  # single signature.
-
-    comparison_result = model_validator.compare_model(
+    if test_data is None:
+      # Create test data for all signatures in the model.
+      test_data = test_utils.create_random_normal_input_data(
+          self.float_model, num_samples=1
+      )
+    return model_validator.compare_model(
         self.float_model,
         self._result.quantized_model,
-        {signature_key: signature_test_data},
-        compare_fn=validation_utils.get_validation_func(error_metrics),
-        error_metric=error_metrics,
+        test_data,
+        error_metrics,
+        validation_utils.get_validation_func(error_metrics),
         use_reference_kernel=use_reference_kernel,
     )
-    return comparison_result
 
   def _get_quantization_params(
       self, calibration_result: Optional[_CalibrationResult] = None

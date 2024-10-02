@@ -45,7 +45,7 @@ def _get_calibration_data(num_samples: int = 128):
 
 
 def _get_test_data(num_samples: int = 8):
-  return _get_dummy_data(num_samples)
+  return {'serving_default': _get_dummy_data(num_samples)}
 
 
 class SplitTest(parameterized.TestCase):
@@ -69,7 +69,7 @@ class SplitTest(parameterized.TestCase):
     _ = self._quantizer.quantize(calibration_result)
 
     comparison_result = self._quantizer.validate(
-        error_metrics='mse', signature_test_data=_get_test_data()
+        error_metrics='mse', test_data=_get_test_data()
     )
     self._check_comparison_result(comparison_result, output_tolerance=1e-4)
 
