@@ -289,10 +289,9 @@ class Quantizer:
     comparison_result = model_validator.compare_model(
         self.float_model,
         self._result.quantized_model,
-        signature_test_data,
+        {signature_key: signature_test_data},
         compare_fn=validation_utils.get_validation_func(error_metrics),
         error_metric=error_metrics,
-        signature_key=signature_key,
         use_reference_kernel=use_reference_kernel,
     )
     return comparison_result

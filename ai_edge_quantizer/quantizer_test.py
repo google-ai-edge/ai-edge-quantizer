@@ -13,8 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Tests for quantizer."""
-
 import json
 import os
 
@@ -36,7 +34,7 @@ TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('')
 _RNG = np.random.default_rng(66)
 
 
-def _get_calibration_data(num_samples: int = 256):
+def _get_calibration_data(num_samples: int = 16):
   calibration_data = []
   for _ in range(num_samples):
     calibration_data.append(
@@ -230,6 +228,7 @@ class QuantizerTest(parameterized.TestCase):
   def test_compare_succeeds(self):
     self._quantizer.quantize()
     validation_result = self._quantizer.validate()
+    validation_result = validation_result.get_signature_comparison_result()
     self.assertIsNotNone(validation_result)
     self.assertIn(
         'sequential/dense_1/MatMul', validation_result.intermediate_tensors
@@ -258,6 +257,7 @@ class QuantizerBytearrayInputs(googletest.TestCase):
     self.assertEqual(quant_result.recipe, self._test_recipe)
     self.assertIsNotNone(quant_result.quantized_model)
     validation_result = self._quantizer.validate()
+    validation_result = validation_result.get_signature_comparison_result()
     self.assertIsNotNone(validation_result)
     self.assertIn(
         'sequential/dense_1/MatMul', validation_result.intermediate_tensors
@@ -266,6 +266,7 @@ class QuantizerBytearrayInputs(googletest.TestCase):
   def test_compare_succeeds(self):
     self._quantizer.quantize()
     validation_result = self._quantizer.validate()
+    validation_result = validation_result.get_signature_comparison_result()
     self.assertIsNotNone(validation_result)
     self.assertIn(
         'sequential/dense_1/MatMul', validation_result.intermediate_tensors

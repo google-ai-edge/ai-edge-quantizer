@@ -28,9 +28,9 @@ from ai_edge_quantizer.utils import tfl_interpreter_utils as utils
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 
 
-@dataclasses.dataclass(frozen=True, init=False)
-class ComparisonResult:
-  """A class for storing the comparison result of two models.
+@dataclasses.dataclass(frozen=True)
+class SingleSignatureComparisonResult:
+  """Comparison result for a single signature.
 
   Attributes:
     error_metric: The name of the error metric used for comparison.
@@ -47,40 +47,92 @@ class ComparisonResult:
   constant_tensors: dict[str, Any]
   intermediate_tensors: dict[str, Any]
 
-  def __init__(
+
+class ComparisonResult:
+  """Comparison result for a model.
+
+  Attributes:
+    comparison_results: A dictionary of signature key and its comparison result.
+  """
+
+  def __init__(self):
+    self._comparison_results: dict[str, SingleSignatureComparisonResult] = {}
+
+  def get_signature_comparison_result(
+      self, signature_key: Optional[str] = None
+  ) -> SingleSignatureComparisonResult:
+    """Get the comparison result for a signature.
+
+    Args:
+      signature_key: The signature key to be used for invoking the models. If
+        the model only has one signature, this can be set to None.
+
+    Returns:
+      A SingleSignatureComparisonResult object.
+    """
+    signature_key = str(signature_key)
+    if signature_key not in self._comparison_results:
+      raise ValueError(
+          f'{signature_key} is not in the comparison_results. Available'
+          f' signature keys are: {self.available_signature_keys()}'
+      )
+    return self._comparison_results[signature_key]
+
+  def available_signature_keys(self) -> list[str]:
+    """Get the available signature keys in the comparison result."""
+    return list(self._comparison_results.keys())
+
+  def add_new_signature_results(
       self,
       source_model: Union[str, bytearray],
       error_metric: str,
       comparison_result: dict[str, float],
+      signature_key: Optional[str] = None,
   ):
-    """Initializes the ComparisonResult object.
+    """Add a new signature result to the comparison result.
 
     Args:
-      source_model: The model that is used to generate the comparison result.
+      source_model: The model to be validated.
       error_metric: The name of the error metric used for comparison.
-      comparison_result: The comparison result from compare_model.
+      comparison_result: A dictionary of tensor name and its value.
+      signature_key: The model signature that the comparison_result belongs to.
+        If the model only has one signature, this can be set to None.
+
+    Raises:
+      ValueError: If the signature_key is already in the comparison_results.
     """
-    # Construct a new comparison_result dictionary with float values (needed for
-    # json serialization).
+    if signature_key in self._comparison_results:
+      raise ValueError(f'{signature_key} is already in the comparison_results.')
+
     result = {key: float(value) for key, value in comparison_result.items()}
 
     input_tensor_results = {}
-    for name in utils.get_input_tensor_names(source_model):
+    for name in utils.get_input_tensor_names(source_model, signature_key):
       input_tensor_results[name] = result.pop(name)
 
     output_tensor_results = {}
-    for name in utils.get_output_tensor_names(source_model):
+    for name in utils.get_output_tensor_names(source_model, signature_key):
       output_tensor_results[name] = result.pop(name)
 
     constant_tensor_results = {}
-    for name in utils.get_constant_tensor_names(source_model):
+    # Only get constant tensors from the main subgraph of the signature.
+    subgraph_index = utils.get_signature_main_subgraph_index(
+        utils.create_tfl_interpreter(source_model), signature_key
+    )
+    for name in utils.get_constant_tensor_names(
+        source_model,
+        subgraph_index,
+    ):
       constant_tensor_results[name] = result.pop(name)
 
-    object.__setattr__(self, 'error_metric', error_metric)
-    object.__setattr__(self, 'input_tensors', input_tensor_results)
-    object.__setattr__(self, 'output_tensors', output_tensor_results)
-    object.__setattr__(self, 'constant_tensors', constant_tensor_results)
-    object.__setattr__(self, 'intermediate_tensors', result)
+    key = str(signature_key)
+    self._comparison_results[key] = SingleSignatureComparisonResult(
+        error_metric=error_metric,
+        input_tensors=input_tensor_results,
+        output_tensors=output_tensor_results,
+        constant_tensors=constant_tensor_results,
+        intermediate_tensors=result,
+    )
 
   def get_all_tensor_results(self) -> dict[str, Any]:
     """Get all the tensor results in a single dictionary.
@@ -88,10 +140,12 @@ class ComparisonResult:
     Returns:
       A dictionary of tensor name and its value.
     """
-    result = self.input_tensors.copy()
-    result.update(self.output_tensors)
-    result.update(self.constant_tensors)
-    result.update(self.intermediate_tensors)
+    result = {}
+    for _, signature_comparison_result in self._comparison_results.items():
+      result.update(signature_comparison_result.input_tensors)
+      result.update(signature_comparison_result.output_tensors)
+      result.update(signature_comparison_result.constant_tensors)
+      result.update(signature_comparison_result.intermediate_tensors)
     return result
 
   def save(self, save_folder: str, model_name: str) -> None:
@@ -104,20 +158,22 @@ class ComparisonResult:
     Raises:
       RuntimeError: If no quantized model is available.
     """
-    result = {
-        'error_metric': self.error_metric,
-        'input_tensors': self.input_tensors,
-        'output_tensors': self.output_tensors,
-        'constant_tensors': self.constant_tensors,
-        'intermediate_tensors': self.intermediate_tensors,
-    }
+    result = {}
+    for signature, comparison_result in self._comparison_results.items():
+      result[str(signature)] = {
+          'error_metric': comparison_result.error_metric,
+          'input_tensors': comparison_result.input_tensors,
+          'output_tensors': comparison_result.output_tensors,
+          'constant_tensors': comparison_result.constant_tensors,
+          'intermediate_tensors': comparison_result.intermediate_tensors,
+      }
     result_save_path = os.path.join(
         save_folder, model_name + '_comparison_result.json'
     )
     with gfile.GFile(result_save_path, 'w') as output_file_handle:
       output_file_handle.write(json.dumps(result))
 
-    # TODO: b/358122753 - Automatically generate the threshold.
+    # TODO: b/365578554 - Remove after ME is updated to use the new json format.
     color_threshold = [0.05, 0.1, 0.2, 0.4, 1, 10, 100]
     json_object = create_json_for_model_explorer(
         self,
@@ -130,15 +186,50 @@ class ComparisonResult:
       output_file_handle.write(json_object)
 
 
-# TODO: b/331655892 - have this function automatically detect the input tensor
-# type
+def _setup_validation_interpreter(
+    model: Union[str, bytearray],
+    signature_input: dict[str, Any],
+    signature_key: Optional[str],
+    use_reference_kernel: bool,
+) -> tuple[Any, int, dict[str, Any]]:
+  """Setup the interpreter for validation given a signature key.
+
+  Args:
+    model: The model to be validated.
+    signature_input: A dictionary of input tensor name and its value.
+    signature_key: The signature key to be used for invoking the models. If the
+      model only has one signature, this can be set to None.
+    use_reference_kernel: Whether to use the reference kernel for the
+      interpreter.
+
+  Returns:
+    A tuple of interpreter, subgraph_index and tensor_name_to_details.
+  """
+
+  interpreter = utils.create_tfl_interpreter(
+      tflite_model=model, use_reference_kernel=use_reference_kernel
+  )
+  utils.invoke_interpreter_signature(
+      interpreter, signature_input, signature_key
+  )
+  # Only validate tensors from the main subgraph of the signature.
+  subgraph_index = utils.get_signature_main_subgraph_index(
+      interpreter, signature_key
+  )
+  tensor_name_to_details = utils.get_tensor_name_to_details_map(
+      interpreter,
+      subgraph_index,
+  )
+  return interpreter, subgraph_index, tensor_name_to_details
+
+
+# TODO: b/330797129 - Enable multi-threaded evaluation.
 def compare_model(
     reference_model: Union[str, bytearray],
     target_model: Union[str, bytearray],
-    signature_dataset: Iterable[dict[str, Any]],
+    test_data: dict[str, Iterable[dict[str, Any]]],
     error_metric: str,
     compare_fn: Callable[[Any, Any], float],
-    signature_key: Optional[str] = None,
     use_reference_kernel: bool = False,
 ) -> ComparisonResult:
   """Compares model tensors over a model signature using the compare_fn.
@@ -151,69 +242,67 @@ def compare_model(
     reference_model: Model which will be used as the reference
     target_model: Target model which will be compared against the reference. We
       expect reference_model and target_model have the inputs and outputs
-    signature_dataset: A list of inputs of the signature to be run on reference
-      and target models.
+      signature.
+    test_data: A dictionary of signature key and its correspending test input
+      data that will be used for comparison.
     error_metric: The name of the error metric used for comparison.
     compare_fn: a comparison function to be used for calculating the statistics,
       this function must be taking in two ArrayLike strcuture and output a
       single float value.
-    signature_key: the signature key to be used for invoking the models. If the
-      model doesn't have a signature key, this can be set to None.
     use_reference_kernel: Whether to use the reference kernel for the
       interpreter.
 
   Returns:
     A ComparisonResult object.
   """
-  reference_interpreter = utils.create_tfl_interpreter(
-      tflite_model=reference_model, use_reference_kernel=use_reference_kernel
-  )
-  target_interpreter = utils.create_tfl_interpreter(
-      tflite_model=target_model, use_reference_kernel=use_reference_kernel
-  )
-  comparison_results = {}
+  model_comparion_result = ComparisonResult()
+  for signature_key, signature_inputs in test_data.items():
+    comparison_results = {}
+    for signature_input in signature_inputs:
+      # Invoke the signature on both interpreters.
+      ref_interpreter, ref_subgraph_index, ref_tensor_name_to_details = (
+          _setup_validation_interpreter(
+              reference_model,
+              signature_input,
+              signature_key,
+              use_reference_kernel,
+          )
+      )
+      targ_interpreter, targ_subgraph_index, targ_tensor_name_to_details = (
+          _setup_validation_interpreter(
+              target_model, signature_input, signature_key, use_reference_kernel
+          )
+      )
+      # Compare the cached tensor values.
+      for tensor_name, detail in ref_tensor_name_to_details.items():
+        if detail['dtype'] == np.object_:
+          continue
+        if tensor_name in targ_tensor_name_to_details:
+          if tensor_name not in comparison_results:
+            comparison_results[tensor_name] = []
 
-  # TODO: b/330797129 - enable multi-threaded evaluation.
-  for signature_input in signature_dataset:
-    utils.invoke_interpreter_signature(
-        reference_interpreter, signature_input, signature_key
-    )
-    utils.invoke_interpreter_signature(
-        target_interpreter,
-        signature_input,
+          reference_data = utils.get_tensor_data(
+              ref_interpreter, detail, ref_subgraph_index
+          )
+          target_data = utils.get_tensor_data(
+              targ_interpreter,
+              targ_tensor_name_to_details[tensor_name],
+              targ_subgraph_index,
+          )
+          comparison_results[tensor_name].append(
+              compare_fn(target_data, reference_data)
+          )
+
+    agregated_results = {}
+    for tensor_name in comparison_results:
+      agregated_results[tensor_name] = np.mean(comparison_results[tensor_name])
+    model_comparion_result.add_new_signature_results(
+        reference_model,
+        error_metric,
+        agregated_results,
         signature_key,
     )
-
-    reference_name_to_details = utils.get_tensor_name_to_details_map(
-        reference_interpreter
-    )
-    target_name_to_details = utils.get_tensor_name_to_details_map(
-        target_interpreter
-    )
-
-    for tensor_name, detail in reference_name_to_details.items():
-      if detail['dtype'] == np.object_:
-        continue
-      if tensor_name in target_name_to_details:
-        if tensor_name not in comparison_results:
-          comparison_results[tensor_name] = []
-        reference_data = utils.get_tensor_data(reference_interpreter, detail)
-        target_data = utils.get_tensor_data(
-            target_interpreter, target_name_to_details[tensor_name]
-        )
-        comparison_results[tensor_name].append(
-            compare_fn(target_data, reference_data)
-        )
-
-  agregated_results = {}
-  for tensor_name in comparison_results:
-    agregated_results[tensor_name] = np.mean(comparison_results[tensor_name])
-
-  return ComparisonResult(
-      reference_model,
-      error_metric,
-      agregated_results,
-  )
+  return model_comparion_result
 
 
 def create_json_for_model_explorer(
