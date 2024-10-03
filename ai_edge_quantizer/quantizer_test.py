@@ -234,6 +234,47 @@ class QuantizerTest(parameterized.TestCase):
         'sequential/dense_1/MatMul', validation_result.intermediate_tensors
     )
 
+  def test_load_custom_policies_succeeds(self):
+
+    test_op_config = qtyping.OpQuantizationConfig(
+        weight_tensor_config=_TensorQuantConfig(num_bits=4, symmetric=True),
+        compute_precision=_ComputePrecision.INTEGER,
+    )
+
+    # Check if the quant config is supported by default policy.
+    self._quantizer.update_quantization_recipe(
+        regex='.*/Dense/.*',
+        operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
+        op_config=test_op_config,
+    )
+
+    # Check if the quant config fails on dummy policy.
+    dummy_policy_path = test_utils.get_path_to_datafile(
+        'policies/dummy_config_policy.json'
+    )
+    self._quantizer.load_config_policy(dummy_policy_path)
+    with self.assertRaisesRegex(
+        ValueError, 'Unsupported op for .*FULLY_CONNECTED'
+    ):
+      self._quantizer.update_quantization_recipe(
+          regex='.*/Dense/.*',
+          operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
+          algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+          op_config=test_op_config,
+      )
+
+    # Check if the quant config is supported by example policy in *.json file.
+    default_policy_path = test_utils.get_path_to_datafile(
+        'policies/example_config_policy.json'
+    )
+    self._quantizer.load_config_policy(default_policy_path)
+    self._quantizer.update_quantization_recipe(
+        regex='.*/Dense/.*',
+        operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
+        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+        op_config=test_op_config,
+    )
+
 
 class QuantizerBytearrayInputs(googletest.TestCase):
 

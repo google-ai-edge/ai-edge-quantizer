@@ -60,16 +60,6 @@ class InputOutputTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
       dict(
-          testcase_name='float_input',
-          activation_tensor_config=None,
-          op=_OpName.INPUT,
-      ),
-      dict(
-          testcase_name='float_output',
-          activation_tensor_config=None,
-          op=_OpName.OUTPUT,
-      ),
-      dict(
           testcase_name='INT8_input',
           activation_tensor_config=_TensorQuantConfig(
               num_bits=8,

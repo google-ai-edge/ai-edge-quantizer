@@ -15,20 +15,11 @@
 
 """The Python API for Algorithm Manager of Quantizer."""
 
-import collections
 from collections.abc import Callable
 import dataclasses
 import functools
-import json
 from typing import Any, Optional
 from ai_edge_quantizer import qtyping
-from ai_edge_quantizer.utils import test_utils
-from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
-
-
-_DEFAULT_CONFIG_CHECK_POLICY_PATH = test_utils.get_path_to_datafile(
-    "policies/default_config_check_policy.json"
-)
 
 
 @dataclasses.dataclass
@@ -268,33 +259,13 @@ class AlgorithmManagerApi:
       return quantized_op_info[tfl_op_name].materialize_func
     return None
 
-  def _load_config_check_policy(
-      self,
-  ) -> qtyping.ConfigCheckPolicyDict:
-    """Loads the config check policy for all algorithms."""
-
-    with gfile.Open(_DEFAULT_CONFIG_CHECK_POLICY_PATH) as json_file:
-      policy_content = json.load(json_file)
-
-    # Convert the config check policy content to a dict of OpQuantizationConfig.
-    policy = collections.OrderedDict()
-    for op_name, op_configs in policy_content.items():
-      policy[qtyping.TFLOperationName(op_name)] = [
-          qtyping.OpQuantizationConfig.from_dict(op_config)
-          for op_config in op_configs
-      ]
-
-    return policy
-
   # TODO: b/53780772 - Merge this function with
   # register_op_quant_config_validation_func after full transition to new check
   # mechanism.
   def register_config_check_policy(
       self,
       algorithm_key: str,
-      config_check_policy: Optional[qtyping.ConfigCheckPolicyDict] = None,
+      config_check_policy: Optional[qtyping.ConfigCheckPolicyDict],
   ):
     """Registers a policy to check the op quantization config."""
-    if config_check_policy is None:
-      config_check_policy = self._load_config_check_policy()
     self._config_check_policy_registry[algorithm_key] = config_check_policy

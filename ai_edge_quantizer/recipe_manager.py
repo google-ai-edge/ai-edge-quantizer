@@ -45,13 +45,13 @@ class OpQuantizationRecipe:
   `regex` or `operation`.
 
   Attributes:
-    regex: Regular expression for scope name matching.
-      Any op that matches `regex` will be quantized according to this instance.
-      The narrowest scope would be the full output tensor name of an op.
-      The widest scope would be '.*' which applies to the full model.
+    regex: Regular expression for scope name matching. Any op that matches
+      `regex` will be quantized according to this instance. The narrowest scope
+      would be the full output tensor name of an op. The widest scope would be
+      '.*' which applies to the full model.
     operation: Target TFL operation. * for any supported TFLite operation.
-    algorithm_key: Algorithm key to be applied.
-      This can be any one of the strings as enumerated in `AlgorithmName`.
+    algorithm_key: Algorithm key to be applied. This can be any one of the
+      strings as enumerated in `AlgorithmName`.
     op_config: Quantization configuration to be applied for the op.
   """
 

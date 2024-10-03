@@ -186,7 +186,18 @@ class AlgorithmManagerApiTest(parameterized.TestCase):
   def test_register_config_check_policy_succeeds(self):
     self.assertEmpty(self._alg_manager._config_check_policy_registry)
     test_algorithm_name = "test_algorithm"
-    self._alg_manager.register_config_check_policy(test_algorithm_name)
+    test_config_check_policy = qtyping.ConfigCheckPolicyDict({
+        _TFLOpName.FULLY_CONNECTED: {
+            qtyping.OpQuantizationConfig(
+                weight_tensor_config=qtyping.TensorQuantizationConfig(
+                    num_bits=1
+                )
+            )
+        }
+    })
+    self._alg_manager.register_config_check_policy(
+        test_algorithm_name, test_config_check_policy
+    )
     self.assertIn(
         test_algorithm_name, self._alg_manager._config_check_policy_registry
     )

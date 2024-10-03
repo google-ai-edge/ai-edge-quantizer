@@ -22,6 +22,7 @@ import os
 from typing import Any, Optional, Union
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import calibrator
+from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import model_modifier
 from ai_edge_quantizer import model_validator
 from ai_edge_quantizer import params_generator
@@ -150,6 +151,22 @@ class Quantizer:
       with gfile.Open(recipe) as json_file:
         recipe = json.load(json_file)
     self._recipe_manager.load_quantization_recipe(recipe)
+
+  def load_config_policy(self, filename: str) -> None:
+    """Loads a JSON policy.
+
+    The existing policy will be overwritten.
+
+    Args:
+      filename: Config policy filename.
+    """
+    with gfile.Open(filename, 'r') as f:
+      policy = default_policy.update_default_config_policy(f.read())
+
+    # Register the policy for MIN_MAX_UNIFORM_QUANT algorithm.
+    algorithm_manager.register_config_check_policy_func(
+        AlgorithmName.MIN_MAX_UNIFORM_QUANT, policy
+    )
 
   def get_quantization_recipe(self) -> _QuantRecipe:
     """Gets the quantization recipe.
