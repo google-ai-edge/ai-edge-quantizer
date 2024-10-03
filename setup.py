@@ -68,5 +68,6 @@ setuptools.setup(
         "immutabledict",
         "numpy",
         "tf-nightly>=2.17.0.dev20240509",
+        "ai-edge-litert-nightly",
     ],
 )

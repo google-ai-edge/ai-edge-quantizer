@@ -33,6 +33,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
+from ai_edge_litert import interpreter as tfl_interpreter  # pylint: disable=g-direct-tensorflow-import
 
 _OpExecutionMode = qtyping.OpExecutionMode
 _OpName = qtyping.TFLOperationName
@@ -177,7 +178,9 @@ def inference(quantized_tflite: bytes, image_path: str):
       data = data / 255.0
     return data.reshape((1, 28, 28, 1))
 
-  tflite_interpreter = tf.lite.Interpreter(model_content=quantized_tflite)
+  tflite_interpreter = tfl_interpreter.Interpreter(
+      model_content=quantized_tflite
+  )
   tflite_interpreter.allocate_tensors()
   data = _read_img(image_path)
   tfl_interpreter_utils.invoke_interpreter_once(tflite_interpreter, [data])

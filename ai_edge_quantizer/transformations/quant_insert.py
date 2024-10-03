@@ -22,7 +22,7 @@ the tensor consumer
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import quantize_tensor
 from ai_edge_quantizer.transformations import transformation_utils
-from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
+from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 def insert_quant(

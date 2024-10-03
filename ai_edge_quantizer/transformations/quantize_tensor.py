@@ -19,7 +19,7 @@ from typing import Optional, cast
 import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import transformation_utils
-from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
+from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 # TODO: b/335014051 - support distinguishing INT, FLOAT & UINT, BFLOAT

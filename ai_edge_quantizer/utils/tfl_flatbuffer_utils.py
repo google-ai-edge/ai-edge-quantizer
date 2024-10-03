@@ -21,7 +21,7 @@ import immutabledict
 import numpy as np
 
 from ai_edge_quantizer import qtyping
-from tensorflow.lite.python import schema_py_generated  # pylint:disable=g-direct-tensorflow-import
+from ai_edge_litert import schema_py_generated  # pylint:disable=g-direct-tensorflow-import
 from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 

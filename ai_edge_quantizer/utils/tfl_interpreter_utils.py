@@ -18,10 +18,10 @@
 from typing import Any, Optional, Union
 
 import numpy as np
-import tensorflow as tf
 
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
+from ai_edge_litert import interpreter as tfl  # pylint: disable=g-direct-tensorflow-import
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 
 DEFAULT_SIGNATURE_KEY = "serving_default"
@@ -31,7 +31,7 @@ def create_tfl_interpreter(
     tflite_model: Union[str, bytearray],
     allocate_tensors: bool = True,
     use_reference_kernel: bool = False,
-) -> tf.lite.Interpreter:
+) -> tfl.Interpreter:
   """Creates a TFLite interpreter from a model file.
 
   Args:
@@ -49,12 +49,10 @@ def create_tfl_interpreter(
   else:
     tflite_model = bytes(tflite_model)
   if use_reference_kernel:
-    op_resolver = tf.lite.experimental.OpResolverType.BUILTIN_REF
+    op_resolver = tfl.OpResolverType.BUILTIN_REF
   else:
-    op_resolver = (
-        tf.lite.experimental.OpResolverType.BUILTIN_WITHOUT_DEFAULT_DELEGATES
-    )
-  tflite_interpreter = tf.lite.Interpreter(
+    op_resolver = tfl.OpResolverType.BUILTIN_WITHOUT_DEFAULT_DELEGATES
+  tflite_interpreter = tfl.Interpreter(
       model_content=tflite_model,
       experimental_op_resolver_type=op_resolver,
       experimental_preserve_all_tensors=True,
@@ -78,7 +76,7 @@ def is_tensor_quantized(tensor_detail: dict[str, Any]) -> bool:
 
 
 def invoke_interpreter_signature(
-    tflite_interpreter: tf.lite.Interpreter,
+    tflite_interpreter: tfl.Interpreter,
     signature_input_data: dict[str, Any],
     signature_key: Optional[str] = None,
     quantize_input: bool = True,
@@ -110,7 +108,7 @@ def invoke_interpreter_signature(
 
 
 def invoke_interpreter_once(
-    tflite_interpreter: tf.lite.Interpreter,
+    tflite_interpreter: tfl.Interpreter,
     input_data_list: list[Any],
     quantize_input: bool = True,
 ):
@@ -297,7 +295,7 @@ def get_constant_tensor_names(
 
 
 def get_signature_main_subgraph_index(
-    tflite_interpreter: tf.lite.Interpreter,
+    tflite_interpreter: tfl.Interpreter,
     signature_key: Optional[str] = None,
 ) -> int:
   """Gets the main subgraph index of a signature.

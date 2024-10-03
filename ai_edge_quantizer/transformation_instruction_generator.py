@@ -24,7 +24,7 @@ import dataclasses
 from typing import Optional
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
-from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
+from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 # When a tensor has no producer, we'll assign -1 to the producer field

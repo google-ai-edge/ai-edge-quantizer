@@ -22,7 +22,7 @@ import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
-from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
+from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation

@@ -24,7 +24,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import transformation_instruction_generator
 from ai_edge_quantizer import transformation_performer
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
-from tensorflow.lite.python import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
+from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
 
 
