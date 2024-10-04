@@ -102,12 +102,25 @@ def read_model(tflite_model: Union[str, bytearray]) -> Any:
   """
   if isinstance(tflite_model, str):
     return flatbuffer_utils.read_model(tflite_model)
-  elif isinstance(tflite_model, bytearray):
+  elif isinstance(tflite_model, bytes) or isinstance(tflite_model, bytearray):
     return flatbuffer_utils.read_model_from_bytearray(tflite_model)
   else:
     raise ValueError(
         "Unsupported tflite_model type: %s" % type(tflite_model).__name__
     )
+
+
+def get_model_content(tflite_path: str) -> bytes:
+  """Get the model content (bytes) from the path.
+
+  Args:
+    tflite_path: Path to the .tflite.
+
+  Returns:
+    The model bytes.
+  """
+  with gfile.Open(tflite_path, "rb") as tflite_file:
+    return tflite_file.read()
 
 
 def get_model_buffer(tflite_path: str) -> bytearray:

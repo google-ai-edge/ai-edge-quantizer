@@ -40,9 +40,10 @@ class Calibrator:
 
   def __init__(
       self,
-      float_tflite: Union[str, bytearray],
+      float_tflite: Union[str, bytes],
   ):
     self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
+
     if not tfl_flatbuffer_utils.is_float_model(self._flatbuffer_model):
       raise ValueError(
           "The input model for calibration is not a float model. Please check"

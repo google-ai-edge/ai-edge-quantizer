@@ -125,9 +125,9 @@ class Quantizer:
       quantization_recipe: Quantization recipe in .json filepath or loaded json
         format.
     """
-    # Turn the `float model` into bytearray for memory efficiency.
-    self.float_model: bytearray = (
-        tfl_flatbuffer_utils.get_model_buffer(float_model)
+    # Use `float model` as bytes for memory efficiency.
+    self.float_model: bytes = (
+        tfl_flatbuffer_utils.get_model_content(float_model)
         if isinstance(float_model, str)
         else float_model
     )

@@ -224,8 +224,8 @@ def _setup_validation_interpreter(
 
 # TODO: b/330797129 - Enable multi-threaded evaluation.
 def compare_model(
-    reference_model: Union[str, bytearray],
-    target_model: Union[str, bytearray],
+    reference_model: Union[str, bytes],
+    target_model: Union[str, bytes],
     test_data: dict[str, Iterable[dict[str, Any]]],
     error_metric: str,
     compare_fn: Callable[[Any, Any], float],

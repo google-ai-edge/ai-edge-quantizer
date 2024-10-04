@@ -78,7 +78,7 @@ def create_random_normal_dataset(
 
 
 def create_random_normal_input_data(
-    tflite_model: Union[str, bytearray],
+    tflite_model: Union[str, bytes],
     num_samples: int = 4,
     random_seed: int = 666,
 ) -> dict[str, list[dict[str, Any]]]:

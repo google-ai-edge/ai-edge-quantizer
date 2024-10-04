@@ -16,14 +16,12 @@
 """Model Modifier class that produce the final quantized TFlite model."""
 
 import copy
-from typing import Union
 
 import numpy as np
 
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import transformation_instruction_generator
 from ai_edge_quantizer import transformation_performer
-from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
 
@@ -31,20 +29,14 @@ from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-t
 class ModelModifier:
   """Model Modifier class that produce the final quantized TFlite model."""
 
-  # TODO: b/336599483 - support byte array as input
-  def __init__(self, float_tflite: Union[str, bytearray]):
+  def __init__(self, float_tflite: bytes):
     """Constructor.
 
     Args:
       float_tflite: the original TFlite model in bytearray or file path
     """
 
-    if isinstance(float_tflite, str):
-      self._model_bytearray = tfl_flatbuffer_utils.get_model_buffer(
-          float_tflite
-      )
-    else:
-      self._model_bytearray = float_tflite
+    self._model_content = float_tflite
 
     self._constant_map = []
     self._transformation_instruction_generator = (
@@ -66,9 +58,8 @@ class ModelModifier:
     Returns:
       a byte buffer that represents the serialized tflite model
     """
-
     quantized_model = copy.deepcopy(
-        flatbuffer_utils.read_model_from_bytearray(self._model_bytearray)
+        flatbuffer_utils.read_model_from_bytearray(self._model_content)
     )
 
     instructions = self._transformation_instruction_generator.quant_params_to_transformation_insts(

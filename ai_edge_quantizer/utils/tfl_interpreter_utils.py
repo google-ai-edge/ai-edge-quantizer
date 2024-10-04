@@ -28,7 +28,7 @@ DEFAULT_SIGNATURE_KEY = "serving_default"
 
 
 def create_tfl_interpreter(
-    tflite_model: Union[str, bytearray],
+    tflite_model: Union[str, bytes],
     allocate_tensors: bool = True,
     use_reference_kernel: bool = False,
 ) -> tfl.Interpreter:
@@ -46,14 +46,13 @@ def create_tfl_interpreter(
   if isinstance(tflite_model, str):
     with gfile.GFile(tflite_model, "rb") as f:
       tflite_model = f.read()
-  else:
-    tflite_model = bytes(tflite_model)
+
   if use_reference_kernel:
     op_resolver = tfl.OpResolverType.BUILTIN_REF
   else:
     op_resolver = tfl.OpResolverType.BUILTIN_WITHOUT_DEFAULT_DELEGATES
   tflite_interpreter = tfl.Interpreter(
-      model_content=tflite_model,
+      model_content=bytes(tflite_model),
       experimental_op_resolver_type=op_resolver,
       experimental_preserve_all_tensors=True,
   )

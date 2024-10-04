@@ -87,7 +87,7 @@ class FloatTransposeTest(parameterized.TestCase):
 
     # Check tensor dtypes.
     quantized_model = tfl_flatbuffer_utils.read_model(
-        bytearray(quantization_result.quantized_model)
+        quantization_result.quantized_model
     )
     self.assertLen(quantized_model.subgraphs, 1)
     subgraph = quantized_model.subgraphs[0]
@@ -133,7 +133,7 @@ class IntegerTransposeTest(parameterized.TestCase):
     )
     quantization_result = self._quantizer.quantize(calibration_result)
     quantized_model = tfl_flatbuffer_utils.read_model(
-        bytearray(quantization_result.quantized_model)
+        quantization_result.quantized_model
     )
     self.assertLen(quantized_model.subgraphs, 1)
     subgraph = quantized_model.subgraphs[0]

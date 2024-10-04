@@ -37,10 +37,11 @@ class ModelModifierTest(parameterized.TestCase):
     self._model_path = os.path.join(
         TEST_DATA_PREFIX_PATH, 'tests/models/conv_fc_mnist.tflite'
     )
-    self._model_modifier = model_modifier.ModelModifier(self._model_path)
-    self._model_buffer: bytearray = tfl_flatbuffer_utils.get_model_buffer(
+
+    self._model_content: bytes = tfl_flatbuffer_utils.get_model_content(
         self._model_path
     )
+    self._model_modifier = model_modifier.ModelModifier(self._model_content)
     self._global_recipe = [
         {
             'regex': '.*',
@@ -62,13 +63,11 @@ class ModelModifierTest(parameterized.TestCase):
     ]
 
   def test_process_constant_map_succeeds(self):
-    constant_size = self._model_modifier._process_constant_map(
-        flatbuffer_utils.read_model_from_bytearray(
-            self._model_modifier._model_bytearray
-        )
+    model_bytearray = flatbuffer_utils.read_model_from_bytearray(
+        self._model_content
     )
+    constant_size = self._model_modifier._process_constant_map(model_bytearray)
     self.assertEqual(constant_size, 202540)
-    pass
 
   def test_modify_model_succeeds_with_recipe(self):
     recipe_manager_instance = recipe_manager.RecipeManager()
@@ -86,7 +85,7 @@ class ModelModifierTest(parameterized.TestCase):
         tensor_quantization_params
     )
     flatbuffer_utils.convert_bytearray_to_object(new_model_binary)
-    self.assertLess(new_model_binary, self._model_buffer)
+    self.assertLess(new_model_binary, self._model_content)
 
   def test_modify_model_preserves_original_model(self):
     recipe_manager_instance = recipe_manager.RecipeManager()
@@ -100,9 +99,9 @@ class ModelModifierTest(parameterized.TestCase):
             recipe_manager_instance
         )
     )
-    self.assertEqual(self._model_modifier._model_bytearray, self._model_buffer)
+    self.assertEqual(self._model_modifier._model_content, self._model_content)
     self._model_modifier.modify_model(tensor_quantization_params)
-    self.assertEqual(self._model_modifier._model_bytearray, self._model_buffer)
+    self.assertEqual(self._model_modifier._model_content, self._model_content)
 
   def test_modify_model_peak_memory_usage_in_acceptable_range(self):
     """Test ModifyModel peak memory usage."""
@@ -124,7 +123,7 @@ class ModelModifierTest(parameterized.TestCase):
     _, mem_peak = tracemalloc.get_traced_memory()
 
     loosen_mem_use_factor = 4.5
-    self.assertLess(mem_peak / len(self._model_buffer), loosen_mem_use_factor)
+    self.assertLess(mem_peak / len(self._model_content), loosen_mem_use_factor)
 
 
 if __name__ == '__main__':

@@ -30,8 +30,9 @@ _OpName = qtyping.TFLOperationName
 class ParamsGenerator:
   """Generate model tensor level quantization parameters."""
 
-  def __init__(self, float_tflite: Union[str, bytearray]):
+  def __init__(self, float_tflite: Union[str, bytes]):
     self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
+
     if not tfl_flatbuffer_utils.is_float_model(self.flatbuffer_model):
       raise ValueError(
           'The input model for quantization parameters generation is not a'
