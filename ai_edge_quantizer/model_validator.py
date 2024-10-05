@@ -22,6 +22,7 @@ import math
 import os
 from typing import Any, Optional, Union
 
+from absl import logging
 import numpy as np
 
 from ai_edge_quantizer.utils import tfl_interpreter_utils as utils
@@ -56,10 +57,12 @@ class ComparisonResult:
 
   Attributes:
     comparison_results: A dictionary of signature key and its comparison result.
+    save_folder: Folder to save the comparison result.
   """
 
-  def __init__(self):
+  def __init__(self, save_folder: str):
     self._comparison_results: dict[str, SingleSignatureComparisonResult] = {}
+    self._save_folder: str = save_folder
 
   def get_signature_comparison_result(
       self, signature_key: str = _DEFAULT_SIGNATURE_KEY
@@ -147,12 +150,10 @@ class ComparisonResult:
       result.update(signature_comparison_result.intermediate_tensors)
     return result
 
-  def save(self, save_folder: str, model_name: str) -> None:
+  def save(self) -> None:
     """Saves the model comparison result.
 
     Args:
-      save_folder: Path to the folder to save the comparison result.
-      model_name: Name of the model.
 
     Raises:
       RuntimeError: If no quantized model is available.
@@ -166,9 +167,7 @@ class ComparisonResult:
           'constant_tensors': comparison_result.constant_tensors,
           'intermediate_tensors': comparison_result.intermediate_tensors,
       }
-    result_save_path = os.path.join(
-        save_folder, model_name + '_comparison_result.json'
-    )
+    result_save_path = os.path.join(self._save_folder, 'comparison_result.json')
     with gfile.GFile(result_save_path, 'w') as output_file_handle:
       output_file_handle.write(json.dumps(result))
 
@@ -179,7 +178,7 @@ class ComparisonResult:
         threshold=color_threshold,
     )
     json_save_path = os.path.join(
-        save_folder, model_name + '_comparison_result_me_input.json'
+        self._save_folder, 'comparison_result_me_input.json'
     )
     with gfile.GFile(json_save_path, 'w') as output_file_handle:
       output_file_handle.write(json_object)
@@ -229,6 +228,7 @@ def compare_model(
     test_data: dict[str, Iterable[dict[str, Any]]],
     error_metric: str,
     compare_fn: Callable[[Any, Any], float],
+    save_folder: str,
     use_reference_kernel: bool = False,
 ) -> ComparisonResult:
   """Compares model tensors over a model signature using the compare_fn.
@@ -254,7 +254,8 @@ def compare_model(
   Returns:
     A ComparisonResult object.
   """
-  model_comparion_result = ComparisonResult()
+  model_comparion_result = ComparisonResult(save_folder)
+  print('Output tensor numerical differences: ')
   for signature_key, signature_inputs in test_data.items():
     comparison_results = {}
     for signature_input in signature_inputs:
@@ -300,6 +301,10 @@ def compare_model(
         error_metric,
         agregated_results,
         signature_key,
+    )
+    # print is probably not right but stdout would be nice.
+    print(
+        model_comparion_result._comparison_results[signature_key].output_tensors
     )
   return model_comparion_result
 
