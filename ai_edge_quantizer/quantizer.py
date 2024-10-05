@@ -16,10 +16,12 @@
 """AI Edge Quantizer API."""
 
 from collections.abc import Iterable
+import copy
 import dataclasses
 import json
 import os
 from typing import Any, Optional, Union
+from absl import logging
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import default_policy
@@ -52,18 +54,20 @@ class QuantizationResult:
   Attributes:
     recipe: Quantization recipe.
     quantized_model: Quantized model.
+    save_folder: Path to the folder to save the quantized model and the
+      quantization recipe.
   """
 
   recipe: _QuantRecipe
   quantized_model: Optional[bytearray]
+  save_folder: Optional[str] = None
 
-  def save(self, save_folder: str, model_name: str) -> None:
+  def save(self) -> None:
     """Saves the quantized model and the quantization recipe.
 
     Args:
       save_folder: Path to the folder to save the quantized model and the
         quantization recipe.
-      model_name: Name of the model.
 
     Raises:
       RuntimeError: If no quantized model is available.
@@ -73,7 +77,7 @@ class QuantizationResult:
       raise RuntimeError(
           'No quantized model to save. Make sure .quantize() is called.'
       )
-    model_save_path = os.path.join(save_folder, f'{model_name}.tflite')
+    model_save_path = os.path.join(self.save_folder, 'quantized.tflite')
     if gfile.Exists(model_save_path):
       raise FileExistsError(
           f'The model {model_save_path} already exists in the folder.'
@@ -82,7 +86,7 @@ class QuantizationResult:
       output_file_handle.write(self.quantized_model)
 
     recipe = json.dumps(self.recipe)
-    recipe_save_path = os.path.join(save_folder, model_name + '_recipe.json')
+    recipe_save_path = os.path.join(self.save_folder, 'recipe.json')
     with gfile.GFile(recipe_save_path, 'w') as output_file_handle:
       output_file_handle.write(recipe)
 
@@ -111,12 +115,17 @@ class Quantizer:
     float_model: TFLite model file path or bytearray.
     quantization_recipe: Quantization recipe .json filepath or in loaded json
       format.
+    save_folder: Folder to save the quantized model and the quantization recipe.
+
+  Raise:
+    FileExistsError if the save_folder already exists.
   """
 
   def __init__(
       self,
       float_model: Union[str, bytearray],
       quantization_recipe: Optional[Union[str, _QuantRecipe]] = None,
+      save_folder: Optional[str] = None,
   ):
     """Initializes the quantizer.
 
@@ -137,7 +146,17 @@ class Quantizer:
     )
     if quantization_recipe is not None:
       self.load_quantization_recipe(quantization_recipe)
-    self._result: QuantizationResult = QuantizationResult([{}], None)
+    self._result: QuantizationResult = QuantizationResult([{}], None, None)
+
+    if save_folder is None:
+      logging.warning('save_folder is None. Artifacts will not be saved.')
+    elif gfile.Exists(save_folder):
+      raise FileExistsError(
+          'save_folder already exists. Overwriting artifacts is not allowed.'
+      )
+    elif save_folder is not None and not gfile.Exists(save_folder):
+      gfile.MakeDirs(save_folder)
+    self._save_folder = save_folder
 
   def load_quantization_recipe(self, recipe: Union[str, _QuantRecipe]) -> None:
     """Loads a quantization recipe.
@@ -239,7 +258,9 @@ class Quantizer:
     return calib.get_model_qsvs()
 
   def quantize(
-      self, calibration_result: Optional[_CalibrationResult] = None
+      self,
+      calibration_result: Optional[_CalibrationResult] = None,
+      tfl_scales=None,
   ) -> QuantizationResult:
     """Quantizes the float model.
 
@@ -257,9 +278,28 @@ class Quantizer:
     if not self.get_quantization_recipe():
       raise RuntimeError('Can not quantize without a quantization recipe.')
     quant_params = self._get_quantization_params(calibration_result)
+
+    # import pprint
+    # pp = pprint.PrettyPrinter(indent=4)
+
+    # override scales
+    if tfl_scales is not None:
+      for s, params in quant_params.items():
+        for ts in tfl_scales:
+          if ts[0] == s:
+            for c in params.consumers:
+              if c.parameters is not None and isinstance(
+                  c.parameters, qtyping.UniformQuantParams
+              ):
+                print(c.parameters.scale)
+                print(ts[1])
+                c.parameters.scale[:] = abs(float(ts[1]))
+                print(c.parameters.scale)
+                print('.........')
+
     quantized_model = self._get_quantized_model(quant_params)
     self._result = QuantizationResult(
-        self.get_quantization_recipe(), quantized_model
+        self.get_quantization_recipe(), quantized_model, self._save_folder
     )
     return self._result
 
@@ -300,6 +340,7 @@ class Quantizer:
         test_data,
         error_metrics,
         validation_utils.get_validation_func(error_metrics),
+        self._save_folder,
         use_reference_kernel=use_reference_kernel,
     )
 
