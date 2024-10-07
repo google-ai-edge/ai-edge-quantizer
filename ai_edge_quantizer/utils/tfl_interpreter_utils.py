@@ -35,7 +35,7 @@ def create_tfl_interpreter(
   """Creates a TFLite interpreter from a model file.
 
   Args:
-    tflite_model: Model file path or bytearray.
+    tflite_model: Model file path or bytes.
     allocate_tensors: Whether to allocate tensors.
     use_reference_kernel: Whether to use the reference kernel for the
       interpreter.
@@ -217,12 +217,12 @@ def get_tensor_name_to_details_map(
 
 
 def get_input_tensor_names(
-    tflite_model: Union[str, bytearray], signature_name: Optional[str] = None
+    tflite_model: Union[str, bytes], signature_name: Optional[str] = None
 ) -> list[str]:
   """Gets input tensor names from a TFLite model for a signature.
 
   Args:
-    tflite_model: Model file path or bytearray.
+    tflite_model: Model file path or bytes.
     signature_name: The signature name that the input tensors belong to.
 
   Returns:
@@ -238,12 +238,12 @@ def get_input_tensor_names(
 
 
 def get_output_tensor_names(
-    tflite_model: Union[str, bytearray], signature_name: Optional[str] = None
+    tflite_model: Union[str, bytes], signature_name: Optional[str] = None
 ) -> list[str]:
   """Gets output tensor names from a TFLite model for a signature.
 
   Args:
-    tflite_model: Model file path or bytearray.
+    tflite_model: Model file path or bytes.
     signature_name: The signature name that the output tensors belong to.
 
   Returns:
@@ -258,7 +258,7 @@ def get_output_tensor_names(
 
 
 def get_constant_tensor_names(
-    tflite_model: Union[str, bytearray],
+    tflite_model: Union[str, bytes],
     subgraph_index: int = 0,
     min_constant_size: int = 1,
 ) -> list[str]:
@@ -269,7 +269,7 @@ def get_constant_tensor_names(
   running it.
 
   Args:
-    tflite_model: Model file path or bytearray.
+    tflite_model: Model file path or bytes.
     subgraph_index: The index of the subgraph that the tensor belongs to.
     min_constant_size: The minimum size of a constant tensor.
 

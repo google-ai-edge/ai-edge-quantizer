@@ -58,7 +58,17 @@ class ComparisonResult:
     comparison_results: A dictionary of signature key and its comparison result.
   """
 
-  def __init__(self):
+  def __init__(self, reference_model: bytes, target_model: bytes):
+    """Initialize the ComparisonResult object.
+
+    Args:
+      reference_model: Model which will be used as the reference.
+      target_model: Target model which will be compared against the reference.
+        We expect target_model and reference_model to have the same graph
+        structure.
+    """
+    self._reference_model = reference_model
+    self._target_model = target_model
     self._comparison_results: dict[str, SingleSignatureComparisonResult] = {}
 
   def get_signature_comparison_result(
@@ -85,7 +95,6 @@ class ComparisonResult:
 
   def add_new_signature_results(
       self,
-      source_model: Union[str, bytearray],
       error_metric: str,
       comparison_result: dict[str, float],
       signature_key: str = _DEFAULT_SIGNATURE_KEY,
@@ -93,7 +102,6 @@ class ComparisonResult:
     """Add a new signature result to the comparison result.
 
     Args:
-      source_model: The model to be validated.
       error_metric: The name of the error metric used for comparison.
       comparison_result: A dictionary of tensor name and its value.
       signature_key: The model signature that the comparison_result belongs to.
@@ -107,20 +115,25 @@ class ComparisonResult:
     result = {key: float(value) for key, value in comparison_result.items()}
 
     input_tensor_results = {}
-    for name in utils.get_input_tensor_names(source_model, signature_key):
+    for name in utils.get_input_tensor_names(
+        self._reference_model, signature_key
+    ):
       input_tensor_results[name] = result.pop(name)
 
     output_tensor_results = {}
-    for name in utils.get_output_tensor_names(source_model, signature_key):
+    for name in utils.get_output_tensor_names(
+        self._reference_model, signature_key
+    ):
       output_tensor_results[name] = result.pop(name)
 
     constant_tensor_results = {}
     # Only get constant tensors from the main subgraph of the signature.
     subgraph_index = utils.get_signature_main_subgraph_index(
-        utils.create_tfl_interpreter(source_model), signature_key
+        utils.create_tfl_interpreter(self._reference_model),
+        signature_key,
     )
     for name in utils.get_constant_tensor_names(
-        source_model,
+        self._reference_model,
         subgraph_index,
     ):
       constant_tensor_results[name] = result.pop(name)
@@ -157,7 +170,12 @@ class ComparisonResult:
     Raises:
       RuntimeError: If no quantized model is available.
     """
-    result = {}
+    reduced_model_size = len(self._reference_model) - len(self._target_model)
+    reduction_ratio = reduced_model_size / len(self._reference_model) * 100
+    result = {
+        'reduced_size_bytes': reduced_model_size,
+        'reduced_size_percentage': reduction_ratio,
+    }
     for signature, comparison_result in self._comparison_results.items():
       result[str(signature)] = {
           'error_metric': comparison_result.error_metric,
@@ -186,7 +204,7 @@ class ComparisonResult:
 
 
 def _setup_validation_interpreter(
-    model: Union[str, bytearray],
+    model: bytes,
     signature_input: dict[str, Any],
     signature_key: Optional[str],
     use_reference_kernel: bool,
@@ -224,8 +242,8 @@ def _setup_validation_interpreter(
 
 # TODO: b/330797129 - Enable multi-threaded evaluation.
 def compare_model(
-    reference_model: Union[str, bytes],
-    target_model: Union[str, bytes],
+    reference_model: bytes,
+    target_model: bytes,
     test_data: dict[str, Iterable[dict[str, Any]]],
     error_metric: str,
     compare_fn: Callable[[Any, Any], float],
@@ -254,7 +272,7 @@ def compare_model(
   Returns:
     A ComparisonResult object.
   """
-  model_comparion_result = ComparisonResult()
+  model_comparion_result = ComparisonResult(reference_model, target_model)
   for signature_key, signature_inputs in test_data.items():
     comparison_results = {}
     for signature_input in signature_inputs:
@@ -296,7 +314,6 @@ def compare_model(
     for tensor_name in comparison_results:
       agregated_results[tensor_name] = np.mean(comparison_results[tensor_name])
     model_comparion_result.add_new_signature_results(
-        reference_model,
         error_metric,
         agregated_results,
         signature_key,
