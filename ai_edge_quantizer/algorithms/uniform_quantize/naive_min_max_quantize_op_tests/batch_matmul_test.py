@@ -71,11 +71,9 @@ class BatchMatmulTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     subgraph_op_id = 0
     op = subgraph0.operators[subgraph_op_id]
     op_tensor_names = {}
-    op_tensor_names["input"] = "input1"
-    op_tensor_names["input2"] = "input2"
-    op_tensor_names["output"] = (
-        "BatchMatMulV3;jax2tf_export_func_/PartitionedCall/BatchMatMulV3"
-    )
+    op_tensor_names["input"] = "serving_default_input_1:0"
+    op_tensor_names["input2"] = "serving_default_input_2:0"
+    op_tensor_names["output"] = "model/tf.linalg.matmul/MatMul"
     self._op_test_info.op_tensor_names = op_tensor_names
     self._op_test_info.quantized_dimension = 2
 
@@ -115,11 +113,9 @@ class BatchMatmulTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     subgraph_op_id = 1
     op = subgraph0.operators[subgraph_op_id]
     op_tensor_names = {}
-    op_tensor_names["input"] = (
-        "BatchMatMulV3;jax2tf_export_func_/PartitionedCall/BatchMatMulV3"
-    )
-    op_tensor_names["input2"] = "input2"
-    op_tensor_names["output"] = "Identity_1"
+    op_tensor_names["input"] = "model/tf.linalg.matmul/MatMul"
+    op_tensor_names["input2"] = "serving_default_input_2:0"
+    op_tensor_names["output"] = "PartitionedCall:0"
     self._op_test_info.op_tensor_names = op_tensor_names
     self._op_test_info.quantized_dimension = 1
 
@@ -190,11 +186,9 @@ class BatchMatmulConstantInputTest(
     subgraph_op_id = 0
     op = subgraph0.operators[subgraph_op_id]
     op_tensor_names = {}
-    op_tensor_names["weight"] = "arith.constant1"
-    op_tensor_names["input"] = "inputs"
-    op_tensor_names["output"] = (
-        "BatchMatMulV3;jax2tf_export_func_/PartitionedCall/BatchMatMulV3"
-    )
+    op_tensor_names["weight"] = "model/tf.linalg.matmul/MatMul/b"
+    op_tensor_names["input"] = "serving_default_input_1:0"
+    op_tensor_names["output"] = "model/tf.linalg.matmul/MatMul"
     compute_precision, is_srq, explicit_dequantize = test_case
     self._op_test_info.op_tensor_names = op_tensor_names
     self._op_test_info.quantized_dimension = 2
@@ -249,10 +243,8 @@ class BatchMatmulConstantInputTest(
     op = subgraph0.operators[subgraph_op_id]
     op_tensor_names = {}
     op_tensor_names["weight"] = "arith.constant"
-    op_tensor_names["input"] = (
-        "BatchMatMulV3;jax2tf_export_func_/PartitionedCall/BatchMatMulV3"
-    )
-    op_tensor_names["output"] = "Identity_1"
+    op_tensor_names["input"] = "model/tf.linalg.matmul/MatMul"
+    op_tensor_names["output"] = "PartitionedCall:0"
     compute_precision, is_srq, explicit_dequantize = test_case
     self._op_test_info.op_tensor_names = op_tensor_names
     self._op_test_info.quantized_dimension = 1
