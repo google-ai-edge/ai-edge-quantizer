@@ -208,7 +208,7 @@ DEFAULT_JSON_POLICY = """
       "EMBEDDING_LOOKUP",
       "FULLY_CONNECTED"
     ],
-    "weightonly_wi4_afp32": ["BATCH_MATMUL", "FULLY_CONNECTED"]
+    "weightonly_wi4_afp32": ["BATCH_MATMUL", "FULLY_CONNECTED", "EMBEDDING_LOOKUP"]
   }
 }
 """
