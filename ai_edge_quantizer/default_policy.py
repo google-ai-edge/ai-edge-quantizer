@@ -199,7 +199,7 @@ DEFAULT_JSON_POLICY = """
       "EMBEDDING_LOOKUP",
       "FULLY_CONNECTED"
     ],
-    "dynamic_wi4_afp32": ["FULLY_CONNECTED", "EMBEDDING_LOOKUP"],
+    "dynamic_wi4_afp32": ["FULLY_CONNECTED", "EMBEDDING_LOOKUP", "CONV_2D"],
     "weightonly_wi8_afp32": [
       "BATCH_MATMUL",
       "CONV_2D",
@@ -208,7 +208,7 @@ DEFAULT_JSON_POLICY = """
       "EMBEDDING_LOOKUP",
       "FULLY_CONNECTED"
     ],
-    "weightonly_wi4_afp32": ["BATCH_MATMUL", "FULLY_CONNECTED", "EMBEDDING_LOOKUP"]
+    "weightonly_wi4_afp32": ["BATCH_MATMUL", "FULLY_CONNECTED", "EMBEDDING_LOOKUP", "CONV_2D"]
   }
 }
 """
