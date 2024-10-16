@@ -16,6 +16,7 @@
 """AI Edge Quantizer API."""
 
 from collections.abc import Iterable
+import copy
 import dataclasses
 import json
 import os
@@ -239,7 +240,9 @@ class Quantizer:
     return calib.get_model_qsvs()
 
   def quantize(
-      self, calibration_result: Optional[_CalibrationResult] = None
+      self,
+      calibration_result: Optional[_CalibrationResult] = None,
+      tfl_scales=None,
   ) -> QuantizationResult:
     """Quantizes the float model.
 
@@ -257,6 +260,25 @@ class Quantizer:
     if not self.get_quantization_recipe():
       raise RuntimeError('Can not quantize without a quantization recipe.')
     quant_params = self._get_quantization_params(calibration_result)
+
+    # import pprint
+    # pp = pprint.PrettyPrinter(indent=4)
+
+    # override scales
+    if tfl_scales is not None:
+      for s, params in quant_params.items():
+        for ts in tfl_scales:
+          if ts[0] == s:
+            for c in params.consumers:
+              if c.parameters is not None and isinstance(
+                  c.parameters, qtyping.UniformQuantParams
+              ):
+                print(c.parameters.scale)
+                print(ts[1])
+                c.parameters.scale[:] = abs(float(ts[1]))
+                print(c.parameters.scale)
+                print('.........')
+
     quantized_model = self._get_quantized_model(quant_params)
     self._result = QuantizationResult(
         self.get_quantization_recipe(), quantized_model
