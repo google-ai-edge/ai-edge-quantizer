@@ -15,7 +15,9 @@
 
 """Tests for params_generator."""
 
+from collections.abc import Generator
 import os
+from typing import Any
 
 from absl.testing import parameterized
 import numpy as np
@@ -27,6 +29,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 
 _ComputePrecision = qtyping.ComputePrecision
@@ -49,6 +52,16 @@ def _int_transpose_model_representative_dataset_gen(num_samples=5):
   for _ in range(num_samples):
     data.append({'input_2': np.random.rand(1, 2, 3, 4).astype(np.int32)})
   return data
+
+
+def _get_calibration_data(
+    dataset_gen: Generator[dict[str, Any], Any, None],
+) -> dict[str, Any]:
+  calibration_samples = [sample for sample in dataset_gen]
+  calibration_data = {
+      tfl_interpreter_utils.DEFAULT_SIGNATURE_KEY: calibration_samples,
+  }
+  return calibration_data
 
 
 class ParamsGeneratorTest(parameterized.TestCase):
@@ -444,9 +457,10 @@ class ParamsGeneratorTest(parameterized.TestCase):
 
     # Calibrate then quantize
     model_calibrator = calibrator.Calibrator(single_fc_model_path)
-    model_calibrator.calibrate(
-        _single_fc_model_representative_dataset_gen(), self._recipe_manager
+    calibration_data = _get_calibration_data(
+        _single_fc_model_representative_dataset_gen()
     )
+    model_calibrator.calibrate(calibration_data, self._recipe_manager)
     model_qsvs = model_calibrator.get_model_qsvs()
     quant_params = params_generator_single_fc.generate_quantization_parameters(
         self._recipe_manager,
@@ -905,9 +919,10 @@ class ParamsGeneratorTest(parameterized.TestCase):
 
     # Calibrate then quantize.
     model_calibrator = calibrator.Calibrator(model_path)
-    model_calibrator.calibrate(
-        _int_transpose_model_representative_dataset_gen(), self._recipe_manager
+    calibration_data = _get_calibration_data(
+        _int_transpose_model_representative_dataset_gen()
     )
+    model_calibrator.calibrate(calibration_data, self._recipe_manager)
     model_qsvs = model_calibrator.get_model_qsvs()
     quant_params = pg.generate_quantization_parameters(
         self._recipe_manager,

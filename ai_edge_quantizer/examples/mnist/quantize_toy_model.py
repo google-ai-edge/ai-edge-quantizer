@@ -21,7 +21,7 @@ image.
 
 import os
 import random
-from typing import Optional
+from typing import Any, Optional
 
 from absl import app
 from absl import flags
@@ -97,7 +97,7 @@ def quantize(
 
   def _get_calibration_data(
       num_samples: int = 256,
-  ) -> list[dict[str, np.ndarray]]:
+  ) -> dict[str, list[dict[str, Any]]]:
     """Generate random dummy calibration data.
 
     The calibration data is a list of dictionaries, each of which contains an
@@ -114,10 +114,15 @@ def quantize(
     x_train = x_train / 255.0  # Normalize pixel values to 0-1.
     x_train = x_train.astype(np.float32)
     x_train = x_train.reshape([-1, 28, 28, 1])
-    calibration_data = []
+    calibration_samples = []
     for _ in range(num_samples):
       sample = random.choice(x_train)
-      calibration_data.append({'conv2d_input': sample.reshape([-1, 28, 28, 1])})
+      calibration_samples.append(
+          {'conv2d_input': sample.reshape([-1, 28, 28, 1])}
+      )
+    calibration_data = {
+        tfl_interpreter_utils.DEFAULT_SIGNATURE_KEY: calibration_samples,
+    }
     return calibration_data
 
   # 1) Instantiate a new quantizer with the source float model path.

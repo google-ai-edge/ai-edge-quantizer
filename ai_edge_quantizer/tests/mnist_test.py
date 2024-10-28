@@ -22,6 +22,7 @@ from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 _ComputePrecision = qtyping.ComputePrecision
 _OpName = qtyping.TFLOperationName
@@ -41,11 +42,15 @@ def _get_dummy_data(num_samples):
 
 
 def _get_calibration_data(num_samples: int = 256):
-  return _get_dummy_data(num_samples)
+  samples = _get_dummy_data(num_samples)
+  data = {
+      tfl_interpreter_utils.DEFAULT_SIGNATURE_KEY: samples,
+  }
+  return data
 
 
 def _get_test_data(num_samples: int = 8):
-  return {'serving_default': _get_dummy_data(num_samples)}
+  return _get_calibration_data(num_samples)
 
 
 class MNISTTest(parameterized.TestCase):

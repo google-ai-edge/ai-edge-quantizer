@@ -25,6 +25,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 _OpExecutionMode = qtyping.OpExecutionMode
 _OpName = qtyping.TFLOperationName
@@ -46,13 +47,17 @@ def _get_dummy_data(
 def _get_calibration_data(
     num_samples: int = 128, dtype: np.dtype = np.float32
 ) -> list[dict[str, Any]]:
-  return _get_dummy_data(num_samples, dtype)
+  calibration_samples = _get_dummy_data(num_samples, dtype)
+  calibration_data = {
+      tfl_interpreter_utils.DEFAULT_SIGNATURE_KEY: calibration_samples,
+  }
+  return calibration_data
 
 
 def _get_test_data(
     num_samples: int = 8, dtype: np.dtype = np.float32
 ) -> list[dict[str, Any]]:
-  return {'serving_default': _get_dummy_data(num_samples, dtype)}
+  return _get_calibration_data(num_samples, dtype)
 
 
 class FloatTransposeTest(parameterized.TestCase):

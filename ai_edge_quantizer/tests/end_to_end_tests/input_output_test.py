@@ -23,6 +23,8 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
+
 
 _OpExecutionMode = qtyping.OpExecutionMode
 _OpName = qtyping.TFLOperationName
@@ -35,9 +37,15 @@ _RNG = np.random.default_rng(66)
 
 
 def _get_dummy_data(num_samples):
-  data = []
+  samples = []
   for _ in range(num_samples):
-    data.append({'input_1': _RNG.uniform(size=(1, 32, 32)).astype(np.float32)})
+    samples.append(
+        {'input_1': _RNG.uniform(size=(1, 32, 32)).astype(np.float32)}
+    )
+
+  data = {
+      tfl_interpreter_utils.DEFAULT_SIGNATURE_KEY: samples,
+  }
   return data
 
 
@@ -46,7 +54,7 @@ def _get_calibration_data(num_samples: int = 128):
 
 
 def _get_test_data(num_samples: int = 8):
-  return {'serving_default': _get_dummy_data(num_samples)}
+  return _get_dummy_data(num_samples)
 
 
 class InputOutputTest(parameterized.TestCase):

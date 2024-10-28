@@ -213,16 +213,13 @@ class Quantizer:
 
   def calibrate(
       self,
-      calibration_data: Iterable[_SignatureInput],
-      signature_key: Optional[str] = None,
+      calibration_data: dict[str, Iterable[_SignatureInput]],
       previous_calibration_result: Optional[_CalibrationResult] = None,
   ) -> _CalibrationResult:
     """Calibrates the float model (required by static range quantization).
 
     Args:
       calibration_data: Calibration data for a model signature.
-      signature_key: The signature key to be used for invoking the models. If
-        the model doesn't have a signature key, this can be set to None.
       previous_calibration_result: Previous calibration result to be loaded. The
         calibration process will be resumed from the previous result.
 
@@ -235,7 +232,7 @@ class Quantizer:
     calib = calibrator.Calibrator(self.float_model)
     if previous_calibration_result is not None:
       calib.load_model_qsvs(previous_calibration_result)
-    calib.calibrate(calibration_data, self._recipe_manager, signature_key)
+    calib.calibrate(calibration_data, self._recipe_manager)
     return calib.get_model_qsvs()
 
   def quantize(

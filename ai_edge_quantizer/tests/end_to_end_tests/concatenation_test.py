@@ -22,6 +22,7 @@ from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 _OpExecutionMode = qtyping.OpExecutionMode
 _OpName = qtyping.TFLOperationName
@@ -32,12 +33,15 @@ _RNG = np.random.default_rng(66)
 
 
 def _get_dummy_data(num_inputs, num_samples):
-  data = []
+  samples = []
   for _ in range(num_samples):
-    data.append({
+    samples.append({
         f'input_{i+1}': _RNG.uniform(size=(1, 10, 20, 30)).astype(np.float32)
         for i in range(num_inputs)
     })
+  data = {
+      tfl_interpreter_utils.DEFAULT_SIGNATURE_KEY: samples,
+  }
   return data
 
 
@@ -46,7 +50,7 @@ def _get_calibration_data(num_inputs: int = 2, num_samples: int = 128):
 
 
 def _get_test_data(num_inputs: int = 2, num_samples: int = 8):
-  return {'serving_default': _get_dummy_data(num_inputs, num_samples)}
+  return _get_dummy_data(num_inputs, num_samples)
 
 
 class ConcatenationTest(parameterized.TestCase):

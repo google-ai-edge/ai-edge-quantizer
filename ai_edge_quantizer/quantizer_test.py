@@ -23,6 +23,7 @@ from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 _ComputePrecision = qtyping.ComputePrecision
 _TFLOpName = qtyping.TFLOperationName
@@ -31,15 +32,22 @@ _TensorDataType = qtyping.TensorDataType
 _AlgorithmName = quantizer.AlgorithmName
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('')
+_MULTI_SIGNATURE_CALIBRATION_DATASET = {
+    'add': [{'x': np.array([2.0], dtype=np.float32)}],
+    'multiply': [{'x': np.array([1.0], dtype=np.float32)}],
+}
 _RNG = np.random.default_rng(66)
 
 
 def _get_calibration_data(num_samples: int = 16):
-  calibration_data = []
+  calibration_samples = []
   for _ in range(num_samples):
-    calibration_data.append(
+    calibration_samples.append(
         {'conv2d_input': _RNG.uniform(size=(1, 28, 28, 1)).astype(np.float32)}
     )
+  calibration_data = {
+      tfl_interpreter_utils.DEFAULT_SIGNATURE_KEY: calibration_samples,
+  }
   return calibration_data
 
 
@@ -342,13 +350,7 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
       ('default_random_data', None),
-      (
-          'specific_data',
-          {
-              'add': [{'x': np.array([2.0]).astype(np.float32)}],
-              'multiply': [{'x': np.array([1.0]).astype(np.float32)}],
-          },
-      ),
+      ('specific_data', _MULTI_SIGNATURE_CALIBRATION_DATASET),
   )
   def test_validate_multiple_signatures_succeeds(self, test_data):
     self._quantizer.quantize(self._calibration_result)
@@ -397,6 +399,115 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
     self.assertIn('PartitionedCall_1:0', mul_result.output_tensors)
     self.assertIn('Mul/y', mul_result.constant_tensors)
     self.assertEmpty(mul_result.intermediate_tensors)
+
+  def test_validate_quantize_after_calibration_succeeds(self):
+    calib_result = self._quantizer.calibrate(
+        _MULTI_SIGNATURE_CALIBRATION_DATASET
+    )
+    self._quantizer.quantize(calib_result)
+    validation_result = self._quantizer.validate(
+        _MULTI_SIGNATURE_CALIBRATION_DATASET
+    )
+    available_signatures = validation_result.available_signature_keys()
+    self.assertLen(available_signatures, 2)
+
+  def test_recipe_conflict_raises_error(self):
+    recipe = [
+        dict({
+            'regex': '.*',
+            'operation': 'ADD',
+            'algorithm_key': 'min_max_uniform_quantize',
+            'op_config': {
+                'activation_tensor_config': {
+                    'num_bits': 8,
+                    'symmetric': False,
+                    'granularity': 'TENSORWISE',
+                    'dtype': 'INT',
+                    'block_size': 0,
+                },
+                'weight_tensor_config': {
+                    'num_bits': 8,
+                    'symmetric': True,
+                    'granularity': 'CHANNELWISE',
+                    'dtype': 'INT',
+                    'block_size': 0,
+                },
+                'compute_precision': 'INTEGER',
+                'explicit_dequantize': False,
+                'skip_checks': False,
+            },
+        })
+    ]
+
+    qt = quantizer.Quantizer(self._test_model_path, recipe)
+    calib_result = qt.calibrate(_MULTI_SIGNATURE_CALIBRATION_DATASET)
+
+    error_message = (
+        "The tensors b'Add/y' and b'Mul/y' do not have the same quantization"
+    )
+    with self.assertRaisesWithPredicateMatch(
+        RuntimeError, lambda err: error_message in str(err)
+    ):
+      qt.quantize(calib_result)
+
+
+class QuantizerToyGemma2Test(parameterized.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    self._tmp_save_path = self.create_tempdir().full_path
+    self._test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH,
+        'tests/models/toy_model_with_kv_cache_multi_signature.tflite',
+    )
+
+    self._toy_gemma2_calibration_dataset = {
+        'signature_1': [{
+            'cache_0': _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
+            'cache_1': _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
+            'positions': _RNG.integers(low=0, high=10, size=(1, 100)).astype(
+                np.int32
+            ),
+            'tokens': _RNG.integers(low=0, high=10, size=(1, 100)).astype(
+                np.int32
+            ),
+        }],
+        'signature_2': [{
+            'cache_0': _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
+            'cache_1': _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
+            'positions': _RNG.integers(low=0, high=10, size=(1, 100)).astype(
+                np.int32
+            ),
+            'tokens': _RNG.integers(low=0, high=10, size=(1, 100)).astype(
+                np.int32
+            ),
+        }],
+    }
+
+    self._test_recipe_path = os.path.join(
+        TEST_DATA_PREFIX_PATH,
+        'recipes/default_a8w8_recipe.json',
+    )
+    with open(self._test_recipe_path) as json_file:
+      self._test_recipe = json.load(json_file)
+
+    self._quantizer = quantizer.Quantizer(
+        self._test_model_path, self._test_recipe_path
+    )
+
+    self._quantizer.update_quantization_recipe(
+        regex='StatefulPartitionedCall',
+        operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
+        algorithm_key=_AlgorithmName.NO_QUANTIZE,
+    )
+
+  def test_toy_gemma2_quantization_succeeds(self):
+    calib_result = self._quantizer.calibrate(
+        self._toy_gemma2_calibration_dataset
+    )
+    self.assertIsNotNone(calib_result)
+    self._quantizer.quantize(calib_result)
+    self.assertIsNotNone(self._quantizer._result.quantized_model)
 
 
 if __name__ == '__main__':

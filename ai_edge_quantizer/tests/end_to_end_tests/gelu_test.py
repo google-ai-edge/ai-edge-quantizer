@@ -22,6 +22,7 @@ from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 _OpExecutionMode = qtyping.OpExecutionMode
 _OpName = qtyping.TFLOperationName
@@ -39,11 +40,15 @@ def _get_dummy_data(num_samples):
 
 
 def _get_calibration_data(num_samples: int = 128):
-  return _get_dummy_data(num_samples)
+  calibration_samples = _get_dummy_data(num_samples)
+  calibration_data = {
+      tfl_interpreter_utils.DEFAULT_SIGNATURE_KEY: calibration_samples,
+  }
+  return calibration_data
 
 
 def _get_test_data(num_samples: int = 8):
-  return {'serving_default': _get_dummy_data(num_samples)}
+  return _get_calibration_data(num_samples)
 
 
 class GeluTest(parameterized.TestCase):

@@ -22,6 +22,7 @@ from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 
 _OpExecutionMode = qtyping.OpExecutionMode
@@ -43,11 +44,15 @@ def _get_dummy_data(num_inputs, num_samples):
 
 
 def _get_calibration_data(num_inputs, num_samples: int = 128):
-  return _get_dummy_data(num_inputs, num_samples)
+  samples = _get_dummy_data(num_inputs, num_samples)
+  data = {
+      tfl_interpreter_utils.DEFAULT_SIGNATURE_KEY: samples,
+  }
+  return data
 
 
 def _get_test_data(num_inputs, num_samples: int = 8):
-  return {'serving_default': _get_dummy_data(num_inputs, num_samples)}
+  return _get_calibration_data(num_inputs, num_samples)
 
 
 class AddTest(parameterized.TestCase):

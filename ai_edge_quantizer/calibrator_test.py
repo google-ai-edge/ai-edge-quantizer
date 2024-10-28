@@ -15,7 +15,9 @@
 
 """Tests for calibrator."""
 
+from collections.abc import Generator
 import os
+from typing import Any
 
 import numpy as np
 
@@ -24,6 +26,7 @@ from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import test_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 _ComputePrecision = qtyping.ComputePrecision
 _AlgorithmName = recipe_manager.AlgorithmName
@@ -32,6 +35,8 @@ TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("")
 _TENSOR_QUANT_CONFIG = qtyping.TensorQuantizationConfig
 
 TEST_MIN_VAL, TEST_MAX_VAL = -1, 1
+
+_RNG = np.random.default_rng(66)
 
 
 def _representative_dataset_gen(size=(1, 8), num_samples=10):
@@ -42,6 +47,16 @@ def _representative_dataset_gen(size=(1, 8), num_samples=10):
         TEST_MAX_VAL,
     )  # fix min/max for testing
     yield {"input_1": vals}
+
+
+def _get_calibration_data(
+    dataset_gen: Generator[dict[str, Any], Any, None],
+) -> dict[str, Any]:
+  calibration_samples = [sample for sample in dataset_gen]
+  calibration_data = {
+      tfl_interpreter_utils.DEFAULT_SIGNATURE_KEY: calibration_samples,
+  }
+  return calibration_data
 
 
 def _add_default_int8xint8_integer_recipe(recipe_manager_object):
@@ -69,7 +84,8 @@ class CalibratorTest(googletest.TestCase):
     )
     self._calibrator = calibrator.Calibrator(self._test_model_path)
     self._recipe_manager = recipe_manager.RecipeManager()
-    self._representative_dataset = _representative_dataset_gen()
+    dataset_gen = _representative_dataset_gen()
+    self._representative_dataset = _get_calibration_data(dataset_gen)
 
   def test_calibrator_state_manipulation(self):
     # load/get qsvs
@@ -204,8 +220,9 @@ class CalibratorTest(googletest.TestCase):
     )
     test_calibrator = calibrator.Calibrator(test_model_path)
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
+    dataset_gen = _representative_dataset_gen(size=(3, 4, 4, 1))
     test_calibrator.calibrate(
-        _representative_dataset_gen(size=(3, 4, 4, 1)),
+        _get_calibration_data(dataset_gen),
         self._recipe_manager,
         cache_output=True,
     )
@@ -229,6 +246,51 @@ class CalibratorAlreadyQuantizedModelTest(googletest.TestCase):
         "The input model for calibration is not a float model.",
     ):
       _ = calibrator.Calibrator(test_model_path)
+
+
+class CalibratorToyGemma2Test(googletest.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    np.random.seed(0)
+
+    self._test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH,
+        "tests/models/toy_model_with_kv_cache_multi_signature.tflite",
+    )
+
+    self._toy_gemma2_calibration_dataset = {
+        "signature_1": [{
+            "cache_0": _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
+            "cache_1": _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
+            "positions": _RNG.integers(low=0, high=10, size=(1, 100)).astype(
+                np.int32
+            ),
+            "tokens": _RNG.integers(low=0, high=10, size=(1, 100)).astype(
+                np.int32
+            ),
+        }],
+        "signature_2": [{
+            "cache_0": _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
+            "cache_1": _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
+            "positions": _RNG.integers(low=0, high=10, size=(1, 100)).astype(
+                np.int32
+            ),
+            "tokens": _RNG.integers(low=0, high=10, size=(1, 100)).astype(
+                np.int32
+            ),
+        }],
+    }
+
+  def test_toy_gemma2_calibration_success(self):
+    calib = calibrator.Calibrator(self._test_model_path)
+    recipe_mngr = recipe_manager.RecipeManager()
+    _add_default_int8xint8_integer_recipe(recipe_mngr)
+    calib.calibrate(
+        self._toy_gemma2_calibration_dataset,
+        model_recipe_manager=recipe_mngr,
+    )
+    self.assertLen(calib.get_model_qsvs(), 260)
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@
 
 from collections.abc import Callable, Iterable
 import copy
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 from absl import logging
 import numpy as np
@@ -62,9 +62,8 @@ class Calibrator:
   # TODO(b/330740605)- Collect multiple QSVs in one run to save compute.
   def calibrate(
       self,
-      calibration_dataset: Iterable[_SignatureInput],
+      calibration_dataset: dict[str, Iterable[_SignatureInput]],
       model_recipe_manager: recipe_manager.RecipeManager,
-      signature_key: Optional[str] = None,
       cache_output: bool = False,
       qsv_update_func: Callable[
           [qtyping.QSV, qtyping.QSV],
@@ -87,13 +86,10 @@ class Calibrator:
     6. Start another round of calibration.
 
     Args:
-      calibration_dataset: A list of input data for calibration for the given
-        model signature.
+      calibration_dataset: A dictionary of input data for calibration for the
+        given model signature.
       model_recipe_manager: A RecipeManager object that contains the
         quantization recipe.
-      signature_key: The signature key to be used for invoking the models. If
-        the model doesn't have a signature key (or only has one ), this can be
-        set to None.
       cache_output: Whether to cache the output of the model during the
         calibration process. This is useful if there are dependencies between
         signatures/models (e.g., decode requires encode output).
@@ -110,24 +106,32 @@ class Calibrator:
           " reset_model_qsvs to reset model qsvs."
       )
 
-    # TODO: b/329322226 - Enable parrallel calibration.
-    for data in calibration_dataset:
-      # Initialize tensor names that are updated in this round of calibration.
-      updated_tensor_names = set()
+    # TODO: b/329322226 - Enable parallel calibration.
+    for signature_key, dataset in calibration_dataset.items():
+      # Step0: get subgraph index.
+      subgraph_idx = tfl_interpreter_utils.get_signature_main_subgraph_index(
+          self._tfl_interpreter, signature_key
+      )
 
-      # Step1: run tfl interpreter to get tensor content.
-      signature_output = tfl_interpreter_utils.invoke_interpreter_signature(
-          self._tfl_interpreter, data, signature_key
-      )
-      if cache_output:
-        self._cached_output.append(signature_output)
-      self._tensor_content_map = (
-          tfl_interpreter_utils.get_tensor_name_to_content_map(
-              self._tfl_interpreter
-          )
-      )
-      # Step2: go through each op to update quantization statistic values.
-      for subgraph in self._flatbuffer_model.subgraphs:
+      for data in dataset:
+        # Initialize tensor names that are updated in this round of calibration.
+        updated_tensor_names = set()
+
+        # Step1: run tfl interpreter on subgraph to get tensor content.
+        signature_output = tfl_interpreter_utils.invoke_interpreter_signature(
+            self._tfl_interpreter, data, signature_key
+        )
+        if cache_output:
+          self._cached_output.append(signature_output)
+        self._tensor_content_map.update(
+            tfl_interpreter_utils.get_tensor_name_to_content_map(
+                self._tfl_interpreter, subgraph_idx
+            )
+        )
+
+        # Step2: go through each op in subgraph to update quantization
+        # statistic values.
+        subgraph = self._flatbuffer_model.subgraphs[subgraph_idx]
         graph_info = qtyping.GraphInfo(
             subgraph.tensors, self._flatbuffer_model.buffers
         )
