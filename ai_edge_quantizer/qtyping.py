@@ -284,10 +284,12 @@ class OpQuantizationConfig:
     compute_precision: The precision of the compute operation.
     explicit_dequantize: Whether to add explicit dequantize op if compute
       precision is FLOAT, but weight is quantized.
-    skip_checks: Whether to skip op quantization config checks.
-      For advanced users only. If set, the quantizer will ignore all op
-      configuration checks and forcefully quantize this op according to the user
-      instructions even if it's not supported in the TFLite runtime.
+    skip_checks: Whether to skip op quantization config checks. For advanced
+      users only. If set, the quantizer will ignore all op configuration checks
+      and forcefully quantize this op according to the user instructions even if
+      it's not supported in the TFLite runtime.
+    min_weight_elements: The minimum number of elements in the weight tensor to
+      be quantized.
   """
 
   activation_tensor_config: Optional[TensorQuantizationConfig] = None
@@ -298,6 +300,7 @@ class OpQuantizationConfig:
   # TODO: b/359647578 - Set default to True.
   explicit_dequantize: bool = False
   skip_checks: bool = False
+  min_weight_elements: int = 0
 
   def __post_init__(self):
     if (

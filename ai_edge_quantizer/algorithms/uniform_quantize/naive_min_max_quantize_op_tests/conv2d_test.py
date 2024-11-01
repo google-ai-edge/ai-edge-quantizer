@@ -167,6 +167,31 @@ class Conv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         naive_min_max_quantize.materialize_fc_conv,
     )
 
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="weights_are_not_quantized",
+          min_weight_elements=1000000,
+          expect_weights_quantized=False,
+      ),
+      dict(
+          testcase_name="weights_are_quantized",
+          min_weight_elements=0,
+          expect_weights_quantized=True,
+      ),
+  )
+  def test_materialize_conv2d_quantizes_weights_larger_than_min_weight_elements_for_w8_afp32_(
+      self, min_weight_elements, expect_weights_quantized
+  ):
+    self._test_materialize_fn_quantizes_weights_larger_than_min_weight_elements_for_w8_afp32(
+        op_name=qtyping.TFLOperationName.CONV_2D,
+        subgraph_op_id=0,
+        min_weight_elements=min_weight_elements,
+        graph_info=self._graph_info,
+        op_test_info=self._op_test_info,
+        materialization_func=naive_min_max_quantize.materialize_fc_conv,
+        expect_weights_quantized=expect_weights_quantized,
+    )
+
 
 if __name__ == "__main__":
   googletest.main()

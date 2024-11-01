@@ -284,6 +284,23 @@ def _materialize_bias_for_conv_ops(
     )
 
 
+def _are_weights_too_small(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    weight_index: int,
+) -> bool:
+  """Checks if weights are too small to be quantized."""
+  tensor = graph_info.subgraph_tensors[op_info.op.inputs[weight_index]]
+  tensor_data = tfl_flatbuffer_utils.get_tensor_data(
+      tensor,
+      graph_info.buffers,
+  )
+  return (
+      tensor_data is not None
+      and np.size(tensor_data) < op_info.op_quant_config.min_weight_elements
+  )
+
+
 def materialize_fc_conv(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
@@ -306,12 +323,15 @@ def materialize_fc_conv(
     Quantization configuration for the tensors associated with the op (e.g.,
     weights, bias).
   """
-  # Ignore bias tensor as it is quantized separately.
+  ignored_inputs = [bias_index]  # Bias tensor is quantized separately.
+  if _are_weights_too_small(op_info, graph_info, weight_index):
+    ignored_inputs.append(weight_index)
+
   op_tensor_params = utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
-      inputs_to_ignore=[bias_index],
+      inputs_to_ignore=ignored_inputs,
   )
 
   _materialize_bias_for_conv_ops(
@@ -346,11 +366,19 @@ def materialize_conv2d_transpose(
   weight_index = 1
   input_index = 2
   bias_index = 3
+
+  ignored_inputs = [
+      ignored_shape_index,
+      bias_index,  # Bias tensor is quantized separately.
+  ]
+  if _are_weights_too_small(op_info, graph_info, weight_index):
+    ignored_inputs.append(weight_index)
+
   op_tensor_params = utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
-      inputs_to_ignore=[ignored_shape_index, bias_index],
+      inputs_to_ignore=ignored_inputs,
   )
   if len(op_tensor_params) < 2:
     raise ValueError(

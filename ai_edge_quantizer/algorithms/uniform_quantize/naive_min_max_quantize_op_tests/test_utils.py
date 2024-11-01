@@ -15,7 +15,7 @@
 
 """Test utils for naive min max quantize."""
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 import dataclasses
 from typing import Any, Optional
 
@@ -591,3 +591,67 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         self.assertAlmostEqual(
             calculated_tensor_max, expected_tensor_max, delta=5e-2
         )
+
+  def _test_materialize_fn_quantizes_weights_larger_than_min_weight_elements_for_w8_afp32(
+      self,
+      op_name: qtyping.TFLOperationName,
+      subgraph_op_id: int,
+      min_weight_elements: int,
+      graph_info: qtyping.GraphInfo,
+      op_test_info: OpTestInfo,
+      materialization_func: Callable[..., Any],
+      expect_weights_quantized: bool,
+  ):
+    """Tests weights are quantized if they are larger than min_weight_elements.
+
+    Args:
+      op_name: Op name.
+      subgraph_op_id: Subgraph op id.
+      min_weight_elements: Minimum number of weight elements.
+      graph_info: GraphInfo object.
+      op_test_info: OpTestInfo object.
+      materialization_func: Function to materialize tensor transformation
+        parameters.
+      expect_weights_quantized: Whether the weights are expected to be
+        quantized.
+    """
+    subgraph0 = op_test_info.test_model.subgraphs[0]
+    op = subgraph0.operators[subgraph_op_id]
+    op_info = qtyping.OpInfo(
+        op=op,
+        op_name=op_name,
+        subgraph_op_index=subgraph_op_id,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            activation_tensor_config=None,
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=8,
+                symmetric=True,
+                granularity=qtyping.QuantGranularity.CHANNELWISE,
+            ),
+            compute_precision=_ComputePrecision.INTEGER,
+            explicit_dequantize=False,
+            skip_checks=False,
+            min_weight_elements=min_weight_elements,
+        ),
+    )
+    _, weight_quant_params, *_ = materialization_func(
+        op_info, graph_info, self._tensor_name_to_qsv
+    )
+    self.assertEqual(
+        weight_quant_params.tensor_name, op_test_info.op_tensor_names["weight"]
+    )
+    self.assertLen(weight_quant_params.consumers, 1)
+    quantization_params = weight_quant_params.consumers[0].parameters
+    transformations = weight_quant_params.consumers[0].transformations
+    if expect_weights_quantized:
+      self.assertIsNotNone(quantization_params)
+      self.assertEqual(
+          transformations,
+          [_QuantTransformation.QUANTIZE_TENSOR],
+      )
+    else:
+      self.assertIsNone(quantization_params)
+      self.assertEqual(
+          transformations,
+          [_QuantTransformation.NO_QUANTIZE],
+      )

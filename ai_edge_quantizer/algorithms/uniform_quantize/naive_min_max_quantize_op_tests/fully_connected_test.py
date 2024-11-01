@@ -58,6 +58,17 @@ class FullyConnectedTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         subgraph_tensors=self._op_test_info.test_model.subgraphs[0].tensors,
         buffers=self._op_test_info.test_model.buffers,
     )
+    self._set_op_tensor_names()
+
+  def _set_op_tensor_names(self):
+    op_tensor_names = {}
+    op_tensor_names["weight"] = "arith.constant1"
+    op_tensor_names["bias"] = "arith.constant2"
+    op_tensor_names["input"] = "sequential/flatten/Reshape"
+    op_tensor_names["output"] = (
+        "sequential/dense/MatMul;sequential/dense/Relu;sequential/dense/BiasAdd"
+    )
+    self._op_test_info.op_tensor_names = op_tensor_names
 
   # TODO(rewu): add int16 tests.
   @parameterized.product(
@@ -88,15 +99,6 @@ class FullyConnectedTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
     subgraph_op_id = 3
     fc_op = subgraph0.operators[subgraph_op_id]
-    op_tensor_names = {}
-    op_tensor_names["weight"] = "arith.constant1"
-    op_tensor_names["bias"] = "arith.constant2"
-    op_tensor_names["input"] = "sequential/flatten/Reshape"
-    op_tensor_names["output"] = (
-        "sequential/dense/MatMul;sequential/dense/Relu;sequential/dense/BiasAdd"
-    )
-    self._op_test_info.op_tensor_names = op_tensor_names
-
     activation_tensor_config = None
     # Check if SRQ.
     if compute_precision == _ComputePrecision.INTEGER and is_srq:
@@ -122,6 +124,31 @@ class FullyConnectedTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         self._graph_info,
         self._op_test_info,
         naive_min_max_quantize.materialize_fc_conv,
+    )
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="weights_are_not_quantized",
+          min_weight_elements=1000000,
+          expect_weights_quantized=False,
+      ),
+      dict(
+          testcase_name="weights_are_quantized",
+          min_weight_elements=0,
+          expect_weights_quantized=True,
+      ),
+  )
+  def test_materialize_fully_connected_quantizes_weights_larger_than_min_weight_elements_for_w8_afp32(
+      self, min_weight_elements, expect_weights_quantized
+  ):
+    self._test_materialize_fn_quantizes_weights_larger_than_min_weight_elements_for_w8_afp32(
+        op_name=qtyping.TFLOperationName.FULLY_CONNECTED,
+        subgraph_op_id=3,
+        min_weight_elements=min_weight_elements,
+        graph_info=self._graph_info,
+        op_test_info=self._op_test_info,
+        materialization_func=naive_min_max_quantize.materialize_fc_conv,
+        expect_weights_quantized=expect_weights_quantized,
     )
 
 

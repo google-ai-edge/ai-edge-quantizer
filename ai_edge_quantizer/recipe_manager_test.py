@@ -474,6 +474,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 'compute_precision': _ComputePrecision.INTEGER,
                 'explicit_dequantize': False,
                 'skip_checks': False,
+                'min_weight_elements': 0,
             },
         },
         {
@@ -492,6 +493,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 'compute_precision': _ComputePrecision.FLOAT,
                 'explicit_dequantize': True,
                 'skip_checks': False,
+                'min_weight_elements': 0,
             },
         },
         {
@@ -510,6 +512,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 'compute_precision': _ComputePrecision.FLOAT,
                 'explicit_dequantize': True,
                 'skip_checks': False,
+                'min_weight_elements': 0,
             },
         },
         {
@@ -528,6 +531,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 'compute_precision': _ComputePrecision.FLOAT,
                 'explicit_dequantize': True,
                 'skip_checks': False,
+                'min_weight_elements': 0,
             },
         },
         {
@@ -546,6 +550,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                 'compute_precision': _ComputePrecision.FLOAT,
                 'explicit_dequantize': True,
                 'skip_checks': False,
+                'min_weight_elements': 0,
             },
         },
     ]
