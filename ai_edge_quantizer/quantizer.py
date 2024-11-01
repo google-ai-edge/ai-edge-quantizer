@@ -30,6 +30,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 
@@ -225,6 +226,9 @@ class Quantizer:
 
     Returns:
       Calibration result ({tensor_name: tensor QSVs (e.g.,min/max)}).
+
+    Raises:
+      ValueError: If the calibration result is insufficient.
     """
     if not self.need_calibration:
       return {}
@@ -234,6 +238,32 @@ class Quantizer:
       calib.load_model_qsvs(previous_calibration_result)
     calib.calibrate(calibration_data, self._recipe_manager)
     return calib.get_model_qsvs()
+
+  def _ensure_model_qsv_sufficient(
+      self, calibration_result: _CalibrationResult
+  ):
+    """Checks if the calibration result has sufficient QSV."""
+
+    # Find all tensor names with empty entries.
+    empty_qsvs = [key for key, value in calibration_result.items() if not value]
+
+    # Go over every signature and check if empty entry tensor belongs to it.
+    tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
+        self.float_model
+    )
+    for signature_key in tfl_interpreter.get_signature_list():
+      subgraph_idx = tfl_interpreter_utils.get_signature_main_subgraph_index(
+          tfl_interpreter, signature_key
+      )
+
+      for tensor_detail in tfl_interpreter.get_tensor_details(subgraph_idx):
+        tensor_name = tensor_detail['name']
+        if tensor_name in empty_qsvs:
+          raise ValueError(
+              f'Missing QSVs (min/max) for tensor {tensor_name} in Signature'
+              f" '{signature_key}'. Please check if Signature"
+              f' {signature_key} has been calibrated.'
+          )
 
   def quantize(
       self, calibration_result: Optional[_CalibrationResult] = None
@@ -250,6 +280,9 @@ class Quantizer:
     Raises:
       RuntimeError: If quantization recipe is empty.
     """
+
+    if calibration_result is not None:
+      self._ensure_model_qsv_sufficient(calibration_result)
 
     if not self.get_quantization_recipe():
       raise RuntimeError('Can not quantize without a quantization recipe.')

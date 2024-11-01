@@ -450,6 +450,23 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
     ):
       qt.quantize(calib_result)
 
+  def test_quantization_with_insufficient_calibration(self):
+    # Run calibration for one signature only.
+    scarce_calibration_dataset = {
+        'add': [{'x': np.array([2.0], dtype=np.float32)}],
+    }
+    calib_result = self._quantizer.calibrate(scarce_calibration_dataset)
+
+    # Quantize and expect an error about missing signature in calibration data.
+    error_message = (
+        'Missing QSVs (min/max) for tensor multiply_x:0 in Signature'
+        " 'multiply'."
+    )
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda err: error_message in str(err)
+    ):
+      self._quantizer.quantize(calib_result)
+
 
 class QuantizerToyGemma2Test(parameterized.TestCase):
 
