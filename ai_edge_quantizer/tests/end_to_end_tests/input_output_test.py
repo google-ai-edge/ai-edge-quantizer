@@ -163,6 +163,7 @@ class InputOutputTest(parameterized.TestCase):
       ('../../recipes/default_a16w8_recipe.json', 7),
       ('../../recipes/default_af32w8float_recipe.json', 0),
       ('../../recipes/dynamic_wi8_afp32_recipe.json', 0),
+      ('../../recipes/dynamic_legacy_wi8_afp32_recipe.json', 0),
   )
   def test_input_output_with_default_recipe(
       self, recipe_path, activation_type_code

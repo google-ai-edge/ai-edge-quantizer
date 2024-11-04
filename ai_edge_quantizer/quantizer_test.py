@@ -140,6 +140,7 @@ class QuantizerTest(parameterized.TestCase):
     )
 
   @parameterized.parameters(
+      'recipes/dynamic_legacy_wi8_afp32_recipe.json',
       'recipes/dynamic_wi8_afp32_recipe.json',
       'recipes/default_af32w8float_recipe.json',
   )

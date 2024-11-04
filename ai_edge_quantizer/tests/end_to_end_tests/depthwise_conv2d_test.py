@@ -96,11 +96,13 @@ class DepthwiseConv2dTest(parameterized.TestCase):
         output_tolerance=1e-4 if channel_wise_weight else 1e-2,
     )
 
-  def test_depthwise_conv2d_model_int8_drq(self):
-    recipe_path = test_utils.get_path_to_datafile(
-        '../../recipes/dynamic_wi8_afp32_recipe.json'
-    )
-    self._quantizer.load_quantization_recipe(recipe_path)
+  @parameterized.parameters(
+      '../../recipes/dynamic_legacy_wi8_afp32_recipe.json',
+      '../../recipes/dynamic_wi8_afp32_recipe.json',
+  )
+  def test_depthwise_conv2d_model_int8_drq(self, recipe_path):
+    full_recipe_path = test_utils.get_path_to_datafile(recipe_path)
+    self._quantizer.load_quantization_recipe(full_recipe_path)
 
     # Check model size.
     quant_result = self._quantizer.quantize()

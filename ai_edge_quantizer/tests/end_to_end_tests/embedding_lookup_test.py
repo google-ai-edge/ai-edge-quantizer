@@ -56,6 +56,7 @@ class EmbeddingLookupTest(parameterized.TestCase):
   @parameterized.parameters(
       '../../recipes/default_af32w8float_recipe.json',
       '../../recipes/default_af32w4float_recipe.json',
+      '../../recipes/dynamic_legacy_wi8_afp32_recipe.json',
       '../../recipes/dynamic_wi8_afp32_recipe.json',
   )
   def test_embedding_lookup_model_int_weight_only(self, recipe_path):
