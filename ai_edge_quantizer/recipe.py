@@ -37,3 +37,31 @@ def dynamic_wi8_afp32():
           },
       })
   ]
+
+
+def dynamic_legacy_wi8_afp32():
+  """Returns a dynamic quantization legacy recipe with int8 weights and float32 activation.
+
+  The difference between this and dynamic_wi8_afp32 is that this recipe sets
+  min_weight_elements to 1024 to match the old quantizer behavior.
+  """
+  return [
+      dict({
+          'regex': '.*',
+          'operation': '*',
+          'algorithm_key': 'min_max_uniform_quantize',
+          'op_config': {
+              'weight_tensor_config': {
+                  'num_bits': 8,
+                  'symmetric': True,
+                  'granularity': 'CHANNELWISE',
+                  'dtype': 'INT',
+                  'block_size': 0,
+              },
+              'compute_precision': 'INTEGER',
+              'explicit_dequantize': False,
+              'skip_checks': False,
+              'min_weight_elements': 1024,
+          },
+      })
+  ]
