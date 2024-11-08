@@ -56,6 +56,12 @@ def check_op_quantization_config(
         " only), please set algorithm key as 'float_casting'."
     )
 
+  if op_quant_config.min_weight_elements < 0:
+    raise ValueError(
+        f"min_weight_elements must be non-negative for op: {op_name} with"
+        f" config: {op_quant_config}."
+    )
+
   if op_quant_config.compute_precision in [
       _ComputePrecision.INTEGER,
       _ComputePrecision.FLOAT,

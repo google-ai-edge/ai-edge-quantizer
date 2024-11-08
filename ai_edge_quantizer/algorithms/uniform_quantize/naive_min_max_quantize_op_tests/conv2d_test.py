@@ -174,12 +174,17 @@ class Conv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
           expect_weights_quantized=False,
       ),
       dict(
-          testcase_name="weights_are_quantized",
+          testcase_name="weights_are_quantized_for_min_weight_elements_0",
           min_weight_elements=0,
           expect_weights_quantized=True,
       ),
+      dict(
+          testcase_name="weights_are_quantized_for_min_weight_elements_1",
+          min_weight_elements=1,
+          expect_weights_quantized=True,
+      ),
   )
-  def test_materialize_conv2d_quantizes_weights_larger_than_min_weight_elements_for_w8_afp32_(
+  def test_materialize_conv2d_quantizes_weights_larger_than_min_weight_elements_for_w8_afp32(
       self, min_weight_elements, expect_weights_quantized
   ):
     self._test_materialize_fn_quantizes_weights_larger_than_min_weight_elements_for_w8_afp32(

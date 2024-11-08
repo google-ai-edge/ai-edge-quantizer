@@ -16,6 +16,7 @@
 """Utils for min/max based quantization."""
 
 from collections.abc import Sequence
+import dataclasses
 import enum
 from typing import Any, Optional
 import numpy as np
@@ -103,7 +104,15 @@ def check_if_valid_op_config(
         f"No policy was specified for op: {op_name} with config:"
         f" {op_quant_config}."
     )
-  elif op_quant_config not in config_check_policy[op_name]:
+  # The config_check_policy contains all possible valid configs, except for
+  # variations in the min_weight_elements field (it's set to 0 for all of them).
+  # min_weight_elements has to be ignored during policy check here because it
+  # can be any non-negative integer, which means we can't list all possible
+  # values in the policy.
+  elif (
+      dataclasses.replace(op_quant_config, min_weight_elements=0)
+      not in config_check_policy[op_name]
+  ):
     error_msg = (
         f"Quantization config for op: {op_name} with config:"
         f" {op_quant_config} was not found in the policy."

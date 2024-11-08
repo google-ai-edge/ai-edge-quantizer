@@ -179,8 +179,13 @@ class Conv2DTransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
           expect_weights_quantized=False,
       ),
       dict(
-          testcase_name="weights_are_quantized",
+          testcase_name="weights_are_quantized_for_min_weight_elements_0",
           min_weight_elements=0,
+          expect_weights_quantized=True,
+      ),
+      dict(
+          testcase_name="weights_are_quantized_for_min_weight_elements_1",
+          min_weight_elements=1,
           expect_weights_quantized=True,
       ),
   )
