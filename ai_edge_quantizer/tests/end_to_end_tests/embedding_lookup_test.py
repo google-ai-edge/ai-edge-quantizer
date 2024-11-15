@@ -34,9 +34,7 @@ _RNG = np.random.default_rng(66)
 def _get_dummy_data(num_samples):
   data = []
   for _ in range(num_samples):
-    data.append(
-        {'inputs': _RNG.uniform(size=(1,)).astype(np.int32)}
-    )
+    data.append({'inputs': _RNG.uniform(size=(1,)).astype(np.int32)})
   return data
 
 
@@ -96,6 +94,30 @@ class EmbeddingLookupTest(parameterized.TestCase):
     print(len(quant_result.quantized_model))
     self.assertLess(len(quant_result.quantized_model), 2000)
 
+    # TODO: b/364405203 - Enable after 0 signature works.
+    # comparion_result = self._quantizer.validate(
+    #     error_metrics='mse',
+    #     signature_test_data=_get_test_data(),
+    # )
+    # self._check_comparion_result(
+    #     comparion_result,
+    #     weight_tolerance=1e-5,
+    #     output_tolerance=1e-5,
+    # )
+
+  @parameterized.parameters(
+      '../../recipes/default_a8w8_recipe.json',
+      '../../recipes/default_a16w8_recipe.json',
+  )
+  def test_embedding_lookup_model_full_integer(self, recipe_path):
+    calibration_result = {
+        'Identity_1': {'min': -2.0, 'max': 2.0},
+    }
+    recipe_path = test_utils.get_path_to_datafile(recipe_path)
+    self._quantizer.load_quantization_recipe(recipe_path)
+    self.assertTrue(self._quantizer.need_calibration)
+    quant_result = self._quantizer.quantize(calibration_result)
+    self.assertLess(len(quant_result.quantized_model), 2000)
     # TODO: b/364405203 - Enable after 0 signature works.
     # comparion_result = self._quantizer.validate(
     #     error_metrics='mse',
