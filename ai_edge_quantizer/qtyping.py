@@ -57,6 +57,7 @@ class TFLOperationName(str, enum.Enum):
   STRIDED_SLICE = 'STRIDED_SLICE'
   SPLIT = 'SPLIT'
   LOGISTIC = 'LOGISTIC'
+  SLICE = 'SLICE'
 
 
 class QuantizeMode(enum.Enum):

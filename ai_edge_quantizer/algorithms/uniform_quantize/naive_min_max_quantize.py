@@ -307,6 +307,24 @@ def _are_weights_too_small(
   )
 
 
+def materialize_slice(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.slice."""
+  return utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
+      inputs_to_ignore=[
+          1,
+          2,
+      ],  # Begin and size indices do not need to be quantized.
+  )
+
+
 def materialize_fc_conv(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,

@@ -89,6 +89,7 @@ for op_name, materialize_func in zip(
         _TFLOpName.STRIDED_SLICE,
         _TFLOpName.SPLIT,
         _TFLOpName.LOGISTIC,  # Sigmoid
+        _TFLOpName.SLICE,
     ),
     (
         naive_min_max_quantize.materialize_input,
@@ -114,6 +115,7 @@ for op_name, materialize_func in zip(
         naive_min_max_quantize.materialize_strided_slice,
         naive_min_max_quantize.materialize_split,
         naive_min_max_quantize.materialize_softmax_and_logistic,
+        naive_min_max_quantize.materialize_slice,
     ),
 ):
   register_quantized_op(

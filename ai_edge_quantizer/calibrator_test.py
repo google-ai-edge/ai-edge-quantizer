@@ -290,7 +290,7 @@ class CalibratorToyGemma2Test(googletest.TestCase):
         self._toy_gemma2_calibration_dataset,
         model_recipe_manager=recipe_mngr,
     )
-    self.assertLen(calib.get_model_qsvs(), 260)
+    self.assertLen(calib.get_model_qsvs(), 274)
 
 
 if __name__ == "__main__":
