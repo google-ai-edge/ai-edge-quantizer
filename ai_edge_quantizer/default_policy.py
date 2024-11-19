@@ -165,7 +165,8 @@ DEFAULT_JSON_POLICY = """
       "INPUT",
       "OUTPUT",
       "SLICE",
-      "EMBEDDING_LOOKUP"
+      "EMBEDDING_LOOKUP",
+      "SUM"
     ],
     "static_wi8_ai8": [
       "ADD",
@@ -191,7 +192,8 @@ DEFAULT_JSON_POLICY = """
       "INPUT",
       "OUTPUT",
       "SLICE",
-      "EMBEDDING_LOOKUP"
+      "EMBEDDING_LOOKUP",
+      "SUM"
     ],
     "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT"],
     "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT"],

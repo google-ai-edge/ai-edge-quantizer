@@ -13,7 +13,9 @@
 # limitations under the License.
 # ==============================================================================
 
-"""E2E tests for the quantizer for model with slice."""
+"""E2E tests for the quantizer for model with transpose."""
+
+from typing import Any
 
 from absl.testing import parameterized
 import numpy as np
@@ -23,6 +25,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 _OpExecutionMode = qtyping.OpExecutionMode
 _OpName = qtyping.TFLOperationName
@@ -32,46 +35,62 @@ _OpQuantConfig = qtyping.OpQuantizationConfig
 _RNG = np.random.default_rng(66)
 
 
-def _get_dummy_data(num_samples):
+def _get_dummy_data(
+    num_samples: int, dtype: np.dtype = np.float32
+) -> list[dict[str, Any]]:
   data = []
   for _ in range(num_samples):
-    data.append({
-        'input_tensor': _RNG.uniform(size=(32, 24, 32)).astype(np.float32),
-        'begin': np.array([1, 0, 0], dtype=np.int32),
-        'size': np.array([16, 8, 16], dtype=np.int32),
-    })
+    data.append({'input_1': _RNG.uniform(size=(2, 3)).astype(dtype)})
   return data
 
 
-def _get_calibration_data(num_samples: int = 64):
-  calibration_samples = _get_dummy_data(num_samples)
-  calibration_data = {'slice': calibration_samples}
+def _get_calibration_data(
+    num_samples: int = 128, dtype: np.dtype = np.float32
+) -> list[dict[str, Any]]:
+  calibration_samples = _get_dummy_data(num_samples, dtype)
+  calibration_data = {
+      tfl_interpreter_utils.DEFAULT_SIGNATURE_KEY: calibration_samples,
+  }
   return calibration_data
 
 
-def _get_test_data(num_samples: int = 8):
-  return _get_calibration_data(num_samples)
+def _get_test_data(
+    num_samples: int = 8, dtype: np.dtype = np.float32
+) -> list[dict[str, Any]]:
+  return _get_calibration_data(num_samples, dtype)
 
 
-class SliceTest(parameterized.TestCase):
+class SumTest(parameterized.TestCase):
 
-  def _custom_setup(self, test_model_file):
+  def setUp(self):
     super().setUp()
     self.float_model_path = test_utils.get_path_to_datafile(
-        f'../models/{test_model_file}'
+        '../models/single_sum.tflite'
     )
     self._quantizer = quantizer.Quantizer(self.float_model_path)
 
-  @parameterized.parameters(
-      ('../../recipes/default_a8w8_recipe.json', 9),  # int8.
-      ('../../recipes/default_a16w8_recipe.json', 7),  # int16.
+  @parameterized.named_parameters(
+      dict(
+          testcase_name='int8_quantized',
+          recipe_path='../../recipes/default_a8w8_recipe.json',
+          tensor_type=9,
+          tol=1e-4,
+      ),
+      dict(
+          testcase_name='int16_quantized',
+          recipe_path='../../recipes/default_a16w8_recipe.json',
+          tensor_type=7,
+          tol=2.5,  # TODO(b/379757798): Update tolerance after bug is fixed.
+      ),
   )
-  def test_slice_model_full_integer(self, recipe_path, tensor_type):
-    self._custom_setup('single_slice.tflite')
+  def test_sum_model_full_integer(self, recipe_path, tensor_type, tol):
     recipe_path = test_utils.get_path_to_datafile(recipe_path)
     self._quantizer.load_quantization_recipe(recipe_path)
     self.assertTrue(self._quantizer.need_calibration)
-    calibration_result = self._quantizer.calibrate(_get_calibration_data())
+
+    data = _get_calibration_data()
+    calibration_result = self._quantizer.calibrate(data)
+
     quantization_result = self._quantizer.quantize(calibration_result)
 
     # Check input/output tensor type.
@@ -81,34 +100,22 @@ class SliceTest(parameterized.TestCase):
     self.assertLen(quantized_model.subgraphs, 1)
     subgraph = quantized_model.subgraphs[0]
     subgraph_tensors = subgraph.tensors
-    self.assertLen(subgraph.inputs, 3)
-    input_tensor = subgraph_tensors[subgraph.inputs[2]]
-    begin_tensor = subgraph_tensors[subgraph.inputs[0]]
-    size_tensor = subgraph_tensors[subgraph.inputs[1]]
+    self.assertLen(subgraph.inputs, 1)
+    input_tensor = subgraph_tensors[subgraph.inputs[0]]
     output_tensor = subgraph_tensors[subgraph.outputs[0]]
     # See schema_py_generated.py for type code.
     self.assertEqual(input_tensor.type, tensor_type)
-    self.assertEqual(begin_tensor.type, 2)  # int32.
-    self.assertEqual(size_tensor.type, 2)  # int32.
     self.assertEqual(output_tensor.type, tensor_type)
 
     comparison_result = self._quantizer.validate(
-        error_metrics='mse', test_data=_get_test_data(num_samples=1)
+        error_metrics='mse',
+        test_data=_get_test_data(num_samples=1),
     )
-    self._check_comparison_result(
-        comparison_result,
-        output_tolerance=1e-4,
-    )
+    self._check_comparison_result(comparison_result, output_tolerance=tol)
 
-  # TODO: b/345503484 - Check weight tensor type of the quantized model.
-  def _check_comparison_result(
-      self,
-      comparison_result,
-      output_tolerance,
-  ):
+  def _check_comparison_result(self, comparison_result, output_tolerance):
     # TODO: b/357959309 - Use comparison result directly for testing.
     comparison_result = comparison_result.get_all_tensor_results()
-    # Check final output.
     output_mse = comparison_result['PartitionedCall:0']
     self.assertLess(output_mse, output_tolerance)
 
