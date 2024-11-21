@@ -325,6 +325,23 @@ def materialize_slice(
   )
 
 
+def materialize_select_v2(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.select_v2."""
+  return utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
+      inputs_to_ignore=[
+          0,
+      ],  # Condition tensor does not need to be quantized.
+  )
+
+
 def materialize_sum(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,

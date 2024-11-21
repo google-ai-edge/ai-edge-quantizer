@@ -91,6 +91,7 @@ for op_name, materialize_func in zip(
         _TFLOpName.LOGISTIC,  # Sigmoid
         _TFLOpName.SLICE,
         _TFLOpName.SUM,
+        _TFLOpName.SELECT_V2,
     ),
     (
         naive_min_max_quantize.materialize_input,
@@ -118,6 +119,7 @@ for op_name, materialize_func in zip(
         naive_min_max_quantize.materialize_softmax_and_logistic,
         naive_min_max_quantize.materialize_slice,
         naive_min_max_quantize.materialize_sum,
+        naive_min_max_quantize.materialize_select_v2,
     ),
 ):
   register_quantized_op(

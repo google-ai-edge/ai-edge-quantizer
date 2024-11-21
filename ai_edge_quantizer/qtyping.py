@@ -59,6 +59,7 @@ class TFLOperationName(str, enum.Enum):
   LOGISTIC = 'LOGISTIC'
   SLICE = 'SLICE'
   SUM = 'SUM'
+  SELECT_V2 = 'SELECT_V2'
 
 
 class QuantizeMode(enum.Enum):
