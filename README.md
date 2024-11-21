@@ -120,7 +120,7 @@ The table below outlines the allowed configurations for available recipes.
 |FULLY_CONNECTED  |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|
 |CONV_2D          |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|    |
 |BATCH_MATMUL     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |<div align="center"> &check; </div>|    |
-|EMBEDDING_LOOKUP |<div align="center"> &check; </div>|<div align="center"> &check; </div>|     |     |     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|    |
+|EMBEDDING_LOOKUP |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|    |
 |DEPTHWISE_CONV_2D|<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |<div align="center"> &check; </div>|    |
 |AVERAGE_POOL_2D  |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |RESHAPE          |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
@@ -138,3 +138,6 @@ The table below outlines the allowed configurations for available recipes.
 |STRIDED_SLICE    |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |SPLIT            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |LOGISTIC         |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|SLICE         |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|SELECT_V2         |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|SUM         |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
