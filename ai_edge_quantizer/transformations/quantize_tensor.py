@@ -22,19 +22,19 @@ from ai_edge_quantizer.transformations import transformation_utils
 from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
-# TODO: b/335014051 - support distinguishing INT, FLOAT & UINT, BFLOAT
+# TODO: b/335014051 - Support distinguishing INT, FLOAT & UINT, BFLOAT.
 def quant_params_to_tflite_type(
     bitwidth: int,
 ) -> Optional[schema_py_generated.TensorType]:
-  """Given specifications from quant param return the corresponding tflite dtype.
+  """Given specifications from quant param return the corresponding TFLite dtype.
 
   Args:
-    bitwidth: bitwidth from UniformQuantParams
+    bitwidth: Bit width from UniformQuantParams.
 
   Returns:
-    the corresponding tflite tensortype
+    The corresponding TFLite tensor type.
   """
-  if bitwidth <= 4:
+  if bitwidth == 4:
     return schema_py_generated.TensorType.INT4
   elif bitwidth <= 8:
     return schema_py_generated.TensorType.INT8
@@ -68,19 +68,19 @@ def nonlinear_quant_params_to_tflite_type(
 
 
 def _pack_data(bitwidth: int, flattened_data: np.ndarray) -> np.ndarray:
-  """Pack the data to the corresponding bitwidth.
+  """Pack the data to the corresponding bit width.
 
-  If no packing is needed, the original data is returned. Any bitwidth equal or
-  less than 4 bits will be packed to 4 bits.
+  Currently only support 4 bits. If no packing is needed, the original data is
+  returned.
 
   Args:
-    bitwidth: Bitwidth from NonLinearQuantParams.
+    bitwidth: Bit width from NonLinearQuantParams.
     flattened_data: The data to be packed.
 
   Returns:
     Packed data.
   """
-  if bitwidth <= 4:
+  if bitwidth == 4:
     even_data = flattened_data[::2] & 0x0F
     odd_data = np.left_shift(flattened_data[1::2], 4).astype(np.uint8)
     if odd_data.shape[0] == even_data.shape[0] - 1:

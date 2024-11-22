@@ -18,6 +18,7 @@
 import os
 import numpy as np
 from tensorflow.python.platform import googletest
+from absl.testing import parameterized
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import quantize_tensor
 from ai_edge_quantizer.transformations import transformation_utils
@@ -28,7 +29,7 @@ from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tenso
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("..")
 
 
-class QuantizeTensorTest(googletest.TestCase):
+class QuantizeTensorTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -179,40 +180,44 @@ class QuantizeTensorTest(googletest.TestCase):
     np.testing.assert_array_equal(quant_param.zeroPoint, [1])
     self.assertEqual(quant_param.quantizedDimension, 0)
 
-  def test_int5_constant_not_packed(self):
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="int5",
+          num_bits=5,
+      ),
+      dict(
+          testcase_name="int2",
+          num_bits=2,
+      ),
+  )
+  def test_int_constant_not_packed(self, num_bits):
     subgraph = self._model.subgraphs[0]
     model = self._model
-    data = np.array(
-        [
-            0x0,
-            0x1,
-            0x2,
-            0x3,
-            0x4,
-            0x5,
-            0x6,
-            0x7,
-        ],
-        dtype=np.int8,
-    )
+    tensor_id = 7
+    data = np.array([0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7], dtype=np.int8)
     expected = np.array([0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7])
     ret = quantize_tensor.quantize_tensor(
         transformation_utils.TransformationInput(
-            tensor_id=7,
+            tensor_id=tensor_id,
             op_codes=model.operatorCodes,
             buffers=model.buffers,
             subgraph=subgraph,
             producer=-1,
             consumers=[4],
             quant_params=qtyping.UniformQuantParams(
-                5, None, np.ones(1), np.ones(1), True, data
+                num_bits=num_bits,
+                quantized_dimension=None,
+                scale=np.ones(1),
+                zero_point=np.ones(1),
+                symmetric=True,
+                quantized_data=data,
             ),
         )
     )
     self.assertEqual(ret.op_id, 0)
     self.assertEqual(ret.num_ops_added, 0)
     np.testing.assert_array_equal(model.buffers[8].data, expected)
-    quant_param = subgraph.tensors[7].quantization
+    quant_param = subgraph.tensors[tensor_id].quantization
     np.testing.assert_array_equal(quant_param.scale, [1])
     np.testing.assert_array_equal(quant_param.zeroPoint, [1])
     self.assertEqual(quant_param.quantizedDimension, 0)
