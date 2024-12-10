@@ -224,7 +224,7 @@ def _setup_validation_interpreter(
   """
 
   interpreter = utils.create_tfl_interpreter(
-      tflite_model=model, use_reference_kernel=use_reference_kernel
+      tflite_model=model
   )
   utils.invoke_interpreter_signature(
       interpreter, signature_input, signature_key
