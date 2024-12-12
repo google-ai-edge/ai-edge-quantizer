@@ -216,6 +216,7 @@ class Quantizer:
       self,
       calibration_data: dict[str, Iterable[_SignatureInput]],
       previous_calibration_result: Optional[_CalibrationResult] = None,
+      num_threads: int = 16,
   ) -> _CalibrationResult:
     """Calibrates the float model (required by static range quantization).
 
@@ -223,6 +224,7 @@ class Quantizer:
       calibration_data: Calibration data for a model signature.
       previous_calibration_result: Previous calibration result to be loaded. The
         calibration process will be resumed from the previous result.
+      num_threads: Number of threads to use for calibration.
 
     Returns:
       Calibration result ({tensor_name: tensor QSVs (e.g.,min/max)}).
@@ -233,7 +235,7 @@ class Quantizer:
     if not self.need_calibration:
       return {}
 
-    calib = calibrator.Calibrator(self.float_model)
+    calib = calibrator.Calibrator(self.float_model, num_threads=num_threads)
     if previous_calibration_result is not None:
       calib.load_model_qsvs(previous_calibration_result)
     calib.calibrate(calibration_data, self._recipe_manager)
@@ -297,7 +299,8 @@ class Quantizer:
       self,
       test_data: Optional[dict[str, Iterable[_SignatureInput]]] = None,
       error_metrics: str = 'mse',
-      use_reference_kernel: bool = False,
+      use_xnnpack: bool = True,
+      num_threads: int = 16,
   ) -> model_validator.ComparisonResult:
     """Numerical validation of the quantized model for a model signature.
 
@@ -314,7 +317,8 @@ class Quantizer:
         data that will be used for validation. If set to None, random normal
         distributed data will be used for all signatures in the model.
       error_metrics: Error metrics to be used for comparison.
-      use_reference_kernel: Whether to use the reference kernel for validation.
+      use_xnnpack: Whether to use the xnnpack library for validation.
+      num_threads: Number of threads to use for validation.
 
     Returns:
       The comparison result.
@@ -330,7 +334,8 @@ class Quantizer:
         test_data,
         error_metrics,
         validation_utils.get_validation_func(error_metrics),
-        use_reference_kernel=use_reference_kernel,
+        use_xnnpack=use_xnnpack,
+        num_threads=num_threads,
     )
 
   def _get_quantization_params(

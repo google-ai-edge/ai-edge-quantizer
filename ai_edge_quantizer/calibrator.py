@@ -41,6 +41,7 @@ class Calibrator:
   def __init__(
       self,
       float_tflite: Union[str, bytes],
+      num_threads: int = 16,
   ):
     self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
 
@@ -50,7 +51,7 @@ class Calibrator:
           " the model (e.g., if it is already quantized)."
       )
     self._tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
-        float_tflite
+        float_tflite, use_xnnpack=True, num_threads=num_threads
     )
     # Tensor name to tensor content.
     self._tensor_content_map: dict[str, Any] = {}

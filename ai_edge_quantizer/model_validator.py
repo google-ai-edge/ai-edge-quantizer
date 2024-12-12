@@ -207,7 +207,8 @@ def _setup_validation_interpreter(
     model: bytes,
     signature_input: dict[str, Any],
     signature_key: Optional[str],
-    use_reference_kernel: bool,
+    use_xnnpack: bool,
+    num_threads: int,
 ) -> tuple[Any, int, dict[str, Any]]:
   """Setup the interpreter for validation given a signature key.
 
@@ -216,15 +217,15 @@ def _setup_validation_interpreter(
     signature_input: A dictionary of input tensor name and its value.
     signature_key: The signature key to be used for invoking the models. If the
       model only has one signature, this can be set to None.
-    use_reference_kernel: Whether to use the reference kernel for the
-      interpreter.
+    use_xnnpack: Whether to use xnnpack for the interpreter.
+    num_threads: The number of threads to use for the interpreter.
 
   Returns:
     A tuple of interpreter, subgraph_index and tensor_name_to_details.
   """
 
   interpreter = utils.create_tfl_interpreter(
-      tflite_model=model, use_reference_kernel=use_reference_kernel
+      tflite_model=model, use_xnnpack=use_xnnpack, num_threads=num_threads
   )
   utils.invoke_interpreter_signature(
       interpreter, signature_input, signature_key
@@ -247,7 +248,8 @@ def compare_model(
     test_data: dict[str, Iterable[dict[str, Any]]],
     error_metric: str,
     compare_fn: Callable[[Any, Any], float],
-    use_reference_kernel: bool = False,
+    use_xnnpack: bool = True,
+    num_threads: int = 16,
 ) -> ComparisonResult:
   """Compares model tensors over a model signature using the compare_fn.
 
@@ -266,8 +268,8 @@ def compare_model(
     compare_fn: a comparison function to be used for calculating the statistics,
       this function must be taking in two ArrayLike strcuture and output a
       single float value.
-    use_reference_kernel: Whether to use the reference kernel for the
-      interpreter.
+    use_xnnpack: Whether to use xnnpack for the interpreter.
+    num_threads: The number of threads to use for the interpreter.
 
   Returns:
     A ComparisonResult object.
@@ -282,12 +284,17 @@ def compare_model(
               reference_model,
               signature_input,
               signature_key,
-              use_reference_kernel,
+              use_xnnpack,
+              num_threads,
           )
       )
       targ_interpreter, targ_subgraph_index, targ_tensor_name_to_details = (
           _setup_validation_interpreter(
-              target_model, signature_input, signature_key, use_reference_kernel
+              target_model,
+              signature_input,
+              signature_key,
+              use_xnnpack,
+              num_threads,
           )
       )
       # Compare the cached tensor values.
