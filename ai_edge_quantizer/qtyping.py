@@ -120,6 +120,8 @@ class UniformQuantParams:
     zero_point: The zero point of the quantization.
     symmetric: Whether the quantization is symmetric (force zero_point to be 0).
     quantized_data: The quantized data.
+    block_size: The block size for blockwise quantization, block_size=0 meaning
+      no blockwise quantization.
   """
 
   num_bits: int
@@ -128,6 +130,7 @@ class UniformQuantParams:
   zero_point: np.ndarray
   symmetric: bool = True
   quantized_data: Optional[np.ndarray] = None
+  block_size: int = 0
 
   @classmethod
   def from_tfl_tensor_details(cls, tensor_detail) -> 'UniformQuantParams':
@@ -170,6 +173,7 @@ class UniformQuantParams:
         and np.array_equal(self.zero_point, other.zero_point)
         and self.symmetric == other.symmetric
         and _compare_array_or_none(self.quantized_data, other.quantized_data)
+        and self.block_size == other.block_size
     )
 
 

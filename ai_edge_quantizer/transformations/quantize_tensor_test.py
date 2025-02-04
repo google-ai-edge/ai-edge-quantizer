@@ -42,7 +42,7 @@ class QuantizeTensorTest(parameterized.TestCase):
     """test quantizing a constant tensor."""
     subgraph = self._model.subgraphs[0]
     model = self._model
-    data = np.ones([1, 112, 112, 3], dtype=np.int8)
+    data = np.ones([1, 112, 112, 32], dtype=np.int8)
     ret = quantize_tensor.quantize_tensor(
         transformation_utils.TransformationInput(
             7,
@@ -134,6 +134,42 @@ class QuantizeTensorTest(parameterized.TestCase):
     self.assertEqual(
         subgraph.tensors[4].type, schema_py_generated.TensorType.FLOAT16
     )
+
+  def test_blockwise_quantization_with_zero_point(self):
+    """Test blockwise quantization with explicit zero point."""
+    subgraph = self._model.subgraphs[0]
+    model = self._model
+    tensor_wh = 112
+    test_tensor_id = 7
+    data = np.ones([1, tensor_wh, tensor_wh, 32]).astype(np.int8)
+    quantize_tensor.quantize_tensor(
+        transformation_utils.TransformationInput(
+            tensor_id=test_tensor_id,
+            op_codes=model.operatorCodes,
+            buffers=model.buffers,
+            subgraph=subgraph,
+            producer=1,
+            consumers=[3],
+            quant_params=qtyping.UniformQuantParams(
+                num_bits=8,
+                quantized_dimension=None,
+                scale=np.ones([1, tensor_wh, tensor_wh, 1]).astype(np.float16),
+                zero_point=np.zeros([1, tensor_wh, tensor_wh, 1]),
+                symmetric=True,
+                quantized_data=data,
+                block_size=32,
+            ),
+        )
+    )
+    quant_param = subgraph.tensors[test_tensor_id].quantization
+    self.assertEqual(
+        quant_param.detailsType,
+        schema_py_generated.QuantizationDetails.BlockwiseQuantization,
+    )
+    self.assertEqual(quant_param.details.blockSize, 32)
+    # Check if the scale and zero point tensors are inserted correctly.
+    self.assertEqual(quant_param.details.scale, 9)
+    self.assertEqual(quant_param.details.zeroPoint, 10)
 
   def test_int4_constant_packed_correctly(self):
     subgraph = self._model.subgraphs[0]
