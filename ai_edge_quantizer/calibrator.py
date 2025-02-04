@@ -281,7 +281,13 @@ class Calibrator:
             algorithm_name, op_key
         )
         op_info = qtyping.OpInfo(op, op_key, subgraph_op_id, op_quant_config)
-        op_qsvs = qsv_init_func(op_info, graph_info)
+        # Ignore the input tensors where any dimension of the shape is 0.
+        inputs_to_ignore = [
+            idx
+            for idx in op.inputs
+            if not np.all(graph_info.subgraph_tensors[idx].shape)
+        ]
+        op_qsvs = qsv_init_func(op_info, graph_info, inputs_to_ignore)
         # Step3: initialize tensor qsvs.
         for tensor_name, qsv in op_qsvs.items():
           if tensor_name not in self._model_qsvs:

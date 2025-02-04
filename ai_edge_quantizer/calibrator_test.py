@@ -228,6 +228,18 @@ class CalibratorTest(googletest.TestCase):
     )
     self.assertLen(test_calibrator.get_cached_output(), 10)
 
+  def test_calibrate_reshape_with_empty_shape_success(self):
+    test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, "tests/models/reshape_with_empty_shape.tflite"
+    )
+    test_calibrator = calibrator.Calibrator(test_model_path)
+    _add_default_int8xint8_integer_recipe(self._recipe_manager)
+    calib_data = test_utils.create_random_normal_input_data(
+        test_model_path, num_samples=4
+    )
+    test_calibrator.calibrate(calib_data, self._recipe_manager)
+    self.assertNotEmpty(test_calibrator.get_model_qsvs())
+
 
 class CalibratorAlreadyQuantizedModelTest(googletest.TestCase):
 

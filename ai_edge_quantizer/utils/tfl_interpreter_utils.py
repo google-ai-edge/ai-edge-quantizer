@@ -188,9 +188,14 @@ def get_tensor_name_to_content_map(
   """
   tensors = {}
   for tensor_detail in tflite_interpreter.get_tensor_details(subgraph_index):
-    # Don't return temporary, unnamed tensors
+    # Don't return temporary, unnamed tensors.
     if not tensor_detail["name"]:
       continue
+
+    # Don't return tensors where any dimension of the shape is 0.
+    if not np.all(tensor_detail["shape"]):
+      continue
+
     tensors[tensor_detail["name"]] = get_tensor_data(
         tflite_interpreter, tensor_detail, subgraph_index, dequantize
     )
