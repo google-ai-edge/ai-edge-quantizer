@@ -352,6 +352,25 @@ class TensorUtilsTest(parameterized.TestCase):
       # Range has to be extended to include zero.
       self.assertEqual(calculated_min, 0)
 
+  def test_tensor_zp_scale_from_min_max_with_clipping(self):
+    min_val = np.min(self._test_data, keepdims=True)
+    max_val = np.max(self._test_data, keepdims=True)
+    clipping_values = np.array([4.0])
+    zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
+        min_val, max_val, 4, True, clipping_values
+    )
+    self.assertEqual(zp.shape, scale.shape)
+    self.assertEqual(zp.shape, (1, 1))
+    self.assertEqual(zp[0], 0)
+    self.assertEqual(scale[0], 4. / 7.)
+
+    zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
+        min_val, max_val, 8, False, clipping_values
+    )
+    self.assertEqual(zp.shape, scale.shape)
+    self.assertEqual(zp.shape, (1, 1))
+    self.assertEqual(scale[0], 4. / 255.)
+
 
 if __name__ == "__main__":
   googletest.main()
