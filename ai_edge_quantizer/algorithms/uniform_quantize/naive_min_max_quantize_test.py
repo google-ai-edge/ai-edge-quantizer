@@ -19,7 +19,6 @@ from absl.testing import parameterized
 import numpy as np
 
 from tensorflow.python.platform import googletest
-from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.utils import test_utils
@@ -157,27 +156,6 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     # weight and bias are excluded.
     self.assertNotIn("arith.constant1", op_qsvs)
     self.assertNotIn("arith.constant2", op_qsvs)
-
-  def test_check_op_quantization_config_with_negative_min_weight_elements_raises_error(
-      self,
-  ):
-    op_quant_config = qtyping.OpQuantizationConfig(
-        weight_tensor_config=_TensorQuantConfig(
-            num_bits=8,
-            granularity=qtyping.QuantGranularity.CHANNELWISE,
-        ),
-        compute_precision=qtyping.ComputePrecision.INTEGER,  # DRQ.
-        min_weight_elements=-1,
-    )
-    with self.assertRaisesWithPredicateMatch(
-        ValueError,
-        lambda err: "min_weight_elements must be non-negative" in str(err),
-    ):
-      naive_min_max_quantize.check_op_quantization_config(
-          _TFLOpName.FULLY_CONNECTED,
-          op_quant_config,
-          default_policy.DEFAULT_CONFIG_CHECK_POLICY,
-      )
 
 
 if __name__ == "__main__":

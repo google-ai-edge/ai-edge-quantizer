@@ -20,6 +20,7 @@ import numpy as np
 
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize.naive_min_max_quantize_op_tests import test_utils as naive_min_max_test_utils
 from ai_edge_quantizer.utils import test_utils
@@ -97,8 +98,11 @@ class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         subgraph_op_index=-1,  # Virtual op, no real id.
         op_quant_config=op_quant_config,
     )
-    quantization_params = naive_min_max_quantize.materialize_input(
-        op_info, self._graph_info, self._model_qsv
+    quantization_params = common_quantize.materialize_input(
+        naive_min_max_quantize.get_tensor_quant_params,
+        op_info,
+        self._graph_info,
+        self._model_qsv,
     )
     # Only one input tensor for the test model.
     self.assertLen(quantization_params, 1)
@@ -141,8 +145,11 @@ class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         subgraph_op_index=-1,  # Virtual op, no real id.
         op_quant_config=op_quant_config,
     )
-    quantization_params = naive_min_max_quantize.materialize_output(
-        op_info, self._graph_info, self._model_qsv
+    quantization_params = common_quantize.materialize_output(
+        naive_min_max_quantize.get_tensor_quant_params,
+        op_info,
+        self._graph_info,
+        self._model_qsv,
     )
     # Only one output tensor for the test model.
     self.assertLen(quantization_params, 1)
@@ -189,8 +196,11 @@ class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         subgraph_op_index=-1,  # Virtual op, no real id.
         op_quant_config=op_quant_config,
     )
-    quantization_params = naive_min_max_quantize.materialize_input(
-        op_info, self._graph_info, self._model_qsv
+    quantization_params = common_quantize.materialize_input(
+        naive_min_max_quantize.get_tensor_quant_params,
+        op_info,
+        self._graph_info,
+        self._model_qsv,
     )
     # Only one input tensor for the test model.
     self.assertLen(quantization_params, 1)
@@ -240,8 +250,11 @@ class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         subgraph_op_index=-1,  # Virtual op, no real id.
         op_quant_config=op_quant_config,
     )
-    quantization_params = naive_min_max_quantize.materialize_output(
-        op_info, self._graph_info, self._model_qsv
+    quantization_params = common_quantize.materialize_output(
+        naive_min_max_quantize.get_tensor_quant_params,
+        op_info,
+        self._graph_info,
+        self._model_qsv,
     )
     # Only one output tensor for the test model.
     self.assertLen(quantization_params, 1)

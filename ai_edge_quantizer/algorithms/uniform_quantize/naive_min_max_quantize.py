@@ -19,559 +19,161 @@ from typing import Any, Optional
 import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
-from ai_edge_quantizer.algorithms.utils import min_max_quantize_utils as utils
+from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 ALGORITHM_KEY = "min_max_uniform_quantize"
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation
-_OpQuantConstraint = utils.OpQuantConstraint
-_ComputePrecision = qtyping.ComputePrecision
+_IntType = uniform_quantize_tensor.IntType
 
 
-def check_op_quantization_config(
-    op_name: _TFLOpName,
-    op_quant_config: qtyping.OpQuantizationConfig,
-    config_check_policy: qtyping.ConfigCheckPolicyDict,
-) -> None:
-  """Checks the op quantization config.
-
-  Args:
-    op_name: The name of the op.
-    op_quant_config: The quantization config for the op.
-    config_check_policy: The policy to check the op quantization config.
-
-  Raises:
-    ValueError: If the op quantization config is invalid.
-  """
-  if op_quant_config.weight_tensor_config is None:
-    raise ValueError(
-        "Weight tensor quantization is required for min/max uniform"
-        " quantization."
-    )
-  if op_quant_config.weight_tensor_config.dtype != qtyping.TensorDataType.INT:
-    raise ValueError(
-        "Weights need to have integer type for min/max uniform quantization. If"
-        " you wish to perform float casting quantization (e.g., fp16 weight"
-        " only), please set algorithm key as 'float_casting'."
-    )
-
-  if op_quant_config.min_weight_elements < 0:
-    raise ValueError(
-        f"min_weight_elements must be non-negative for op: {op_name} with"
-        f" config: {op_quant_config}."
-    )
-
-  if op_quant_config.compute_precision in [
-      _ComputePrecision.INTEGER,
-      _ComputePrecision.FLOAT,
-  ]:
-    # Use policy-based mechanism to validate op.
-    utils.check_if_valid_op_config(
-        op_name, op_quant_config, config_check_policy
-    )
-  utils.check_subchannel_config(op_name, op_quant_config)
-
-
-def materialize_input(
+def _init_tensor_min_max(
+    tensor_data: Optional[np.ndarray],
     op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in the virtual input op."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-  )
-
-
-def materialize_output(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in the virtual output op."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-  )
-
-
-def materialize_add(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.add."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-  )
-
-
-def materialize_sub(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.sub."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-  )
-
-
-def materialize_mul(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.mul."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-  )
-
-
-def materialize_softmax_and_logistic(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.softmax and tfl.logistic."""
-  # Hard code scales and zp values as they are hard coded in TFL kernels.
-  # Softmax:
-  #   https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/kernels/activations.cc#L548
-  # Logistic:
-  #   https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/kernels/activations.cc#L421
-  output_activation_constraints = {
-      8: qtyping.UniformQuantParams(
-          num_bits=8,
-          quantized_dimension=None,
-          scale=np.array(1.0 / 256),
-          zero_point=np.array(-128),
-          symmetric=False,
-      ),
-      16: qtyping.UniformQuantParams(
-          num_bits=16,
-          quantized_dimension=None,
-          scale=np.array(1.0 / 32768),
-          zero_point=np.array(0),
-      ),
-  }
-
-  return utils.materialize_op_with_output_activation_constraint(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      output_activation_constraints,
-  )
-
-
-def materialize_batch_matmul(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.batch_matmul."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-  )
-
-
-def materialize_embedding_lookup(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.embedding_lookup."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      inputs_to_ignore=[0],  # Lookup index does not need to be quantized.
-  )
-
-
-def materialize_reshape(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.reshape."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
-      inputs_to_ignore=[1],  # Shape tensor does not need to be quantized.
-  )
-
-
-def materialize_average_pool_2d(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.average_pool_2d."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
-  )
-
-
-def _materialize_bias_for_conv_ops(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    op_tensor_params: list[qtyping.TensorTransformationParams],
-    op_input_index: int = 0,
-    op_weight_index: int = 1,
-    op_bias_index: int = 2,
-):
-  """Materializes bias tensors in conv ops by updating `op_tensor_params`.
-
-  Args:
-    op_info: Aggregated information about the op (e.g., quantization config).
-    graph_info: Graph information needed to perform quantization for the op.
-    op_tensor_params: Partially populated quantization configuration for the
-      tensors associated with the op in the order of input, weight, output.
-    op_input_index: Index for the input tensor in the op.
-    op_weight_index: Index for the weight tensor in the op.
-    op_bias_index: Index for the bias tensor in the op.
-  """
-  _, _, bias_tensor, _ = tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
-      op_info.op,
-      graph_info.subgraph_tensors,
-      op_input_index,
-      op_weight_index,
-      op_bias_index,
-  )
-  if bias_tensor is not None:
-    bias_quant_params = None
-    # Fused bias needs to be quantized for SRQ.
-    # Check if SRQ.
+) -> qtyping.QSV:
+  """Initialize the min/max for a tensor."""
+  if tensor_data is None:
+    return {}
+  else:
+    quantized_dim = None
     if (
-        op_info.op_quant_config.compute_precision == _ComputePrecision.INTEGER
-        and op_info.op_quant_config.activation_tensor_config is not None
+        op_info.op_quant_config.weight_tensor_config is not None
+        and op_info.op_quant_config.weight_tensor_config.granularity
+        == qtyping.QuantGranularity.BLOCKWISE
     ):
-      bias_content = tfl_flatbuffer_utils.get_tensor_data(
-          bias_tensor,
-          graph_info.buffers,
+      # TODO(b/346612503): emulate subchannel only supports fully connected,
+      # will skip special handling. Once we have a spec, we can change this.
+      block_size = op_info.op_quant_config.weight_tensor_config.block_size
+      # assuming tensor is 2D, which is correct for FULLY_CONNECTED
+      transposed_tensor_data = np.transpose(tensor_data, (1, 0))
+      if transposed_tensor_data.shape[0] % block_size:
+        raise ValueError(
+            f"Block size {block_size} does not divide channel dimension"
+            f" {transposed_tensor_data.shape[0]}."
+        )
+      reshaped_tensor_data = np.reshape(
+          transposed_tensor_data,
+          (
+              1,
+              int(transposed_tensor_data.shape[0] / block_size),
+              block_size,
+              transposed_tensor_data.shape[1],
+          ),
       )
-      bias_quant_params = (
-          uniform_quantize_tensor.symmetric_quantize_bias_tensor(
-              bias_content,
-              op_tensor_params[op_input_index].consumers[0].parameters,
-              op_tensor_params[op_weight_index].consumers[0].parameters,
-          )
-      )
-    # We only quantize bias under SRQ. Setting is_constant=True for SRQ only
-    # to avoid quantize bias for DRQ and weight-only cases.
-    is_constant = (
-        # Check if SRQ.
-        op_info.op_quant_config.compute_precision == _ComputePrecision.INTEGER
-        and op_info.op_quant_config.activation_tensor_config is not None
+      return {
+          "min": np.min(reshaped_tensor_data, axis=(0, 1, 2), keepdims=True),
+          "max": np.max(reshaped_tensor_data, axis=(0, 1, 2), keepdims=True),
+      }
+    if (
+        op_info.op_quant_config.weight_tensor_config is not None
+        and op_info.op_quant_config.weight_tensor_config.granularity
+        == qtyping.QuantGranularity.CHANNELWISE
+    ):
+      if op_info.op_name == _TFLOpName.BATCH_MATMUL:
+        quantized_dim = common_utils.get_bmm_weight_quantized_dim(
+            tensor_data, adj_y=op_info.op.builtinOptions.adjY
+        )
+      else:
+        quantized_dim = tfl_flatbuffer_utils.TFL_OP_TO_WEIGHT_QUANTIZED_DIM.get(
+            op_info.op_name, None
+        )
+    reduce_dims = common_utils.get_reduce_dims(
+        quantized_dim, list(tensor_data.shape)
     )
-    op_tensor_params[op_bias_index] = utils.get_tensor_transformation_params(
-        tfl_flatbuffer_utils.get_tensor_name(bias_tensor),
-        op_info,
-        is_inbounding_tensor=True,
-        quant_params=bias_quant_params,
-        is_constant=is_constant,
-    )
+    return {
+        "min": np.min(tensor_data, axis=reduce_dims, keepdims=True),
+        "max": np.max(tensor_data, axis=reduce_dims, keepdims=True),
+    }
 
 
-def _are_weights_too_small(
+def get_tensor_quant_params(
     op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    weight_index: int,
-) -> bool:
-  """Checks if weights are too small to be quantized."""
-  tensor = graph_info.subgraph_tensors[op_info.op.inputs[weight_index]]
-  tensor_data = tfl_flatbuffer_utils.get_tensor_data(
-      tensor,
-      graph_info.buffers,
-  )
-  return (
-      tensor_data is not None
-      and np.size(tensor_data) < op_info.op_quant_config.min_weight_elements
-  )
-
-
-def materialize_slice(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.slice."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
-      inputs_to_ignore=[
-          1,
-          2,
-      ],  # Begin and size indices do not need to be quantized.
-  )
-
-
-def materialize_select_v2(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.select_v2."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
-      inputs_to_ignore=[
-          0,
-      ],  # Condition tensor does not need to be quantized.
-  )
-
-
-def materialize_sum(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.sum."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
-      inputs_to_ignore=[1],  # Axis index does not need to be quantized.
-  )
-
-
-def materialize_fc_conv(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-    input_index: int = 0,
-    weight_index: int = 1,
-    bias_index: int = 2,
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in fully_connected, conv_2d and depthwise_conv_2d.
+    tensor_quant_config: qtyping.TensorQuantizationConfig,
+    tensor_content: Optional[np.ndarray] = None,
+    tensor_qsv: Optional[dict[str, Any]] = None,
+) -> qtyping.UniformQuantParams:
+  """Get the quantization parameters for a tensor.
 
   Args:
     op_info: Aggregated information about the op (e.g., quantization config).
-    graph_info: Graph information needed to perform quantization for the op.
-    tensor_name_to_qsv: A map of tensor name to quantization parameters.
-    input_index: Index for the input tensor in the op.
-    weight_index: Index for the weight tensor in the op.
-    bias_index: Index for the bias tensor in the op.
+    tensor_quant_config: The quantization config for the tensor.
+    tensor_content: The content of the tensor.
+    tensor_qsv: A dictionary containingthe min/max of the tensor.
 
   Returns:
-    Quantization configuration for the tensors associated with the op (e.g.,
-    weights, bias).
+    The quantization parameters for the tensor.
   """
-  ignored_inputs = [bias_index]  # Bias tensor is quantized separately.
-  if _are_weights_too_small(op_info, graph_info, weight_index):
-    ignored_inputs.append(weight_index)
+  # Get quant params.
+  if tensor_qsv is None:
+    if tensor_content is not None:
+      # We need min/max to calculate quantization parameters, which
+      # should be collected during the calibration process. However,
+      # weight-only and DRQ do not require calibration, thus it is
+      # possible that this information is missing here. In that case we
+      # collect min/max on the spot.
+      tensor_min_max = _init_tensor_min_max(
+          tensor_content,
+          op_info,
+      )
+    else:
+      raise ValueError(
+          f"{op_info.op_name}(index: {op_info.subgraph_op_index}) not found in"
+          " tensor_name_to_qsv. Check if the correct calibration results are"
+          " passed into the ParamsGenerator."
+      )
+  else:
+    tensor_min_max = tensor_qsv
 
-  op_tensor_params = utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      inputs_to_ignore=ignored_inputs,
-  )
-
-  _materialize_bias_for_conv_ops(
-      op_info,
-      graph_info,
-      op_tensor_params,
-      op_input_index=input_index,
-      op_weight_index=weight_index,
-      op_bias_index=bias_index,
-  )
-
-  return op_tensor_params
-
-
-def materialize_conv2d_transpose(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.conv2d_transpose.
-
-  Args:
-    op_info: Aggregated information about the op (e.g., quantization config).
-    graph_info: Graph information needed to perform quantization for the op.
-    tensor_name_to_qsv: A map of tensor name to quantization parameters.
-
-  Returns:
-    Quantization configuration for the tensors associated with the op (e.g.,
-    weights, bias).
-  """
-  ignored_shape_index = 0
-  weight_index = 1
-  input_index = 2
-  bias_index = 3
-
-  ignored_inputs = [
-      ignored_shape_index,
-      bias_index,  # Bias tensor is quantized separately.
-  ]
-  if _are_weights_too_small(op_info, graph_info, weight_index):
-    ignored_inputs.append(weight_index)
-
-  op_tensor_params = utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      inputs_to_ignore=ignored_inputs,
-  )
-  if len(op_tensor_params) < 2:
+  if "min" not in tensor_min_max or "max" not in tensor_min_max:
     raise ValueError(
-        "Materialize standard op should return at least two tensors for"
-        " conv2d_transpose."
+        "min and max must be provided to produce tensor quantization"
+        " parameters. Check if the correct calibration results are passed into"
+        " the ParamsGenerator."
     )
-  _materialize_bias_for_conv_ops(
-      op_info,
-      graph_info,
-      op_tensor_params,
-      op_input_index=input_index,
-      op_weight_index=weight_index,
-      op_bias_index=bias_index,
+  zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
+      tensor_min_max["min"],
+      tensor_min_max["max"],
+      tensor_quant_config.num_bits,
+      tensor_quant_config.symmetric,
   )
-
-  return op_tensor_params
-
-
-def materialize_tanh(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.tanh."""
-  # Hard code scales and zero point values as they are hard coded in:
-  # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/mlir/lite/ir/tfl_ops.td#L3430
-  output_activation_constraints = {}
-  for num_bits in [8, 16]:
-    output_activation_constraints[num_bits] = qtyping.UniformQuantParams(
-        num_bits=num_bits,
-        quantized_dimension=None,
-        scale=np.array(1.0 / (1 << (num_bits - 1))),
-        zero_point=np.array(0),
-        # Activation is always asymmetric for 8 bit and symmetric for 16 bits.
-        symmetric=num_bits == 16,
+  quantized_dim = None
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.CHANNELWISE:
+    if op_info.op_name == _TFLOpName.BATCH_MATMUL:
+      quantized_dim = common_utils.get_bmm_weight_quantized_dim(
+          tensor_content, adj_y=op_info.op.builtinOptions.adjY
+      )
+    else:
+      quantized_dim = tfl_flatbuffer_utils.TFL_OP_TO_WEIGHT_QUANTIZED_DIM[
+          op_info.op_name
+      ]
+  quant_params = qtyping.UniformQuantParams(
+      scale=scale,
+      zero_point=zp,
+      num_bits=tensor_quant_config.num_bits,
+      symmetric=tensor_quant_config.symmetric,
+      quantized_dimension=quantized_dim,
+  )
+  if tensor_content is None:
+    return quant_params
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
+    quantized_vars = (
+        uniform_quantize_tensor.uniform_quantize_for_emulated_subchannel(
+            tensor_content, quant_params, tensor_quant_config.block_size
+        )
     )
-  return utils.materialize_op_with_output_activation_constraint(
-      op_info, graph_info, tensor_name_to_qsv, output_activation_constraints
-  )
-
-
-def materialize_transpose(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.transpose."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
-      inputs_to_ignore=[1],  # Permutation tensor does not need to be quantized.
-  )
-
-
-def materialize_gelu(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.gelu."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-  )
-
-
-def materialize_strided_slice(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.strided_slice."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
-      inputs_to_ignore=[1, 2, 3],  # Ignore the begin, end, and strides tensors.
-  )
-
-
-def materialize_mean(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.mean."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      inputs_to_ignore=[1],  # Axis tensor does not need to be quantized.
-  )
-
-
-def materialize_rsqrt(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.rsqrt."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-  )
-
-
-def materialize_concatenation(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.concatenation."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
-  )
-
-
-def materialize_split(
-    op_info: qtyping.OpInfo,
-    graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
-  """Materialize tensors in tfl.split."""
-  return utils.materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
-      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
-      inputs_to_ignore=[0],  # Split dimension does not need to be quantized.
+  else:
+    quantized_vars = uniform_quantize_tensor.uniform_quantize(
+        tensor_content, quant_params
+    )
+  # Update with quantized values.
+  return qtyping.UniformQuantParams(
+      scale=scale,
+      zero_point=zp,
+      num_bits=tensor_quant_config.num_bits,
+      symmetric=tensor_quant_config.symmetric,
+      quantized_dimension=quantized_dim,
+      quantized_data=quantized_vars,
   )
 
 
@@ -601,18 +203,22 @@ def init_qsvs(
     if tensor_idx != -1 and i not in inputs_to_ignore:
       tensor = graph_info.subgraph_tensors[tensor_idx]
       tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
-      op_qsvs[tensor_name] = utils.init_tensor_min_max(
-          tensor,
-          graph_info,
+      tensor_data = tfl_flatbuffer_utils.get_tensor_data(
+          tensor, graph_info.buffers
+      )
+      op_qsvs[tensor_name] = _init_tensor_min_max(
+          tensor_data,
           op_info,
       )
   for i, tensor_idx in enumerate(op_info.op.outputs):
     if tensor_idx != -1 and i not in outputs_to_ignore:
       tensor = graph_info.subgraph_tensors[tensor_idx]
       tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
-      op_qsvs[tensor_name] = utils.init_tensor_min_max(
-          tensor,
-          graph_info,
+      tensor_data = tfl_flatbuffer_utils.get_tensor_data(
+          tensor, graph_info.buffers
+      )
+      op_qsvs[tensor_name] = _init_tensor_min_max(
+          tensor_data,
           op_info,
       )
   return op_qsvs

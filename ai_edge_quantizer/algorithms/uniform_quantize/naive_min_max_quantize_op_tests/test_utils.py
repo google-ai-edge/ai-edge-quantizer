@@ -23,6 +23,7 @@ from absl.testing import parameterized
 import numpy as np
 
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -241,7 +242,10 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         num_outputs=num_outputs,
     )
     tensor_quant_params = materialization_func(
-        op_info, graph_info, self._tensor_name_to_qsv
+        naive_min_max_quantize.get_tensor_quant_params,
+        op_info,
+        graph_info,
+        self._tensor_name_to_qsv,
     )
     self.assertLen(tensor_quant_params, num_inputs + num_outputs)
 
@@ -327,7 +331,10 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         op_test_info=op_test_info,
     )
     tensor_quant_params = materialization_func(
-        op_info, graph_info, self._tensor_name_to_qsv
+        naive_min_max_quantize.get_tensor_quant_params,
+        op_info,
+        graph_info,
+        self._tensor_name_to_qsv,
     )
 
     _, weight_tensor, bias_tensor, _ = (
@@ -635,7 +642,10 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         ),
     )
     _, weight_quant_params, *_ = materialization_func(
-        op_info, graph_info, self._tensor_name_to_qsv
+        naive_min_max_quantize.get_tensor_quant_params,
+        op_info,
+        graph_info,
+        self._tensor_name_to_qsv,
     )
     self.assertEqual(
         weight_quant_params.tensor_name, op_test_info.op_tensor_names["weight"]

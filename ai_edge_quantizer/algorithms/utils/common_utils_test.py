@@ -18,7 +18,7 @@ from absl.testing import parameterized
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
-from ai_edge_quantizer.algorithms.utils import min_max_quantize_utils
+from ai_edge_quantizer.algorithms.utils import common_utils
 
 _ComputePrecision = qtyping.ComputePrecision
 _QuantTransformation = qtyping.QuantTransformation
@@ -52,7 +52,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision=compute_precision,
         explicit_dequantize=explicit_dequantize,
     )
-    transformations = min_max_quantize_utils.get_tensor_transformations(
+    transformations = common_utils.get_tensor_transformations(
         op_quant_config, is_inbounding_tensor, is_constant
     )
     # Check if WEIGHT_ONLY.
@@ -120,7 +120,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_if_valid_op_config(
+      common_utils.check_if_valid_op_config(
           op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
       )
 
@@ -146,7 +146,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         ),
         compute_precision=_ComputePrecision.INTEGER,  # DRQ.
     )
-    min_max_quantize_utils.check_if_valid_op_config(
+    common_utils.check_if_valid_op_config(
         op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
     )
 
@@ -166,7 +166,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_if_valid_op_config(
+      common_utils.check_if_valid_op_config(
           op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
       )
 
@@ -186,7 +186,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_if_valid_op_config(
+      common_utils.check_if_valid_op_config(
           op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
       )
 
@@ -207,7 +207,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_if_valid_op_config(
+      common_utils.check_if_valid_op_config(
           op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
       )
 
@@ -220,7 +220,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision=_ComputePrecision.INTEGER,  # DRQ.
         min_weight_elements=100,
     )
-    min_max_quantize_utils.check_if_valid_op_config(
+    common_utils.check_if_valid_op_config(
         _TFLOpName.CONV_2D, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
     )
 
@@ -255,7 +255,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         ),
         compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
-    min_max_quantize_utils.check_if_valid_op_config(
+    common_utils.check_if_valid_op_config(
         op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
     )
 
@@ -275,7 +275,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_if_valid_op_config(
+      common_utils.check_if_valid_op_config(
           _TFLOpName.CUSTOM_OP, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
       )
 
@@ -297,7 +297,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_if_valid_op_config(
+      common_utils.check_if_valid_op_config(
           _TFLOpName.FULLY_CONNECTED,
           op_quant_config,
           _DEFAULT_CONFIG_CHECK_POLICY,
@@ -321,7 +321,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_if_valid_op_config(
+      common_utils.check_if_valid_op_config(
           _TFLOpName.FULLY_CONNECTED,
           op_quant_config,
           _DEFAULT_CONFIG_CHECK_POLICY,
@@ -345,7 +345,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_if_valid_op_config(
+      common_utils.check_if_valid_op_config(
           _TFLOpName.FULLY_CONNECTED,
           op_quant_config,
           _DEFAULT_CONFIG_CHECK_POLICY,
@@ -368,7 +368,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      min_max_quantize_utils.check_if_valid_op_config(
+      common_utils.check_if_valid_op_config(
           _TFLOpName.FULLY_CONNECTED,
           op_quant_config,
           _DEFAULT_CONFIG_CHECK_POLICY,
@@ -425,7 +425,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision == _ComputePrecision.INTEGER
         and op_quant_config.activation_tensor_config is None
     ):
-      min_max_quantize_utils.check_if_valid_op_config(
+      common_utils.check_if_valid_op_config(
           op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
       )
     # Check if WEIGHT_ONLY.
@@ -439,7 +439,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision == _ComputePrecision.INTEGER
         and op_quant_config.activation_tensor_config is not None
     ):
-      min_max_quantize_utils.check_if_valid_op_config(
+      common_utils.check_if_valid_op_config(
           op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
       )
 
@@ -477,11 +477,11 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
 
     with self.assertRaises(ValueError):
       if is_drq:
-        min_max_quantize_utils.check_if_valid_op_config(
+        common_utils.check_if_valid_op_config(
             op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
         )
       elif not is_drq:
-        min_max_quantize_utils.check_if_valid_op_config(
+        common_utils.check_if_valid_op_config(
             op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
         )
 
@@ -500,11 +500,12 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     with self.assertRaisesRegex(
         ValueError, "only supports ops with a single output tensor"
     ):
-      min_max_quantize_utils.materialize_op_with_output_activation_constraint(
+      common_utils.materialize_op_with_output_activation_constraint(
           op_info=mock_op_info,
           graph_info=qtyping.GraphInfo([], []),
           tensor_name_to_qsv={},
           output_activation_constraints={},
+          get_tensor_quant_params_fn=lambda *args: [],
       )
 
 

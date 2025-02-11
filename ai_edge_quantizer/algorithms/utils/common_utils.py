@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Utils for min/max based quantization."""
+"""Common utils for uniform quantization algorithms."""
 
 from collections.abc import Sequence
 import dataclasses
@@ -29,7 +29,8 @@ _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation
 _IntType = uniform_quantize_tensor.IntType
 
-_SUPPORTED_WEIGHT_ONLY_OPS = frozenset([
+
+_DRQ_OR_WEIGHT_ONLY_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
     _TFLOpName.CONV_2D,
     _TFLOpName.BATCH_MATMUL,
@@ -38,14 +39,6 @@ _SUPPORTED_WEIGHT_ONLY_OPS = frozenset([
     _TFLOpName.CONV_2D_TRANSPOSE,
 ])
 
-_SUPPORTED_DRQ_OPS = frozenset([
-    _TFLOpName.FULLY_CONNECTED,
-    _TFLOpName.CONV_2D,
-    _TFLOpName.BATCH_MATMUL,
-    _TFLOpName.EMBEDDING_LOOKUP,
-    _TFLOpName.DEPTHWISE_CONV_2D,
-    _TFLOpName.CONV_2D_TRANSPOSE,
-])
 _SUPPORTED_SUBCHANNEL_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
 ])
@@ -139,73 +132,13 @@ class OpQuantConstraint(enum.Enum):
   SAME_AS_OUTPUT_SCALE = 2
 
 
-def init_tensor_min_max(
-    tensor: Any,
-    graph_info: qtyping.GraphInfo,
-    op_info: qtyping.OpInfo,
-):
-  """Initialize the min/max for a tensor."""
-  tensor_data = tfl_flatbuffer_utils.get_tensor_data(tensor, graph_info.buffers)
-  # Initial values for non-constant tensors.
-  if tensor_data is None:
-    return {}
-  # Real min/max for constant tensors.
-  else:
-    quantized_dim = None
-    if (
-        op_info.op_quant_config.weight_tensor_config is not None
-        and op_info.op_quant_config.weight_tensor_config.granularity
-        == qtyping.QuantGranularity.BLOCKWISE
-    ):
-      # TODO(b/346612503): emulate subchannel only supports fully connected,
-      # will skip special handling. Once we have a spec, we can change this.
-      block_size = op_info.op_quant_config.weight_tensor_config.block_size
-      # assuming tensor is 2D, which is correct for FULLY_CONNECTED
-      transposed_tensor_data = np.transpose(tensor_data, (1, 0))
-      if transposed_tensor_data.shape[0] % block_size:
-        raise ValueError(
-            f"Block size {block_size} does not divide channel dimension"
-            f" {transposed_tensor_data.shape[0]}."
-        )
-      reshaped_tensor_data = np.reshape(
-          transposed_tensor_data,
-          (
-              1,
-              int(transposed_tensor_data.shape[0] / block_size),
-              block_size,
-              transposed_tensor_data.shape[1],
-          ),
-      )
-      return {
-          "min": np.min(reshaped_tensor_data, axis=(0, 1, 2), keepdims=True),
-          "max": np.max(reshaped_tensor_data, axis=(0, 1, 2), keepdims=True),
-      }
-    if (
-        op_info.op_quant_config.weight_tensor_config is not None
-        and op_info.op_quant_config.weight_tensor_config.granularity
-        == qtyping.QuantGranularity.CHANNELWISE
-    ):
-      if op_info.op_name == _TFLOpName.BATCH_MATMUL:
-        quantized_dim = _get_bmm_weight_quantized_dim(
-            tensor_data, adj_y=op_info.op.builtinOptions.adjY
-        )
-      else:
-        quantized_dim = tfl_flatbuffer_utils.TFL_OP_TO_WEIGHT_QUANTIZED_DIM.get(
-            op_info.op_name, None
-        )
-    reduce_dims = _get_reduce_dims(quantized_dim, tensor.shape)
-    return {
-        "min": np.min(tensor_data, axis=reduce_dims, keepdims=True),
-        "max": np.max(tensor_data, axis=reduce_dims, keepdims=True),
-    }
-
-
 def _get_tensor_transformation_params_wrapper(
     tensor: Any,
     is_inbounding_tensor: bool,
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
     quant_params=None,
 ) -> qtyping.TensorTransformationParams:
   """Util to get tensor transformation params.
@@ -216,6 +149,8 @@ def _get_tensor_transformation_params_wrapper(
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    get_tensor_quant_params_fn: Function to get quantization parameters for the
+      tensor.
     quant_params: Quantization parameters for the tensor.
 
   Returns:
@@ -229,37 +164,15 @@ def _get_tensor_transformation_params_wrapper(
   tensor_quant_config = op_info.op_quant_config.activation_tensor_config
   is_constant = tensor_data is not None
   # Use weight configuration if it is supported.
-  if is_constant and op_info.op_name in frozenset.union(
-      _SUPPORTED_WEIGHT_ONLY_OPS, _SUPPORTED_DRQ_OPS
-  ):
+  if is_constant and op_info.op_name in _DRQ_OR_WEIGHT_ONLY_OPS:
     tensor_quant_config = op_info.op_quant_config.weight_tensor_config
   # Get quant params.
   if quant_params is None and tensor_quant_config is not None:
-    if tensor_name not in tensor_name_to_qsv:
-      if is_constant:
-        # We need min/max to calculate quantization parameters, which
-        # should be collected during the calibration process. However,
-        # weight-only and DRQ do not require calibration, thus it is
-        # possible that this information is missing here. In that case we
-        # collect min/max on the spot.
-        tensor_min_max = init_tensor_min_max(
-            tensor,
-            graph_info,
-            op_info,
-        )
-      else:
-        raise ValueError(
-            f"Tensor {tensor_name} not found in tensor_name_to_qsv. Check"
-            " if the correct calibration results are passed into the"
-            " ParamsGenerator."
-        )
-    else:
-      tensor_min_max = tensor_name_to_qsv[tensor_name]
-    quant_params = _get_tensor_quant_params(
+    quant_params = get_tensor_quant_params_fn(
         op_info,
-        tensor_min_max,
         tensor_quant_config,
-        tensor_content=tensor_data,
+        tensor_data,
+        tensor_name_to_qsv.get(tensor_name),
     )
   return get_tensor_transformation_params(
       tensor_name,
@@ -277,6 +190,7 @@ def _materialize_op_tensors(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
     quant_params=None,
 ) -> None:
   """Util to materialize op tensors. Appends the results to op_tensor_params.
@@ -289,6 +203,8 @@ def _materialize_op_tensors(
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    get_tensor_quant_params_fn: Function to get quantization parameters for the
+      tensor.
     quant_params: Quantization parameters for the tensor.
   """
   for tensor in op_tensors:
@@ -298,7 +214,8 @@ def _materialize_op_tensors(
         op_info,
         graph_info,
         tensor_name_to_qsv,
-        quant_params,
+        get_tensor_quant_params_fn=get_tensor_quant_params_fn,
+        quant_params=quant_params,
     )
     op_tensor_params.append(tensor_params)
 
@@ -309,6 +226,7 @@ def _get_single_tensor_params(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
 ) -> qtyping.TensorTransformationParams:
   """Util to get single tensor params.
 
@@ -318,6 +236,8 @@ def _get_single_tensor_params(
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    get_tensor_quant_params_fn: Function to get quantization parameters for the
+      tensor.
 
   Returns:
     Transformation parameters for the tensor.
@@ -336,6 +256,7 @@ def _get_single_tensor_params(
       op_info,
       graph_info,
       tensor_name_to_qsv,
+      get_tensor_quant_params_fn=get_tensor_quant_params_fn,
   )
 
 
@@ -345,6 +266,7 @@ def _materialize_standard_op_with_same_as_input_scale(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize tensors in an op with same as input scale constraint.
 
@@ -354,6 +276,8 @@ def _materialize_standard_op_with_same_as_input_scale(
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    get_tensor_quant_params_fn: Function to get quantization parameters for the
+      tensor.
 
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
@@ -367,6 +291,7 @@ def _materialize_standard_op_with_same_as_input_scale(
       op_info=op_info,
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
+      get_tensor_quant_params_fn=get_tensor_quant_params_fn,
   )
   op_tensor_params.append(input_tensor_params)
   # Use input quantization params for all output tensors.
@@ -377,6 +302,7 @@ def _materialize_standard_op_with_same_as_input_scale(
       op_info=op_info,
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
+      get_tensor_quant_params_fn=get_tensor_quant_params_fn,
       quant_params=input_tensor_params.consumers[0].parameters,
   )
   # Change output qsv to be the same as input qsv. This is safe since TFL
@@ -396,6 +322,7 @@ def _materialize_standard_op_with_same_as_output_scale(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize tensors in an op with same as output scale constraint.
 
@@ -405,6 +332,8 @@ def _materialize_standard_op_with_same_as_output_scale(
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    get_tensor_quant_params_fn: Function to get quantization parameters for the
+      tensor.
 
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
@@ -418,6 +347,7 @@ def _materialize_standard_op_with_same_as_output_scale(
       op_info=op_info,
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
+      get_tensor_quant_params_fn=get_tensor_quant_params_fn,
   )
   # Use output quantization params for all input tensors.
   if output_tensor_params.producer is None:
@@ -431,6 +361,7 @@ def _materialize_standard_op_with_same_as_output_scale(
       op_info=op_info,
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
+      get_tensor_quant_params_fn=get_tensor_quant_params_fn,
       quant_params=quant_params,
   )
   op_tensor_params.append(output_tensor_params)
@@ -444,6 +375,7 @@ def _materialize_standard_op_no_constraint(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize tensors in an op with no constraint.
 
@@ -453,6 +385,8 @@ def _materialize_standard_op_no_constraint(
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    get_tensor_quant_params_fn: Function to get quantization parameters for the
+      tensor.
 
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
@@ -466,6 +400,7 @@ def _materialize_standard_op_no_constraint(
       op_info=op_info,
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
+      get_tensor_quant_params_fn=get_tensor_quant_params_fn,
   )
   _materialize_op_tensors(
       op_tensor_params,
@@ -474,6 +409,7 @@ def _materialize_standard_op_no_constraint(
       op_info=op_info,
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
+      get_tensor_quant_params_fn=get_tensor_quant_params_fn,
   )
 
   return op_tensor_params
@@ -696,6 +632,7 @@ def materialize_standard_op(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
     constraint: OpQuantConstraint = OpQuantConstraint.NO_CONSTRAIN,
     inputs_to_ignore: Optional[Sequence[int]] = None,
     outputs_to_ignore: Optional[Sequence[int]] = None,
@@ -709,6 +646,8 @@ def materialize_standard_op(
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    get_tensor_quant_params_fn: Function to get quantization parameters for the
+      tensor.
     constraint: The constraint for materializing the op.
     inputs_to_ignore: Input tensor indices to ignore.
     outputs_to_ignore: Output tensor indices to ignore.
@@ -747,15 +686,30 @@ def materialize_standard_op(
     tensor_params = []  # Every tensor is ignored.
   elif constraint == OpQuantConstraint.SAME_AS_INPUT_SCALE:
     tensor_params = _materialize_standard_op_with_same_as_input_scale(
-        input_tensors, output_tensors, op_info, graph_info, tensor_name_to_qsv
+        input_tensors,
+        output_tensors,
+        op_info,
+        graph_info,
+        tensor_name_to_qsv,
+        get_tensor_quant_params_fn,
     )
   elif constraint == OpQuantConstraint.SAME_AS_OUTPUT_SCALE:
     tensor_params = _materialize_standard_op_with_same_as_output_scale(
-        input_tensors, output_tensors, op_info, graph_info, tensor_name_to_qsv
+        input_tensors,
+        output_tensors,
+        op_info,
+        graph_info,
+        tensor_name_to_qsv,
+        get_tensor_quant_params_fn,
     )
   else:
     tensor_params = _materialize_standard_op_no_constraint(
-        input_tensors, output_tensors, op_info, graph_info, tensor_name_to_qsv
+        input_tensors,
+        output_tensors,
+        op_info,
+        graph_info,
+        tensor_name_to_qsv,
+        get_tensor_quant_params_fn,
     )
 
   # Materialize ignored tensors.
@@ -781,6 +735,7 @@ def materialize_op_with_output_activation_constraint(
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
     output_activation_constraints: dict[int, qtyping.UniformQuantParams],
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize tensors in an op with output activation constraint.
 
@@ -795,6 +750,8 @@ def materialize_op_with_output_activation_constraint(
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
     output_activation_constraints: A map of output activation num bits to
       quantization parameters.
+    get_tensor_quant_params_fn: Function to get quantization parameters for the
+      tensor.
 
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
@@ -812,9 +769,7 @@ def materialize_op_with_output_activation_constraint(
     )
 
   tensor_params = materialize_standard_op(
-      op_info,
-      graph_info,
-      tensor_name_to_qsv,
+      op_info, graph_info, tensor_name_to_qsv, get_tensor_quant_params_fn
   )
   output_tensor_params = tensor_params[-1]
 
@@ -951,76 +906,7 @@ def get_tensor_transformation_params(
   )
 
 
-def _get_tensor_quant_params(
-    op_info: qtyping.OpInfo,
-    tensor_min_max: dict[str, Any],
-    tensor_quant_config: qtyping.TensorQuantizationConfig,
-    tensor_content: Optional[np.ndarray] = None,
-) -> qtyping.UniformQuantParams:
-  """Get the quantization parameters for a tensor.
-
-  Args:
-    op_info: aggregated information about the op (e.g., quantization config).
-    tensor_min_max: the min/max of the tensor.
-    tensor_quant_config: the quantization config for the tensor.
-    tensor_content: the content of the tensor.
-
-  Returns:
-    The quantization parameters for the tensor.
-  """
-  if "min" not in tensor_min_max or "max" not in tensor_min_max:
-    raise ValueError(
-        "min and max must be provided to produce tensor quantization"
-        " parameters. Check if the correct calibration results are passed into"
-        " the ParamsGenerator."
-    )
-  zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
-      tensor_min_max["min"],
-      tensor_min_max["max"],
-      tensor_quant_config.num_bits,
-      tensor_quant_config.symmetric,
-  )
-  quantized_dim = None
-  if tensor_quant_config.granularity == qtyping.QuantGranularity.CHANNELWISE:
-    if op_info.op_name == _TFLOpName.BATCH_MATMUL:
-      quantized_dim = _get_bmm_weight_quantized_dim(
-          tensor_content, adj_y=op_info.op.builtinOptions.adjY
-      )
-    else:
-      quantized_dim = tfl_flatbuffer_utils.TFL_OP_TO_WEIGHT_QUANTIZED_DIM[
-          op_info.op_name
-      ]
-  quant_params = qtyping.UniformQuantParams(
-      scale=scale,
-      zero_point=zp,
-      num_bits=tensor_quant_config.num_bits,
-      symmetric=tensor_quant_config.symmetric,
-      quantized_dimension=quantized_dim,
-  )
-  if tensor_content is None:
-    return quant_params
-  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
-    quantized_vars = (
-        uniform_quantize_tensor.uniform_quantize_for_emulated_subchannel(
-            tensor_content, quant_params, tensor_quant_config.block_size
-        )
-    )
-  else:
-    quantized_vars = uniform_quantize_tensor.uniform_quantize(
-        tensor_content, quant_params
-    )
-  # Update with quantized values.
-  return qtyping.UniformQuantParams(
-      scale=scale,
-      zero_point=zp,
-      num_bits=tensor_quant_config.num_bits,
-      symmetric=tensor_quant_config.symmetric,
-      quantized_dimension=quantized_dim,
-      quantized_data=quantized_vars,
-  )
-
-
-def _get_reduce_dims(
+def get_reduce_dims(
     quantized_dim: Optional[int],
     tensor_shape: list[int],
 ) -> Optional[tuple[int, ...]]:
@@ -1034,7 +920,7 @@ def _get_reduce_dims(
   return tuple(reduce_dims)
 
 
-def _get_bmm_weight_quantized_dim(
+def get_bmm_weight_quantized_dim(
     weight_tensor_data: np.ndarray, adj_y: bool
 ) -> int:
   """Get the quantized dimension for batch matmul."""

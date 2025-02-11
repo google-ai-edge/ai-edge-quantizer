@@ -20,7 +20,7 @@ import numpy as np
 
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
-from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
+from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize.naive_min_max_quantize_op_tests import test_utils as naive_min_max_test_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
@@ -116,7 +116,7 @@ class Conv2DTransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         op_info,
         self._graph_info,
         self._op_test_info,
-        naive_min_max_quantize.materialize_conv2d_transpose,
+        common_quantize.materialize_conv2d_transpose,
         bias_quantized_dim=None,
         input_index=2,
         weight_index=1,
@@ -164,7 +164,7 @@ class Conv2DTransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         op_info,
         self._graph_info,
         self._op_test_info,
-        naive_min_max_quantize.materialize_conv2d_transpose,
+        common_quantize.materialize_conv2d_transpose,
         bias_quantized_dim=None,
         input_index=2,
         weight_index=1,
@@ -198,7 +198,7 @@ class Conv2DTransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         min_weight_elements=min_weight_elements,
         graph_info=self._graph_info,
         op_test_info=self._op_test_info,
-        materialization_func=naive_min_max_quantize.materialize_conv2d_transpose,
+        materialization_func=common_quantize.materialize_conv2d_transpose,
         expect_weights_quantized=expect_weights_quantized,
     )
 

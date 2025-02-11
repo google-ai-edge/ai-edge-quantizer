@@ -20,7 +20,7 @@ import numpy as np
 
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
-from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
+from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize.naive_min_max_quantize_op_tests import test_utils as naive_min_max_test_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
@@ -95,7 +95,7 @@ class SumTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         op_info,
         self._graph_info,
         self._op_test_info,
-        naive_min_max_quantize.materialize_sum,
+        common_quantize.materialize_sum,
         same_input_output_params=True,
         inputs_to_ignore=[1],  # Ignore axis tensor.
     )

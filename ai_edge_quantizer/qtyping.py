@@ -20,7 +20,7 @@ from collections.abc import MutableMapping
 import copy
 import dataclasses
 import enum
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Callable
 
 import numpy as np
 from typing_extensions import TypeAlias
@@ -485,3 +485,14 @@ class IOOperator:
   inputs: list[int]
   outputs: list[int]
   op_key: TFLOperationName
+
+# The function signature for `get_tensor_quant_params_fn`.
+GetTensorQuantParamsFuncSignature = Callable[
+    [
+        OpInfo,  # op_info
+        TensorQuantizationConfig,  # tensor_quant_config
+        Optional[np.ndarray],  # tensor_data
+        Optional[dict[str, Any]],  # tensor qsv
+    ],
+    UniformQuantParams,
+]

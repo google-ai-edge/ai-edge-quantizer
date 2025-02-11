@@ -20,7 +20,7 @@ import numpy as np
 
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
-from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
+from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize.naive_min_max_quantize_op_tests import test_utils as naive_min_max_test_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
@@ -113,7 +113,7 @@ class DepthwiseConv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         op_info,
         self._graph_info,
         self._op_test_info,
-        naive_min_max_quantize.materialize_fc_conv,
+        common_quantize.materialize_fc_conv,
     )
 
   @parameterized.parameters(8, 16)
@@ -156,7 +156,7 @@ class DepthwiseConv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         op_info,
         self._graph_info,
         self._op_test_info,
-        naive_min_max_quantize.materialize_fc_conv,
+        common_quantize.materialize_fc_conv,
     )
 
   @parameterized.named_parameters(
@@ -185,7 +185,7 @@ class DepthwiseConv2dTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         min_weight_elements=min_weight_elements,
         graph_info=self._graph_info,
         op_test_info=self._op_test_info,
-        materialization_func=naive_min_max_quantize.materialize_fc_conv,
+        materialization_func=common_quantize.materialize_fc_conv,
         expect_weights_quantized=expect_weights_quantized,
     )
 
