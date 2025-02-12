@@ -37,38 +37,38 @@ def _init_tensor_min_max(
     return {}
   else:
     quantized_dim = None
+    # TODO(b/394351333): deprecate emluated subchannel quantization.
+    # if (
+    #     op_info.op_quant_config.weight_tensor_config is not None
+    #     and op_info.op_quant_config.weight_tensor_config.granularity
+    #     == qtyping.QuantGranularity.BLOCKWISE
+    # ):
+    #   # will skip special handling. Once we have a spec, we can change this.
+    #   block_size = op_info.op_quant_config.weight_tensor_config.block_size
+    #   # assuming tensor is 2D, which is correct for FULLY_CONNECTED
+    #   transposed_tensor_data = np.transpose(tensor_data, (1, 0))
+    #   if transposed_tensor_data.shape[0] % block_size:
+    #     raise ValueError(
+    #         f"Block size {block_size} does not divide channel dimension"
+    #         f" {transposed_tensor_data.shape[0]}."
+    #     )
+    #   reshaped_tensor_data = np.reshape(
+    #       transposed_tensor_data,
+    #       (
+    #           1,
+    #           int(transposed_tensor_data.shape[0] / block_size),
+    #           block_size,
+    #           transposed_tensor_data.shape[1],
+    #       ),
+    #   )
+    #   return {
+    #       "min": np.min(reshaped_tensor_data, axis=(0, 1, 2), keepdims=True),
+    #       "max": np.max(reshaped_tensor_data, axis=(0, 1, 2), keepdims=True),
+    #   }
     if (
         op_info.op_quant_config.weight_tensor_config is not None
         and op_info.op_quant_config.weight_tensor_config.granularity
-        == qtyping.QuantGranularity.BLOCKWISE
-    ):
-      # TODO(b/346612503): emulate subchannel only supports fully connected,
-      # will skip special handling. Once we have a spec, we can change this.
-      block_size = op_info.op_quant_config.weight_tensor_config.block_size
-      # assuming tensor is 2D, which is correct for FULLY_CONNECTED
-      transposed_tensor_data = np.transpose(tensor_data, (1, 0))
-      if transposed_tensor_data.shape[0] % block_size:
-        raise ValueError(
-            f"Block size {block_size} does not divide channel dimension"
-            f" {transposed_tensor_data.shape[0]}."
-        )
-      reshaped_tensor_data = np.reshape(
-          transposed_tensor_data,
-          (
-              1,
-              int(transposed_tensor_data.shape[0] / block_size),
-              block_size,
-              transposed_tensor_data.shape[1],
-          ),
-      )
-      return {
-          "min": np.min(reshaped_tensor_data, axis=(0, 1, 2), keepdims=True),
-          "max": np.max(reshaped_tensor_data, axis=(0, 1, 2), keepdims=True),
-      }
-    if (
-        op_info.op_quant_config.weight_tensor_config is not None
-        and op_info.op_quant_config.weight_tensor_config.granularity
-        == qtyping.QuantGranularity.CHANNELWISE
+        != qtyping.QuantGranularity.TENSORWISE
     ):
       if op_info.op_name == _TFLOpName.BATCH_MATMUL:
         quantized_dim = common_utils.get_bmm_weight_quantized_dim(
@@ -78,13 +78,54 @@ def _init_tensor_min_max(
         quantized_dim = tfl_flatbuffer_utils.TFL_OP_TO_WEIGHT_QUANTIZED_DIM.get(
             op_info.op_name, None
         )
-    reduce_dims = common_utils.get_reduce_dims(
-        quantized_dim, list(tensor_data.shape)
-    )
-    return {
-        "min": np.min(tensor_data, axis=reduce_dims, keepdims=True),
-        "max": np.max(tensor_data, axis=reduce_dims, keepdims=True),
-    }
+    if (
+        op_info.op_quant_config.weight_tensor_config is not None
+        and op_info.op_quant_config.weight_tensor_config.granularity
+        == qtyping.QuantGranularity.BLOCKWISE
+    ):
+      reshaped_data, reduce_dims = _reshape_data_for_blockwise(
+          tensor_data,
+          quantized_dim,
+          op_info.op_quant_config.weight_tensor_config.block_size,
+      )
+      return {
+          "min": np.min(reshaped_data, axis=reduce_dims, keepdims=False),
+          "max": np.max(reshaped_data, axis=reduce_dims, keepdims=False),
+      }
+
+    else:
+      reduce_dims = common_utils.get_reduce_dims(
+          quantized_dim, tensor_data.shape
+      )
+      return {
+          "min": np.min(tensor_data, axis=reduce_dims, keepdims=True),
+          "max": np.max(tensor_data, axis=reduce_dims, keepdims=True),
+      }
+
+
+def _get_tensor_shape_for_blockwise(
+    tensor_shape: tuple[int, ...], quantized_dim: int, block_size: int
+) -> list[int]:
+  """Get the tensor shape for blockwise quantization."""
+  new_shape = []
+  for index, val in enumerate(tensor_shape):
+    if index == quantized_dim:
+      new_shape.append(int(val / block_size))
+      new_shape.append(block_size)
+    else:
+      new_shape.append(val)
+  return new_shape
+
+
+def _reshape_data_for_blockwise(
+    tensor_data: np.ndarray, quantized_dim: int, block_size: int
+) -> tuple[np.ndarray, int]:
+  """Reshapes data for blockwise quantization."""
+  new_shape = _get_tensor_shape_for_blockwise(
+      tensor_data.shape, quantized_dim, block_size
+  )
+  reshaped_data = tensor_data.reshape(new_shape)
+  return reshaped_data, quantized_dim + 1
 
 
 def get_tensor_quant_params(
@@ -138,7 +179,9 @@ def get_tensor_quant_params(
       tensor_quant_config.symmetric,
   )
   quantized_dim = None
-  if tensor_quant_config.granularity == qtyping.QuantGranularity.CHANNELWISE:
+  if (
+      tensor_quant_config.granularity != qtyping.QuantGranularity.TENSORWISE
+  ):
     if op_info.op_name == _TFLOpName.BATCH_MATMUL:
       quantized_dim = common_utils.get_bmm_weight_quantized_dim(
           tensor_content, adj_y=op_info.op.builtinOptions.adjY
@@ -156,16 +199,46 @@ def get_tensor_quant_params(
   )
   if tensor_content is None:
     return quant_params
+
+  # The reshaping for blockwise quantization is unique hence we do this here
+  # to avoid unexpected broadcast behavior downstream.
   if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
-    quantized_vars = (
-        uniform_quantize_tensor.uniform_quantize_for_emulated_subchannel(
-            tensor_content, quant_params, tensor_quant_config.block_size
-        )
+    expanded_tensor_shape = _get_tensor_shape_for_blockwise(
+        tensor_content.shape, quantized_dim, tensor_quant_config.block_size
     )
-  else:
-    quantized_vars = uniform_quantize_tensor.uniform_quantize(
-        tensor_content, quant_params
+    expanded_scale = np.reshape(
+        np.broadcast_to(
+            np.expand_dims(scale, quantized_dim + 1),
+            expanded_tensor_shape,
+        ),
+        tensor_content.shape,
     )
+    expanded_zp = np.reshape(
+        np.broadcast_to(
+            np.expand_dims(zp, quantized_dim + 1),
+            expanded_tensor_shape,
+        ),
+        tensor_content.shape,
+    )
+    quant_params = qtyping.UniformQuantParams(
+        scale=expanded_scale,
+        zero_point=expanded_zp,
+        num_bits=tensor_quant_config.num_bits,
+        symmetric=tensor_quant_config.symmetric,
+        quantized_dimension=quantized_dim,
+    )
+
+  # We should stop using emulated subchannel,
+  # but keep it here for as Darwinn may still need it.
+  #   quantized_vars = (
+  #       uniform_quantize_tensor.uniform_quantize_for_emulated_subchannel(
+  #           tensor_content, quant_params, tensor_quant_config.block_size
+  #       )
+  #   )
+  # else:
+  quantized_vars = uniform_quantize_tensor.uniform_quantize(
+      tensor_content, quant_params
+  )
   # Update with quantized values.
   return qtyping.UniformQuantParams(
       scale=scale,
@@ -174,6 +247,7 @@ def get_tensor_quant_params(
       symmetric=tensor_quant_config.symmetric,
       quantized_dimension=quantized_dim,
       quantized_data=quantized_vars,
+      block_size=tensor_quant_config.block_size,
   )
 
 
