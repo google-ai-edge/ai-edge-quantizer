@@ -119,12 +119,13 @@ def fix_quantization_params_rank(
   )
 
 
+# TODO(b/394351333): deprecate emluated subchannel quantization.
 def uniform_quantize_for_emulated_subchannel(
     tensor_data: np.ndarray,
     quantization_params: qtyping.UniformQuantParams,
     block_size: int,
 ) -> np.ndarray:
-  """Uniform quantize a tensor for emulated subchannel.
+  """Deprecated. Uniform quantize a tensor for emulated subchannel.
 
   emulation involves reshaping the tensor and quantizing value on a different
   axes. Hence, we use a different quantization function.
@@ -368,4 +369,15 @@ def _is_valid_quantization_params(
         f"Ranks of scales ({scale_rank}) and zps"
         f" ({zero_point_rank}) must be the same as the tensor rank"
         f" ({tensor_rank})."
+    )
+  if (
+      quantization_params.block_size != 0
+      and tensor_data.shape[quantization_params.quantized_dimension]
+      % quantization_params.block_size
+      != 0
+  ):
+    raise ValueError(
+        "Tensor dimension must be divisible by block size. Got dimension:"
+        f" {tensor_data.shape[quantization_params.quantized_dimension]} and"
+        f" block size: {quantization_params.block_size}"
     )

@@ -908,7 +908,7 @@ def get_tensor_transformation_params(
 
 def get_reduce_dims(
     quantized_dim: Optional[int],
-    tensor_shape: list[int],
+    tensor_shape: tuple[int, ...],
 ) -> Optional[tuple[int, ...]]:
   """Get the reduce dims of a tensor for the given quantized dimension."""
   if quantized_dim is None:
