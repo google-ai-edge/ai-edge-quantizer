@@ -189,8 +189,8 @@ def init_qsvs(
   Args:
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
-    inputs_to_ignore: Input tensor indices to ignore.
-    outputs_to_ignore: Output tensor indices to ignore.
+    inputs_to_ignore: Operand indices to ignore.
+    outputs_to_ignore: Result indices to ignore.
 
   Returns:
     QSVs.
@@ -199,8 +199,8 @@ def init_qsvs(
 
   inputs_to_ignore = inputs_to_ignore or []
   outputs_to_ignore = outputs_to_ignore or []
-  for i, tensor_idx in enumerate(op_info.op.inputs):
-    if tensor_idx != -1 and i not in inputs_to_ignore:
+  for opr_idx, tensor_idx in enumerate(op_info.op.inputs):
+    if tensor_idx != -1 and opr_idx not in inputs_to_ignore:
       tensor = graph_info.subgraph_tensors[tensor_idx]
       tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
       tensor_data = tfl_flatbuffer_utils.get_tensor_data(
@@ -210,8 +210,8 @@ def init_qsvs(
           tensor_data,
           op_info,
       )
-  for i, tensor_idx in enumerate(op_info.op.outputs):
-    if tensor_idx != -1 and i not in outputs_to_ignore:
+  for res_idx, tensor_idx in enumerate(op_info.op.outputs):
+    if tensor_idx != -1 and res_idx not in outputs_to_ignore:
       tensor = graph_info.subgraph_tensors[tensor_idx]
       tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
       tensor_data = tfl_flatbuffer_utils.get_tensor_data(
