@@ -14,6 +14,7 @@
 # ==============================================================================
 
 import os
+from typing import cast
 
 from absl.testing import parameterized
 import numpy as np
@@ -21,6 +22,7 @@ import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
+from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -156,6 +158,49 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     # weight and bias are excluded.
     self.assertNotIn("arith.constant1", op_qsvs)
     self.assertNotIn("arith.constant2", op_qsvs)
+
+  def test_get_tensor_quant_params_for_blockwise_weight(self):
+    subgraph0 = self._test_model.subgraphs[0]
+    subgraph_op_index = 3
+    fc_op = subgraph0.operators[subgraph_op_index]
+    weight_tensor_config = _TensorQuantConfig(
+        num_bits=4,
+        symmetric=True,
+        granularity=qtyping.QuantGranularity.BLOCKWISE,
+        block_size=2,
+    )
+    op_info = qtyping.OpInfo(
+        op=fc_op,
+        op_name=_TFLOpName.FULLY_CONNECTED,
+        subgraph_op_index=subgraph_op_index,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=weight_tensor_config,
+        ),
+    )
+    test_data = np.array([[-7, 7], [4, -4], [4, -4], [7, 7]])
+    quant_params = naive_min_max_quantize.get_tensor_quant_params(
+        op_info=op_info,
+        tensor_quant_config=weight_tensor_config,
+        tensor_content=test_data,
+    )
+    scale = quant_params.scale
+    zp = quant_params.zero_point
+    expected_zp, expected_scale = (
+        uniform_quantize_tensor.tensor_zp_scale_from_min_max(
+            min_value=np.array([[-7, 4], [-4, -4]]),
+            max_value=np.array([[4, 7], [7, 7]]),
+            num_bits=4,
+            symmetric=True,
+        )
+    )
+    self.assertTrue(np.array_equal(zp, expected_zp))
+    self.assertTrue(np.array_equal(scale, expected_scale))
+    self.assertIsNotNone(quant_params.quantized_data)
+    self.assertTupleEqual(
+        cast(np.ndarray, quant_params.quantized_data).shape, test_data.shape
+    )
+    self.assertEqual(quant_params.block_size, 2)
+    self.assertEqual(quant_params.quantized_dimension, 0)
 
 
 if __name__ == "__main__":

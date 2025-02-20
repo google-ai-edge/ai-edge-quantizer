@@ -119,55 +119,6 @@ def fix_quantization_params_rank(
   )
 
 
-def uniform_quantize_for_emulated_subchannel(
-    tensor_data: np.ndarray,
-    quantization_params: qtyping.UniformQuantParams,
-    block_size: int,
-) -> np.ndarray:
-  """Uniform quantize a tensor for emulated subchannel.
-
-  emulation involves reshaping the tensor and quantizing value on a different
-  axes. Hence, we use a different quantization function.
-
-  Args:
-    tensor_data: The tensor to be quantized.
-    quantization_params: The quantization parameters.
-    block_size: The block size of the emulated subchannel.
-
-  Returns:
-    The quantized tensor.
-  """
-  scales, zero_points = (
-      quantization_params.scale,
-      quantization_params.zero_point,
-  )
-  transposed_and_reshaped_tensor = np.reshape(
-      np.transpose(tensor_data, (1, 0)),
-      (
-          1,
-          int(tensor_data.shape[1] / block_size),
-          block_size,
-          tensor_data.shape[0],
-      ),
-  )
-  inverse_scales = 1.0 / scales
-  qtype = IntType(quantization_params.num_bits, signed=True)
-  # Symmetric means narrow range (e.g., -127 to 127)
-  narrow_range = quantization_params.symmetric
-  required_dtype = np.signedinteger if qtype.signed else np.unsignedinteger
-  if not np.issubdtype(zero_points.dtype, required_dtype):
-    raise ValueError(
-        f"zero_points need to be {required_dtype}."
-        f" But the actual type is {zero_points.dtype}."
-    )
-  ret = (
-      np.multiply(transposed_and_reshaped_tensor, inverse_scales) + zero_points
-  )
-  ret = _round_and_clip(ret, qtype, narrow_range)
-  ret = assign_quantized_type(ret, qtype)
-  return ret
-
-
 def uniform_quantize(
     tensor_data: np.ndarray,
     quantization_params: qtyping.UniformQuantParams,
@@ -368,4 +319,15 @@ def _is_valid_quantization_params(
         f"Ranks of scales ({scale_rank}) and zps"
         f" ({zero_point_rank}) must be the same as the tensor rank"
         f" ({tensor_rank})."
+    )
+  if (
+      quantization_params.block_size != 0
+      and tensor_data.shape[quantization_params.quantized_dimension]
+      % quantization_params.block_size
+      != 0
+  ):
+    raise ValueError(
+        "Tensor dimension must be divisible by block size. Got dimension:"
+        f" {tensor_data.shape[quantization_params.quantized_dimension]} and"
+        f" block size: {quantization_params.block_size}"
     )

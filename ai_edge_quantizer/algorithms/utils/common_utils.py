@@ -906,9 +906,30 @@ def get_tensor_transformation_params(
   )
 
 
+def get_weight_quantized_dim(op_info: qtyping.OpInfo, tensor_data: np.ndarray):
+  """Get the quantized dimension for the weight tensor.
+
+  Args:
+    op_info: Aggregated information about the op (e.g., quantization config).
+    tensor_data: The weight tensor data.
+
+  Returns:
+    The quantized dimension for the weight tensor.
+  """
+  if op_info.op_name == _TFLOpName.BATCH_MATMUL:
+    quantized_dim = get_bmm_weight_quantized_dim(
+        tensor_data, adj_y=op_info.op.builtinOptions.adjY
+    )
+  else:
+    quantized_dim = tfl_flatbuffer_utils.TFL_OP_TO_WEIGHT_QUANTIZED_DIM.get(
+        op_info.op_name, None
+    )
+  return quantized_dim
+
+
 def get_reduce_dims(
     quantized_dim: Optional[int],
-    tensor_shape: list[int],
+    tensor_shape: Sequence[int],
 ) -> Optional[tuple[int, ...]]:
   """Get the reduce dims of a tensor for the given quantized dimension."""
   if quantized_dim is None:
