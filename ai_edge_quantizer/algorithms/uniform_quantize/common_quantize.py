@@ -110,6 +110,21 @@ def materialize_output(
   )
 
 
+def materialize_composite(
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in the virtual output op."""
+  return common_utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      get_tensor_quant_params_fn,
+  )
+
+
 def materialize_add(
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
     op_info: qtyping.OpInfo,
