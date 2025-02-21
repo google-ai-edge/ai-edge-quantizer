@@ -19,7 +19,6 @@ import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import dequantized_weight_recovery
-from ai_edge_quantizer.utils import test_utils
 
 _TFLOpName = qtyping.TFLOperationName
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
@@ -31,9 +30,15 @@ class DequantizedWeightRecoveryTest(parameterized.TestCase):
     super().setUp()
     self._dummy_quantized_weights = np.array([
         [1, -2, 3, 4],
-        [6, 7, -8, 5],
-        [-1, 8, -7, -4],
+        [6, 7, -6, 5],
+        [2, -6, -7, -4],
     ])
+    self._dummy_op_info = qtyping.OpInfo(
+        op=None,
+        op_name=_TFLOpName.FULLY_CONNECTED,
+        subgraph_op_index=0,
+        op_quant_config=qtyping.OpQuantizationConfig(),
+    )
 
   @parameterized.named_parameters(
       dict(
@@ -96,18 +101,104 @@ class DequantizedWeightRecoveryTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
       dict(
-          testcase_name="recovery_on_wrong_dimension",
-          quantized_dimension=1,  # should be 0.
+          testcase_name="tensor-recovery-tensor-quant",
+          tensor_quant_config=qtyping.TensorQuantizationConfig(
+              num_bits=4,
+              granularity=qtyping.QuantGranularity.TENSORWISE,
+          ),
+          scale=np.array([0.1875]).reshape(1, 1),
+      ),
+      dict(
+          testcase_name="channel-recovery-channel-quant",
+          tensor_quant_config=qtyping.TensorQuantizationConfig(
+              num_bits=4,
+              granularity=qtyping.QuantGranularity.CHANNELWISE,
+          ),
           scale=np.array([0.1875, 1e-4, 12.3]).reshape(3, 1),
       ),
       dict(
-          testcase_name="tensor_recovery_for_channel_quantization",
-          quantized_dimension=None,  # should be 0.
-          scale=np.array([0.003, 1.234, 12.65, 2.24e-4]).reshape(1, 4),
+          testcase_name="channel-recovery-excessive-bits",
+          tensor_quant_config=qtyping.TensorQuantizationConfig(
+              num_bits=8,  # int4 is enough for the sample weights.
+              granularity=qtyping.QuantGranularity.CHANNELWISE,
+          ),
+          scale=np.array([0.1875, 1e-4, 12.3]).reshape(3, 1),
       ),
   )
-  def test_tensor_zp_scale_from_2d_dequantized_symmetric_weights_raises_error_big_recovery_error(
-      self, quantized_dimension, scale
+  def test_get_tensor_quant_params_success_with_dequantized_weights(
+      self, tensor_quant_config, scale
+  ):
+    dequant_vals = scale * self._dummy_quantized_weights
+    tensor_quant_params = dequantized_weight_recovery.get_tensor_quant_params(
+        self._dummy_op_info, tensor_quant_config, dequant_vals
+    )
+
+    if tensor_quant_config.granularity is qtyping.QuantGranularity.TENSORWISE:
+      self.assertIsNone(tensor_quant_params.quantized_dimension)
+    else:
+      self.assertEqual(tensor_quant_params.quantized_dimension, 0)
+
+    recovered_scale = tensor_quant_params.scale
+    self.assertEqual(recovered_scale.shape, scale.shape)
+    self.assertSequenceAlmostEqual(recovered_scale.flatten(), scale.flatten())
+
+    # Zero point should be zero for symmetric quantization.
+    recovered_zp = tensor_quant_params.zero_point
+    self.assertEqual(np.sum(recovered_zp), 0)
+    self.assertEqual(recovered_zp.shape, scale.shape)
+
+  def test_get_tensor_quant_params_success_with_qsv(self):
+    # Fall back to naive_min_max_quantize.py for non-weight tensors.
+    tensor_quant_params = dequantized_weight_recovery.get_tensor_quant_params(
+        self._dummy_op_info,
+        tensor_quant_config=qtyping.TensorQuantizationConfig(
+            num_bits=8,
+            granularity=qtyping.QuantGranularity.TENSORWISE,
+        ),
+        tensor_qsv={
+            "min": np.array([-1]),
+            "max": np.array([1]),
+        },
+    )
+
+    self.assertIsNone(tensor_quant_params.quantized_dimension)
+    recovered_scale = tensor_quant_params.scale
+    self.assertEqual(recovered_scale.shape, (1,))
+    self.assertSequenceAlmostEqual(recovered_scale.flatten(), [1 / 127])
+
+    # Zero point should be zero for symmetric quantization.
+    recovered_zp = tensor_quant_params.zero_point
+    self.assertEqual(np.sum(recovered_zp), 0)
+    self.assertEqual(recovered_zp.shape, (1,))
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="recovery_on_wrong_dimension",
+          tensor_quant_config=qtyping.TensorQuantizationConfig(
+              num_bits=4,
+              granularity=qtyping.QuantGranularity.CHANNELWISE,
+          ),
+          scale=np.array([0.003, 1.234, 12.65, 2.24e-4]).reshape(1, 4),
+      ),
+      dict(
+          testcase_name="tensor_recovery_for_channel_quantization",
+          tensor_quant_config=qtyping.TensorQuantizationConfig(
+              num_bits=4,
+              granularity=qtyping.QuantGranularity.TENSORWISE,
+          ),
+          scale=np.array([0.1875, 1e-2, 12.3]).reshape(3, 1),
+      ),
+      dict(
+          testcase_name="insufficient_bits",
+          tensor_quant_config=qtyping.TensorQuantizationConfig(
+              num_bits=2,
+              granularity=qtyping.QuantGranularity.CHANNELWISE,
+          ),
+          scale=np.array([0.1875, 1e-2, 12.3]).reshape(3, 1),
+      ),
+  )
+  def test_get_tensor_quant_params_raises_error_big_recovery_error(
+      self, tensor_quant_config, scale
   ):
     dequant_vals = scale * self._dummy_quantized_weights
     with self.assertRaisesRegex(
@@ -115,8 +206,8 @@ class DequantizedWeightRecoveryTest(parameterized.TestCase):
         "Failed to recover the original quantized values from dequantized"
         " values. Max diff between recovered and original values: ",
     ):
-      dequantized_weight_recovery.get_zp_scale_from_2d_dequantized_symmetric_weights(
-          dequant_vals, quantized_dimension
+      dequantized_weight_recovery.get_tensor_quant_params(
+          self._dummy_op_info, tensor_quant_config, dequant_vals
       )
 
 

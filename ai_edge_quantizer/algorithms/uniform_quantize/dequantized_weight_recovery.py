@@ -15,11 +15,13 @@
 
 """Recovers quantized weights from dequantized weights (often from QAT)."""
 
-from typing import Optional
+import dataclasses
+from typing import Any, Optional
 import numpy as np
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
-
+from ai_edge_quantizer.algorithms.utils import common_utils
 
 ALGORITHM_KEY = "dequantized_weight_recovery"
 _TFLOpName = qtyping.TFLOperationName
@@ -27,24 +29,26 @@ _QuantTransformation = qtyping.QuantTransformation
 _IntType = uniform_quantize_tensor.IntType
 
 
-def _validate_recovered_scale(
-    dequant_vals: np.ndarray, scale: np.ndarray, tol: float = 1e-4
+def _validate_recovered_weights(
+    original_vals: np.ndarray,
+    quant_vals: np.ndarray,
+    scale: np.ndarray,
+    tol: float = 1e-4,
 ):
-  """Validates if the recovered quantized values match the dequantized values.
+  """Validates if recovered weights (from the quantized values) are close enough to the original ones.
 
   Args:
-      dequant_vals: The dequantized weight values.
-      scale: The scale values.
-      tol: The tolerance for the difference between the recovered and original
-        values.
+    original_vals: Original values before quantization.
+    quant_vals: Quantized values.
+    scale: Scale used for quantization.
+    tol: Tolerance for the difference between original and recovered values.
 
   Raises:
-      RuntimeError: If the maximum difference between the recovered and
-        original values exceeds the tolerance.
+    RuntimeError: If the maximum difference between original and recovered
+    values exceeds the tolerance.
   """
-  quant_vals = np.round(dequant_vals / scale)  # no need to clamp.
   recovered_vals = quant_vals * scale
-  diff = np.abs(recovered_vals - dequant_vals).flatten()
+  diff = np.abs(recovered_vals - original_vals).flatten()
   max_diff = diff.max()
   if max_diff > tol:
     raise RuntimeError(
@@ -127,5 +131,120 @@ def get_zp_scale_from_2d_dequantized_symmetric_weights(
     )
 
   zero_points = np.zeros_like(scales, dtype=np.int32)
-  _validate_recovered_scale(dequant_vals, scales)
   return zero_points, scales
+
+
+def get_tensor_quant_params(
+    op_info: qtyping.OpInfo,
+    tensor_quant_config: qtyping.TensorQuantizationConfig,
+    tensor_content: Optional[np.ndarray] = None,
+    tensor_qsv: Optional[dict[str, Any]] = None,
+) -> qtyping.UniformQuantParams:
+  """Get the quantization parameters for a tensor.
+
+  Args:
+    op_info: Aggregated information about the op (e.g., quantization config).
+    tensor_quant_config: The quantization config for the tensor.
+    tensor_content: The content of the tensor.
+    tensor_qsv: A dictionary containing the min/max of the tensor.
+
+  Returns:
+    The quantization parameters for the tensor.
+
+  Raises:
+    ValueError: If the quantization granularity is blockwise, or if the tensor
+    is not a 2D symmetric weight tensor.
+  """
+  # Fallback to naive_min_max_quantize.py for non-weight tensors.
+  if tensor_content is None:
+    return naive_min_max_quantize.get_tensor_quant_params(
+        op_info, tensor_quant_config, tensor_content, tensor_qsv
+    )
+
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
+    raise ValueError(
+        "Blockwise quantization is not supported for dequantized weight"
+        " recovery."
+    )
+  if tensor_content.ndim != 2 or not tensor_quant_config.symmetric:
+    raise ValueError(
+        "Only 2D symmetric weights are supported for dequantized weight"
+        " recovery."
+    )
+
+  quantized_dim = None
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.CHANNELWISE:
+    quantized_dim = common_utils.get_weight_quantized_dim(
+        op_info, tensor_content
+    )
+
+  zp, scale = get_zp_scale_from_2d_dequantized_symmetric_weights(
+      dequant_vals=tensor_content,
+      quantized_dimension=quantized_dim,
+  )
+  quant_params = qtyping.UniformQuantParams(
+      scale=scale,
+      zero_point=zp,
+      num_bits=tensor_quant_config.num_bits,
+      symmetric=tensor_quant_config.symmetric,
+      quantized_dimension=quantized_dim,
+  )
+  quantized_vars = uniform_quantize_tensor.uniform_quantize(
+      tensor_content, quant_params
+  )
+  _validate_recovered_weights(tensor_content, quantized_vars, scale)
+  return dataclasses.replace(quant_params, quantized_data=quantized_vars)
+
+
+def calibrate(
+    tfl_op: Any,
+    graph_info: qtyping.GraphInfo,
+    tensor_content_map: dict[str, np.ndarray],
+    inputs_to_ignore: Optional[list[int]] = None,
+    outputs_to_ignore: Optional[list[int]] = None,
+) -> dict[str, qtyping.QSV]:
+  """Collect quantization statistics variable (QSV, e.g., min/max) for the op.
+
+  Args:
+    tfl_op: The tfl operation.
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_content_map: A map of tensor name to tensor content.
+    inputs_to_ignore: Input tensor indices to ignore.
+    outputs_to_ignore: Output tensor indices to ignore.
+
+  Returns:
+    A dictionary with key as tensor name and value as the collected QSV.
+  """
+  # Reuse the min/max calibration algorithm from naive_min_max_quantize.py since
+  # only weights need to be handled differently.
+  return naive_min_max_quantize.min_max_calibrate(
+      tfl_op,
+      graph_info,
+      tensor_content_map,
+      inputs_to_ignore,
+      outputs_to_ignore,
+  )
+
+
+def init_qsvs(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    inputs_to_ignore: Optional[list[int]] = None,
+    outputs_to_ignore: Optional[list[int]] = None,
+) -> qtyping.QSV:
+  """Initialize the QSVs.
+
+  Args:
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    inputs_to_ignore: Input tensor indices to ignore.
+    outputs_to_ignore: Output tensor indices to ignore.
+
+  Returns:
+    QSVs.
+  """
+  # Reuse the min/max calibration algorithm from naive_min_max_quantize.py since
+  # only weights need to be handeled differently.
+  return naive_min_max_quantize.init_qsvs(
+      op_info, graph_info, inputs_to_ignore, outputs_to_ignore
+  )
