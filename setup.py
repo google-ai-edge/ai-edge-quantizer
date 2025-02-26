@@ -52,6 +52,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -63,7 +64,7 @@ setuptools.setup(
     packages=setuptools.find_packages(
         include=["ai_edge_quantizer*"],
     ),
-    python_requires=">=3.9, <3.12",
+    python_requires=">=3.9, <=3.12",
     install_requires=[
         "immutabledict",
         "numpy",

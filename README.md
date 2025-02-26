@@ -16,7 +16,7 @@ Nightly Colab      | [![](https://github.com/google-ai-edge/ai-edge-quantizer/ac
 
 ### Requirements and Dependencies
 
- * Python versions:  3.9, 3.10, 3.11
+ * Python versions: 3.9, 3.10, 3.11, 3.12
  * Operating system: Linux, MacOS
  * TensorFlow: [![tf-nightly](https://img.shields.io/badge/tf--nightly-latest-blue)](https://pypi.org/project/tf-nightly/)
 

@@ -58,7 +58,7 @@ jobs:
     needs: build-and-release-nightly
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     name: Test Install and Import ai-edge-quantizer-nightly
     runs-on: ubuntu-latest
