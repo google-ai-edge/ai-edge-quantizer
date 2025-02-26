@@ -197,8 +197,8 @@ DEFAULT_JSON_POLICY = """
       "SUM",
       "SELECT_V2"
     ],
-    "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT"],
-    "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT"],
+    "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
+    "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
     "dynamic_wi8_afp32": [
       "BATCH_MATMUL",
       "CONV_2D",
