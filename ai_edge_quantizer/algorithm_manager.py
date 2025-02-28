@@ -22,7 +22,10 @@ from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.nonlinear_quantize import float_casting
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
+from ai_edge_quantizer.algorithms.uniform_quantize import dequantized_weight_recovery
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
+
+# TODO: b/399775701 - Clean up this file.
 
 _TFLOpName = qtyping.TFLOperationName
 
@@ -51,7 +54,9 @@ class AlgorithmName(str, enum.Enum):
   NO_QUANTIZE = "no_quantize"
   MIN_MAX_UNIFORM_QUANT = naive_min_max_quantize.ALGORITHM_KEY
   FLOAT_CASTING = float_casting.ALGORITHM_KEY
+  DEQUANTIZED_WEIGHT_RECOVERY = dequantized_weight_recovery.ALGORITHM_KEY
 
+### MIN/MAX_UNIFORM_QUANT ###
 
 # Register MIN_MAX_UNIFORM_QUANT algorithm.
 register_op_quant_config_validation_func(
@@ -109,7 +114,7 @@ for op_name, materialize_func in MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT.items():
       ),
   )
 
-# Register FLOAT_CASTING algorithm.
+### FLOAT_CASTING ###
 register_op_quant_config_validation_func(
     AlgorithmName.FLOAT_CASTING,
     float_casting.check_op_quantization_config,
@@ -143,4 +148,39 @@ for op_name, materialize_func in zip(
       float_casting.init_qsvs,
       calibration_func=float_casting.calibrate,
       materialize_func=materialize_func,
+  )
+
+### DEQUANTIZED_WEIGHT_RECOVERY ###
+register_op_quant_config_validation_func(
+    AlgorithmName.DEQUANTIZED_WEIGHT_RECOVERY,
+    common_quantize.check_op_quantization_config,
+)
+
+register_config_check_policy_func(
+    AlgorithmName.DEQUANTIZED_WEIGHT_RECOVERY,
+    default_policy.DEFAULT_CONFIG_CHECK_POLICY,
+)
+
+DEQUANTIZED_WEIGHT_RECOVERY_OP_NAME_MATERIALIZE_FUNC_DICT = {
+    _TFLOpName.FULLY_CONNECTED: common_quantize.materialize_fc_conv,
+    _TFLOpName.EMBEDDING_LOOKUP: common_quantize.materialize_embedding_lookup,
+}
+
+for (
+    op_name,
+    materialize_func,
+) in DEQUANTIZED_WEIGHT_RECOVERY_OP_NAME_MATERIALIZE_FUNC_DICT.items():
+  register_quantized_op(
+      algorithm_key=AlgorithmName.DEQUANTIZED_WEIGHT_RECOVERY,
+      tfl_op_name=op_name,
+      init_qsv_func=dequantized_weight_recovery.init_qsvs,
+      calibration_func=dequantized_weight_recovery.calibrate,
+      # Most of the materialize op functions are common for all algorithms
+      # except for the function to get scale and zero point, i.e.,
+      # get_tensor_quant_params. So we use functools.partial here to pass in the
+      # common utility function and the algorithm-specific function.
+      materialize_func=functools.partial(
+          materialize_func,
+          dequantized_weight_recovery.get_tensor_quant_params,
+      ),
   )
