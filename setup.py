@@ -64,7 +64,7 @@ setuptools.setup(
     packages=setuptools.find_packages(
         include=["ai_edge_quantizer*"],
     ),
-    python_requires=">=3.9, <=3.12",
+    python_requires=">=3.9",
     install_requires=[
         "immutabledict",
         "numpy",
