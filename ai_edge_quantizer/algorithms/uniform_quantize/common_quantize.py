@@ -375,6 +375,25 @@ def materialize_select_v2(
   )
 
 
+def materialize_dynamic_update_slice(
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.dynamic_update_slice."""
+  return common_utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      get_tensor_quant_params_fn,
+      constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
+      inputs_to_ignore=[
+          2,
+      ],  # start_indices do not need to be quantized.
+  )
+
+
 def materialize_sum(
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
     op_info: qtyping.OpInfo,

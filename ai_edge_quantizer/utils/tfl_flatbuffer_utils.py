@@ -62,6 +62,9 @@ TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
     _TFLOpName.SLICE: schema_py_generated.BuiltinOperator.SLICE,
     _TFLOpName.SUM: schema_py_generated.BuiltinOperator.SUM,
     _TFLOpName.SELECT_V2: schema_py_generated.BuiltinOperator.SELECT_V2,
+    _TFLOpName.DYNAMIC_UPDATE_SLICE: (
+        schema_py_generated.BuiltinOperator.DYNAMIC_UPDATE_SLICE
+    ),
 })
 
 TFL_OP_CODE_TO_NAME = immutabledict.immutabledict(

@@ -97,6 +97,9 @@ MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT = {
     _TFLOpName.SLICE: common_quantize.materialize_slice,
     _TFLOpName.SUM: common_quantize.materialize_sum,
     _TFLOpName.SELECT_V2: common_quantize.materialize_select_v2,
+    _TFLOpName.DYNAMIC_UPDATE_SLICE: (
+        common_quantize.materialize_dynamic_update_slice
+    ),
 }
 for op_name, materialize_func in MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT.items():
   register_quantized_op(

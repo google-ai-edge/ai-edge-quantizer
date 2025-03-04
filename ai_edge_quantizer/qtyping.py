@@ -60,6 +60,7 @@ class TFLOperationName(str, enum.Enum):
   SLICE = 'SLICE'
   SUM = 'SUM'
   SELECT_V2 = 'SELECT_V2'
+  DYNAMIC_UPDATE_SLICE = 'DYNAMIC_UPDATE_SLICE'
 
 
 class QuantizeMode(enum.Enum):
