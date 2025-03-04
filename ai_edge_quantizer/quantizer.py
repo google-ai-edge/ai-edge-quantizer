@@ -28,7 +28,6 @@ from ai_edge_quantizer import model_validator
 from ai_edge_quantizer import params_generator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
-from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
@@ -325,7 +324,7 @@ class Quantizer:
     """
     if test_data is None:
       # Create test data for all signatures in the model.
-      test_data = test_utils.create_random_normal_input_data(
+      test_data = tfl_interpreter_utils.create_random_normal_input_data(
           self.float_model, num_samples=1
       )
     return model_validator.compare_model(

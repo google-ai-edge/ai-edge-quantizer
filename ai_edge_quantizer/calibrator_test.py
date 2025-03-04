@@ -234,7 +234,7 @@ class CalibratorTest(googletest.TestCase):
     )
     test_calibrator = calibrator.Calibrator(test_model_path)
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
-    calib_data = test_utils.create_random_normal_input_data(
+    calib_data = tfl_interpreter_utils.create_random_normal_input_data(
         test_model_path, num_samples=4
     )
     test_calibrator.calibrate(calib_data, self._recipe_manager)

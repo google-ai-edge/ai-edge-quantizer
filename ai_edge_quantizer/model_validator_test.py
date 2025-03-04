@@ -21,6 +21,7 @@ from tensorflow.python.platform import googletest
 from ai_edge_quantizer import model_validator
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('.')
@@ -194,7 +195,7 @@ class ModelValidatorCompareTest(googletest.TestCase):
         self.target_model_path
     )
     self.signature_key = 'serving_default'  # single signature.
-    self.test_data = test_utils.create_random_normal_input_data(
+    self.test_data = tfl_interpreter_utils.create_random_normal_input_data(
         self.reference_model_path
     )
     self.test_dir = self.create_tempdir()

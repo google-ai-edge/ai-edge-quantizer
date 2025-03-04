@@ -18,11 +18,19 @@
 import inspect as _inspect
 import os.path as _os_path
 import sys as _sys
-from typing import Any, Union
 
-import numpy as np
+from absl.testing import parameterized
 
+from ai_edge_quantizer import model_validator
+from ai_edge_quantizer import qtyping
+from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import tfl_interpreter_utils
+
+_ComputePrecision = qtyping.ComputePrecision
+_OpName = qtyping.TFLOperationName
+_TensorQuantConfig = qtyping.TensorQuantizationConfig
+_OpQuantConfig = qtyping.OpQuantizationConfig
+_AlgorithmName = quantizer.AlgorithmName
 
 
 def get_path_to_datafile(path):
@@ -46,62 +54,84 @@ def get_path_to_datafile(path):
   return path
 
 
-def create_random_normal_dataset(
-    input_details: dict[str, Any],
-    num_samples: int,
-    random_seed: Union[int, np._typing.ArrayLike],
-) -> list[dict[str, Any]]:
-  """create random dataset following random distribution.
+class BaseOpTestCase(parameterized.TestCase):
+  """Base class for op-level tests."""
 
-  Args:
-    input_details: list of dict created by
-      tensorflow.lite.interpreter.get_input_details() for generating dataset
-    num_samples: number of input samples to be generated
-    random_seed: random seed to be used for function
+  def quantize_and_validate(
+      self,
+      model_path: str,
+      algorithm_key: _AlgorithmName,
+      op_name: _OpName,
+      op_config: _OpQuantConfig,
+      num_validation_samples: int = 4,
+      error_metric: str = 'mse',
+  ) -> model_validator.ComparisonResult:
+    """Quantizes and validates the given model with the given configurations.
 
-  Returns:
-    a list of inputs to the given interpreter, for a single interpreter we may
-    have multiple input tensors so each set of inputs is also represented as
-    list
-  """
-  rng = np.random.default_rng(random_seed)
-  dataset = []
-  for _ in range(num_samples):
-    input_data = {}
-    for arg_name, input_tensor in input_details.items():
-      new_data = rng.normal(size=input_tensor['shape']).astype(
-          input_tensor['dtype']
-      )
-      input_data[arg_name] = new_data
-    dataset.append(input_data)
-  return dataset
+    Args:
+      model_path: The path to the model to be quantized.
+      algorithm_key: The algorithm to be used for quantization.
+      op_name: The name of the operation to be quantized.
+      op_config: The configuration for the operation to be quantized.
+      num_validation_samples: The number of samples to use for validation.
+      error_metric: The error error_metric to use for validation.
 
-
-def create_random_normal_input_data(
-    tflite_model: Union[str, bytes],
-    num_samples: int = 4,
-    random_seed: int = 666,
-) -> dict[str, list[dict[str, Any]]]:
-  """create random dataset following random distribution for signature runner.
-
-  Args:
-    tflite_model: TFLite model path or bytearray
-    num_samples: number of input samples to be generated
-    random_seed: random seed to be used for function
-
-  Returns:
-    a list of inputs to the given interpreter, for a single interpreter we may
-    have multiple signatures so each set of inputs is also represented as
-    list
-  """
-  tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(tflite_model)
-  signature_defs = tfl_interpreter.get_signature_list()
-  signature_keys = list(signature_defs.keys())
-  test_data = {}
-  for signature_key in signature_keys:
-    signature_runner = tfl_interpreter.get_signature_runner(signature_key)
-    input_details = signature_runner.get_input_details()
-    test_data[signature_key] = create_random_normal_dataset(
-        input_details, num_samples, random_seed
+    Returns:
+      The comparison result of the validation.
+    """
+    quantizer_instance = quantizer.Quantizer(model_path)
+    quantizer_instance.update_quantization_recipe(
+        algorithm_key=algorithm_key,
+        regex='.*',
+        operation_name=op_name,
+        op_config=op_config,
     )
-  return test_data
+    if quantizer_instance.need_calibration:
+      calibration_data = tfl_interpreter_utils.create_random_normal_input_data(
+          quantizer_instance.float_model, num_samples=num_validation_samples * 8
+      )
+      calibration_result = quantizer_instance.calibrate(calibration_data)
+      quantization_result = quantizer_instance.quantize(calibration_result)
+    else:
+      quantization_result = quantizer_instance.quantize()
+    test_data = tfl_interpreter_utils.create_random_normal_input_data(
+        quantization_result.quantized_model, num_samples=num_validation_samples
+    )
+    return quantizer_instance.validate(test_data, error_metric)
+
+  def assert_model_size_reduction_above_min_pct(
+      self,
+      validation_result: model_validator.ComparisonResult,
+      min_pct: float,
+  ):
+    """Checks the model size reduction (percentage) against the given expectation."""
+    _, reduction_pct = validation_result.get_model_size_reduction()
+    self.assertGreater(reduction_pct, min_pct)
+
+  def assert_weights_errors_below_tolerance(
+      self,
+      validation_result: model_validator.ComparisonResult,
+      weight_tolerance: float,
+  ):
+    """Checks the weight tensors' numerical behavior against the given tolerance."""
+    self.assertNotEmpty(validation_result.available_signature_keys())
+    for signature_key in validation_result.available_signature_keys():
+      signature_result = validation_result.get_signature_comparison_result(
+          signature_key
+      )
+      for result in signature_result.constant_tensors.values():
+        self.assertLess(result, weight_tolerance)
+
+  def assert_output_errors_below_tolerance(
+      self,
+      validation_result: model_validator.ComparisonResult,
+      output_tolerance: float,
+  ):
+    """Checks the output tensor numerical behavior against the given tolerance."""
+    self.assertNotEmpty(validation_result.available_signature_keys())
+    for signature_key in validation_result.available_signature_keys():
+      signature_result = validation_result.get_signature_comparison_result(
+          signature_key
+      )
+      for result in signature_result.output_tensors.values():
+        self.assertLess(result, output_tolerance)

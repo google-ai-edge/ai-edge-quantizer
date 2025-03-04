@@ -315,3 +315,62 @@ def get_signature_main_subgraph_index(
   """
   signature_runner = tflite_interpreter.get_signature_runner(signature_key)
   return signature_runner._subgraph_index  # pylint:disable=protected-access
+
+
+def create_random_normal_dataset(
+    input_details: dict[str, Any],
+    num_samples: int,
+    random_seed: Union[int, np._typing.ArrayLike],
+) -> list[dict[str, Any]]:
+  """Creates a random normal dataset for given input details.
+
+  Args:
+    input_details: A dictionary of input details.
+    num_samples: The number of samples to generate.
+    random_seed: The random seed to use.
+
+  Returns:
+    A list of dictionaries, each containing a sample of input data (for all
+    signatures).
+  """
+  rng = np.random.default_rng(random_seed)
+  dataset = []
+  for _ in range(num_samples):
+    input_data = {}
+    for arg_name, input_tensor in input_details.items():
+      new_data = rng.normal(size=input_tensor["shape"]).astype(
+          input_tensor["dtype"]
+      )
+      input_data[arg_name] = new_data
+    dataset.append(input_data)
+  return dataset
+
+
+def create_random_normal_input_data(
+    tflite_model: Union[str, bytes],
+    num_samples: int = 4,
+    random_seed: int = 666,
+) -> dict[str, list[dict[str, Any]]]:
+  """create random dataset following random distribution for signature runner.
+
+  Args:
+    tflite_model: TFLite model path or bytearray
+    num_samples: number of input samples to be generated
+    random_seed: random seed to be used for function
+
+  Returns:
+    a list of inputs to the given interpreter, for a single interpreter we may
+    have multiple signatures so each set of inputs is also represented as
+    list
+  """
+  tfl_interpreter = create_tfl_interpreter(tflite_model)
+  signature_defs = tfl_interpreter.get_signature_list()
+  signature_keys = list(signature_defs.keys())
+  test_data = {}
+  for signature_key in signature_keys:
+    signature_runner = tfl_interpreter.get_signature_runner(signature_key)
+    input_details = signature_runner.get_input_details()
+    test_data[signature_key] = create_random_normal_dataset(
+        input_details, num_samples, random_seed
+    )
+  return test_data

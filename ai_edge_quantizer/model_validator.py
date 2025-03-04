@@ -160,6 +160,12 @@ class ComparisonResult:
       result.update(signature_comparison_result.intermediate_tensors)
     return result
 
+  def get_model_size_reduction(self) -> tuple[int, float]:
+    """Get the model size reduction in bytes and percentage."""
+    reduced_model_size = len(self._reference_model) - len(self._target_model)
+    reduction_perc = reduced_model_size / len(self._reference_model) * 100
+    return reduced_model_size, reduction_perc
+
   def save(self, save_folder: str, model_name: str) -> None:
     """Saves the model comparison result.
 
@@ -170,8 +176,7 @@ class ComparisonResult:
     Raises:
       RuntimeError: If no quantized model is available.
     """
-    reduced_model_size = len(self._reference_model) - len(self._target_model)
-    reduction_ratio = reduced_model_size / len(self._reference_model) * 100
+    reduced_model_size, reduction_ratio = self.get_model_size_reduction()
     result = {
         'reduced_size_bytes': reduced_model_size,
         'reduced_size_percentage': reduction_ratio,
