@@ -135,3 +135,33 @@ class BaseOpTestCase(parameterized.TestCase):
       )
       for result in signature_result.output_tensors.values():
         self.assertLess(result, output_tolerance)
+
+  def assert_quantization_accuracy_and_size(
+      self,
+      algorithm_key: _AlgorithmName,
+      model_path: str,
+      op_name: _OpName,
+      op_config: _OpQuantConfig,
+      expected_model_size_reduction: float,
+      weight_tolerance: float = 1e-4,
+      output_tolerance: float = 1e-4,
+  ):
+    """Check if the quantization is successful and the result is valid."""
+    validation_result = self.quantize_and_validate(
+        model_path=model_path,
+        algorithm_key=algorithm_key,
+        op_name=op_name,
+        op_config=op_config,
+    )
+    with self.subTest(name='ModelSizeReduction'):
+      self.assert_model_size_reduction_above_min_pct(
+          validation_result, expected_model_size_reduction
+      )
+    with self.subTest(name='WeightsErrors'):
+      self.assert_weights_errors_below_tolerance(
+          validation_result, weight_tolerance
+      )
+    with self.subTest(name='OutputErrors'):
+      self.assert_output_errors_below_tolerance(
+          validation_result, output_tolerance
+      )
