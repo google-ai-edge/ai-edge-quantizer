@@ -108,6 +108,8 @@ class QuantTransformation(enum.Enum):
   # Create pattern for emulated subchannel quantization, only support fully
   # connected op.
   EMULATED_SUBCHANNEL = 4
+  # Duplicate the buffer.
+  DUPLICATE_BUFFER = 5
 
 
 @dataclasses.dataclass(frozen=True)
@@ -237,6 +239,7 @@ class TensorTransformationParams:
   tensor_name: str
   producer: Optional[OpToTensorParams] = None
   consumers: Optional[list[OpToTensorParams]] = None
+  needs_buffer_duplication: bool = False
 
 
 @dataclasses.dataclass(frozen=True)

@@ -22,6 +22,7 @@ import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import transformation_instruction_generator
 from ai_edge_quantizer import transformation_performer
+from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
 
@@ -46,6 +47,18 @@ class ModelModifier:
         transformation_performer.TransformationPerformer()
     )
 
+  def _get_tensor_processing_order(
+      self, flatbuffer_model: schema_py_generated.ModelT
+  ) -> list[str]:
+    """Get the tensor processing order."""
+    buffer_to_tensors = tfl_flatbuffer_utils.buffer_to_tensors(flatbuffer_model)
+
+    tensor_names = []
+    for buffer_tensors in buffer_to_tensors.values():
+      for tensor in buffer_tensors:
+        tensor_names.append(tfl_flatbuffer_utils.get_tensor_name(tensor))
+    return tensor_names
+
   def modify_model(
       self, params: dict[str, qtyping.TensorTransformationParams]
   ) -> bytearray:
@@ -66,8 +79,9 @@ class ModelModifier:
         params, quantized_model
     )
 
+    tensor_processing_order = self._get_tensor_processing_order(quantized_model)
     self._transformation_performer.transform_graph(
-        instructions, quantized_model
+        instructions, quantized_model, tensor_processing_order
     )
     constant_buffer_size = self._process_constant_map(quantized_model)
     # we leave 64MB for the model architecture.

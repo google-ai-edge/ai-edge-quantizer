@@ -15,6 +15,7 @@
 
 """Generate model tensor level quantization config."""
 
+from collections.abc import Sequence
 import copy
 from typing import Any, Optional, Union
 
@@ -252,6 +253,26 @@ class ParamsGenerator:
         tensor_params.append(output_tensor_params)
     return tensor_params
 
+  def _mark_tensors_requiring_buffer_duplication(
+      self, buffers_to_duplicate: Sequence[int]
+  ) -> None:
+    """Mark tensors that require buffer duplication.
+
+    Mark all tensors within each of the provided buffers as requiring buffer
+    duplication, except for the last tensor. The order of tensors is assumed to
+    be the same during both the marking and transformation performer steps, as
+    determined by `self.buffer_to_tensors`. This allows the final tensor to
+    reuse the original buffer, as it is not marked for duplication.
+
+    Args:
+      buffers_to_duplicate: Indices of the buffers to duplicate.
+    """
+    for buffer_idx in buffers_to_duplicate:
+      for tensor in self.buffer_to_tensors[buffer_idx][:-1]:
+        self.model_quant_results[
+            tfl_flatbuffer_utils.get_tensor_name(tensor)
+        ].needs_buffer_duplication = True
+
   def _check_buffer_sharing(self) -> None:
     """Check if tensors sharing the same buffer have the same quantization.
 
@@ -259,6 +280,7 @@ class ParamsGenerator:
       RuntimeError: If the tensors sharing the same buffer have different
         quantization settings.
     """
+    buffers_to_duplicate = []
     for tensors in self.buffer_to_tensors.values():
       if len(tensors) <= 1:
         continue
@@ -273,13 +295,21 @@ class ParamsGenerator:
         if not _compatible_tensor_transformation_params(
             first_tensor_params, tensor_params
         ):
-          error_msg = (
-              f'The tensors {first_tensor.name} and {tensor.name} do not have'
-              ' the same quantization parameters even though they share the'
-              ' same buffer. Please modify your quantization recipe to make'
-              ' sure the two tensors have the same quantization settings.'
-          )
-          raise RuntimeError(error_msg)
+          if _are_distinct_tensors_with_shared_buffer(
+              first_tensor, tensor, self.flatbuffer_model.buffers
+          ):
+            buffers_to_duplicate.append(first_tensor.buffer)
+            break
+          else:
+            error_msg = (
+                f'The tensors {first_tensor.name} and {tensor.name} do not have'
+                ' the same quantization parameters even though they share the'
+                ' same buffer. Please modify your quantization recipe to make'
+                ' sure the two tensors have the same quantization settings.'
+            )
+            raise RuntimeError(error_msg)
+
+    self._mark_tensors_requiring_buffer_duplication(buffers_to_duplicate)
 
 
 def _compatible_tensor_transformation_params(
@@ -359,3 +389,14 @@ def _compatible_tensor_params(
   ):
     return True
   return False
+
+
+def _are_distinct_tensors_with_shared_buffer(
+    tensor1: Any, tensor2: Any, buffers: list[Any]
+) -> bool:
+  """Check if two tensors are different and share a constant buffer."""
+  are_different_tensors = tensor1.name != tensor2.name
+  do_share_buffer = tensor1.buffer == tensor2.buffer
+  is_constant_buffer = buffers[tensor1.buffer].data is not None
+
+  return are_different_tensors and do_share_buffer and is_constant_buffer
