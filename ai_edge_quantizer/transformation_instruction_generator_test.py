@@ -1077,6 +1077,49 @@ class InstructionGeneratorTest(parameterized.TestCase):
     self.assertLen(instructions, 1)
     self.assertEqual(instructions["tfl.quantize"], expected_instructions)
 
+  def test_generate_instruction_adds_duplication_transformation_as_first_instruction(
+      self,
+  ):
+    test_tensor_name = "test_tensor"
+    dummy_op_to_tensor_params = qtyping.OpToTensorParams(
+        subgraph_op_id=0,
+        transformations=[qtyping.QuantTransformation.ADD_QUANTIZE],
+        parameters=qtyping.UniformQuantParams(
+            8, None, np.array([1]), np.array([0])
+        ),
+    )
+    quant_parameters = {
+        test_tensor_name: qtyping.TensorTransformationParams(
+            tensor_name=test_tensor_name,
+            producer=dummy_op_to_tensor_params,
+            consumers=[dummy_op_to_tensor_params],
+            needs_buffer_duplication=True,
+        ),
+    }
+    instruction_gen = (
+        instruction_generator.TransformationInstructionsGenerator()
+    )
+    # _tensor_name_to_graph_info has to have an entry for the test tensor for
+    # `quant_params_to_transformation_insts` to work. But the values do not
+    # matter for this test.
+    instruction_gen._tensor_name_to_graph_info[test_tensor_name] = (
+        instruction_generator.TransformationInstructionsGenerator.TensorGraphInfo(
+            tensor_id=1,
+            subgraph_id=0,
+            producer=0,
+            consumers=[2],
+        )
+    )
+    instructions = instruction_gen.quant_params_to_transformation_insts(
+        quant_parameters
+    )
+    self.assertLen(instructions, 1)
+    self.assertGreater(len(instructions[test_tensor_name].instructions), 1)
+    self.assertEqual(
+        instructions[test_tensor_name].instructions[0].transformation,
+        qtyping.QuantTransformation.DUPLICATE_BUFFER,
+    )
+
 
 if __name__ == "__main__":
   googletest.main()

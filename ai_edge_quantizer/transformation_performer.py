@@ -15,9 +15,14 @@
 
 """Python manager for transformations to be applied to TFlite models."""
 
+from collections.abc import Sequence
+from typing import Optional
+
 import numpy as np
+
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import dequant_insert
+from ai_edge_quantizer.transformations import duplicate_buffer
 from ai_edge_quantizer.transformations import emulated_subchannel
 from ai_edge_quantizer.transformations import quant_insert
 from ai_edge_quantizer.transformations import quantize_tensor
@@ -68,6 +73,9 @@ class TransformationPerformer:
             emulated_subchannel.emulated_subchannel
         ),
         qtyping.QuantTransformation.ADD_QUANTIZE: quant_insert.insert_quant,
+        qtyping.QuantTransformation.DUPLICATE_BUFFER: (
+            duplicate_buffer.duplicate_buffer
+        ),
     }
     # transformations are seprated in two categories:
     # op_insertion_transformations are transformations that only insert ops
@@ -77,6 +85,7 @@ class TransformationPerformer:
         qtyping.QuantTransformation.ADD_DEQUANTIZE,
         qtyping.QuantTransformation.QUANTIZE_TENSOR,
         qtyping.QuantTransformation.ADD_QUANTIZE,
+        qtyping.QuantTransformation.DUPLICATE_BUFFER,
     ])
     self._op_replacement_transformations = set(
         [qtyping.QuantTransformation.EMULATED_SUBCHANNEL]
@@ -260,19 +269,24 @@ class TransformationPerformer:
       self,
       transformation_instructions: dict[str, qtyping.TensorTransformationInsts],
       tflite_model: schema_py_generated.ModelT,
-  ):
-    """Apply all transformations to the given tflite_model.
+      tensor_processing_order: Optional[Sequence[str]] = None,
+  ) -> None:
+    """Apply all transformations to the given tflite_model in place.
 
     Args:
-      transformation_instructions: a dict of transformation instructions grouped
-        by tensors, produced by transformation_instruction_generator
-      tflite_model: the tflite model to apply quantization on
-
-    Returns:
-      None, modifies the input tflite_model in place
+      transformation_instructions: Mapping from tensor name to its
+        transformation instructions, produced by
+        transformation_instruction_generator.
+      tflite_model: The tflite model to apply quantization to.
+      tensor_processing_order: The order of tensors to process. If not provided,
+        the order will be inferred from `transformation_instructions`.
     """
     self._original_op_id_map = []
     self._added_op_id_map = []
     self._create_op_id_map(tflite_model)
-    for transformation_inst in transformation_instructions.values():
-      self._apply_transformations(transformation_inst, tflite_model)
+    if tensor_processing_order is None:
+      tensor_processing_order = transformation_instructions.keys()
+    for tensor_name in tensor_processing_order:
+      self._apply_transformations(
+          transformation_instructions[tensor_name], tflite_model
+      )

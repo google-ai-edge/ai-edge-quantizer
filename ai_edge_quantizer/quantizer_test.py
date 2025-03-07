@@ -412,7 +412,9 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
     available_signatures = validation_result.available_signature_keys()
     self.assertLen(available_signatures, 2)
 
-  def test_recipe_conflict_raises_error(self):
+  def test_constant_buffer_shared_by_tensors_with_different_quantization_params_succeeds(
+      self,
+  ):
     recipe = [
         dict({
             'regex': '.*',
@@ -439,17 +441,9 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
             },
         })
     ]
-
     qt = quantizer.Quantizer(self._test_model_path, recipe)
     calib_result = qt.calibrate(_MULTI_SIGNATURE_CALIBRATION_DATASET)
-
-    error_message = (
-        "The tensors b'Add/y' and b'Mul/y' do not have the same quantization"
-    )
-    with self.assertRaisesWithPredicateMatch(
-        RuntimeError, lambda err: error_message in str(err)
-    ):
-      qt.quantize(calib_result)
+    self.assertIsNotNone(qt.quantize(calib_result).quantized_model)
 
   def test_quantization_with_insufficient_calibration(self):
     # Run calibration for one signature only.
