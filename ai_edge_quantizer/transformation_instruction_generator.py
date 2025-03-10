@@ -458,24 +458,38 @@ class TransformationInstructionsGenerator:
       self,
       param: qtyping.TensorTransformationParams,
   ) -> qtyping.TensorTransformationInsts:
-    """Converts a single quantization params to transformation instructions.
+    """Convert single tensor quant params to transformation instructions.
 
     Args:
-      param: quantization parameter of a tensor in the graph
+      param: Quantization parameters of a tensor in the graph.
 
     Returns:
-      a list of transformations to be applied to the same tensor
+      Transformations to be applied to the given tensor.
     """
-    # setup the structure
+    # Setup the structure.
     tensor_info = self._tensor_name_to_graph_info[param.tensor_name]
     tensor_trans_insts = qtyping.TensorTransformationInsts(
         param.tensor_name, tensor_info.subgraph_id, []
     )
 
-    # horizontal optimization
+    # Add all producer rules.
+    transformations = []
+    if param.producer:
+      for transformation in param.producer.transformations:
+        transformations.append(
+            qtyping.TransformationInst(
+                transformation,
+                tensor_info.tensor_id,
+                tensor_info.producer,
+                tensor_info.consumers,
+                param.producer.parameters,
+            )
+        )
+
+    # Horizontal optimization.
     consumer_group = self._group_consumer_transformations(param)
-    # at this point, starting from index 1 of consumer_group, we're having sets
-    # that represents transformations that can be grouped together
+    # At this point, starting from index 1 of consumer_group, we're having sets
+    # that represent transformations that can be grouped together.
     transformations_available_for_vertical_optimization = (
         self._produce_transformation_for_vertical_opt(consumer_group, param)
     )
@@ -484,23 +498,7 @@ class TransformationInstructionsGenerator:
             consumer_group, param
         )
     )
-
-    transformations = []
-    # adding all producer rules
-    producer_params = param.producer
-    if producer_params:
-      for transformation in producer_params.transformations:
-        transformations.append(
-            qtyping.TransformationInst(
-                transformation,
-                tensor_info.tensor_id,
-                tensor_info.producer,
-                tensor_info.consumers,
-                producer_params.parameters,
-            )
-        )
-
-    # apply vertical optimization
+    # Apply vertical optimization.
     last_producer_rule_idx = len(transformations) - 1
     if last_producer_rule_idx >= 0:
       transformations += self._apply_vertical_optimization(
@@ -509,11 +507,11 @@ class TransformationInstructionsGenerator:
       )
     else:
       transformations += transformations_available_for_vertical_optimization
-    # Adding other consumers rules
+    # Adding other consumers rules.
     transformations += other_consumer_transformations
     tensor_trans_insts.instructions = transformations
     # Check the generated transformation instructions are valid, the function
-    # will raise an error if the instructions are not valid
+    # will raise an error if the instructions are not valid.
     self._check_tensor_transformation_instructions_valid(tensor_trans_insts)
 
     return tensor_trans_insts
