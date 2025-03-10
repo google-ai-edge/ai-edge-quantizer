@@ -100,6 +100,7 @@ MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT = {
     _TFLOpName.DYNAMIC_UPDATE_SLICE: (
         common_quantize.materialize_dynamic_update_slice
     ),
+    _TFLOpName.STABLEHLO_COMPOSITE: common_quantize.materialize_composite,
 }
 for op_name, materialize_func in MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT.items():
   register_quantized_op(

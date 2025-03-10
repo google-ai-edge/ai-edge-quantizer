@@ -18,8 +18,10 @@
 import collections
 import copy
 import json
-from typing import Any
+from typing import Any, Union
 from ai_edge_quantizer import qtyping
+from ai_edge_litert import schema_py_generated as schema  # pylint:disable=g-direct-tensorflow-import
+from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
 
 _TFLOpName = qtyping.TFLOperationName
 _OpQuantizationConfig = qtyping.OpQuantizationConfig
@@ -168,7 +170,9 @@ DEFAULT_JSON_POLICY = """
       "EMBEDDING_LOOKUP",
       "SUM",
       "SELECT_V2",
-      "DYNAMIC_UPDATE_SLICE"
+      "DYNAMIC_UPDATE_SLICE",
+      "SELECT_V2",
+      "STABLEHLO_COMPOSITE"
     ],
     "static_wi8_ai8": [
       "ADD",
@@ -197,7 +201,9 @@ DEFAULT_JSON_POLICY = """
       "EMBEDDING_LOOKUP",
       "SUM",
       "SELECT_V2",
-      "DYNAMIC_UPDATE_SLICE"
+      "DYNAMIC_UPDATE_SLICE",
+      "SELECT_V2",
+      "STABLEHLO_COMPOSITE"
     ],
     "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
     "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
@@ -286,6 +292,33 @@ def _unroll_json_config(
         )
 
   return quant_configs
+
+
+# TODO: b/401024954 - Have a better way to specify recipes based on op options.
+def is_conditionally_unquantized(
+    op: Union[schema.Operator, schema.OperatorT],
+) -> bool:
+  """Checks if the operator is conditionally unquantized.
+
+  We may want to quantize an op only when its has certain options.
+  Policies/recipes
+  are not aware of op options, so it is checked here.
+
+  Args:
+    op: The operator to check.
+
+  Returns:
+    True if the operator is conditionally unquantized, False otherwise.
+  """
+  if opts := flatbuffer_utils.get_options_as(
+      op, schema.StableHLOCompositeOptionsT
+  ):
+    name: bytes = opts.name
+    # Non npu_call composites may have a kernel and as such will not be
+    # quantized.
+    return ("od" + "ml.npu_call") not in name.decode("utf-8")
+
+  return False
 
 
 def update_default_config_policy(raw_json_policy: str):

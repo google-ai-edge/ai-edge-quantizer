@@ -86,7 +86,6 @@ def check_if_valid_op_config(
   Raises:
     ValueError: If the op quantization config is not valid.
   """
-
   check_passed = False
   error_msg = ""
   # Check if find op_config in policy config_check_policy.

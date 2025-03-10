@@ -19,6 +19,7 @@ import copy
 from typing import Any, Optional, Union
 
 from ai_edge_quantizer import algorithm_manager
+from ai_edge_quantizer import default_policy as policy
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
@@ -73,8 +74,12 @@ class ParamsGenerator:
     if model_qsvs is None:
       model_qsvs = {}
 
+    skip_subgraphs = set()
     op_codes = self.flatbuffer_model.operatorCodes
-    for subgraph in self.flatbuffer_model.subgraphs:
+    for sg_ind, subgraph in enumerate(self.flatbuffer_model.subgraphs):
+      if sg_ind in skip_subgraphs:
+        continue
+
       graph_info = qtyping.GraphInfo(
           subgraph.tensors, self.flatbuffer_model.buffers
       )
@@ -103,10 +108,19 @@ class ParamsGenerator:
         algorithm_name, op_quant_config = (
             model_recipe_manager.get_quantization_configs(op_key, op_scope)
         )
+        if policy.is_conditionally_unquantized(op):
+          algorithm_name = algorithm_manager.AlgorithmName.NO_QUANTIZE
+
         if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
+          side_effect_subgraphs = (
+              tfl_flatbuffer_utils.get_op_side_effect_subgraphs(op)
+          )
+          skip_subgraphs.update(side_effect_subgraphs)
+
           op_quant_results = self._get_params_for_no_quant_op(
               subgraph_op_id, op, subgraph.tensors
           )
+
         else:
           op_info = qtyping.OpInfo(op, op_key, subgraph_op_id, op_quant_config)
           # Step2: query algorithm_manager to get/call the related function.
@@ -259,17 +273,25 @@ class ParamsGenerator:
       RuntimeError: If the tensors sharing the same buffer have different
         quantization settings.
     """
+    def get_result(tensor: Any):
+      return self.model_quant_results.get(
+          tfl_flatbuffer_utils.get_tensor_name(tensor), None
+      )
+
     for tensors in self.buffer_to_tensors.values():
       if len(tensors) <= 1:
         continue
+
       first_tensor = tensors[0]
-      first_tensor_params = self.model_quant_results[
-          tfl_flatbuffer_utils.get_tensor_name(first_tensor)
-      ]
+      first_tensor_params = get_result(first_tensor)
+      if first_tensor_params is None:
+        continue
+
       for tensor in tensors[1:]:
-        tensor_params = self.model_quant_results[
-            tfl_flatbuffer_utils.get_tensor_name(tensor)
-        ]
+        tensor_params = get_result(tensor)
+        if tensor_params is None:
+          continue
+
         if not _compatible_tensor_transformation_params(
             first_tensor_params, tensor_params
         ):

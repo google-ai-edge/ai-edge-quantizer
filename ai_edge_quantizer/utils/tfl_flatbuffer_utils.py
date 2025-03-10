@@ -21,49 +21,40 @@ import immutabledict
 import numpy as np
 
 from ai_edge_quantizer import qtyping
-from ai_edge_litert import schema_py_generated  # pylint:disable=g-direct-tensorflow-import
+from ai_edge_litert import schema_py_generated as schema  # pylint:disable=g-direct-tensorflow-import
 from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
 
 _TFLOpName = qtyping.TFLOperationName
 
 TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
-    _TFLOpName.FULLY_CONNECTED: (
-        schema_py_generated.BuiltinOperator.FULLY_CONNECTED
-    ),
-    _TFLOpName.BATCH_MATMUL: schema_py_generated.BuiltinOperator.BATCH_MATMUL,
-    _TFLOpName.CONV_2D: schema_py_generated.BuiltinOperator.CONV_2D,
-    _TFLOpName.DEPTHWISE_CONV_2D: (
-        schema_py_generated.BuiltinOperator.DEPTHWISE_CONV_2D
-    ),
-    _TFLOpName.CONV_2D_TRANSPOSE: (
-        schema_py_generated.BuiltinOperator.TRANSPOSE_CONV
-    ),
-    _TFLOpName.EMBEDDING_LOOKUP: (
-        schema_py_generated.BuiltinOperator.EMBEDDING_LOOKUP
-    ),
-    _TFLOpName.SOFTMAX: schema_py_generated.BuiltinOperator.SOFTMAX,
-    _TFLOpName.AVERAGE_POOL_2D: (
-        schema_py_generated.BuiltinOperator.AVERAGE_POOL_2D
-    ),
-    _TFLOpName.RESHAPE: schema_py_generated.BuiltinOperator.RESHAPE,
-    _TFLOpName.TANH: schema_py_generated.BuiltinOperator.TANH,
-    _TFLOpName.TRANSPOSE: schema_py_generated.BuiltinOperator.TRANSPOSE,
-    _TFLOpName.GELU: schema_py_generated.BuiltinOperator.GELU,
-    _TFLOpName.ADD: schema_py_generated.BuiltinOperator.ADD,
-    _TFLOpName.SUB: schema_py_generated.BuiltinOperator.SUB,
-    _TFLOpName.MUL: schema_py_generated.BuiltinOperator.MUL,
-    _TFLOpName.MEAN: schema_py_generated.BuiltinOperator.MEAN,
-    _TFLOpName.RSQRT: schema_py_generated.BuiltinOperator.RSQRT,
-    _TFLOpName.CONCATENATION: schema_py_generated.BuiltinOperator.CONCATENATION,
-    _TFLOpName.STRIDED_SLICE: schema_py_generated.BuiltinOperator.STRIDED_SLICE,
-    _TFLOpName.SPLIT: schema_py_generated.BuiltinOperator.SPLIT,
-    _TFLOpName.LOGISTIC: schema_py_generated.BuiltinOperator.LOGISTIC,
-    _TFLOpName.SLICE: schema_py_generated.BuiltinOperator.SLICE,
-    _TFLOpName.SUM: schema_py_generated.BuiltinOperator.SUM,
-    _TFLOpName.SELECT_V2: schema_py_generated.BuiltinOperator.SELECT_V2,
+    _TFLOpName.FULLY_CONNECTED: schema.BuiltinOperator.FULLY_CONNECTED,
+    _TFLOpName.BATCH_MATMUL: schema.BuiltinOperator.BATCH_MATMUL,
+    _TFLOpName.CONV_2D: schema.BuiltinOperator.CONV_2D,
+    _TFLOpName.DEPTHWISE_CONV_2D: schema.BuiltinOperator.DEPTHWISE_CONV_2D,
+    _TFLOpName.CONV_2D_TRANSPOSE: schema.BuiltinOperator.TRANSPOSE_CONV,
+    _TFLOpName.EMBEDDING_LOOKUP: schema.BuiltinOperator.EMBEDDING_LOOKUP,
+    _TFLOpName.SOFTMAX: schema.BuiltinOperator.SOFTMAX,
+    _TFLOpName.AVERAGE_POOL_2D: schema.BuiltinOperator.AVERAGE_POOL_2D,
+    _TFLOpName.RESHAPE: schema.BuiltinOperator.RESHAPE,
+    _TFLOpName.TANH: schema.BuiltinOperator.TANH,
+    _TFLOpName.TRANSPOSE: schema.BuiltinOperator.TRANSPOSE,
+    _TFLOpName.GELU: schema.BuiltinOperator.GELU,
+    _TFLOpName.ADD: schema.BuiltinOperator.ADD,
+    _TFLOpName.SUB: schema.BuiltinOperator.SUB,
+    _TFLOpName.MUL: schema.BuiltinOperator.MUL,
+    _TFLOpName.MEAN: schema.BuiltinOperator.MEAN,
+    _TFLOpName.RSQRT: schema.BuiltinOperator.RSQRT,
+    _TFLOpName.CONCATENATION: schema.BuiltinOperator.CONCATENATION,
+    _TFLOpName.STRIDED_SLICE: schema.BuiltinOperator.STRIDED_SLICE,
+    _TFLOpName.SPLIT: schema.BuiltinOperator.SPLIT,
+    _TFLOpName.LOGISTIC: schema.BuiltinOperator.LOGISTIC,
+    _TFLOpName.SLICE: schema.BuiltinOperator.SLICE,
+    _TFLOpName.SUM: schema.BuiltinOperator.SUM,
+    _TFLOpName.SELECT_V2: schema.BuiltinOperator.SELECT_V2,
+    _TFLOpName.STABLEHLO_COMPOSITE: schema.BuiltinOperator.STABLEHLO_COMPOSITE,
     _TFLOpName.DYNAMIC_UPDATE_SLICE: (
-        schema_py_generated.BuiltinOperator.DYNAMIC_UPDATE_SLICE
+        schema.BuiltinOperator.DYNAMIC_UPDATE_SLICE
     ),
 })
 
@@ -318,3 +309,23 @@ def get_subgraph_input_output_operators(
       op_key=qtyping.TFLOperationName.OUTPUT,
   )
   return [input_op, output_op]
+
+
+def get_op_side_effect_subgraphs(
+    op: Union[schema.Operator, schema.OperatorT],
+) -> list[int]:
+  """Get indices of any subgraphs invoked as a side effect of the operator.
+
+  Args:
+    op: The operator object.
+
+  Returns:
+    A list of subgraph indices invoked by the operator. Empty if the operator
+    does not invoke any subgraphs.
+  """
+  if opts := flatbuffer_utils.get_options_as(
+      op, schema.StableHLOCompositeOptionsT
+  ):
+    return [opts.decompositionSubgraphIndex]
+  # Can add other nested ops here (control flow ops, etc).
+  return []
