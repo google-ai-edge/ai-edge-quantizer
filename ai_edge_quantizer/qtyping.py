@@ -109,6 +109,8 @@ class QuantTransformation(enum.Enum):
   # Create pattern for emulated subchannel quantization, only support fully
   # connected op.
   EMULATED_SUBCHANNEL = 4
+  # Duplicate the buffer.
+  DUPLICATE_BUFFER = 5
 
 
 @dataclasses.dataclass(frozen=True)

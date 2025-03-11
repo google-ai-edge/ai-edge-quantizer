@@ -69,6 +69,29 @@ def add_op_code(
   return len(model_op_codes) - 1
 
 
+def add_new_constant_buffer(
+    data: np.ndarray,
+    buffers: list[schema_py_generated.BufferT],
+) -> int:
+  """Add a new constant buffer to the model.
+
+  Args:
+    data: The data of the new tensor.
+    buffers: The buffers of the model.
+
+  Returns:
+    The index of the new buffer in the model.
+  """
+  new_buffer = schema_py_generated.BufferT()
+  new_buffer.data = np.frombuffer(data.tobytes(), dtype=np.uint8).flatten()
+  new_buffer.offset = 0
+  new_buffer.size = 0
+  new_buffer_id = len(buffers)
+  buffers.append(new_buffer)
+
+  return new_buffer_id
+
+
 def add_new_constant_tensor(
     tensor_name: str,
     data: np.ndarray,
@@ -88,16 +111,11 @@ def add_new_constant_tensor(
   Returns:
     The index of the new tensor in the subgraph.
   """
-  tensor_buffer = schema_py_generated.BufferT()
-  tensor_buffer.data = np.frombuffer(data.tobytes(), dtype=np.uint8).flatten()
-  tensor_buffer.offset = 0
-  tensor_buffer.size = 0
-  tensor_buffer_id = len(buffers)
-  buffers.append(tensor_buffer)
+  new_buffer_id = add_new_constant_buffer(data, buffers)
 
   new_tensor = schema_py_generated.TensorT()
   new_tensor.shape = data.shape
-  new_tensor.buffer = tensor_buffer_id
+  new_tensor.buffer = new_buffer_id
   new_tensor.type = tensor_type
   new_tensor.name = tensor_name
   new_tensor_id = len(subgraph.tensors)

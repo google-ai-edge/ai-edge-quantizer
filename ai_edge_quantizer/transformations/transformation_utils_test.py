@@ -58,6 +58,38 @@ class TransformationUtilsTest(parameterized.TestCase):
   @parameterized.named_parameters(
       dict(
           testcase_name="float32",
+          data=np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32),
+      ),
+      dict(
+          testcase_name="int8",
+          data=np.array([[1, 2], [3, 4]], dtype=np.int8),
+      ),
+  )
+  def test_add_new_constant_buffer(self, data):
+    """Tests if the constant buffer is added to the model."""
+    prev_num_buffers = len(self.model.buffers) - 1
+    new_buffer_idx = transformation_utils.add_new_constant_buffer(
+        data=data,
+        buffers=self.model.buffers,
+    )
+    self.assertEqual(new_buffer_idx, prev_num_buffers + 1)
+
+    expected_buffer_data = (
+        np.frombuffer(
+            data.tobytes(),
+            dtype=np.uint8,
+        )
+        .flatten()
+        .tolist()
+    )
+    self.assertEqual(
+        self.model.buffers[new_buffer_idx].data.tolist(),
+        expected_buffer_data,
+    )
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="float32",
           tensor_data=np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32),
           tensor_type=schema_py_generated.TensorType.FLOAT32,
           expected_type=schema_py_generated.TensorType.FLOAT32,
