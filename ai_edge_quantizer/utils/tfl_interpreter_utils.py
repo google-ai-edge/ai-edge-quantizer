@@ -216,8 +216,10 @@ def get_tensor_name_to_details_map(
   """
   tensor_name_to_detail = {}
   for tensor_detail in tflite_interpreter.get_tensor_details(subgraph_index):
-    # Don't return temporary, unnamed tensors
-    if not tensor_detail["name"]:
+    # Don't return temporary, unnamed tensors or scratch tensors.
+    # tensor_detail doesn't include the allocation size (bytes) or an
+    # indicator of scratch tensors, so use the name to filter them out.
+    if not tensor_detail["name"] or "scratch" in tensor_detail["name"]:
       continue
     tensor_name_to_detail[tensor_detail["name"]] = tensor_detail
   return tensor_name_to_detail
