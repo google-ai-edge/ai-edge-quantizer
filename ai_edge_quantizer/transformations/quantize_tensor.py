@@ -149,7 +149,7 @@ def _perform_blockwise_quantization(
       transformation_input.subgraph,
       transformation_input.buffers,
   )
-  blockwise_details.scale = scale_tensor_id
+  blockwise_details.scales = scale_tensor_id
   blockwise_details.blockSize = transformation_input.quant_params.block_size
   # blockwise quantization allows optional zero point.
   if transformation_input.quant_params.zero_point is not None:
@@ -160,7 +160,7 @@ def _perform_blockwise_quantization(
         transformation_input.subgraph,
         transformation_input.buffers,
     )
-    blockwise_details.zeroPoint = zero_point_tensor_id
+    blockwise_details.zeroPoints = zero_point_tensor_id
   flatbuffer_quantization.details = blockwise_details
   return flatbuffer_quantization
 

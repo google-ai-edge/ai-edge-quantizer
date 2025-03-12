@@ -168,8 +168,8 @@ class QuantizeTensorTest(parameterized.TestCase):
     )
     self.assertEqual(quant_param.details.blockSize, 32)
     # Check if the scale and zero point tensors are inserted correctly.
-    self.assertEqual(quant_param.details.scale, 9)
-    self.assertEqual(quant_param.details.zeroPoint, 10)
+    self.assertEqual(quant_param.details.scales, 9)
+    self.assertEqual(quant_param.details.zeroPoints, 10)
 
   def test_int4_constant_packed_correctly(self):
     subgraph = self._model.subgraphs[0]
