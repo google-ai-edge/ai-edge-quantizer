@@ -16,6 +16,7 @@
 """Uniform quantize in tensor level."""
 
 import dataclasses
+from typing import Optional
 import numpy as np
 from ai_edge_quantizer import qtyping
 
@@ -237,7 +238,11 @@ def symmetric_quantize_bias_tensor(
 
 
 def tensor_zp_scale_from_min_max(
-    min_value, max_value, num_bits: int, symmetric: bool
+    min_value,
+    max_value,
+    num_bits: int,
+    symmetric: bool,
+    clipping_values: Optional[np.ndarray] = None,
 ):
   """Get zero point and scale from min and max value.
 
@@ -246,6 +251,10 @@ def tensor_zp_scale_from_min_max(
     max_value: The maximum value of the tensor (channel-wise supported).
     num_bits: The number of bits of the tensor.
     symmetric: Whether the tensor is symmetric.
+    clipping_values: Absolute clipping values to apply to the tensor. This will
+      clip the tensors to the range [-clipping_values, clipping_values]. This
+      should be the same shape as min_value and max_value. If None, no clipping
+      will be applied.
 
   Returns:
     The zero point and scale of the tensor.
@@ -261,6 +270,8 @@ def tensor_zp_scale_from_min_max(
   if symmetric:
     bound = np.maximum(np.abs(min_value), np.abs(max_value))
     bound = np.maximum(bound, min_bound)
+    if clipping_values is not None:
+      bound = np.clip(bound, -clipping_values, clipping_values)
     if not qtype.signed:
       half_q = (qmax - 1) / 2
       scale = bound / half_q
@@ -268,7 +279,6 @@ def tensor_zp_scale_from_min_max(
     else:
       scale = bound / qmax
       zp = np.zeros_like(scale, dtype=np.int32)
-
   else:
     # Include 0 to the range to support zero-padding.
     # See: https://arxiv.org/pdf/1712.05877.pdf
@@ -276,6 +286,8 @@ def tensor_zp_scale_from_min_max(
     bound_max = np.maximum(max_value, np.zeros_like(max_value))
     bound_min = np.minimum(min_value, np.zeros_like(min_value))
     bound = np.maximum(bound_max - bound_min, min_bound)
+    if clipping_values is not None:
+      bound = np.clip(bound, -clipping_values, clipping_values)
     scale = bound / (qmax - qmin)
     zp = qmin - bound_min / scale
     zp = np.rint(zp)

@@ -21,7 +21,9 @@ import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
-from ai_edge_quantizer.algorithms.uniform_quantize.naive_min_max_quantize_op_tests import test_utils as naive_min_max_test_utils
+from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
+from ai_edge_quantizer.algorithms.uniform_quantize import octav
+from ai_edge_quantizer.algorithms.uniform_quantize.op_architecture_tests import test_utils as op_test_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -29,20 +31,18 @@ _TFLOpName = qtyping.TFLOperationName
 _ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
-_OpTestInfo = naive_min_max_test_utils.OpTestInfo
+_OpTestInfo = op_test_utils.OpTestInfo
 
 _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(
     "../../../tests/models"
 )
 _DEFAULT_ACTIVATION_QUANT_SETTING = (
-    naive_min_max_test_utils.DEFAULT_ACTIVATION_QUANT_SETTING
+    op_test_utils.DEFAULT_ACTIVATION_QUANT_SETTING
 )
-_DEFAULT_WEIGHT_QUANT_SETTING = (
-    naive_min_max_test_utils.DEFAULT_WEIGHT_QUANT_SETTING
-)
+_DEFAULT_WEIGHT_QUANT_SETTING = op_test_utils.DEFAULT_WEIGHT_QUANT_SETTING
 
 
-class ReshapeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
+class AveragePool2dTest(op_test_utils.BaseQuantizeTest):
 
   def setUp(self):
     super().setUp()
@@ -54,7 +54,7 @@ class ReshapeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         test_model=tfl_flatbuffer_utils.read_model(self._test_model_path),
         op_tensor_names={},
         input_range=(np.array([[-10]]), np.array([[8]])),
-        output_range=(np.array([[0]]), np.array([[1]])),
+        output_range=(np.array([[10]]), np.array([[88]])),
     )
     # The test model has one subgraph for now.
     self._graph_info = qtyping.GraphInfo(
@@ -62,17 +62,25 @@ class ReshapeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         buffers=self._op_test_info.test_model.buffers,
     )
 
-  @parameterized.parameters(
-      (_DEFAULT_ACTIVATION_QUANT_SETTING),
-      (
-          _TensorQuantConfig(
-              num_bits=16,
-              symmetric=True,
-              granularity=qtyping.QuantGranularity.TENSORWISE,
-          )
+  @parameterized.product(
+      get_tensor_quant_params_func=(
+          naive_min_max_quantize.get_tensor_quant_params,
+          octav.get_tensor_quant_params,
+      ),
+      activation_tensor_config=(
+          (_DEFAULT_ACTIVATION_QUANT_SETTING),
+          (
+              _TensorQuantConfig(
+                  num_bits=16,
+                  symmetric=True,
+                  granularity=qtyping.QuantGranularity.TENSORWISE,
+              )
+          ),
       ),
   )
-  def test_materialize_softmax_succeeds(self, activation_tensor_config):
+  def test_materialize_average_pool_2d_succeeds(
+      self, get_tensor_quant_params_func, activation_tensor_config
+  ):
     op_quant_config = qtyping.OpQuantizationConfig(
         activation_tensor_config=activation_tensor_config,
         weight_tensor_config=_DEFAULT_WEIGHT_QUANT_SETTING,
@@ -80,25 +88,30 @@ class ReshapeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     )
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
-    subgraph_op_id = 5
-    op = subgraph0.operators[subgraph_op_id]
+    subgraph_op_id = 1
+    average_pool_op = subgraph0.operators[subgraph_op_id]
     op_info = qtyping.OpInfo(
-        op=op,
-        op_name=qtyping.TFLOperationName.SOFTMAX,
+        op=average_pool_op,
+        op_name=qtyping.TFLOperationName.AVERAGE_POOL_2D,
         subgraph_op_index=subgraph_op_id,
         op_quant_config=op_quant_config,
     )
 
     # Test settings.
     op_tensor_names = {}
-    op_tensor_names["input"] = "sequential/dense_1/MatMul"
-    op_tensor_names["output"] = "StatefulPartitionedCall:0"
+    op_tensor_names["input"] = (
+        "sequential/conv2d/Relu;sequential/conv2d/BiasAdd;sequential/conv2d/Conv2D;sequential/conv2d/BiasAdd/ReadVariableOp1"
+    )
+    op_tensor_names["output"] = "sequential/average_pooling2d/AvgPool"
     self._op_test_info.op_tensor_names = op_tensor_names
+
     self._test_no_weights_op(
         op_info,
         self._graph_info,
         self._op_test_info,
-        common_quantize.materialize_softmax_and_logistic,
+        common_quantize.materialize_average_pool_2d,
+        get_tensor_quant_params_func,
+        same_input_output_params=True,
     )
 
 

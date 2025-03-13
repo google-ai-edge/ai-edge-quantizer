@@ -21,7 +21,9 @@ import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
-from ai_edge_quantizer.algorithms.uniform_quantize.naive_min_max_quantize_op_tests import test_utils as naive_min_max_test_utils
+from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
+from ai_edge_quantizer.algorithms.uniform_quantize import octav
+from ai_edge_quantizer.algorithms.uniform_quantize.op_architecture_tests import test_utils as op_test_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -29,20 +31,20 @@ _TFLOpName = qtyping.TFLOperationName
 _ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
-_OpTestInfo = naive_min_max_test_utils.OpTestInfo
+_OpTestInfo = op_test_utils.OpTestInfo
 
 _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(
     "../../../tests/models"
 )
 
 
-class Conv2DTransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
+class Conv2dTest(op_test_utils.BaseQuantizeTest):
 
   def setUp(self):
     super().setUp()
     np.random.seed(666)
     self._test_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, "single_conv2d_transpose_bias.tflite"
+        _TEST_DATA_PREFIX_PATH, "conv_fc_mnist.tflite"
     )
     self._op_test_info = _OpTestInfo(
         test_model=tfl_flatbuffer_utils.read_model(self._test_model_path),
@@ -60,36 +62,43 @@ class Conv2DTransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
 
   def _set_op_tensor_names(self):
     op_tensor_names = {}
-    op_tensor_names["weight"] = (
-        "sequential_5/conv2d_transpose_3/conv2d_transpose"
-    )
+    op_tensor_names["weight"] = "sequential/conv2d/Conv2D"
     op_tensor_names["bias"] = (
-        "sequential_5/conv2d_transpose_3/BiasAdd;sequential_5/conv2d_transpose_3/conv2d_transpose;sequential_5/conv2d_transpose_3/BiasAdd/ReadVariableOp"
+        "sequential/conv2d/Relu;sequential/conv2d/BiasAdd;sequential/conv2d/Conv2D;sequential/conv2d/BiasAdd/ReadVariableOp"
     )
-    op_tensor_names["input"] = "serving_default_input_6:0"
-    op_tensor_names["ignored_input"] = "sequential_5/conv2d_transpose_3/stack"
-    op_tensor_names["output"] = "StatefulPartitionedCall:0"
+    op_tensor_names["input"] = "serving_default_conv2d_input:0"
+    op_tensor_names["output"] = (
+        "sequential/conv2d/Relu;sequential/conv2d/BiasAdd;sequential/conv2d/Conv2D;sequential/conv2d/BiasAdd/ReadVariableOp1"
+    )
     self._op_test_info.op_tensor_names = op_tensor_names
 
   @parameterized.product(
-      symmetric_weight=(True, False),
+      num_bits_weight=(4, 8),
       granularity=(
           qtyping.QuantGranularity.CHANNELWISE,
           qtyping.QuantGranularity.TENSORWISE,
       ),
-      test_case=[
-          # Tuple holds compute precision and whether to use explicit
+      # get_tensor_quant_params_func, symmetric_weight
+      algos=(
+          (naive_min_max_quantize.get_tensor_quant_params, True),
+          (naive_min_max_quantize.get_tensor_quant_params, False),
+          (octav.get_tensor_quant_params, True),
+      ),
+      test_case=(
+          # Tuple holds compute precision and whether to use srq and explicit
           # dequantize.
-          (_ComputePrecision.FLOAT, True),  # WEIGHT_ONLY.
-          (_ComputePrecision.INTEGER, False),  # DRQ.
-      ],
+          (_ComputePrecision.FLOAT, True),
+          (_ComputePrecision.INTEGER, False),
+      ),
   )
-  def test_materialize_weight_only_drq_conv2d_transpose_succeeds(
+  def test_materialize_weight_only_drq_conv2d_succeeds(
       self,
-      symmetric_weight,
+      num_bits_weight,
       granularity,
+      algos,
       test_case,
   ):
+    get_quant_params_func, symmetric_weight = algos
     compute_precision, explicit_dequantize = test_case
 
     # Read from Model Explorer.
@@ -99,12 +108,12 @@ class Conv2DTransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     activation_tensor_config = None
     op_info = qtyping.OpInfo(
         op=op,
-        op_name=qtyping.TFLOperationName.CONV_2D_TRANSPOSE,
+        op_name=qtyping.TFLOperationName.CONV_2D,
         subgraph_op_index=subgraph_op_id,
         op_quant_config=qtyping.OpQuantizationConfig(
             activation_tensor_config=activation_tensor_config,
             weight_tensor_config=_TensorQuantConfig(
-                num_bits=8,  # Only int8 is supported for now.
+                num_bits=num_bits_weight,
                 symmetric=symmetric_weight,
                 granularity=granularity,
             ),
@@ -116,18 +125,23 @@ class Conv2DTransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         op_info,
         self._graph_info,
         self._op_test_info,
-        common_quantize.materialize_conv2d_transpose,
-        bias_quantized_dim=None,
-        input_index=2,
-        weight_index=1,
-        bias_index=3,
-        inputs_to_ignore=[0],
+        common_quantize.materialize_fc_conv,
+        get_quant_params_func,
     )
 
-  @parameterized.parameters(8, 16)
-  def test_materialize_srq_conv2d_transpose_succeeds(
+  @parameterized.product(
+      get_tensor_quant_params_func=(
+          naive_min_max_quantize.get_tensor_quant_params,
+          octav.get_tensor_quant_params,
+      ),
+      activation_num_bits=(8, 16),
+      weight_num_bits=(4, 8),
+  )
+  def test_materialize_srq_conv2d_succeeds(
       self,
+      get_tensor_quant_params_func,
       activation_num_bits,
+      weight_num_bits,
   ):
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
@@ -148,12 +162,12 @@ class Conv2DTransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
       )
     op_info = qtyping.OpInfo(
         op=op,
-        op_name=qtyping.TFLOperationName.CONV_2D_TRANSPOSE,
+        op_name=qtyping.TFLOperationName.CONV_2D,
         subgraph_op_index=subgraph_op_id,
         op_quant_config=qtyping.OpQuantizationConfig(
             activation_tensor_config=activation_tensor_config,
             weight_tensor_config=_TensorQuantConfig(
-                num_bits=8,  # Only int8 is supported for now.
+                num_bits=weight_num_bits,
                 symmetric=True,
                 granularity=qtyping.QuantGranularity.CHANNELWISE,
             ),
@@ -164,41 +178,34 @@ class Conv2DTransposeTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         op_info,
         self._graph_info,
         self._op_test_info,
-        common_quantize.materialize_conv2d_transpose,
-        bias_quantized_dim=None,
-        input_index=2,
-        weight_index=1,
-        bias_index=3,
-        inputs_to_ignore=[0],
+        common_quantize.materialize_fc_conv,
+        get_tensor_quant_params_func,
     )
 
-  @parameterized.named_parameters(
-      dict(
-          testcase_name="weights_are_not_quantized",
-          min_weight_elements=1000000,
-          expect_weights_quantized=False,
+  @parameterized.product(
+      get_tensor_quant_params_func=(
+          naive_min_max_quantize.get_tensor_quant_params,
+          octav.get_tensor_quant_params,
       ),
-      dict(
-          testcase_name="weights_are_quantized_for_min_weight_elements_0",
-          min_weight_elements=0,
-          expect_weights_quantized=True,
-      ),
-      dict(
-          testcase_name="weights_are_quantized_for_min_weight_elements_1",
-          min_weight_elements=1,
-          expect_weights_quantized=True,
+      # compute precision, whether to use srq, explicit dequantize.
+      test_case=(
+          ("weights_are_not_quantized", 1000000, False),
+          ("weights_are_quantized_for_min_weight_elements_0", 0, True),
+          ("weights_are_quantized_for_min_weight_elements_1", 1, True),
       ),
   )
-  def test_materialize_conv2d_transpose_quantizes_weights_larger_than_min_weight_elements_for_w8_afp32(
-      self, min_weight_elements, expect_weights_quantized
+  def test_materialize_conv2d_quantizes_weights_larger_than_min_weight_elements_for_w8_afp32(
+      self, get_tensor_quant_params_func, test_case
   ):
+    _, min_weight_elements, expect_weights_quantized = test_case
     self._test_materialize_fn_quantizes_weights_larger_than_min_weight_elements_for_w8_afp32(
-        op_name=qtyping.TFLOperationName.CONV_2D_TRANSPOSE,
+        op_name=qtyping.TFLOperationName.CONV_2D,
         subgraph_op_id=0,
         min_weight_elements=min_weight_elements,
         graph_info=self._graph_info,
         op_test_info=self._op_test_info,
-        materialization_func=common_quantize.materialize_conv2d_transpose,
+        materialization_func=common_quantize.materialize_fc_conv,
+        get_tensor_quant_params_func=get_tensor_quant_params_func,
         expect_weights_quantized=expect_weights_quantized,
     )
 

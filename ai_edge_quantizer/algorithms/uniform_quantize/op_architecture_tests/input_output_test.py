@@ -22,7 +22,8 @@ from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
-from ai_edge_quantizer.algorithms.uniform_quantize.naive_min_max_quantize_op_tests import test_utils as naive_min_max_test_utils
+from ai_edge_quantizer.algorithms.uniform_quantize import octav
+from ai_edge_quantizer.algorithms.uniform_quantize.op_architecture_tests import test_utils as op_test_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -30,7 +31,7 @@ _TFLOpName = qtyping.TFLOperationName
 _ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
-_OpTestInfo = naive_min_max_test_utils.OpTestInfo
+_OpTestInfo = op_test_utils.OpTestInfo
 
 
 _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(
@@ -38,7 +39,7 @@ _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(
 )
 
 
-class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
+class InputOutputTest(op_test_utils.BaseQuantizeTest):
 
   def setUp(self):
     super().setUp()
@@ -118,6 +119,10 @@ class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     self.assertIsNone(producer_info.parameters)
 
   @parameterized.product(
+      get_tensor_quant_params_func=(
+          naive_min_max_quantize.get_tensor_quant_params,
+          octav.get_tensor_quant_params,
+      ),
       weight_num_bits=[4, 8],
       symmetric_weight=[True, False],
       granularity=[
@@ -126,7 +131,11 @@ class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
       ],
   )
   def test_materialize_output_float(
-      self, weight_num_bits, symmetric_weight, granularity
+      self,
+      get_tensor_quant_params_func,
+      weight_num_bits,
+      symmetric_weight,
+      granularity,
   ):
     weight_config = _TensorQuantConfig(
         num_bits=weight_num_bits,
@@ -146,7 +155,7 @@ class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         op_quant_config=op_quant_config,
     )
     quantization_params = common_quantize.materialize_output(
-        naive_min_max_quantize.get_tensor_quant_params,
+        get_tensor_quant_params_func,
         op_info,
         self._graph_info,
         self._model_qsv,
@@ -165,6 +174,10 @@ class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     self.assertIsNone(consumer_info.parameters)
 
   @parameterized.product(
+      get_tensor_quant_params_func=(
+          naive_min_max_quantize.get_tensor_quant_params,
+          octav.get_tensor_quant_params,
+      ),
       act_num_bits=[8, 16],
       weight_num_bits=[4, 8],
       granularity=[
@@ -173,7 +186,11 @@ class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
       ],
   )
   def test_materialize_input_integer(
-      self, act_num_bits, weight_num_bits, granularity
+      self,
+      get_tensor_quant_params_func,
+      act_num_bits,
+      weight_num_bits,
+      granularity,
   ):
     activation_config = _TensorQuantConfig(
         num_bits=act_num_bits,
@@ -197,7 +214,7 @@ class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         op_quant_config=op_quant_config,
     )
     quantization_params = common_quantize.materialize_input(
-        naive_min_max_quantize.get_tensor_quant_params,
+        get_tensor_quant_params_func,
         op_info,
         self._graph_info,
         self._model_qsv,
@@ -219,6 +236,10 @@ class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     self.assertEqual(quant_params.num_bits, act_num_bits)
 
   @parameterized.product(
+      get_tensor_quant_params_func=(
+          naive_min_max_quantize.get_tensor_quant_params,
+          octav.get_tensor_quant_params,
+      ),
       act_num_bits=[8, 16],
       weight_num_bits=[4, 8],
       granularity=[
@@ -227,7 +248,11 @@ class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
       ],
   )
   def test_materialize_output_integer(
-      self, act_num_bits, weight_num_bits, granularity
+      self,
+      get_tensor_quant_params_func,
+      act_num_bits,
+      weight_num_bits,
+      granularity,
   ):
     activation_config = _TensorQuantConfig(
         num_bits=act_num_bits,
@@ -251,7 +276,7 @@ class InputOutputTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         op_quant_config=op_quant_config,
     )
     quantization_params = common_quantize.materialize_output(
-        naive_min_max_quantize.get_tensor_quant_params,
+        get_tensor_quant_params_func,
         op_info,
         self._graph_info,
         self._model_qsv,
