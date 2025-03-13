@@ -1077,6 +1077,68 @@ class InstructionGeneratorTest(parameterized.TestCase):
     self.assertLen(instructions, 1)
     self.assertEqual(instructions["tfl.quantize"], expected_instructions)
 
+  def test_instruction_generator_keeps_buffer_duplication_as_first_transformation(
+      self,
+  ):
+    test_tensor_name = "test_tensor"
+
+    dummy_quant_params = qtyping.UniformQuantParams(
+        8, None, np.array([1]), np.array([0])
+    )
+    consumer_params_1 = qtyping.OpToTensorParams(
+        subgraph_op_id=0,
+        transformations=[
+            qtyping.QuantTransformation.DUPLICATE_BUFFER,
+            qtyping.QuantTransformation.ADD_QUANTIZE,
+        ],
+        parameters=dummy_quant_params,
+    )
+    consumer_params_2 = qtyping.OpToTensorParams(
+        subgraph_op_id=2,
+        transformations=[
+            qtyping.QuantTransformation.DUPLICATE_BUFFER,
+            qtyping.QuantTransformation.ADD_QUANTIZE,
+            qtyping.QuantTransformation.ADD_DEQUANTIZE,
+        ],
+        parameters=dummy_quant_params,
+    )
+
+    quant_parameters = {
+        test_tensor_name: qtyping.TensorTransformationParams(
+            tensor_name=test_tensor_name,
+            producer=None,
+            consumers=[consumer_params_1, consumer_params_2],
+        ),
+    }
+    instruction_gen = (
+        instruction_generator.TransformationInstructionsGenerator()
+    )
+    # _tensor_name_to_graph_info has to have an entry for the test tensor for
+    # `quant_params_to_transformation_insts` to work. But the values do not
+    # matter for this test.
+    instruction_gen._tensor_name_to_graph_info[test_tensor_name] = (
+        instruction_generator.TransformationInstructionsGenerator.TensorGraphInfo(
+            tensor_id=1,
+            subgraph_id=0,
+            producer=0,
+            consumers=[2],
+        )
+    )
+    instructions = instruction_gen.quant_params_to_transformation_insts(
+        quant_parameters
+    )
+    self.assertLen(instructions, 1)
+    instructions = instructions[test_tensor_name].instructions
+    self.assertGreater(len(instructions), 1)
+    self.assertEqual(
+        instructions[0].transformation,
+        qtyping.QuantTransformation.DUPLICATE_BUFFER,
+    )
+    self.assertNotIn(
+        qtyping.QuantTransformation.DUPLICATE_BUFFER,
+        instructions[1:],
+    )
+
 
 if __name__ == "__main__":
   googletest.main()

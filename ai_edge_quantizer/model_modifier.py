@@ -15,6 +15,7 @@
 
 """Model Modifier class that produce the final quantized TFlite model."""
 
+from collections.abc import Sequence
 import copy
 
 import numpy as np
@@ -22,6 +23,7 @@ import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import transformation_instruction_generator
 from ai_edge_quantizer import transformation_performer
+from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
 
@@ -46,6 +48,35 @@ class ModelModifier:
         transformation_performer.TransformationPerformer()
     )
 
+  def _get_tensor_processing_order(
+      self,
+      tensor_names: Sequence[str],
+      flatbuffer_model: schema_py_generated.ModelT,
+  ) -> list[str]:
+    """Get the tensor processing order obtained from `buffer_to_tensors`.
+
+    The processing order is used to ensure that last tensor in a buffer is
+    processed the last. This is required for the correctness of buffer
+    duplication, as the last tensor in a buffer won't be duplicated.
+
+    Args:
+      tensor_names: Names of the tensors that need to be processed.
+      flatbuffer_model: TFlite model.
+
+    Returns:
+      A list of tensor names in the processing order.
+    """
+    buffer_to_tensors = tfl_flatbuffer_utils.buffer_to_tensors(flatbuffer_model)
+
+    processing_order = []
+    for buffer_tensors in buffer_to_tensors.values():
+      for tensor in buffer_tensors:
+        tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
+        if tensor_name in tensor_names:
+          processing_order.append(tensor_name)
+
+    return processing_order
+
   def modify_model(
       self, params: dict[str, qtyping.TensorTransformationParams]
   ) -> bytearray:
@@ -66,8 +97,11 @@ class ModelModifier:
         params, quantized_model
     )
 
+    tensor_processing_order = self._get_tensor_processing_order(
+        list(instructions.keys()), quantized_model
+    )
     self._transformation_performer.transform_graph(
-        instructions, quantized_model
+        instructions, quantized_model, tensor_processing_order
     )
     constant_buffer_size = self._process_constant_map(quantized_model)
     # we leave 64MB for the model architecture.

@@ -13,11 +13,14 @@
 # limitations under the License.
 # ==============================================================================
 
+from collections.abc import Sequence
 from absl.testing import parameterized
 from tensorflow.python.platform import googletest
+from ai_edge_quantizer import model_validator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 _ComputePrecision = qtyping.ComputePrecision
 _OpName = qtyping.TFLOperationName
@@ -47,47 +50,83 @@ class SharedBufferTest(parameterized.TestCase):
         },
     }
 
+  def _check_comparison_result(
+      self,
+      output_tensor_names: Sequence[str],
+      comparison_result: model_validator.ComparisonResult,
+      output_tolerance: float,
+  ):
+    tensors_results = comparison_result.get_all_tensor_results()
+    for output_tensor_name in output_tensor_names:
+      self.assertLess(
+          tensors_results[output_tensor_name],
+          output_tolerance,
+      )
+
   @parameterized.named_parameters(
       dict(
-          testcase_name='fc_1_quant_fc_2_no_quant',
-          fc_1_num_bits=8,
-          fc_2_num_bits=None,
+          testcase_name='sig1_fcs_quant_sig2_fcs_no_quant',
+          sig1_num_bits=8,
+          sig2_num_bits=None,
+          output_tolerance=1e-2,
       ),
       dict(
-          testcase_name='fc_1_no_quant_fc_2_quant',
-          fc_1_num_bits=None,
-          fc_2_num_bits=8,
+          testcase_name='sig1_fcs_no_quant_sig2_fcs_quant',
+          sig1_num_bits=None,
+          sig2_num_bits=8,
+          output_tolerance=1e-2,
       ),
       dict(
-          testcase_name='fc_1_int8_fc_2_int4',
-          fc_1_num_bits=8,
-          fc_2_num_bits=4,
+          testcase_name='sig1_fcs_quant_sig2_fcs_quant_different_params',
+          sig1_num_bits=8,
+          sig2_num_bits=4,
+          output_tolerance=0.5,
       ),
   )
-  def test_quantization_fails_for_constant_tensors_with_shared_buffer_and_different_quantization_params(
-      self, fc_1_num_bits, fc_2_num_bits
+  def test_quantization_succeeds_for_distinct_constant_tensors_with_shared_buffer_and_different_quantization_params(
+      self, sig1_num_bits, sig2_num_bits, output_tolerance
   ):
-    # This model has two FC layers with the same weights.
+    # This two-signature model demonstrates both constant tensor and constant
+    # buffer sharing. Each signature has two consecutive fully connected (FC)
+    # layers that share a weight tensor: the first signature uses
+    # `arith.constant` and the second uses `arith.constant1`, demonstrating
+    # constant tensor sharing. Furthermore, 'arith.constant' and
+    # 'arith.constant1' share a buffer, demonstrating constant buffer sharing.
+    # This test ensures that constant buffer sharing can be handled correctly
+    # it receives different sets of quantization params.
     float_model_path = test_utils.get_path_to_datafile(
-        'models/weight_sharing_fcs.tflite'
+        'models/constant_tensor_and_buffer_only_sharing_weight_fcs.tflite'
     )
     qt = quantizer.Quantizer(float_model_path)
 
-    fc_1_regex = '.*PartitionedCall:0'
-    fc_2_regex = '.*PartitionedCall_1:0'
+    sig1_output_tensor_name = 'PartitionedCall:0'
+    sig2_output_tensor_name = 'PartitionedCall_1:0'
+    sig1_fc1_regex = 'BatchMatMulV3;'
+    sig1_fc2_regex = f'{sig1_output_tensor_name};'
+    sig2_fc1_regex = 'BatchMatMulV31;'
+    sig2_fc2_regex = f'{sig2_output_tensor_name};'
     recipe = []
-    if fc_1_num_bits is not None:
-      recipe.append(self._get_fc_recipe_entry(fc_1_regex, fc_1_num_bits))
-    if fc_2_num_bits is not None:
-      recipe.append(self._get_fc_recipe_entry(fc_2_regex, fc_2_num_bits))
+    # Use same quantization params for FCs within each signature to ensure we
+    # don't get a tensor sharing error.
+    if sig1_num_bits is not None:
+      recipe.append(self._get_fc_recipe_entry(sig1_fc1_regex, sig1_num_bits))
+      recipe.append(self._get_fc_recipe_entry(sig1_fc2_regex, sig1_num_bits))
+    if sig2_num_bits is not None:
+      recipe.append(self._get_fc_recipe_entry(sig2_fc1_regex, sig2_num_bits))
+      recipe.append(self._get_fc_recipe_entry(sig2_fc2_regex, sig2_num_bits))
     qt.load_quantization_recipe(recipe)
-    with self.assertRaisesRegex(
-        expected_exception=RuntimeError,
-        expected_regex=(
-            'The tensors .* do not have the same quantization parameters'
-        ),
-    ):
-      qt.quantize()
+    quantized_model = qt.quantize().quantized_model
+    self.assertIsNotNone(quantized_model)
+
+    test_data = tfl_interpreter_utils.create_random_normal_input_data(
+        quantized_model, num_samples=4
+    )
+    comparison_result = qt.validate(error_metrics='mse', test_data=test_data)
+    self._check_comparison_result(
+        output_tensor_names=[sig1_output_tensor_name, sig2_output_tensor_name],
+        comparison_result=comparison_result,
+        output_tolerance=output_tolerance,
+    )
 
 
 if __name__ == '__main__':

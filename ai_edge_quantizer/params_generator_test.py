@@ -13,8 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Tests for params_generator."""
-
 from collections.abc import Generator
 import os
 from typing import Any
@@ -30,6 +28,7 @@ from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
+from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 _ComputePrecision = qtyping.ComputePrecision
@@ -570,9 +569,27 @@ class ParamsGeneratorTest(parameterized.TestCase):
     )
     self.assertLen(quant_params, 6)
 
-  @parameterized.parameters('no_quant', 'execution_mode', 'num_bits')
-  def test_generate_params_buffer_sharing_graphs_fails(
-      self, the_other_fc_difference
+  @parameterized.named_parameters(
+      dict(
+          testcase_name='different_quant_config_fc2_no_quant',
+          fc_2_num_bits=None,
+          expected_tensor_with_buffer_duplication='BatchMatMulV3',
+      ),
+      dict(
+          testcase_name='different_quant_config_fc2_int4',
+          fc_2_num_bits=4,
+          expected_tensor_with_buffer_duplication='BatchMatMulV3',
+      ),
+      dict(
+          testcase_name='same_quant_config',
+          fc_2_num_bits=8,
+          expected_tensor_with_buffer_duplication=None,
+      ),
+  )
+  def test_generate_params_marks_correct_buffers_for_duplication_when_distinct_tensors_share_constant_buffer(
+      self,
+      fc_2_num_bits,
+      expected_tensor_with_buffer_duplication,
   ):
     model_path = os.path.join(
         TEST_DATA_PREFIX_PATH, 'tests/models/weight_sharing_fcs.tflite'
@@ -580,33 +597,52 @@ class ParamsGeneratorTest(parameterized.TestCase):
     # Setup the quantization config for the first FC.
     self._recipe_manager.add_quantization_config(
         regex='PartitionedCall:0',
-        operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
+        operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
         op_config=qtyping.OpQuantizationConfig(
-            weight_tensor_config=_TensorQuantConfig(num_bits=8),
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=8, granularity=qtyping.QuantGranularity.CHANNELWISE
+            ),
             compute_precision=_ComputePrecision.INTEGER,
         ),
     )
     # Setup the quantization config for the second FC (weight shared with the
     # first FC).
-    if the_other_fc_difference == 'no_quant':
-      pass
-    elif the_other_fc_difference == 'num_bits':
+    if fc_2_num_bits is not None:
       self._recipe_manager.add_quantization_config(
           regex='PartitionedCall_1:0',
-          operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
+          operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
           op_config=qtyping.OpQuantizationConfig(
-              weight_tensor_config=_TensorQuantConfig(num_bits=4),
+              weight_tensor_config=_TensorQuantConfig(
+                  num_bits=fc_2_num_bits,
+                  granularity=qtyping.QuantGranularity.CHANNELWISE,
+              ),
               compute_precision=_ComputePrecision.INTEGER,
           ),
       )
     pg = params_generator.ParamsGenerator(model_path)
-    error_message = 'do not have the same quantization parameters'
-    with self.assertRaisesWithPredicateMatch(
-        RuntimeError, lambda err: error_message in str(err)
-    ):
-      pg.generate_quantization_parameters(
-          self._recipe_manager,
-      )
+    quant_params = pg.generate_quantization_parameters(
+        self._recipe_manager,
+    )
+    self.assertLen(quant_params, 6)
+
+    # Check that the expected tensor has buffer duplication transformation as
+    # the first one to be applied. And no other tensor has buffer duplication
+    # transformation at all.
+    for tensor_name in quant_params:
+      if tensor_name == expected_tensor_with_buffer_duplication:
+        self.assertIsNotNone(quant_params[tensor_name].consumers)
+        for consumer in quant_params[tensor_name].consumers:
+          self.assertNotEmpty(consumer.transformations)
+          self.assertEqual(
+              consumer.transformations[0],
+              qtyping.QuantTransformation.DUPLICATE_BUFFER,
+          )
+      elif quant_params[tensor_name].consumers is not None:
+        for consumer in quant_params[tensor_name].consumers:
+          self.assertNotIn(
+              qtyping.QuantTransformation.DUPLICATE_BUFFER,
+              consumer.transformations,
+          )
 
   @parameterized.named_parameters(
       dict(
@@ -1035,6 +1071,63 @@ class ParamsGeneratorAlreadyQuantizedModelTest(googletest.TestCase):
         ' model.',
     ):
       _ = params_generator.ParamsGenerator(test_model_path)
+
+
+def _create_tensor(name: str, buffer_idx: int) -> schema_py_generated.TensorT:
+  tensor = schema_py_generated.TensorT()
+  tensor.name = name.encode('utf-8')
+  tensor.buffer = buffer_idx
+  return tensor
+
+
+def _create_buffer(data: Any) -> schema_py_generated.BufferT:
+  buffer = schema_py_generated.BufferT()
+  buffer.data = data
+  return buffer
+
+
+class ParamsGeneratorUtilsTest(parameterized.TestCase):
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name='same_tensors',
+          tensor1=_create_tensor(name='tensor1', buffer_idx=0),
+          tensor2=_create_tensor(name='tensor1', buffer_idx=0),
+          buffers=[_create_buffer(data=np.array([1, 2, 3]))],
+          expected=False,
+      ),
+      dict(
+          testcase_name='tensors_do_not_share_buffer',
+          tensor1=_create_tensor(name='tensor1', buffer_idx=0),
+          tensor2=_create_tensor(name='tensor2', buffer_idx=1),
+          buffers=[
+              _create_buffer(data=np.array([1, 2, 3])),
+              _create_buffer(data=np.array([4, 5, 6])),
+          ],
+          expected=False,
+      ),
+      dict(
+          testcase_name='different_tensors_share_non_constant_buffer',
+          tensor1=_create_tensor(name='tensor1', buffer_idx=0),
+          tensor2=_create_tensor(name='tensor2', buffer_idx=0),
+          buffers=[_create_buffer(data=None)],
+          expected=False,
+      ),
+      dict(
+          testcase_name='different_tensors_share_constant_buffer',
+          tensor1=_create_tensor(name='tensor1', buffer_idx=0),
+          tensor2=_create_tensor(name='tensor2', buffer_idx=0),
+          buffers=[_create_buffer(data=np.array([1, 2, 3]))],
+          expected=True,
+      ),
+  )
+  def test__are_distinct_tensors_with_shared_buffer(
+      self, tensor1, tensor2, buffers, expected
+  ):
+    got = params_generator._are_distinct_tensors_with_shared_buffer(
+        tensor1=tensor1, tensor2=tensor2, buffers=buffers
+    )
+    self.assertEqual(expected, got)
 
 
 if __name__ == '__main__':
