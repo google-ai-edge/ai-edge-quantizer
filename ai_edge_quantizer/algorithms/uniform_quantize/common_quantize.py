@@ -23,7 +23,7 @@ to implement the get_tensor_quant_params_fn with the
 qtyping.GetTensorQuantParamsFuncSignature signature.
 """
 
-from typing import Any
+from typing import Any, Optional, Sequence
 import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
@@ -669,3 +669,153 @@ def materialize_split(
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[0],  # Split dimension does not need to be quantized.
   )
+
+
+def _get_tensor_shape_for_blockwise(
+    tensor_shape: Sequence[int], quantized_dim: int, block_size: int
+) -> list[int]:
+  """Get the tensor shape for blockwise quantization.
+
+  This function splits the quantize dimension of the tensor into blocks and the
+  dim/blocks. Hence, min/max of the tensor can be calculated for each block
+  using existing functions.
+
+  Args:
+    tensor_shape: The original shape of the tensor.
+    quantized_dim: The dimension to be quantized blockwise.
+    block_size: The size of the block.
+
+  Returns:
+    The new tensor shape for calculating scale and zp for blockwise
+    quantization.
+  """
+  new_shape = []
+  for index, val in enumerate(tensor_shape):
+    if index == quantized_dim:
+      new_shape.append(int(val / block_size))
+      new_shape.append(block_size)
+    else:
+      new_shape.append(val)
+  return new_shape
+
+
+def _reshape_data_for_blockwise(
+    tensor_data: np.ndarray, quantized_dim: int, block_size: int
+) -> tuple[np.ndarray, int]:
+  """Reshapes data for blockwise quantization.
+
+  Args:
+    tensor_data: The original tensor data.
+    quantized_dim: The dimension to be quantized blockwise.
+    block_size: The size of the block.
+
+  Returns:
+    A tuple containing the reshaped tensor data and the new reduce dimension.
+  """
+  new_shape = _get_tensor_shape_for_blockwise(
+      tensor_data.shape, quantized_dim, block_size
+  )
+  reshaped_data = tensor_data.reshape(new_shape)
+  return reshaped_data, quantized_dim + 1
+
+
+def broadcast_scale_zp_for_blockwise(
+    tensor_content: np.ndarray,
+    quant_params: qtyping.UniformQuantParams,
+) -> qtyping.UniformQuantParams:
+  """Broadcasts scale and zp for blockwise quantization.
+
+  Args:
+    tensor_content: The original tensor data.
+    quant_params: The quantization parameters.
+      `quant_params.quantized_dimension` must be specified.
+      `quant_params.block_size` must be specified and positive.
+
+  Returns:
+    The updated quantization parameters with broadcasted scale and zp for
+    correct constant quantization.
+  """
+  if quant_params.quantized_dimension is None:
+    raise ValueError("Quantized dimension must be specified.")
+  if quant_params.block_size is None or quant_params.block_size <= 0:
+    raise ValueError("Block size must be specified and positive.")
+  quantized_dim = quant_params.quantized_dimension
+  expanded_tensor_shape = _get_tensor_shape_for_blockwise(
+      tensor_content.shape, quantized_dim, quant_params.block_size
+  )
+  expanded_scale = np.reshape(
+      np.broadcast_to(
+          np.expand_dims(quant_params.scale, quantized_dim + 1),
+          expanded_tensor_shape,
+      ),
+      tensor_content.shape,
+  )
+  expanded_zp = np.reshape(
+      np.broadcast_to(
+          np.expand_dims(quant_params.zero_point, quantized_dim + 1),
+          expanded_tensor_shape,
+      ),
+      tensor_content.shape,
+  )
+  return qtyping.UniformQuantParams(
+      scale=expanded_scale,
+      zero_point=expanded_zp,
+      num_bits=quant_params.num_bits,
+      symmetric=quant_params.symmetric,
+      quantized_dimension=quantized_dim,
+      block_size=quant_params.block_size,
+  )
+
+
+def init_tensor_min_max(
+    tensor_data: Optional[np.ndarray],
+    op_info: qtyping.OpInfo,
+) -> qtyping.QSV:
+  """Initialize the min/max for a tensor.
+
+  This function initializes the min/max values for a tensor.
+
+  Args:
+    tensor_data: The tensor data.
+    op_info: Aggregated information about the op (e.g., quantization config).
+
+  Returns:
+    A dictionary containing the min/max values for the tensor, or an empty
+    dictionary if the tensor data is None.
+  """
+  if tensor_data is None:
+    return {}
+  else:
+    weight_tensor_config = op_info.op_quant_config.weight_tensor_config
+    quantized_dim = None
+    if weight_tensor_config is not None and (
+        weight_tensor_config.granularity == qtyping.QuantGranularity.CHANNELWISE
+        or weight_tensor_config.granularity
+        == qtyping.QuantGranularity.BLOCKWISE
+    ):
+      quantized_dim = common_utils.get_weight_quantized_dim(
+          op_info, tensor_data
+      )
+    if (
+        weight_tensor_config is not None
+        and weight_tensor_config.granularity
+        == qtyping.QuantGranularity.BLOCKWISE
+    ):
+      reshaped_data, reduce_dims = _reshape_data_for_blockwise(
+          tensor_data,
+          quantized_dim,
+          weight_tensor_config.block_size,
+      )
+      return {
+          "min": np.min(reshaped_data, axis=reduce_dims, keepdims=False),
+          "max": np.max(reshaped_data, axis=reduce_dims, keepdims=False),
+      }
+
+    else:
+      reduce_dims = common_utils.get_reduce_dims(
+          quantized_dim, tensor_data.shape
+      )
+      return {
+          "min": np.min(tensor_data, axis=reduce_dims, keepdims=True),
+          "max": np.max(tensor_data, axis=reduce_dims, keepdims=True),
+      }
