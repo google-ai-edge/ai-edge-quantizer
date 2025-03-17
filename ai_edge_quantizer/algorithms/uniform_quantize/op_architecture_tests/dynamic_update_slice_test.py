@@ -21,7 +21,9 @@ import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
-from ai_edge_quantizer.algorithms.uniform_quantize.naive_min_max_quantize_op_tests import test_utils as naive_min_max_test_utils
+from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
+from ai_edge_quantizer.algorithms.uniform_quantize import octav
+from ai_edge_quantizer.algorithms.uniform_quantize.op_architecture_tests import test_utils as op_test_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -29,24 +31,22 @@ _TFLOpName = qtyping.TFLOperationName
 _ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
-_OpTestInfo = naive_min_max_test_utils.OpTestInfo
+_OpTestInfo = op_test_utils.OpTestInfo
 
 _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(
     "../../../tests/models"
 )
 
-_DEFAULT_WEIGHT_QUANT_SETTING = (
-    naive_min_max_test_utils.DEFAULT_WEIGHT_QUANT_SETTING
-)
+_DEFAULT_WEIGHT_QUANT_SETTING = op_test_utils.DEFAULT_WEIGHT_QUANT_SETTING
 
 
-class SelectV2Test(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
+class DynamicUpdateSliceTest(op_test_utils.BaseQuantizeTest):
 
   def setUp(self):
     super().setUp()
     np.random.seed(666)
     self._test_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, "single_select_v2.tflite"
+        _TEST_DATA_PREFIX_PATH, "dynamic_update_slice.tflite"
     )
     self._op_test_info = _OpTestInfo(
         test_model=tfl_flatbuffer_utils.read_model(self._test_model_path),
@@ -60,11 +60,16 @@ class SelectV2Test(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         buffers=self._op_test_info.test_model.buffers,
     )
 
-  @parameterized.parameters(
-      8,
-      16,
+  @parameterized.product(
+      num_bits=(8, 16),
+      get_tensor_quant_params_func=(
+          naive_min_max_quantize.get_tensor_quant_params,
+          octav.get_tensor_quant_params,
+      ),
   )
-  def test_materialize_select_v2_succeeds(self, num_bits):
+  def test_materialize_dynamic_update_slice_succeeds(
+      self, num_bits, get_tensor_quant_params_func
+  ):
     activation_tensor_config = _TensorQuantConfig(
         num_bits=num_bits,
         symmetric=True,
@@ -81,25 +86,26 @@ class SelectV2Test(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     op = subgraph0.operators[subgraph_op_id]
     op_info = qtyping.OpInfo(
         op=op,
-        op_name=qtyping.TFLOperationName.SELECT_V2,
+        op_name=qtyping.TFLOperationName.DYNAMIC_UPDATE_SLICE,
         subgraph_op_index=subgraph_op_id,
         op_quant_config=op_quant_config,
     )
 
     # Test settings.
     op_tensor_names = {}
-    op_tensor_names["input"] = "selectv2_condition_tensor:0"
-    op_tensor_names["input2"] = "selectv2_t_tensor:0"
-    op_tensor_names["input3"] = "selectv2_e_tensor:0"
-    op_tensor_names["output"] = "PartitionedCall:0"
+    op_tensor_names["input"] = "input"
+    op_tensor_names["input2"] = "update"
+    op_tensor_names["input3"] = "indices"
+    op_tensor_names["output"] = "Identity_1"
     self._op_test_info.op_tensor_names = op_tensor_names
     self._test_no_weights_op(
         op_info,
         self._graph_info,
         self._op_test_info,
-        common_quantize.materialize_select_v2,
+        common_quantize.materialize_dynamic_update_slice,
+        get_tensor_quant_params_func,
         same_input_output_params=True,
-        inputs_to_ignore=[0],
+        inputs_to_ignore=[2],
     )
 
 

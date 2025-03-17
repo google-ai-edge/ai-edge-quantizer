@@ -21,7 +21,9 @@ import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
-from ai_edge_quantizer.algorithms.uniform_quantize.naive_min_max_quantize_op_tests import test_utils as naive_min_max_test_utils
+from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
+from ai_edge_quantizer.algorithms.uniform_quantize import octav
+from ai_edge_quantizer.algorithms.uniform_quantize.op_architecture_tests import test_utils as op_test_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -32,13 +34,13 @@ _TFLOpName = qtyping.TFLOperationName
 _ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
-_OpTestInfo = naive_min_max_test_utils.OpTestInfo
+_OpTestInfo = op_test_utils.OpTestInfo
 _DEFAULT_ACTIVATION_QUANT_SETTING = (
-    naive_min_max_test_utils.DEFAULT_ACTIVATION_QUANT_SETTING
+    op_test_utils.DEFAULT_ACTIVATION_QUANT_SETTING
 )
 
 
-class BatchMatmulTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
+class BatchMatmulTest(op_test_utils.BaseQuantizeTest):
   """Tests bmm op where both inputs are non-constant tensors."""
 
   def setUp(self):
@@ -57,15 +59,19 @@ class BatchMatmulTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         buffers=self._op_test_info.test_model.buffers,
     )
 
-  @parameterized.named_parameters(
-      ("activation_int8_asymmetric_srq", 8, False),
-      ("activation_int16_symmetric", 16, True),
+  @parameterized.product(
+      # get_tensor_quant_params_func, num_bits_activation, symmetric_activation
+      test_case=(
+          (naive_min_max_quantize.get_tensor_quant_params, 8, False),
+          (naive_min_max_quantize.get_tensor_quant_params, 16, True),
+          (octav.get_tensor_quant_params, 8, True),
+          (octav.get_tensor_quant_params, 16, True),
+      )
   )
-  def test_batch_matmul_adjy_false_srq_succeeds(
-      self,
-      num_bits_activation,
-      symmetric_activation,
-  ):
+  def test_batch_matmul_adjy_false_srq_succeeds(self, test_case):
+    get_tensor_quant_params_func, num_bits_activation, symmetric_activation = (
+        test_case
+    )
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
     subgraph_op_id = 0
@@ -97,17 +103,22 @@ class BatchMatmulTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         self._graph_info,
         self._op_test_info,
         common_quantize.materialize_batch_matmul,
+        get_tensor_quant_params_func,
     )
 
-  @parameterized.named_parameters(
-      ("activation_int8_asymmetric", 8, False),
-      ("activation_int16_symmetric", 16, True),
+  @parameterized.product(
+      # get_tensor_quant_params_func, num_bits_activation, symmetric_activation
+      test_case=(
+          (naive_min_max_quantize.get_tensor_quant_params, 8, False),
+          (naive_min_max_quantize.get_tensor_quant_params, 16, True),
+          (octav.get_tensor_quant_params, 8, True),
+          (octav.get_tensor_quant_params, 16, True),
+      )
   )
-  def test_batch_matmul_adjy_true_srq_succeeds(
-      self,
-      num_bits_activation,
-      symmetric_activation,
-  ):
+  def test_batch_matmul_adjy_true_srq_succeeds(self, test_case):
+    get_tensor_quant_params_func, num_bits_activation, symmetric_activation = (
+        test_case
+    )
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
     subgraph_op_id = 1
@@ -138,12 +149,11 @@ class BatchMatmulTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         self._graph_info,
         self._op_test_info,
         common_quantize.materialize_batch_matmul,
+        get_tensor_quant_params_func,
     )
 
 
-class BatchMatmulConstantInputTest(
-    naive_min_max_test_utils.NaiveMinMaxQuantizeTest
-):
+class BatchMatmulConstantInputTest(op_test_utils.BaseQuantizeTest):
   """Tests bmm op where one the inputs is a constant tensor."""
 
   def setUp(self):
@@ -166,7 +176,12 @@ class BatchMatmulConstantInputTest(
 
   @parameterized.product(
       num_bits_weight=(4, 8),
-      symmetric_weight=(True, False),
+      # get_tensor_quant_params_func, symmetric_weight
+      algos=(
+          (naive_min_max_quantize.get_tensor_quant_params, True),
+          (naive_min_max_quantize.get_tensor_quant_params, False),
+          (octav.get_tensor_quant_params, True),
+      ),
       test_case=(
           # Tuple holds compute precision, whether to use srq and whether
           # to use explicit dequantize.
@@ -178,9 +193,10 @@ class BatchMatmulConstantInputTest(
   def test_batch_matmul_adjy_false_succeeds(
       self,
       num_bits_weight,
-      symmetric_weight,
+      algos,
       test_case,
   ):
+    get_tensor_quant_params_func, symmetric_weight = algos
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
     subgraph_op_id = 0
@@ -218,11 +234,17 @@ class BatchMatmulConstantInputTest(
         self._graph_info,
         self._op_test_info,
         common_quantize.materialize_batch_matmul,
+        get_tensor_quant_params_func,
     )
 
   @parameterized.product(
       num_bits_weight=(4, 8),
-      symmetric_weight=(True, False),
+      # get_tensor_quant_params_func, symmetric_weight
+      algos=(
+          (naive_min_max_quantize.get_tensor_quant_params, True),
+          (naive_min_max_quantize.get_tensor_quant_params, False),
+          (octav.get_tensor_quant_params, True),
+      ),
       test_case=(
           # Tuple holds compute precision, whether to use srq and whether
           # to use explicit dequantize.
@@ -234,9 +256,10 @@ class BatchMatmulConstantInputTest(
   def test_batch_matmul_adjy_true_succeeds(
       self,
       num_bits_weight,
-      symmetric_weight,
+      algos,
       test_case,
   ):
+    get_tensor_quant_params_func, symmetric_weight = algos
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
     subgraph_op_id = 1
@@ -274,6 +297,7 @@ class BatchMatmulConstantInputTest(
         self._graph_info,
         self._op_test_info,
         common_quantize.materialize_batch_matmul,
+        get_tensor_quant_params_func,
     )
 
 

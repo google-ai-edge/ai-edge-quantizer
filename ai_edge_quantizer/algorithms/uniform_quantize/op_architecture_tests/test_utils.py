@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Test utils for naive min max quantize."""
+"""Test utils for uniform quantize op architecture tests."""
 
 from collections.abc import Callable, Sequence
 import dataclasses
@@ -23,7 +23,6 @@ from absl.testing import parameterized
 import numpy as np
 
 from ai_edge_quantizer import qtyping
-from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -69,10 +68,10 @@ DEFAULT_WEIGHT_QUANT_SETTING = _TensorQuantConfig(
 )
 
 
-class NaiveMinMaxQuantizeTest(parameterized.TestCase):
-  """Base test class for naive min max quantize.
+class BaseQuantizeTest(parameterized.TestCase):
+  """Base test class for uniform quantize op architecture tests.
 
-  This class provides test utils for naive min max quantize.
+  This class provides test utils for uniform quantize op architecture tests.
   """
 
   def setUp(self):
@@ -212,6 +211,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       graph_info,
       op_test_info,
       materialization_func,
+      get_tensor_quant_params_func,
       same_input_output_params=False,
       inputs_to_ignore=None,
       outputs_to_ignore=None,
@@ -225,6 +225,8 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         op tensor input names have to follow the pattern of "input", "input2",
         "input3" etc.
       materialization_func: Function to materialize tensor transformation
+        parameters.
+      get_tensor_quant_params_func: Function to get tensor quantization
         parameters.
       same_input_output_params: Whether the input and output tensor
         transformation parameters are the same.
@@ -242,7 +244,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         num_outputs=num_outputs,
     )
     tensor_quant_params = materialization_func(
-        naive_min_max_quantize.get_tensor_quant_params,
+        get_tensor_quant_params_func,
         op_info,
         graph_info,
         self._tensor_name_to_qsv,
@@ -295,6 +297,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       graph_info,
       op_test_info,
       materialization_func,
+      get_tensor_quant_params_func,
       bias_quantized_dim: int = 0,
       input_index: int = 0,
       weight_index: int = 1,
@@ -316,6 +319,8 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         pattern of "ignored_input", "ignored_input2", "ignored_input3" etc.
       materialization_func: Function to materialize tensor transformation
         parameters.
+      get_tensor_quant_params_func: Function to get tensor quantization
+        parameters.
       bias_quantized_dim: Quantized dimension for bias.
       input_index: Input tensor index in the result of materialization function.
       weight_index: Weight tensor index in the result of materialization
@@ -331,7 +336,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         op_test_info=op_test_info,
     )
     tensor_quant_params = materialization_func(
-        naive_min_max_quantize.get_tensor_quant_params,
+        get_tensor_quant_params_func,
         op_info,
         graph_info,
         self._tensor_name_to_qsv,
@@ -607,6 +612,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       graph_info: qtyping.GraphInfo,
       op_test_info: OpTestInfo,
       materialization_func: Callable[..., Any],
+      get_tensor_quant_params_func: Callable[..., Any],
       expect_weights_quantized: bool,
   ):
     """Tests weights are quantized if they are larger than min_weight_elements.
@@ -618,6 +624,8 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
       graph_info: GraphInfo object.
       op_test_info: OpTestInfo object.
       materialization_func: Function to materialize tensor transformation
+        parameters.
+      get_tensor_quant_params_func: Function to get tensor quantization
         parameters.
       expect_weights_quantized: Whether the weights are expected to be
         quantized.
@@ -642,7 +650,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         ),
     )
     _, weight_quant_params, *_ = materialization_func(
-        naive_min_max_quantize.get_tensor_quant_params,
+        get_tensor_quant_params_func,
         op_info,
         graph_info,
         self._tensor_name_to_qsv,

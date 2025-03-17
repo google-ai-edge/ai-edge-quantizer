@@ -21,7 +21,9 @@ import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
-from ai_edge_quantizer.algorithms.uniform_quantize.naive_min_max_quantize_op_tests import test_utils as naive_min_max_test_utils
+from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
+from ai_edge_quantizer.algorithms.uniform_quantize import octav
+from ai_edge_quantizer.algorithms.uniform_quantize.op_architecture_tests import test_utils as op_test_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -29,20 +31,24 @@ _TFLOpName = qtyping.TFLOperationName
 _ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
-_OpTestInfo = naive_min_max_test_utils.OpTestInfo
+_OpTestInfo = op_test_utils.OpTestInfo
 
 _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(
     "../../../tests/models"
 )
+_DEFAULT_ACTIVATION_QUANT_SETTING = (
+    op_test_utils.DEFAULT_ACTIVATION_QUANT_SETTING
+)
+_DEFAULT_WEIGHT_QUANT_SETTING = op_test_utils.DEFAULT_WEIGHT_QUANT_SETTING
 
 
-class StridedSliceTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
+class ConcatenationTest(op_test_utils.BaseQuantizeTest):
 
   def setUp(self):
     super().setUp()
     np.random.seed(666)
     self._test_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, "single_strided_slice.tflite"
+        _TEST_DATA_PREFIX_PATH, "two_inputs_concatenation.tflite"
     )
     self._op_test_info = _OpTestInfo(
         test_model=tfl_flatbuffer_utils.read_model(self._test_model_path),
@@ -56,16 +62,28 @@ class StridedSliceTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         buffers=self._op_test_info.test_model.buffers,
     )
 
-  @parameterized.named_parameters(
-      ("int8_asymmetric", 8, False), ("int16_symmetric", 16, True)
+  @parameterized.product(
+      get_tensor_quant_params_func=(
+          naive_min_max_quantize.get_tensor_quant_params,
+          octav.get_tensor_quant_params,
+      ),
+      activation_tensor_config=(
+          (_DEFAULT_ACTIVATION_QUANT_SETTING),
+          (
+              _TensorQuantConfig(
+                  num_bits=16,
+                  symmetric=True,
+                  granularity=qtyping.QuantGranularity.TENSORWISE,
+              )
+          ),
+      ),
   )
-  def test_materialize_strided_slice_srq_succeeds(
-      self, activation_num_bits, activation_symmetry
+  def test_materialize_concatenation_succeeds(
+      self, get_tensor_quant_params_func, activation_tensor_config
   ):
     op_quant_config = qtyping.OpQuantizationConfig(
-        activation_tensor_config=_TensorQuantConfig(
-            num_bits=activation_num_bits, symmetric=activation_symmetry
-        ),
+        activation_tensor_config=activation_tensor_config,
+        weight_tensor_config=_DEFAULT_WEIGHT_QUANT_SETTING,
         compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     # Read from Model Explorer.
@@ -74,7 +92,7 @@ class StridedSliceTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     op = subgraph0.operators[subgraph_op_id]
     op_info = qtyping.OpInfo(
         op=op,
-        op_name=qtyping.TFLOperationName.STRIDED_SLICE,
+        op_name=qtyping.TFLOperationName.TRANSPOSE,
         subgraph_op_index=subgraph_op_id,
         op_quant_config=op_quant_config,
     )
@@ -82,24 +100,16 @@ class StridedSliceTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
     # Test settings.
     op_tensor_names = {}
     op_tensor_names["input"] = "serving_default_input_1:0"
-    op_tensor_names["input2"] = (
-        "model/tf.__operators__.getitem/strided_slice/stack"
-    )
-    op_tensor_names["input3"] = (
-        "model/tf.__operators__.getitem/strided_slice/stack_1"
-    )
-    op_tensor_names["input4"] = (
-        "model/tf.__operators__.getitem/strided_slice/stack_2"
-    )
+    op_tensor_names["input2"] = "serving_default_input_2:0"
     op_tensor_names["output"] = "PartitionedCall:0"
     self._op_test_info.op_tensor_names = op_tensor_names
     self._test_no_weights_op(
         op_info,
         self._graph_info,
         self._op_test_info,
-        common_quantize.materialize_strided_slice,
+        common_quantize.materialize_concatenation,
+        get_tensor_quant_params_func,
         same_input_output_params=True,
-        inputs_to_ignore=[1, 2, 3],
     )
 
 

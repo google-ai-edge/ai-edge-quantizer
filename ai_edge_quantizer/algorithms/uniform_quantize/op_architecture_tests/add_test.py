@@ -21,7 +21,9 @@ import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
-from ai_edge_quantizer.algorithms.uniform_quantize.naive_min_max_quantize_op_tests import test_utils as naive_min_max_test_utils
+from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
+from ai_edge_quantizer.algorithms.uniform_quantize import octav
+from ai_edge_quantizer.algorithms.uniform_quantize.op_architecture_tests import test_utils as op_test_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -29,17 +31,18 @@ _TFLOpName = qtyping.TFLOperationName
 _ComputePrecision = qtyping.ComputePrecision
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
-_OpTestInfo = naive_min_max_test_utils.OpTestInfo
+_OpTestInfo = op_test_utils.OpTestInfo
 
 _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(
     "../../../tests/models"
 )
 
 
-class AddTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
+class AddTest(op_test_utils.BaseQuantizeTest):
 
   def _custom_setup(self, test_model_file: str):
     np.random.seed(666)
+
     self._test_model_path = os.path.join(
         _TEST_DATA_PREFIX_PATH, test_model_file
     )
@@ -55,16 +58,24 @@ class AddTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         buffers=self._op_test_info.test_model.buffers,
     )
 
-  @parameterized.named_parameters(
-      ("int8_nonsymmetric", 8, False),
-      ("int16_symmetric", 16, True),
+  @parameterized.product(
+      get_tensor_quant_params_func=(
+          naive_min_max_quantize.get_tensor_quant_params,
+          octav.get_tensor_quant_params,
+      ),
+      # num_bits, symmetric
+      test_case=(
+          (8, False),
+          (16, True),
+      ),
   )
   def test_materialize_srq_add_succeeds(
       self,
-      activation_num_bits: int,
-      activation_symmetric: bool,
+      get_tensor_quant_params_func,
+      test_case,
   ):
     self._custom_setup("single_add.tflite")
+    activation_num_bits, activation_symmetric = test_case
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
     subgraph_op_id = 0
@@ -95,18 +106,26 @@ class AddTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         self._graph_info,
         self._op_test_info,
         common_quantize.materialize_add,
+        get_tensor_quant_params_func,
     )
 
-  @parameterized.named_parameters(
-      ("int8_nonsymmetric", 8, False),
-      ("int16_symmetric", 16, True),
+  @parameterized.product(
+      # get_tensor_quant_params_func, activation_num_bits, activation_symmetric
+      test_case=(
+          (naive_min_max_quantize.get_tensor_quant_params, 8, False),
+          (naive_min_max_quantize.get_tensor_quant_params, 16, True),
+          (octav.get_tensor_quant_params, 8, True),
+          (octav.get_tensor_quant_params, 16, True),
+      ),
   )
   def test_materialize_srq_add1_constant_input_succeeds(
       self,
-      activation_num_bits: int,
-      activation_symmetric: bool,
+      test_case,
   ):
     """Tests the case where one of the ADD inputs is a constant tensor."""
+    get_tensor_quant_params_func, activation_num_bits, activation_symmetric = (
+        test_case
+    )
     self._custom_setup("single_add1_constant_input.tflite")
     # Read from Model Explorer.
     subgraph0 = self._op_test_info.test_model.subgraphs[0]
@@ -140,7 +159,9 @@ class AddTest(naive_min_max_test_utils.NaiveMinMaxQuantizeTest):
         self._graph_info,
         self._op_test_info,
         common_quantize.materialize_add,
+        get_tensor_quant_params_func,
     )
+
 
 if __name__ == "__main__":
   googletest.main()

@@ -206,10 +206,36 @@ register_config_check_policy_func(
 )
 
 _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
+    _TFLOpName.INPUT: common_quantize.materialize_input,
+    _TFLOpName.OUTPUT: common_quantize.materialize_output,
     _TFLOpName.FULLY_CONNECTED: common_quantize.materialize_fc_conv,
     _TFLOpName.BATCH_MATMUL: common_quantize.materialize_batch_matmul,
     _TFLOpName.CONV_2D: common_quantize.materialize_fc_conv,
+    _TFLOpName.DEPTHWISE_CONV_2D: common_quantize.materialize_fc_conv,
+    _TFLOpName.CONV_2D_TRANSPOSE: common_quantize.materialize_conv2d_transpose,
+    _TFLOpName.RESHAPE: common_quantize.materialize_reshape,
+    _TFLOpName.AVERAGE_POOL_2D: common_quantize.materialize_average_pool_2d,
     _TFLOpName.EMBEDDING_LOOKUP: common_quantize.materialize_embedding_lookup,
+    _TFLOpName.SOFTMAX: common_quantize.materialize_softmax_and_logistic,
+    _TFLOpName.TANH: common_quantize.materialize_tanh,
+    _TFLOpName.TRANSPOSE: common_quantize.materialize_transpose,
+    _TFLOpName.GELU: common_quantize.materialize_gelu,
+    _TFLOpName.ADD: common_quantize.materialize_add,
+    _TFLOpName.SUB: common_quantize.materialize_sub,
+    _TFLOpName.MUL: common_quantize.materialize_mul,
+    _TFLOpName.MEAN: common_quantize.materialize_mean,
+    _TFLOpName.RSQRT: common_quantize.materialize_rsqrt,
+    _TFLOpName.CONCATENATION: common_quantize.materialize_concatenation,
+    _TFLOpName.STRIDED_SLICE: common_quantize.materialize_strided_slice,
+    _TFLOpName.SPLIT: common_quantize.materialize_split,
+    _TFLOpName.LOGISTIC: common_quantize.materialize_softmax_and_logistic,
+    _TFLOpName.SLICE: common_quantize.materialize_slice,
+    _TFLOpName.SUM: common_quantize.materialize_sum,
+    _TFLOpName.SELECT_V2: common_quantize.materialize_select_v2,
+    _TFLOpName.DYNAMIC_UPDATE_SLICE: (
+        common_quantize.materialize_dynamic_update_slice
+    ),
+    _TFLOpName.STABLEHLO_COMPOSITE: common_quantize.materialize_composite,
 })
 
 for op_name, materialize_func in _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT.items():
