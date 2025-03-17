@@ -28,7 +28,7 @@ here = pathlib.Path(__file__).parent.resolve()
 DOCLINES = __doc__.split("\n")
 
 name = "ai-edge-quantizer"
-version = "0.0.1"
+version = "0.1.0"
 if nightly_release_date := os.environ.get("NIGHTLY_RELEASE_DATE"):
   name += "-nightly"
   version += ".dev" + nightly_release_date
@@ -69,6 +69,6 @@ setuptools.setup(
         "immutabledict",
         "numpy",
         "tf-nightly>=2.17.0.dev20240509",
-        "ai-edge-litert-nightly",
+        "ai-edge-litert>=1.2.0",
     ],
 )
