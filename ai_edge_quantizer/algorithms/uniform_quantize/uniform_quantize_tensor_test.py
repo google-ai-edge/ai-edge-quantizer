@@ -352,6 +352,33 @@ class TensorUtilsTest(parameterized.TestCase):
       # Range has to be extended to include zero.
       self.assertEqual(calculated_min, 0)
 
+  @parameterized.parameters(
+      # number of bits, is_symmetric, max bound of the quantized range.
+      (4, True, 7),
+      (8, False, 255),
+    )
+  def test_tensor_zp_scale_from_min_max_with_clipping(
+      self, num_bits, symmetric, quantized_bound
+  ):
+    min_val = np.array([[1.0]])
+    max_val = np.array([[5.0]])
+    clipping_values = np.array([4.0])
+    zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
+        min_val, max_val, num_bits, symmetric, clipping_values
+    )
+    expected_scale = clipping_values / quantized_bound
+
+    with self.subTest(name="CheckShapes"):
+      self.assertEqual(zp.shape, scale.shape)
+      self.assertEqual(zp.shape, (1, 1))
+
+    if symmetric:
+      with self.subTest(name="CheckSymmetricZpValue"):
+        self.assertEqual(zp[0], 0)
+
+    with self.subTest(name="CheckScaleValue"):
+      self.assertEqual(scale[0], expected_scale)
+
 
 if __name__ == "__main__":
   googletest.main()
