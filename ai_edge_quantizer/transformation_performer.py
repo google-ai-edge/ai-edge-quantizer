@@ -23,6 +23,7 @@ import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import dequant_insert
 from ai_edge_quantizer.transformations import duplicate_buffer
+from ai_edge_quantizer.transformations import duplicate_tensor
 from ai_edge_quantizer.transformations import emulated_subchannel
 from ai_edge_quantizer.transformations import quant_insert
 from ai_edge_quantizer.transformations import quantize_tensor
@@ -76,6 +77,9 @@ class TransformationPerformer:
         qtyping.QuantTransformation.DUPLICATE_BUFFER: (
             duplicate_buffer.duplicate_buffer
         ),
+        qtyping.QuantTransformation.DUPLICATE_TENSOR: (
+            duplicate_tensor.duplicate_tensor
+        ),
     }
     # transformations are seprated in two categories:
     # op_insertion_transformations are transformations that only insert ops
@@ -86,6 +90,7 @@ class TransformationPerformer:
         qtyping.QuantTransformation.QUANTIZE_TENSOR,
         qtyping.QuantTransformation.ADD_QUANTIZE,
         qtyping.QuantTransformation.DUPLICATE_BUFFER,
+        qtyping.QuantTransformation.DUPLICATE_TENSOR,
     ])
     self._op_replacement_transformations = set(
         [qtyping.QuantTransformation.EMULATED_SUBCHANNEL]
@@ -132,42 +137,47 @@ class TransformationPerformer:
       transformations: list[qtyping.TransformationInst],
       subgraph_id: int,
       trans_info: qtyping.TransformationInfo,
-  ):
-    """Update the instructions after the graph is modified.
+  ) -> None:
+    """Update the instructions in-place after the graph is modified.
 
-    After an op is inserted, the topology is changed and this may impact the
-    following transformation to be applied. So we need to update instructions
-    that have yet to be applied.
+    After an op is inserted or a tensor is duplicated, the topology is changed
+    and this may impact the following transformation to be applied. So we need
+    to update instructions that have yet to be applied.
 
     Args:
-      prev_transformation_index: the index of the last applied transformation
-      transformations: the list of transformations we're applying
-      subgraph_id: the subgraph where the provided instrucitons belongs to
-      trans_info: transformation info returned by a transformation
-
-    Returns:
-      None, modifies the transformation in place
+      prev_transformation_index: The index of the last applied transformation.
+      transformations: The list of transformations we're applying.
+      subgraph_id: The subgraph where the provided instructions belong to.
+      trans_info: Transformation info returned by a transformation.
     """
-    # if no ops were added, then no need for update
-    if trans_info.num_ops_added == 0:
-      return
     prev_transformation = transformations[prev_transformation_index]
-    self._added_op_id_map[subgraph_id].append(
-        trans_info.op_id + trans_info.num_ops_added - 1
+    is_prev_not_duplicate_tensor = (
+        prev_transformation.transformation
+        != qtyping.QuantTransformation.DUPLICATE_TENSOR
     )
+    if trans_info.num_ops_added == 0 and is_prev_not_duplicate_tensor:
+      return
+
+    was_op_added = trans_info.num_ops_added > 0
+    if was_op_added:
+      self._added_op_id_map[subgraph_id].append(
+          trans_info.op_id + trans_info.num_ops_added - 1
+      )
+
     for transformations_index in range(
         prev_transformation_index + 1, len(transformations)
     ):
       transformation = transformations[transformations_index]
       for consumer_index in transformation.consumers:
-        # if the consumer need to use newly added ops, then the new added op
+        # If the consumer needs to use newly added ops, then the new added op
         # index needs to be outside of the range of the orignal op ids.
         if consumer_index in prev_transformation.consumers:
-          transformation.producer = (
-              len(self._original_op_id_map[subgraph_id])
-              + len(self._added_op_id_map[subgraph_id])
-              - 1
-          )
+          if was_op_added:
+            transformation.producer = (
+                len(self._original_op_id_map[subgraph_id])
+                + len(self._added_op_id_map[subgraph_id])
+                - 1
+            )
           transformation.tensor_id = trans_info.output_tensor_id
 
   def _apply_single_transformation(
