@@ -30,6 +30,18 @@ _OpQuantConfig = qtyping.OpQuantizationConfig
 
 class SharedBufferTest(parameterized.TestCase):
 
+  def setUp(self):
+    super().setUp()
+    # This two-signature model demonstrates both constant tensor and constant
+    # buffer sharing. Each signature has two consecutive fully connected (FC)
+    # layers that share a weight tensor: the first signature uses
+    # `arith.constant` and the second uses `arith.constant1`, demonstrating
+    # constant tensor sharing. Furthermore, 'arith.constant' and
+    # 'arith.constant1' share a buffer, demonstrating constant buffer sharing.
+    self.float_model_path = test_utils.get_path_to_datafile(
+        'models/constant_tensor_and_buffer_only_sharing_weight_fcs.tflite'
+    )
+
   def _get_fc_recipe_entry(self, regex: str, num_bits: int):
     return {
         'regex': regex,
@@ -86,18 +98,9 @@ class SharedBufferTest(parameterized.TestCase):
   def test_quantization_succeeds_for_distinct_constant_tensors_with_shared_buffer_and_different_quantization_params(
       self, sig1_num_bits, sig2_num_bits, output_tolerance
   ):
-    # This two-signature model demonstrates both constant tensor and constant
-    # buffer sharing. Each signature has two consecutive fully connected (FC)
-    # layers that share a weight tensor: the first signature uses
-    # `arith.constant` and the second uses `arith.constant1`, demonstrating
-    # constant tensor sharing. Furthermore, 'arith.constant' and
-    # 'arith.constant1' share a buffer, demonstrating constant buffer sharing.
-    # This test ensures that constant buffer sharing can be handled correctly
-    # it receives different sets of quantization params.
-    float_model_path = test_utils.get_path_to_datafile(
-        'models/constant_tensor_and_buffer_only_sharing_weight_fcs.tflite'
-    )
-    qt = quantizer.Quantizer(float_model_path)
+    # This test checks a constant buffer shared by tensors `arith.constant`
+    # and `arith.constant1` from FCs from two different signatures.
+    qt = quantizer.Quantizer(self.float_model_path)
 
     sig1_output_tensor_name = 'PartitionedCall:0'
     sig2_output_tensor_name = 'PartitionedCall_1:0'
@@ -127,6 +130,49 @@ class SharedBufferTest(parameterized.TestCase):
         comparison_result=comparison_result,
         output_tolerance=output_tolerance,
     )
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name='fc1_quant_fc2_no_quant',
+          fc1_num_bits=8,
+          fc2_num_bits=None,
+      ),
+      dict(
+          testcase_name='fc1_no_quant_fc2_quant',
+          fc1_num_bits=None,
+          fc2_num_bits=8,
+      ),
+      dict(
+          testcase_name='fc1_quant_fc2_quant_different_params',
+          fc1_num_bits=8,
+          fc2_num_bits=4,
+      ),
+  )
+  def test_quantization_fails_for_a_constant_tensor_with_different_quantization_params(
+      self, fc1_num_bits, fc2_num_bits
+  ):
+    # This test checks a constant tensor `arith.constant` shared by FCs in the
+    # first signature.
+    qt = quantizer.Quantizer(self.float_model_path)
+
+    sig1_fc1_regex = 'BatchMatMulV3;'
+    sig1_fc2_regex = 'PartitionedCall:0;'
+
+    recipe = []
+    if fc1_num_bits is not None:
+      recipe.append(self._get_fc_recipe_entry(sig1_fc1_regex, fc1_num_bits))
+    if fc2_num_bits is not None:
+      recipe.append(self._get_fc_recipe_entry(sig1_fc2_regex, fc2_num_bits))
+    qt.load_quantization_recipe(recipe)
+
+    with self.assertRaisesRegex(
+        expected_exception=RuntimeError,
+        expected_regex=(
+            "The tensors b'arith.constant' and b'arith.constant' do not have"
+            ' the same quantization parameters'
+        ),
+    ):
+      qt.quantize()
 
 
 if __name__ == '__main__':
