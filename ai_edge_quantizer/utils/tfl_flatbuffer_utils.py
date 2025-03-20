@@ -205,7 +205,11 @@ def buffer_to_tensors(flatbuffer_model: Any) -> dict[int, list[Any]]:
       for tensor in parse_op_tensors(op, subgraph.tensors):
         if tensor.buffer not in buffer_to_tensor_map:
           buffer_to_tensor_map[tensor.buffer] = []
-        buffer_to_tensor_map[tensor.buffer].append(tensor)
+        if (
+            tensor.buffer != 0
+            or tensor not in buffer_to_tensor_map[tensor.buffer]
+        ):
+          buffer_to_tensor_map[tensor.buffer].append(tensor)
   return buffer_to_tensor_map
 
 
