@@ -72,6 +72,11 @@ TFL_OP_TO_WEIGHT_QUANTIZED_DIM = immutabledict.immutabledict({
     _TFLOpName.CONV_2D_TRANSPOSE: 0,
 })
 
+TFL_OP_TO_BLOCKWISE_WEIGHT_QUANTIZED_DIM = immutabledict.immutabledict({
+    _TFLOpName.FULLY_CONNECTED: 1,
+    _TFLOpName.EMBEDDING_LOOKUP: 1,
+})
+
 NUM_TFL_DATATYPES = 18
 TENSOR_CODE_TO_TYPE = {}
 for dtype_code in range(NUM_TFL_DATATYPES):

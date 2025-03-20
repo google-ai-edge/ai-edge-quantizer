@@ -143,24 +143,15 @@ def _perform_blockwise_quantization(
   tensor = transformation_input.subgraph.tensors[transformation_input.tensor_id]
   blockwise_details = schema_py_generated.BlockwiseQuantizationT()
   scale_tensor_id = transformation_utils.add_new_constant_tensor(
-      tensor.name + b"_scale",
-      transformation_input.quant_params.scale,
+      tensor.name + b"_scales",
+      transformation_input.quant_params.scale.astype(np.float16),
       schema_py_generated.TensorType.FLOAT16,
       transformation_input.subgraph,
       transformation_input.buffers,
   )
   blockwise_details.scales = scale_tensor_id
   blockwise_details.blockSize = transformation_input.quant_params.block_size
-  # blockwise quantization allows optional zero point.
-  if transformation_input.quant_params.zero_point is not None:
-    zero_point_tensor_id = transformation_utils.add_new_constant_tensor(
-        tensor.name + b"_zero_point",
-        transformation_input.quant_params.zero_point,
-        schema_py_generated.TensorType.INT32,
-        transformation_input.subgraph,
-        transformation_input.buffers,
-    )
-    blockwise_details.zeroPoints = zero_point_tensor_id
+  # TODO: b/404909258 - Add optional zero point to blockwise quantization.
   flatbuffer_quantization.details = blockwise_details
   return flatbuffer_quantization
 

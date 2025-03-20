@@ -80,12 +80,15 @@ def get_tensor_quant_params(
       tensor_quant_config.symmetric,
   )
   quantized_dim = None
-  if (
-      tensor_quant_config.granularity == qtyping.QuantGranularity.CHANNELWISE
-      or tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE
-  ):
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.CHANNELWISE:
     quantized_dim = common_utils.get_weight_quantized_dim(
         op_info, tensor_content
+    )
+  elif tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
+    quantized_dim = (
+        tfl_flatbuffer_utils.TFL_OP_TO_BLOCKWISE_WEIGHT_QUANTIZED_DIM[
+            op_info.op_name
+        ]
     )
   quant_params = qtyping.UniformQuantParams(
       scale=scale,

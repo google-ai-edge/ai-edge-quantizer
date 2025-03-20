@@ -187,8 +187,8 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     zp = quant_params.zero_point
     expected_zp, expected_scale = (
         uniform_quantize_tensor.tensor_zp_scale_from_min_max(
-            min_value=np.array([[-7, 4], [-4, -4]]),
-            max_value=np.array([[4, 7], [7, 7]]),
+            min_value=np.array([[-7], [-4], [-4], [7]]),
+            max_value=np.array([[7], [4], [4], [7]]),
             num_bits=4,
             symmetric=True,
         )
@@ -200,7 +200,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
         cast(np.ndarray, quant_params.quantized_data).shape, test_data.shape
     )
     self.assertEqual(quant_params.block_size, 2)
-    self.assertEqual(quant_params.quantized_dimension, 0)
+    self.assertEqual(quant_params.quantized_dimension, 1)
 
 
 if __name__ == "__main__":

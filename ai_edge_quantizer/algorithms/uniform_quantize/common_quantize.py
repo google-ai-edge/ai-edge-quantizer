@@ -790,8 +790,6 @@ def init_tensor_min_max(
     quantized_dim = None
     if weight_tensor_config is not None and (
         weight_tensor_config.granularity == qtyping.QuantGranularity.CHANNELWISE
-        or weight_tensor_config.granularity
-        == qtyping.QuantGranularity.BLOCKWISE
     ):
       quantized_dim = common_utils.get_weight_quantized_dim(
           op_info, tensor_data
@@ -801,6 +799,11 @@ def init_tensor_min_max(
         and weight_tensor_config.granularity
         == qtyping.QuantGranularity.BLOCKWISE
     ):
+      quantized_dim = (
+          tfl_flatbuffer_utils.TFL_OP_TO_BLOCKWISE_WEIGHT_QUANTIZED_DIM[
+              op_info.op_name
+          ]
+      )
       reshaped_data, reduce_dims = _reshape_data_for_blockwise(
           tensor_data,
           quantized_dim,
