@@ -190,22 +190,15 @@ def parse_fc_bmm_conv_tensors(
 # flatbuffer_model has Any type since tensorflow.lite.tools.flatbuffer_utils
 # is not type annotated.
 def buffer_to_tensors(flatbuffer_model: Any) -> dict[int, list[Any]]:
-  """Get the buffer to tensor map for a tflite model.
-
-  Args:
-    flatbuffer_model: the flatbuffer_model.
-
-  Returns:
-    buffer_to_tensor_map: key as buffer index, value as list of tensors share
-    the buffer
-  """
+  """Returns a map from buffer id to tensors that use it."""
   buffer_to_tensor_map = {}
   for subgraph in flatbuffer_model.subgraphs:
     for op in subgraph.operators:
       for tensor in parse_op_tensors(op, subgraph.tensors):
         if tensor.buffer not in buffer_to_tensor_map:
           buffer_to_tensor_map[tensor.buffer] = []
-        buffer_to_tensor_map[tensor.buffer].append(tensor)
+        if tensor not in buffer_to_tensor_map[tensor.buffer]:
+          buffer_to_tensor_map[tensor.buffer].append(tensor)
   return buffer_to_tensor_map
 
 

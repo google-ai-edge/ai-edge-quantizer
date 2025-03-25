@@ -105,6 +105,26 @@ class FlatbufferUtilsTest(googletest.TestCase):
     conv2d_filter_tensor = tensors[0]
     self.assertEqual(tuple(conv2d_filter_tensor.shape), (8, 3, 3, 1))
 
+  def test_buffer_to_tensors_has_unique_values(self):
+    test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH,
+        "constant_tensor_and_buffer_only_sharing_weight_fcs.tflite",
+    )
+    test_model = tfl_flatbuffer_utils.read_model(test_model_path)
+    buffer_to_tensor_map = tfl_flatbuffer_utils.buffer_to_tensors(test_model)
+    self.assertLen(buffer_to_tensor_map, 7)
+    # The following buffer is shared by two tensors, each shared by two FC ops.
+    # This is where before we had multiple enrties for the same tensor.
+    self.assertLen(buffer_to_tensor_map[2], 2)
+    got_tensor_names = [
+        tfl_flatbuffer_utils.get_tensor_name(tensor)
+        for tensor in buffer_to_tensor_map[2]
+    ]
+    self.assertEqual(
+        got_tensor_names,
+        ["arith.constant", "arith.constant1"],
+    )
+
   def test_get_tensor_name(self):
     subgraph0 = self._test_model.subgraphs[0]
     subgraph_tensors = subgraph0.tensors

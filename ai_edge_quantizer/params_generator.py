@@ -306,7 +306,7 @@ class ParamsGenerator:
 
     buffers_to_duplicate = []
     for tensors in self.buffer_to_tensors.values():
-      if len(tensors) <= 1:
+      if not tensors:
         continue
 
       first_tensor = tensors[0]
@@ -314,7 +314,7 @@ class ParamsGenerator:
       if first_tensor_params is None:
         continue
 
-      for tensor in tensors[1:]:
+      for tensor in tensors:  # Also checking against itself.
         tensor_params = get_result(tensor)
         if tensor_params is None:
           continue
