@@ -394,14 +394,6 @@ def _compatible_tensor_params(
   ]
   if _same_tensor_params_except_id(params1, params2):
     return True
-  if (
-      params1.transformations[0] != _QuantTrans.NO_QUANTIZE
-      and params2.transformations[0] != _QuantTrans.NO_QUANTIZE
-  ):
-    # NO_QUANTIZE has no parameters. So only if both params aren't NO_QUANTIZE
-    # do we expect the parameters to be the same.
-    if params1.parameters != params2.parameters:
-      return False
   # We only need to check the first transformation because transformations are
   # applied in order, and as long as the one that's immediately after the tensor
   # is the same, it's compatible.
@@ -413,6 +405,7 @@ def _compatible_tensor_params(
   if (
       params1.transformations[0] in quantized_source_transformations
       and params2.transformations[0] in quantized_source_transformations
+      and params1.parameters == params2.parameters
   ):
     return True
   return False

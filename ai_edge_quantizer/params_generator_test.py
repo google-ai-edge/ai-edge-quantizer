@@ -914,6 +914,58 @@ class ParamsGeneratorTest(parameterized.TestCase):
           ),
           expected=True,
       ),
+      dict(
+          testcase_name='compatible_no_numeric_check',
+          param1=qtyping.TensorTransformationParams(
+              tensor_name='tfl.quantize',
+              producer=None,
+              consumers=[
+                  qtyping.OpToTensorParams(
+                      subgraph_op_id=4,
+                      transformations=[
+                          qtyping.QuantTransformation.ADD_QUANTIZE,
+                      ],
+                      parameters=qtyping.UniformQuantParams(
+                          8, None, np.array([0.00028806]), np.array([0])
+                      ),
+                  ),
+                  qtyping.OpToTensorParams(
+                      subgraph_op_id=5,
+                      transformations=[
+                          qtyping.QuantTransformation.ADD_QUANTIZE,
+                      ],
+                      parameters=qtyping.UniformQuantParams(
+                          8, None, np.array([0.00027501]), np.array([0])
+                      ),
+                  ),
+              ],
+          ),
+          param2=qtyping.TensorTransformationParams(
+              tensor_name='tfl.quantize',
+              producer=None,
+              consumers=[
+                  qtyping.OpToTensorParams(
+                      subgraph_op_id=4,
+                      transformations=[
+                          qtyping.QuantTransformation.ADD_QUANTIZE,
+                      ],
+                      parameters=qtyping.UniformQuantParams(
+                          8, None, np.array([0.00028806]), np.array([0])
+                      ),
+                  ),
+                  qtyping.OpToTensorParams(
+                      subgraph_op_id=5,
+                      transformations=[
+                          qtyping.QuantTransformation.ADD_QUANTIZE,
+                      ],
+                      parameters=qtyping.UniformQuantParams(
+                          8, None, np.array([0.00027501]), np.array([0])
+                      ),
+                  ),
+              ],
+          ),
+          expected=True,
+      ),
   )
   def test_params_compatible(self, param1, param2, expected):
     # adding a test to make production coverage happy.
