@@ -111,6 +111,8 @@ class QuantTransformation(enum.Enum):
   EMULATED_SUBCHANNEL = 4
   # Duplicate the buffer.
   DUPLICATE_BUFFER = 5
+  # Duplicate the tensor.
+  DUPLICATE_TENSOR = 6
 
 
 @dataclasses.dataclass(frozen=True)
