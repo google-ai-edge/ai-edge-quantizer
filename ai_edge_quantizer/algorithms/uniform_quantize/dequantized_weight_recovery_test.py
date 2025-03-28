@@ -62,7 +62,7 @@ class DequantizedWeightRecoveryTest(parameterized.TestCase):
   ):
     dequant_vals = scale * self._dummy_quantized_weights
     zp, recovered_scale = (
-        dequantized_weight_recovery.get_zp_scale_from_2d_dequantized_symmetric_weights(
+        dequantized_weight_recovery.get_zp_scale_from_dequantized_symmetric_weights(
             dequant_vals, quantized_dimension
         )
     )
@@ -72,17 +72,40 @@ class DequantizedWeightRecoveryTest(parameterized.TestCase):
     self.assertEqual(np.sum(zp), 0)
     self.assertEqual(zp.shape, scale.shape)
 
-  def test_tensor_zp_scale_from_2d_dequantized_symmetric_weights_raises_error_for_non_2d_weights(
-      self,
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="per-tensor-recovery",
+          quantized_dimension=None,
+          scale=np.array([0.1875]).reshape(1, 1),
+      ),
+      dict(
+          testcase_name="channel0-recovery",
+          quantized_dimension=0,
+          scale=np.array([0.1875, 1e-4, 12.3]).reshape(3, 1, 1),
+      ),
+      dict(
+          testcase_name="channel1-recovery",
+          quantized_dimension=1,
+          scale=np.array([0.003, 1.234]).reshape(1, 2, 1),
+      ),
+  )
+  def test_tensor_zp_scale_from_3d_dequantized_symmetric_weights_success(
+      self, quantized_dimension, scale
   ):
-    weights_3d = self._dummy_quantized_weights.reshape(1, 3, 4)
-    weights_3d = weights_3d * 1.02
-    with self.assertRaisesRegex(
-        ValueError, "Only 2D weights are supported. Got 3 dimensions."
-    ):
-      dequantized_weight_recovery.get_zp_scale_from_2d_dequantized_symmetric_weights(
-          weights_3d, quantized_dimension=None
-      )
+    dequant_vals = scale * self._dummy_quantized_weights.reshape(3, 2, 2)
+    zp, recovered_scale = (
+        dequantized_weight_recovery.get_zp_scale_from_dequantized_symmetric_weights(
+            dequant_vals, quantized_dimension
+        )
+    )
+    with self.subTest("shapes_match"):
+      self.assertEqual(recovered_scale.shape, scale.shape)
+      self.assertEqual(zp.shape, scale.shape)
+    with self.subTest("scale_value_match"):
+      self.assertSequenceAlmostEqual(recovered_scale.flatten(), scale.flatten())
+    with self.subTest("zp_is_zero"):
+      # Zero point should be zero for symmetric quantization.
+      self.assertEqual(np.sum(zp), 0)
 
   @parameterized.named_parameters(
       dict(testcase_name="negative_dimension", quantized_dimension=-1),
@@ -95,7 +118,7 @@ class DequantizedWeightRecoveryTest(parameterized.TestCase):
     with self.assertRaisesRegex(
         ValueError, "quantized_dimension must be 0, 1, or None. Got"
     ):
-      dequantized_weight_recovery.get_zp_scale_from_2d_dequantized_symmetric_weights(
+      dequantized_weight_recovery.get_zp_scale_from_dequantized_symmetric_weights(
           dequant_vals, quantized_dimension
       )
 

@@ -70,17 +70,17 @@ def _get_scale(arr: np.ndarray, min_scale: float) -> float:
   return min_scale
 
 
-def get_zp_scale_from_2d_dequantized_symmetric_weights(
+def get_zp_scale_from_dequantized_symmetric_weights(
     dequant_vals: np.ndarray,
     quantized_dimension: Optional[int] = None,
     min_scale: float = 1e-9,
 ) -> tuple[np.ndarray, np.ndarray]:
-  """Calculates scale and zero point from 2D dequantized, symmetric weights.
+  """Calculates scale and zero point from dequantized and symmetric weights.
 
   Handles both per-tensor and per-channel (axis) quantization.
 
   Args:
-      dequant_vals: The 2D dequantized weight values (numpy array).
+      dequant_vals: The dequantized weight values (numpy array).
       quantized_dimension:  The dimension along which quantization was performed
         (0 or 1), or None for per-tensor quantization.
       min_scale: The minimum allowed scale value.
@@ -91,14 +91,8 @@ def get_zp_scale_from_2d_dequantized_symmetric_weights(
           - scales: Scales (scalar for per-tensor, array for per-channel).
 
   Raises:
-      ValueError: If `dequant_vals` is not 2D, or if
-          `quantized_dimension` is not 0, 1, or None.
+      ValueError: If `quantized_dimension` is not 0, 1, or None.
   """
-
-  if dequant_vals.ndim != 2:
-    raise ValueError(
-        f"Only 2D weights are supported. Got {dequant_vals.ndim} dimensions."
-    )
 
   if quantized_dimension not in (0, 1, None):
     raise ValueError(
@@ -112,23 +106,26 @@ def get_zp_scale_from_2d_dequantized_symmetric_weights(
     # Per-tensor quantization: One scale for the entire tensor.
     scales = _get_scale(dequant_vals.flatten(), min_scale)
     scales = np.array([[scales]])
-
   else:
     # Per-channel quantization: A scale for each slice along the dimension.
-    scales = []
-    for i in range(dequant_vals.shape[quantized_dimension]):
-      if quantized_dimension == 0:
-        vec = dequant_vals[i, :]
-      else:  # quantized_dimension == 1
-        vec = dequant_vals[:, i]
-      scales.append(_get_scale(vec, min_scale))
-
-    # Reshape for correct broadcasting.
-    scales = (
-        np.array(scales).reshape(-1, 1)
-        if quantized_dimension == 0
-        else np.array(scales).reshape(1, -1)
+    # Create a broadcasted array for per-channel scales. It should have the same
+    # number of dimensions as the input, with 1 in all dimensions except for the
+    # quantized dimension, which retains its original size.
+    scales = np.empty(
+        tuple(
+            [
+                1
+                if i != quantized_dimension
+                else dequant_vals.shape[quantized_dimension]
+                for i in range(dequant_vals.ndim)
+            ]
+        )
     )
+    for i in range(dequant_vals.shape[quantized_dimension]):
+      slices = [slice(None)] * dequant_vals.ndim
+      slices[quantized_dimension] = i
+      vec = dequant_vals[tuple(slices)]
+      scales[tuple(slices)] = _get_scale(vec, min_scale)
 
   zero_points = np.zeros_like(scales, dtype=np.int32)
   return zero_points, scales
@@ -153,7 +150,7 @@ def get_tensor_quant_params(
 
   Raises:
     ValueError: If the quantization granularity is blockwise, or if the tensor
-    is not a 2D symmetric weight tensor.
+    is not a symmetric weight tensor.
   """
   # Fallback to naive_min_max_quantize.py for non-weight tensors.
   if tensor_content is None:
@@ -166,10 +163,9 @@ def get_tensor_quant_params(
         "Blockwise quantization is not supported for dequantized weight"
         " recovery."
     )
-  if tensor_content.ndim != 2 or not tensor_quant_config.symmetric:
+  if not tensor_quant_config.symmetric:
     raise ValueError(
-        "Only 2D symmetric weights are supported for dequantized weight"
-        " recovery."
+        "Only symmetric weights are supported for dequantized weight recovery."
     )
 
   quantized_dim = None
@@ -178,7 +174,7 @@ def get_tensor_quant_params(
         op_info, tensor_content
     )
 
-  zp, scale = get_zp_scale_from_2d_dequantized_symmetric_weights(
+  zp, scale = get_zp_scale_from_dequantized_symmetric_weights(
       dequant_vals=tensor_content,
       quantized_dimension=quantized_dim,
   )
