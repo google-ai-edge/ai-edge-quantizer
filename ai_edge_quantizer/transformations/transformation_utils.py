@@ -16,7 +16,7 @@
 """Utility functions for graph transformations."""
 
 import dataclasses
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -98,6 +98,7 @@ def add_new_constant_tensor(
     tensor_type: schema_py_generated.TensorType,
     subgraph: schema_py_generated.SubGraphT,
     buffers: list[schema_py_generated.BufferT],
+    tensor_shape: Optional[list[int]] = None,
 ) -> int:
   """Add a new constant tensor to the model.
 
@@ -107,6 +108,8 @@ def add_new_constant_tensor(
     tensor_type: The type of the new tensor.
     subgraph: The subgraph where the new tensor is added.
     buffers: The buffers of the model.
+    tensor_shape: The shape of the new tensor. If not provided, the shape of the
+      data will be used.
 
   Returns:
     The index of the new tensor in the subgraph.
@@ -114,7 +117,9 @@ def add_new_constant_tensor(
   new_buffer_id = add_new_constant_buffer(data, buffers)
 
   new_tensor = schema_py_generated.TensorT()
-  new_tensor.shape = data.shape
+  if tensor_shape is None:
+    tensor_shape = data.shape
+  new_tensor.shape = tensor_shape
   new_tensor.buffer = new_buffer_id
   new_tensor.type = tensor_type
   new_tensor.name = tensor_name
