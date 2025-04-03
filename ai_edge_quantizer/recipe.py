@@ -39,6 +39,29 @@ def dynamic_wi8_afp32():
   ]
 
 
+def dynamic_wi4_afp32():
+  """Returns a dynamic quantization recipe with int4 weights and float32 activation."""
+  return [
+      dict({
+          'regex': '.*',
+          'operation': '*',
+          'algorithm_key': 'min_max_uniform_quantize',
+          'op_config': {
+              'weight_tensor_config': {
+                  'num_bits': 4,
+                  'symmetric': True,
+                  'granularity': 'CHANNELWISE',
+                  'dtype': 'INT',
+                  'block_size': 0,
+              },
+              'compute_precision': 'INTEGER',
+              'explicit_dequantize': False,
+              'skip_checks': False,
+          },
+      })
+  ]
+
+
 def dynamic_legacy_wi8_afp32():
   """Returns a dynamic quantization legacy recipe with int8 weights and float32 activation.
 
