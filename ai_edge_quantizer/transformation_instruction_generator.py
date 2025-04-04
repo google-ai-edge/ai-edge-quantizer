@@ -27,6 +27,9 @@ from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
+_QuantTransformation = qtyping.QuantTransformation
+
+
 # When a tensor has no producer, we'll assign -1 to the producer field
 # When a tensor is a graph output, we'll also include a -1 in the consumer list
 def check_horizontal_optimization(
@@ -516,21 +519,101 @@ class TransformationInstructionsGenerator:
 
     return tensor_trans_insts
 
-  def _check_tensor_transformation_instructions_valid(
-      self, instructions: qtyping.TensorTransformationInsts
-  ):
-    """Check if the tensor transformation instructions are valid.
+  def _split_instructions_by_tensor_duplication(
+      self,
+      instructions: qtyping.TensorTransformationInsts,
+  ) -> list[list[qtyping.TransformationInst]]:
+    """Split the instructions into subsets by tensor duplication.
+
+    Splits the instructions into subsets based on which tensor (original or one
+    of duplicated ones) they will be applied to.
+
+    The first subset is for the original tensor. The following subsets are for
+    the duplicated tensors. The order of instructions in each subset is
+    preserved.
+
+    Enforced constraints for each duplicated tensor's instructions subset:
+    1. The first instruction must be a `DUPLICATE_TENSOR` one.
+    2. No other `DUPLICATE_TENSOR` instructions can be present.
+
+    For the following instructions:
+      [
+          (transformation=DUPLICATE_TENSOR, consumers=[1, 2, 3]),
+          (transformation=DUPLICATE_TENSOR, consumers=[4]),
+          (transformation=T1, consumers=[1, 2]),
+          (transformation=T2, consumers=[3]),
+          (transformation=T3, consumers=[4]),
+          (transformation=T4, consumers=[5])
+      ]
+
+    `instruction_subsets` will be:
+      [
+          [(transformation=T4, consumers=[5])],
+          [
+              (transformation=DUPLICATE_TENSOR, consumers=[1, 2, 3]),
+              (transformation=T1, consumers=[1, 2]),
+              (transformation=T2, consumers=[3])
+          ],
+          [
+              (transformation=DUPLICATE_TENSOR, consumers=[4]),
+              (transformation=T3, consumers=[4])
+          ]
+      ],
 
     Args:
       instructions: Transformation instructions for a tensor.
 
+    Returns:
+      A list of subsets of transformation instructions, where the first subset
+      is for the original tensor, and the following subsets are for the
+      duplicated tensors.
+
     Raises:
-      ValueError: If the instructions are not valid.
+      ValueError: If DUPLICATE_TENSOR is found and it's not the first
+      transformation for its consumers.
+    """
+    original_tensor_subset_idx = 0
+    instruction_subsets = [[]]
+    consumer_to_subset_idx = {}
+    for instruction in instructions.instructions:
+      if instruction.transformation == _QuantTransformation.DUPLICATE_TENSOR:
+        instruction_subsets.append([instruction])
+        subset_idx = len(instruction_subsets) - 1
+        for consumer in instruction.consumers:
+          if consumer in consumer_to_subset_idx:
+            raise ValueError(
+                f"Tensor {instructions.tensor_name} : duplicate tensor should"
+                " be the first instruction for its consumers."
+            )
+          else:
+            consumer_to_subset_idx[consumer] = subset_idx
+      else:
+        first_consumer = instruction.consumers[0]
+        if first_consumer not in consumer_to_subset_idx:
+          consumer_to_subset_idx[first_consumer] = original_tensor_subset_idx
+        subset_idx = consumer_to_subset_idx[first_consumer]
+        instruction_subsets[subset_idx].append(instruction)
+
+    return instruction_subsets
+
+  def _check_subset_of_tensor_transformation_instructions_valid(
+      self,
+      instructions: Optional[list[qtyping.TransformationInst]],
+      tensor_name: str,
+  ):
+    """Check if a subset of tensor transformation instructions is valid.
+
+    Args:
+      instructions: A subset of transformation instructions for a tensor.
+      tensor_name: The name of the tensor.
+
+    Raises:
+      ValueError: If the subset of instructions are not valid.
     """
     is_tensor_unquantized = False
     is_tensor_quantized = False
     is_operator_emulated = False
-    for instruction in instructions.instructions:
+    for instruction in instructions:
       transform_type = instruction.transformation
       if transform_type == qtyping.QuantTransformation.NO_QUANTIZE:
         is_tensor_unquantized = True
@@ -543,14 +626,36 @@ class TransformationInstructionsGenerator:
         is_operator_emulated = True
     if is_tensor_unquantized and is_tensor_quantized:
       raise ValueError(
-          "Tensor %s can not be both quantized and unquantized"
-          % instructions.tensor_name
+          "Tensor %s can not be both quantized and unquantized" % tensor_name
       )
-    if is_operator_emulated and len(instructions.instructions) > 1:
+    if is_operator_emulated and len(instructions) > 1:
       raise ValueError(
           "Tensor %s : op replacement transformation can not be combined with"
-          " other transformations."
-          % instructions.tensor_name
+          " other transformations." % tensor_name
+      )
+
+  def _check_tensor_transformation_instructions_valid(
+      self,
+      instructions: qtyping.TensorTransformationInsts,
+  ):
+    """Check if the tensor transformation instructions are valid.
+
+    Args:
+      instructions: Transformation instructions for a tensor.
+
+    Raises:
+      ValueError: If the instructions are not valid.
+    """
+    # Split the instructions into subsets based on which tensor (original or one
+    # of duplicated ones) they will be applied to.
+    instruction_subsets = self._split_instructions_by_tensor_duplication(
+        instructions
+    )
+    # Check that each subset of instructions is valid.
+    for instruction_subset in instruction_subsets:
+      self._check_subset_of_tensor_transformation_instructions_valid(
+          instruction_subset,
+          instructions.tensor_name,
       )
 
   def quant_params_to_transformation_insts(

@@ -27,6 +27,8 @@ from ai_edge_quantizer.utils import test_utils
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(".")
 
+_QTransf = qtyping.QuantTransformation
+
 
 class InstructionGeneratorTest(parameterized.TestCase):
 
@@ -1130,14 +1132,93 @@ class InstructionGeneratorTest(parameterized.TestCase):
     self.assertLen(instructions, 1)
     instructions = instructions[test_tensor_name].instructions
     self.assertGreater(len(instructions), 1)
-    self.assertEqual(
-        instructions[0].transformation,
-        qtyping.QuantTransformation.DUPLICATE_BUFFER,
+    self.assertEqual(instructions[0].transformation, _QTransf.DUPLICATE_BUFFER)
+    self.assertNotIn(_QTransf.DUPLICATE_BUFFER, instructions[1:])
+
+  def _get_test_instruction(self, transformation, consumers=None):
+    if consumers is None:
+      consumers = []
+    return qtyping.TransformationInst(
+        transformation=transformation,
+        consumers=consumers,
+        # Dummy values below.
+        tensor_id=0,
+        producer=None,
+        parameters=None,
     )
-    self.assertNotIn(
-        qtyping.QuantTransformation.DUPLICATE_BUFFER,
-        instructions[1:],
+
+  def test__split_instructions_by_tensor_duplication_returns_expected_subsets(
+      self,
+  ):
+    instructions = [
+        self._get_test_instruction(_QTransf.DUPLICATE_TENSOR, consumers=[1, 2, 3]),  # pylint: disable=line-too-long
+        self._get_test_instruction(_QTransf.DUPLICATE_TENSOR, consumers=[4]),
+        self._get_test_instruction(_QTransf.ADD_QUANTIZE, consumers=[1, 2]),
+        self._get_test_instruction(_QTransf.ADD_QUANTIZE, consumers=[3]),
+        self._get_test_instruction(_QTransf.ADD_QUANTIZE, consumers=[4]),
+        self._get_test_instruction(_QTransf.ADD_QUANTIZE, consumers=[5]),
+    ]
+    tensor_instructions = qtyping.TensorTransformationInsts(
+        tensor_name="test_tensor", subgraph_id=0, instructions=instructions
     )
+    instruction_gen = (
+        instruction_generator.TransformationInstructionsGenerator()
+    )
+    got = instruction_gen._split_instructions_by_tensor_duplication(
+        tensor_instructions
+    )
+    expected = [
+        [self._get_test_instruction(_QTransf.ADD_QUANTIZE, consumers=[5])],
+        [
+            self._get_test_instruction(_QTransf.DUPLICATE_TENSOR, consumers=[1, 2, 3]),  # pylint: disable=line-too-long
+            self._get_test_instruction(_QTransf.ADD_QUANTIZE, consumers=[1, 2]),
+            self._get_test_instruction(_QTransf.ADD_QUANTIZE, consumers=[3]),
+        ],
+        [
+            self._get_test_instruction(_QTransf.DUPLICATE_TENSOR, consumers=[4]),  # pylint: disable=line-too-long
+            self._get_test_instruction(_QTransf.ADD_QUANTIZE, consumers=[4]),
+        ],
+    ]
+    self.assertEqual(got, expected)
+
+  def test__check_tensor_transformation_instructions_valid_succeeds_on_q_dq_with_duplication(
+      self,
+  ):
+    instructions = [
+        self._get_test_instruction(_QTransf.DUPLICATE_TENSOR, consumers=[1]),
+        self._get_test_instruction(_QTransf.NO_QUANTIZE, consumers=[1]),
+        self._get_test_instruction(_QTransf.QUANTIZE_TENSOR, consumers=[2]),
+    ]
+    tensor_instructions = qtyping.TensorTransformationInsts(
+        tensor_name="test_tensor", subgraph_id=0, instructions=instructions
+    )
+    instruction_gen = (
+        instruction_generator.TransformationInstructionsGenerator()
+    )
+    instruction_gen._check_tensor_transformation_instructions_valid(
+        tensor_instructions
+    )
+
+  def test__check_tensor_transformation_instructions_valid_fails_when_q_noq_wo_duplication(
+      self,
+  ):
+    tensor_instructions = qtyping.TensorTransformationInsts(
+        tensor_name="test_tensor",
+        subgraph_id=0,
+        instructions=[
+            self._get_test_instruction(_QTransf.NO_QUANTIZE, consumers=[1]),
+            self._get_test_instruction(_QTransf.QUANTIZE_TENSOR, consumers=[2]),
+        ],
+    )
+    instruction_gen = (
+        instruction_generator.TransformationInstructionsGenerator()
+    )
+    with self.assertRaisesRegex(
+        ValueError, "can not be both quantized and unquantized"
+    ):
+      instruction_gen._check_tensor_transformation_instructions_valid(
+          tensor_instructions
+      )
 
 
 if __name__ == "__main__":
