@@ -457,6 +457,53 @@ class TransformationInstructionsGenerator:
       transformations.insert(0, producer_trans_rule)
     return transformations
 
+  def _remove_last_tensor_duplication(
+      self, tensor_trans_insts: qtyping.TensorTransformationInsts
+  ) -> None:
+    """Remove the last tensor duplication so the original tensor can be reused."""
+    instructions = tensor_trans_insts.instructions
+    if not instructions:
+      return
+    for i in range(len(instructions) - 1, -1, -1):
+      if (
+          instructions[i].transformation
+          == _QuantTransformation.DUPLICATE_TENSOR
+      ):
+        instructions.pop(i)
+        return
+
+  def _remove_unnecessary_buffer_duplication(
+      self, tensor_trans_insts: qtyping.TensorTransformationInsts
+  ) -> None:
+    """Remove buffer duplications that comes after a tensor duplication.
+
+    When a tensor is duplicated, a new buffer is created for it. Therefore,
+    buffer duplication transformation that comes after it is unnecessary.
+
+    Args:
+      tensor_trans_insts: Transformation instructions for a tensor.
+    """
+    instructions = tensor_trans_insts.instructions
+    if not instructions:
+      return
+
+    # Find all consumers that have a tensor duplication.
+    consumers_with_tensor_duplication = set()
+    for instr in instructions:
+      if instr.transformation == _QuantTransformation.DUPLICATE_TENSOR:
+        consumers_with_tensor_duplication.update(instr.consumers)
+    if not consumers_with_tensor_duplication:
+      return
+
+    # Remove a buffer duplication that comes with a tensor duplication.
+    for i in range(len(instructions) - 1, -1, -1):
+      instr = instructions[i]
+      if (
+          instr.transformation == _QuantTransformation.DUPLICATE_BUFFER
+          and consumers_with_tensor_duplication.issuperset(instr.consumers)
+      ):
+        instructions.pop(i)
+
   def _quant_params_to_transformation_insts(
       self,
       param: qtyping.TensorTransformationParams,
@@ -513,6 +560,18 @@ class TransformationInstructionsGenerator:
     # Adding other consumers rules.
     transformations += other_consumer_transformations
     tensor_trans_insts.instructions = transformations
+
+    # Now, when all optimizations are done, we can remove the last tensor
+    # duplication instruction, so the original tensor can be reused.
+    self._remove_last_tensor_duplication(tensor_trans_insts)
+    # With the tensor duplication instructions finalized, we can remove
+    # unnecessary buffer duplications applied to the same duplicated tensors.
+    # This is not a part of a vertical optimization because vertical
+    # optimization only works between producers & consumers, and this is between
+    # the consumer only. Also this can't be done during the params generation
+    # because removing last tensor duplication has to happen first.
+    self._remove_unnecessary_buffer_duplication(tensor_trans_insts)
+
     # Check the generated transformation instructions are valid, the function
     # will raise an error if the instructions are not valid.
     self._check_tensor_transformation_instructions_valid(tensor_trans_insts)

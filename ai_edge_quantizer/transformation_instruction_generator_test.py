@@ -1147,6 +1147,149 @@ class InstructionGeneratorTest(parameterized.TestCase):
         parameters=None,
     )
 
+  def test__remove_last_tensor_duplication_succeeds(self):
+    tensor_instructions = qtyping.TensorTransformationInsts(
+        tensor_name="test_tensor",
+        subgraph_id=0,
+        instructions=[
+            self._get_test_instruction(_QTransf.DUPLICATE_TENSOR),
+            self._get_test_instruction(_QTransf.ADD_QUANTIZE),
+            self._get_test_instruction(_QTransf.DUPLICATE_TENSOR),
+            self._get_test_instruction(_QTransf.ADD_DEQUANTIZE),
+        ],
+    )
+    instruction_gen = (
+        instruction_generator.TransformationInstructionsGenerator()
+    )
+    instruction_gen._remove_last_tensor_duplication(tensor_instructions)
+
+    self.assertLen(tensor_instructions.instructions, 3)
+    expected_transformations = [
+        _QTransf.DUPLICATE_TENSOR,
+        _QTransf.ADD_QUANTIZE,
+        _QTransf.ADD_DEQUANTIZE,
+    ]
+    got_transformations = [
+        instruction.transformation
+        for instruction in tensor_instructions.instructions
+    ]
+    self.assertEqual(got_transformations, expected_transformations)
+
+  def test__remove_unnecessary_buffer_duplication_succeeds(
+      self,
+  ):
+    instructions = [
+        self._get_test_instruction(_QTransf.DUPLICATE_TENSOR, consumers=[1]),
+        self._get_test_instruction(_QTransf.DUPLICATE_BUFFER, consumers=[1]),
+        self._get_test_instruction(_QTransf.ADD_QUANTIZE),
+        self._get_test_instruction(_QTransf.DUPLICATE_BUFFER, consumers=[1]),
+        self._get_test_instruction(_QTransf.ADD_DEQUANTIZE),
+        self._get_test_instruction(_QTransf.DUPLICATE_BUFFER, consumers=[2]),
+        self._get_test_instruction(_QTransf.DUPLICATE_TENSOR, consumers=[3, 4]),
+        self._get_test_instruction(_QTransf.ADD_QUANTIZE),
+        self._get_test_instruction(_QTransf.DUPLICATE_BUFFER, consumers=[3, 4]),
+    ]
+    tensor_instructions = qtyping.TensorTransformationInsts(
+        tensor_name="test_tensor",
+        subgraph_id=0,
+        instructions=instructions,
+    )
+    instruction_gen = (
+        instruction_generator.TransformationInstructionsGenerator()
+    )
+    instruction_gen._remove_unnecessary_buffer_duplication(tensor_instructions)
+
+    self.assertLen(tensor_instructions.instructions, 6)
+    expected_transformations = [
+        _QTransf.DUPLICATE_TENSOR,
+        _QTransf.ADD_QUANTIZE,
+        _QTransf.ADD_DEQUANTIZE,
+        _QTransf.DUPLICATE_BUFFER,
+        _QTransf.DUPLICATE_TENSOR,
+        _QTransf.ADD_QUANTIZE,
+    ]
+    got_transformations = [
+        instruction.transformation
+        for instruction in tensor_instructions.instructions
+    ]
+    self.assertEqual(got_transformations, expected_transformations)
+
+  def test__instruction_generator_removes_unnecessary_tensor_and_buffer_duplication(
+      self,
+  ):
+    test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH,
+        "tests/models/constant_tensor_and_buffer_only_sharing_weight_fcs.tflite",
+    )
+    params_4_bits = qtyping.UniformQuantParams(
+        4, None, np.array([1]), np.array([0])
+    )
+    params_8_bits = qtyping.UniformQuantParams(
+        8, None, np.array([1]), np.array([0])
+    )
+    quant_parameters = {}
+    # Two FCs share a weight tensor `arith.constant`.
+    quant_parameters["arith.constant"] = qtyping.TensorTransformationParams(
+        tensor_name="arith.constant",
+        producer=None,
+        consumers=[
+            qtyping.OpToTensorParams(
+                subgraph_op_id=0,
+                transformations=[
+                    _QTransf.DUPLICATE_TENSOR,
+                    _QTransf.DUPLICATE_BUFFER,  # Expected to be removed.
+                    _QTransf.QUANTIZE_TENSOR,
+                ],
+                parameters=params_8_bits,
+            ),
+            qtyping.OpToTensorParams(
+                subgraph_op_id=1,
+                transformations=[
+                    _QTransf.DUPLICATE_TENSOR,  # Expected to be removed.
+                    _QTransf.DUPLICATE_BUFFER,
+                    _QTransf.QUANTIZE_TENSOR,
+                ],
+                parameters=params_4_bits,
+            ),
+        ],
+    )
+    instruction_gen = instruction_generator.TransformationInstructionsGenerator(
+        test_model_path
+    )
+    instructions = instruction_gen.quant_params_to_transformation_insts(
+        quant_parameters
+    )
+
+    def get_expected_instruction(transformation, consumers, params):
+      return qtyping.TransformationInst(
+          transformation=transformation,
+          consumers=consumers,
+          tensor_id=1,
+          producer=-1,
+          parameters=params,
+      )
+
+    expected_instructions = qtyping.TensorTransformationInsts(
+        tensor_name="arith.constant",
+        subgraph_id=0,
+        instructions=[
+            get_expected_instruction(
+                _QTransf.DUPLICATE_TENSOR, consumers=[0], params=params_8_bits
+            ),
+            get_expected_instruction(
+                _QTransf.DUPLICATE_BUFFER, consumers=[1], params=params_4_bits
+            ),
+            get_expected_instruction(
+                _QTransf.QUANTIZE_TENSOR, consumers=[0], params=params_8_bits
+            ),
+            get_expected_instruction(
+                _QTransf.QUANTIZE_TENSOR, consumers=[1], params=params_4_bits
+            ),
+        ],
+    )
+    self.assertLen(instructions, 1)
+    self.assertEqual(instructions["arith.constant"], expected_instructions)
+
   def test__split_instructions_by_tensor_duplication_returns_expected_subsets(
       self,
   ):
