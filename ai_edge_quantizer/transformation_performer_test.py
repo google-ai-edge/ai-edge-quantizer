@@ -15,6 +15,7 @@
 
 """Tests for transformation_performer."""
 
+import copy
 import os
 
 import numpy as np
@@ -25,6 +26,9 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import transformation_performer
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
+
+_QTransf = qtyping.QuantTransformation
+
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(".")
 
@@ -265,6 +269,52 @@ class TransformationPerformerTest(parameterized.TestCase):
     self.assertListEqual(
         self._transformation_performer._added_op_id_map,
         expected_added_op_id_map,
+    )
+
+  def test__update_instructions_updates_tensor_id_after_duplicate_tensor(self):
+    def get_test_instruction(transformation, consumers):
+      return qtyping.TransformationInst(
+          transformation=transformation,
+          consumers=consumers,
+          # Dummy values below.
+          tensor_id=0,
+          producer=0,
+          parameters=qtyping.UniformQuantParams(
+              8, None, np.array([1]), np.array([0])
+          ),
+      )
+
+    instructions = [
+        get_test_instruction(_QTransf.DUPLICATE_TENSOR, consumers=[1]),
+        get_test_instruction(_QTransf.ADD_QUANTIZE, consumers=[1]),
+        get_test_instruction(_QTransf.ADD_DEQUANTIZE, consumers=[1]),
+        get_test_instruction(_QTransf.QUANTIZE_TENSOR, consumers=[2]),
+    ]
+    # Simulate a situation as if the first instruction (duplicate tensor) was
+    # applied.
+    subgraph_id = 0
+    duplicated_tensor_id = 13
+    prev_trans_idx = 0
+    trans_info = qtyping.TransformationInfo(
+        # Copy of what duplicate_tensor.py returns.
+        op_id=0,
+        num_ops_added=0,
+        output_tensor_id=duplicated_tensor_id,
+    )
+    self._transformation_performer._create_op_id_map(self._test_model)
+    self._transformation_performer._update_instructions(
+        prev_trans_idx, instructions, subgraph_id, trans_info
+    )
+    # Expecting the ops with the same consumers as in the DUPLICATE_TENSOR
+    # instruction to use the new tensor id.
+    expected_instructions = copy.deepcopy(instructions)
+    expected_instructions[1].tensor_id = duplicated_tensor_id
+    expected_instructions[2].tensor_id = duplicated_tensor_id
+    self.assertSequenceEqual(instructions, expected_instructions)
+    # Expecting no change to the op id map.
+    self.assertListEqual(
+        self._transformation_performer._added_op_id_map,
+        [[]],
     )
 
   def test_transform_graph(self):
