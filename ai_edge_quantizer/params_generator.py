@@ -344,22 +344,58 @@ def _compatible_tensor_transformation_params(
     params2: qtyping.TensorTransformationParams,
 ) -> bool:
   """Check if two tensor transformation params are compatible."""
+  return (
+      _are_tensor_consumer_params_compatible(params1)
+      and _are_tensor_consumer_params_compatible(params2)
+      and _are_self_compatible_tensors_compatible_to_each_other(
+          params1, params2
+      )
+  )
+
+
+def _are_tensor_consumer_params_compatible(
+    params: qtyping.TensorTransformationParams,
+) -> bool:
+  """Check if all tensor's consumers have the same quantization parameters."""
+  if params.consumers is None or len(params.consumers) < 2:
+    return True
+  consumer_1 = params.consumers[0]
+  for consumer in params.consumers[1:]:
+    if not _compatible_tensor_params(consumer, consumer_1):
+      return False
+  return True
+
+
+def _are_self_compatible_tensors_compatible_to_each_other(
+    params1: qtyping.TensorTransformationParams,
+    params2: qtyping.TensorTransformationParams,
+) -> bool:
+  """Check if two self compatible tensors are compatible to each other.
+
+  Self compatible means that all tensor's consumers have the same quantization
+  parameters.
+
+  Args:
+    params1: The first tensor transformation params.
+    params2: The second tensor transformation params.
+
+  Returns:
+    Whether the two tensors are compatible to each other.
+  """
+  # Check the producer.
   if params1.producer is None or params2.producer is None:
     if params1.producer != params2.producer:
       return False
   elif not _compatible_tensor_params(params1.producer, params2.producer):
     return False
+
+  # Check the consumers.
   if params1.consumers is None or params2.consumers is None:
     if params1.consumers != params2.consumers:
       return False
   else:
-    # Check all consumers within each params are compatible.
-    for params1_consumer in params1.consumers:
-      if not _compatible_tensor_params(params1_consumer, params1.consumers[0]):
-        return False
-    for params2_consumer in params2.consumers:
-      if not _compatible_tensor_params(params2_consumer, params2.consumers[0]):
-        return False
+    # Since all consumer params within each tensor are the same, it's enough to
+    # check only the first consumers.
     if not _compatible_tensor_params(
         params1.consumers[0], params2.consumers[0]
     ):
