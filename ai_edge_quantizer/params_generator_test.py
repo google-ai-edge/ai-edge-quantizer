@@ -700,43 +700,6 @@ class ParamsGeneratorTest(parameterized.TestCase):
           expected=False,
       ),
       dict(
-          testcase_name='param2_consumer_incompatible',
-          param1=qtyping.TensorTransformationParams(
-              tensor_name='tfl.quantize',
-              producer=qtyping.OpToTensorParams(
-                  subgraph_op_id=0,
-                  transformations=[_QTransf.ADD_QUANTIZE],
-                  parameters=_PARAMS_8BIT,
-              ),
-              consumers=_get_test_consumers(
-                  transformations_per_consumer=[
-                      [_QTransf.ADD_QUANTIZE],
-                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
-                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
-                  ],
-                  params_per_consumer=[_PARAMS_8BIT] * 4,
-              ),
-          ),
-          param2=qtyping.TensorTransformationParams(
-              tensor_name='tfl.other_quantize',
-              producer=qtyping.OpToTensorParams(
-                  subgraph_op_id=0,
-                  transformations=[_QTransf.NO_QUANTIZE],
-                  parameters=_PARAMS_8BIT,
-              ),
-              consumers=_get_test_consumers(
-                  transformations_per_consumer=[
-                      [_QTransf.ADD_QUANTIZE],
-                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
-                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
-                      [_QTransf.QUANTIZE_TENSOR],
-                  ],
-                  params_per_consumer=[_PARAMS_8BIT] * 4,
-              ),
-          ),
-          expected=False,
-      ),
-      dict(
           testcase_name='compatible',
           param1=qtyping.TensorTransformationParams(
               tensor_name='tfl.quantize',
@@ -806,12 +769,81 @@ class ParamsGeneratorTest(parameterized.TestCase):
           expected=True,
       ),
   )
-  def test_params_compatible(self, param1, param2, expected):
-    # adding a test to make production coverage happy.
+  def test__are_self_compatible_tensors_compatible_to_each_other(
+      self, param1, param2, expected
+  ):
     self.assertEqual(
-        params_generator._compatible_tensor_transformation_params(
+        params_generator._are_self_compatible_tensors_compatible_to_each_other(
             param1, param2
         ),
+        expected,
+    )
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name='consumer_incompatible',
+          params=qtyping.TensorTransformationParams(
+              tensor_name='tfl.quantize',
+              producer=qtyping.OpToTensorParams(
+                  subgraph_op_id=0,
+                  transformations=[_QTransf.NO_QUANTIZE],
+                  parameters=_PARAMS_8BIT,
+              ),
+              consumers=_get_test_consumers(
+                  transformations_per_consumer=[
+                      [_QTransf.ADD_QUANTIZE],
+                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
+                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
+                      [_QTransf.QUANTIZE_TENSOR],
+                  ],
+                  params_per_consumer=[_PARAMS_8BIT] * 4,
+              ),
+          ),
+          expected=False,
+      ),
+      dict(
+          testcase_name='compatible',
+          params=qtyping.TensorTransformationParams(
+              tensor_name='tfl.quantize',
+              producer=None,
+              consumers=_get_test_consumers(
+                  transformations_per_consumer=[
+                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
+                      [_QTransf.ADD_QUANTIZE],
+                      [_QTransf.NO_QUANTIZE, _QTransf.ADD_QUANTIZE],
+                      [_QTransf.NO_QUANTIZE],
+                  ],
+                  params_per_consumer=[_PARAMS_8BIT] * 4,
+              ),
+          ),
+          expected=True,
+      ),
+      dict(
+          testcase_name='compatible_no_numeric_check',
+          params=qtyping.TensorTransformationParams(
+              tensor_name='tfl.quantize',
+              producer=None,
+              consumers=_get_test_consumers(
+                  transformations_per_consumer=[
+                      [_QTransf.ADD_QUANTIZE],
+                      [_QTransf.ADD_QUANTIZE],
+                  ],
+                  params_per_consumer=[
+                      qtyping.UniformQuantParams(
+                          8, None, np.array([0.00028806]), np.array([0])
+                      ),
+                      qtyping.UniformQuantParams(
+                          8, None, np.array([0.00027501]), np.array([0])
+                      ),
+                  ],
+              ),
+          ),
+          expected=True,
+      ),
+  )
+  def test__are_tensor_consumer_params_compatible(self, params, expected):
+    self.assertEqual(
+        params_generator._are_tensor_consumer_params_compatible(params),
         expected,
     )
 
