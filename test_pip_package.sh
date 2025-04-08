@@ -37,7 +37,7 @@ function build_pip_and_install {
   fi
 
   ${PYTHON_BIN} -m pip install --upgrade pip
-  ${PYTHON_BIN} -m pip install build wheel
+  ${PYTHON_BIN} -m pip install --upgrade build setuptools wheel
 
   echo "------ build pip and install -----"
   pushd "${SCRIPT_DIR}" > /dev/null
