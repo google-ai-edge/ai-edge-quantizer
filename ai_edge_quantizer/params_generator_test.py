@@ -28,7 +28,6 @@ from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 _ComputePrecision = qtyping.ComputePrecision
@@ -37,8 +36,11 @@ _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _QuantTransformation = qtyping.QuantTransformation
 _AlgorithmName = recipe_manager.AlgorithmName
 _QuantGranularity = qtyping.QuantGranularity
+_QTransf = qtyping.QuantTransformation
+
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('')
+_PARAMS_8BIT = qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0]))
 
 
 def _single_fc_model_representative_dataset_gen(num_samples=5):
@@ -61,6 +63,20 @@ def _get_calibration_data(
       tfl_interpreter_utils.DEFAULT_SIGNATURE_KEY: calibration_samples,
   }
   return calibration_data
+
+
+def _get_test_consumers(
+    transformations_per_consumer: list[list[_QTransf]],
+    params_per_consumer: list[qtyping.OpToTensorParams],
+) -> list[qtyping.OpToTensorParams]:
+  return [
+      qtyping.OpToTensorParams(
+          subgraph_op_id=i + 1,
+          transformations=transformations_per_consumer[i],
+          parameters=params_per_consumer[i],
+      )
+      for i in range(len(transformations_per_consumer))
+  ]
 
 
 class ParamsGeneratorTest(parameterized.TestCase):
@@ -635,14 +651,166 @@ class ParamsGeneratorTest(parameterized.TestCase):
           self.assertNotEmpty(consumer.transformations)
           self.assertEqual(
               consumer.transformations[0],
-              qtyping.QuantTransformation.DUPLICATE_BUFFER,
+              _QTransf.DUPLICATE_BUFFER,
+          )
+          self.assertNotIn(
+              _QTransf.DUPLICATE_BUFFER, consumer.transformations[1:]
           )
       elif quant_params[tensor_name].consumers is not None:
         for consumer in quant_params[tensor_name].consumers:
-          self.assertNotIn(
-              qtyping.QuantTransformation.DUPLICATE_BUFFER,
-              consumer.transformations,
-          )
+          self.assertNotIn(_QTransf.DUPLICATE_BUFFER, consumer.transformations)
+
+  def _get_fc_recipe_entry(self, regex: str, num_bits: int):
+    return {
+        'regex': regex,
+        'operation': 'FULLY_CONNECTED',
+        'algorithm_key': 'min_max_uniform_quantize',
+        'op_config': {
+            'weight_tensor_config': {
+                'num_bits': num_bits,
+                'symmetric': True,
+                'granularity': 'CHANNELWISE',
+                'dtype': 'INT',
+                'block_size': 0,
+            },
+            'compute_precision': 'INTEGER',
+            'explicit_dequantize': False,
+            'skip_checks': False,
+            'min_weight_elements': 0,
+        },
+    }
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name='fc1_quant_fc2_no_quant',
+          fc1_num_bits=8,
+          fc2_num_bits=None,
+      ),
+      dict(
+          testcase_name='fc1_no_quant_fc2_quant',
+          fc1_num_bits=None,
+          fc2_num_bits=8,
+      ),
+      dict(
+          testcase_name='fc1_quant_fc2_quant_different_params',
+          fc1_num_bits=8,
+          fc2_num_bits=4,
+      ),
+  )
+  def test_generate_params_marks_correct_buffers_tensors_for_duplication(
+      self,
+      fc1_num_bits,
+      fc2_num_bits,
+  ):
+    model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH,
+        'tests/models/constant_tensor_and_buffer_only_sharing_weight_fcs.tflite',
+    )
+    sig1_fc1_regex = 'BatchMatMulV3;'
+    sig1_fc2_regex = 'PartitionedCall:0;'
+    recipe = []
+    if fc1_num_bits is not None:
+      recipe.append(self._get_fc_recipe_entry(sig1_fc1_regex, fc1_num_bits))
+    if fc2_num_bits is not None:
+      recipe.append(self._get_fc_recipe_entry(sig1_fc2_regex, fc2_num_bits))
+    self._recipe_manager.load_quantization_recipe(recipe)
+    pg = params_generator.ParamsGenerator(model_path)
+    quant_params = pg.generate_quantization_parameters(self._recipe_manager)
+
+    expected_tensor = 'arith.constant'
+    consumers = quant_params[expected_tensor].consumers
+    self.assertLen(consumers, 2)
+
+    # Check FC1 transformations.
+    if fc1_num_bits is None:
+      fc1_quant_transformation = _QTransf.NO_QUANTIZE
+    else:
+      fc1_quant_transformation = _QTransf.QUANTIZE_TENSOR
+    self.assertEqual(
+        consumers[0].transformations,
+        [
+            _QTransf.DUPLICATE_TENSOR,
+            _QTransf.DUPLICATE_BUFFER,
+            fc1_quant_transformation,
+        ],
+    )
+    # Check FC2 transformations.
+    if fc2_num_bits is None:
+      fc2_quant_transformation = _QTransf.NO_QUANTIZE
+    else:
+      fc2_quant_transformation = _QTransf.QUANTIZE_TENSOR
+    self.assertEqual(
+        consumers[1].transformations,
+        [
+            _QTransf.DUPLICATE_TENSOR,
+            _QTransf.DUPLICATE_BUFFER,
+            fc2_quant_transformation,
+        ],
+    )
+    # Check that no other tensor has tensor or buffer duplication
+    # transformations.
+    for tensor_name, params in quant_params.items():
+      if tensor_name == expected_tensor:
+        continue
+      for consumer in params.consumers:
+        self.assertNotIn(_QTransf.DUPLICATE_TENSOR, consumer.transformations)
+        self.assertNotIn(_QTransf.DUPLICATE_BUFFER, consumer.transformations)
+
+  def test_generate_params_returns_valid_results_when_multiple_tensor_duplication_for_one_buffer(
+      self,
+  ):
+    model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH,
+        'tests/models/constant_tensor_and_buffer_only_sharing_weight_fcs.tflite',
+    )
+    sig1_fc1_regex = 'BatchMatMulV3;'
+    sig1_fc2_regex = 'PartitionedCall:0;'
+    sig2_fc1_regex = 'BatchMatMulV31;'
+    sig2_fc2_regex = 'PartitionedCall_1:0;'
+    recipe = [
+        self._get_fc_recipe_entry(sig1_fc1_regex, num_bits=8),
+        self._get_fc_recipe_entry(sig1_fc2_regex, num_bits=4),
+        self._get_fc_recipe_entry(sig2_fc1_regex, num_bits=8),
+        self._get_fc_recipe_entry(sig2_fc2_regex, num_bits=4),
+    ]
+    self._recipe_manager.load_quantization_recipe(recipe)
+    pg = params_generator.ParamsGenerator(model_path)
+    quant_params = pg.generate_quantization_parameters(self._recipe_manager)
+    # Check transformations for sig1.
+    sig1_expected_tensor = 'arith.constant'
+    sig1_consumers = quant_params[sig1_expected_tensor].consumers
+    self.assertLen(sig1_consumers, 2)
+    sig1_expected_transformations = [
+        _QTransf.DUPLICATE_TENSOR,
+        _QTransf.DUPLICATE_BUFFER,
+        _QTransf.QUANTIZE_TENSOR,
+    ]
+    for sig1_consumer in sig1_consumers:
+      self.assertEqual(
+          sig1_consumer.transformations,
+          sig1_expected_transformations,
+      )
+    # Check transformations for sig2.
+    sig2_expected_tensor = 'arith.constant1'
+    sig2_consumers = quant_params[sig2_expected_tensor].consumers
+    self.assertLen(sig2_consumers, 2)
+    sig2_expected_transformations = [
+        _QTransf.DUPLICATE_TENSOR,
+        _QTransf.QUANTIZE_TENSOR,
+    ]
+    for sig2_consumer in sig2_consumers:
+      self.assertEqual(
+          sig2_consumer.transformations,
+          sig2_expected_transformations,
+      )
+    # Check that no other tensor has tensor or buffer duplication
+    # transformations.
+    for tensor_name, params in quant_params.items():
+      if tensor_name in [sig1_expected_tensor, sig2_expected_tensor]:
+        continue
+      for consumer in params.consumers:
+        self.assertNotIn(_QTransf.DUPLICATE_TENSOR, consumer.transformations)
+        self.assertNotIn(_QTransf.DUPLICATE_BUFFER, consumer.transformations)
 
   @parameterized.named_parameters(
       dict(
@@ -651,187 +819,34 @@ class ParamsGeneratorTest(parameterized.TestCase):
               tensor_name='tfl.quantize',
               producer=qtyping.OpToTensorParams(
                   subgraph_op_id=0,
-                  transformations=[qtyping.QuantTransformation.ADD_DEQUANTIZE],
-                  parameters=qtyping.UniformQuantParams(
-                      8, None, np.array([1]), np.array([0])
-                  ),
+                  transformations=[_QTransf.ADD_DEQUANTIZE],
+                  parameters=_PARAMS_8BIT,
               ),
-              consumers=[
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=1,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=2,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                          qtyping.QuantTransformation.ADD_DEQUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=3,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                          qtyping.QuantTransformation.ADD_DEQUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=4,
-                      transformations=[
-                          qtyping.QuantTransformation.NO_QUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-              ],
+              consumers=_get_test_consumers(
+                  transformations_per_consumer=[
+                      [_QTransf.ADD_QUANTIZE],
+                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
+                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
+                      [_QTransf.NO_QUANTIZE],
+                  ],
+                  params_per_consumer=[_PARAMS_8BIT] * 4,
+              ),
           ),
           param2=qtyping.TensorTransformationParams(
-              'tfl.other_quantize',
-              qtyping.OpToTensorParams(
-                  subgraph_op_id=0,
-                  transformations=[qtyping.QuantTransformation.NO_QUANTIZE],
-                  parameters=qtyping.UniformQuantParams(
-                      8, None, np.array([1]), np.array([0])
-                  ),
-              ),
-              [
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=1,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=2,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                          qtyping.QuantTransformation.ADD_DEQUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=3,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                          qtyping.QuantTransformation.ADD_DEQUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-              ],
-          ),
-          expected=False,
-      ),
-      dict(
-          testcase_name='param2_consumer_incompatible',
-          param1=qtyping.TensorTransformationParams(
-              tensor_name='tfl.quantize',
+              tensor_name='tfl.other_quantize',
               producer=qtyping.OpToTensorParams(
                   subgraph_op_id=0,
-                  transformations=[qtyping.QuantTransformation.ADD_QUANTIZE],
-                  parameters=qtyping.UniformQuantParams(
-                      8, None, np.array([1]), np.array([0])
-                  ),
+                  transformations=[_QTransf.NO_QUANTIZE],
+                  parameters=_PARAMS_8BIT,
               ),
-              consumers=[
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=1,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=2,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                          qtyping.QuantTransformation.ADD_DEQUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=3,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                          qtyping.QuantTransformation.ADD_DEQUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-              ],
-          ),
-          param2=qtyping.TensorTransformationParams(
-              'tfl.other_quantize',
-              qtyping.OpToTensorParams(
-                  subgraph_op_id=0,
-                  transformations=[qtyping.QuantTransformation.NO_QUANTIZE],
-                  parameters=qtyping.UniformQuantParams(
-                      8, None, np.array([1]), np.array([0])
-                  ),
+              consumers=_get_test_consumers(
+                  transformations_per_consumer=[
+                      [_QTransf.ADD_QUANTIZE],
+                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
+                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
+                  ],
+                  params_per_consumer=[_PARAMS_8BIT] * 4,
               ),
-              [
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=1,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=2,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                          qtyping.QuantTransformation.ADD_DEQUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=3,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                          qtyping.QuantTransformation.ADD_DEQUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=4,
-                      transformations=[
-                          qtyping.QuantTransformation.QUANTIZE_TENSOR,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-              ],
           ),
           expected=False,
       ),
@@ -840,77 +855,27 @@ class ParamsGeneratorTest(parameterized.TestCase):
           param1=qtyping.TensorTransformationParams(
               tensor_name='tfl.quantize',
               producer=None,
-              consumers=[
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=2,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=3,
-                      transformations=[
-                          qtyping.QuantTransformation.NO_QUANTIZE,
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=4,
-                      transformations=[
-                          qtyping.QuantTransformation.NO_QUANTIZE,
-                      ],
-                  ),
-              ],
+              consumers=_get_test_consumers(
+                  transformations_per_consumer=[
+                      [_QTransf.ADD_QUANTIZE],
+                      [_QTransf.NO_QUANTIZE, _QTransf.ADD_QUANTIZE],
+                      [_QTransf.NO_QUANTIZE],
+                  ],
+                  params_per_consumer=[_PARAMS_8BIT] * 4,
+              ),
           ),
           param2=qtyping.TensorTransformationParams(
-              'tfl.other_quantize',
-              None,
-              [
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=1,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=2,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                          qtyping.QuantTransformation.ADD_DEQUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=3,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                          qtyping.QuantTransformation.ADD_DEQUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=4,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
-                          8, None, np.array([1]), np.array([0])
-                      ),
-                  ),
-              ],
+              tensor_name='tfl.other_quantize',
+              producer=None,
+              consumers=_get_test_consumers(
+                  transformations_per_consumer=[
+                      [_QTransf.ADD_QUANTIZE],
+                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
+                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
+                      [_QTransf.ADD_QUANTIZE],
+                  ],
+                  params_per_consumer=[_PARAMS_8BIT] * 4,
+              ),
           ),
           expected=True,
       ),
@@ -919,60 +884,117 @@ class ParamsGeneratorTest(parameterized.TestCase):
           param1=qtyping.TensorTransformationParams(
               tensor_name='tfl.quantize',
               producer=None,
-              consumers=[
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=4,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
+              consumers=_get_test_consumers(
+                  transformations_per_consumer=[
+                      [_QTransf.ADD_QUANTIZE],
+                      [_QTransf.ADD_QUANTIZE],
+                  ],
+                  params_per_consumer=[
+                      qtyping.UniformQuantParams(
                           8, None, np.array([0.00028806]), np.array([0])
                       ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=5,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
+                      qtyping.UniformQuantParams(
                           8, None, np.array([0.00027501]), np.array([0])
                       ),
-                  ),
-              ],
+                  ],
+              ),
           ),
           param2=qtyping.TensorTransformationParams(
               tensor_name='tfl.quantize',
               producer=None,
-              consumers=[
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=4,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
+              consumers=_get_test_consumers(
+                  transformations_per_consumer=[
+                      [_QTransf.ADD_QUANTIZE],
+                      [_QTransf.ADD_QUANTIZE],
+                  ],
+                  params_per_consumer=[
+                      qtyping.UniformQuantParams(
                           8, None, np.array([0.00028806]), np.array([0])
                       ),
-                  ),
-                  qtyping.OpToTensorParams(
-                      subgraph_op_id=5,
-                      transformations=[
-                          qtyping.QuantTransformation.ADD_QUANTIZE,
-                      ],
-                      parameters=qtyping.UniformQuantParams(
+                      qtyping.UniformQuantParams(
                           8, None, np.array([0.00027501]), np.array([0])
                       ),
-                  ),
-              ],
+                  ],
+              ),
           ),
           expected=True,
       ),
   )
-  def test_params_compatible(self, param1, param2, expected):
-    # adding a test to make production coverage happy.
+  def test__are_self_compatible_tensors_compatible_to_each_other(
+      self, param1, param2, expected
+  ):
     self.assertEqual(
-        params_generator._compatible_tensor_transformation_params(
+        params_generator._are_self_compatible_tensors_compatible_to_each_other(
             param1, param2
         ),
+        expected,
+    )
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name='consumer_incompatible',
+          params=qtyping.TensorTransformationParams(
+              tensor_name='tfl.quantize',
+              producer=qtyping.OpToTensorParams(
+                  subgraph_op_id=0,
+                  transformations=[_QTransf.NO_QUANTIZE],
+                  parameters=_PARAMS_8BIT,
+              ),
+              consumers=_get_test_consumers(
+                  transformations_per_consumer=[
+                      [_QTransf.ADD_QUANTIZE],
+                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
+                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
+                      [_QTransf.QUANTIZE_TENSOR],
+                  ],
+                  params_per_consumer=[_PARAMS_8BIT] * 4,
+              ),
+          ),
+          expected=False,
+      ),
+      dict(
+          testcase_name='compatible',
+          params=qtyping.TensorTransformationParams(
+              tensor_name='tfl.quantize',
+              producer=None,
+              consumers=_get_test_consumers(
+                  transformations_per_consumer=[
+                      [_QTransf.ADD_QUANTIZE, _QTransf.ADD_DEQUANTIZE],
+                      [_QTransf.ADD_QUANTIZE],
+                      [_QTransf.NO_QUANTIZE, _QTransf.ADD_QUANTIZE],
+                      [_QTransf.NO_QUANTIZE],
+                  ],
+                  params_per_consumer=[_PARAMS_8BIT] * 4,
+              ),
+          ),
+          expected=True,
+      ),
+      dict(
+          testcase_name='compatible_no_numeric_check',
+          params=qtyping.TensorTransformationParams(
+              tensor_name='tfl.quantize',
+              producer=None,
+              consumers=_get_test_consumers(
+                  transformations_per_consumer=[
+                      [_QTransf.ADD_QUANTIZE],
+                      [_QTransf.ADD_QUANTIZE],
+                  ],
+                  params_per_consumer=[
+                      qtyping.UniformQuantParams(
+                          8, None, np.array([0.00028806]), np.array([0])
+                      ),
+                      qtyping.UniformQuantParams(
+                          8, None, np.array([0.00027501]), np.array([0])
+                      ),
+                  ],
+              ),
+          ),
+          expected=True,
+      ),
+  )
+  def test__are_tensor_consumer_params_compatible(self, params, expected):
+    self.assertEqual(
+        params_generator._are_tensor_consumer_params_compatible(params),
         expected,
     )
 
@@ -1123,63 +1145,6 @@ class ParamsGeneratorAlreadyQuantizedModelTest(googletest.TestCase):
         ' model.',
     ):
       _ = params_generator.ParamsGenerator(test_model_path)
-
-
-def _create_tensor(name: str, buffer_idx: int) -> schema_py_generated.TensorT:
-  tensor = schema_py_generated.TensorT()
-  tensor.name = name.encode('utf-8')
-  tensor.buffer = buffer_idx
-  return tensor
-
-
-def _create_buffer(data: Any) -> schema_py_generated.BufferT:
-  buffer = schema_py_generated.BufferT()
-  buffer.data = data
-  return buffer
-
-
-class ParamsGeneratorUtilsTest(parameterized.TestCase):
-
-  @parameterized.named_parameters(
-      dict(
-          testcase_name='same_tensors',
-          tensor1=_create_tensor(name='tensor1', buffer_idx=0),
-          tensor2=_create_tensor(name='tensor1', buffer_idx=0),
-          buffers=[_create_buffer(data=np.array([1, 2, 3]))],
-          expected=False,
-      ),
-      dict(
-          testcase_name='tensors_do_not_share_buffer',
-          tensor1=_create_tensor(name='tensor1', buffer_idx=0),
-          tensor2=_create_tensor(name='tensor2', buffer_idx=1),
-          buffers=[
-              _create_buffer(data=np.array([1, 2, 3])),
-              _create_buffer(data=np.array([4, 5, 6])),
-          ],
-          expected=False,
-      ),
-      dict(
-          testcase_name='different_tensors_share_non_constant_buffer',
-          tensor1=_create_tensor(name='tensor1', buffer_idx=0),
-          tensor2=_create_tensor(name='tensor2', buffer_idx=0),
-          buffers=[_create_buffer(data=None)],
-          expected=False,
-      ),
-      dict(
-          testcase_name='different_tensors_share_constant_buffer',
-          tensor1=_create_tensor(name='tensor1', buffer_idx=0),
-          tensor2=_create_tensor(name='tensor2', buffer_idx=0),
-          buffers=[_create_buffer(data=np.array([1, 2, 3]))],
-          expected=True,
-      ),
-  )
-  def test__are_distinct_tensors_with_shared_buffer(
-      self, tensor1, tensor2, buffers, expected
-  ):
-    got = params_generator._are_distinct_tensors_with_shared_buffer(
-        tensor1=tensor1, tensor2=tensor2, buffers=buffers
-    )
-    self.assertEqual(expected, got)
 
 
 if __name__ == '__main__':
