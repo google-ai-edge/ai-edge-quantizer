@@ -231,7 +231,8 @@ def get_tensor_data(tensor: Any, buffers: list[Any]) -> Optional[np.ndarray]:
   data = np.frombuffer(
       buffer_data, dtype=TENSOR_CODE_TO_TYPE[tensor.type].lower()
   )
-  data = np.reshape(data, tensor.shape)
+  if tensor.shape is not None:
+    data = np.reshape(data, tensor.shape)
   return data
 
 
