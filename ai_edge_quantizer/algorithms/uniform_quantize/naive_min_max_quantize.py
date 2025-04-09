@@ -16,6 +16,7 @@
 """Performs naive min/max uniform quantization."""
 
 from typing import Any, Optional
+import ml_dtypes
 import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
@@ -73,12 +74,25 @@ def get_tensor_quant_params(
         " parameters. Check if the correct calibration results are passed into"
         " the ParamsGenerator."
     )
+  clipping_values = None
+  # Blockwise quantization uses float16 scale, with 7 bit mantissa,
+  # so the maximum representable value is 65280.
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
+    clipping_values = np.broadcast_to(
+        np.array(65280), tensor_min_max["min"].shape
+    )
   zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
       tensor_min_max["min"],
       tensor_min_max["max"],
       tensor_quant_config.num_bits,
       tensor_quant_config.symmetric,
+      clipping_values,
   )
+  # Round the scale values to 7 bit mantissa.
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
+    scale = (
+        scale.astype(ml_dtypes.bfloat16).astype(np.float16).astype(np.float32)
+    )
   quantized_dim = None
   if tensor_quant_config.granularity == qtyping.QuantGranularity.CHANNELWISE:
     quantized_dim = common_utils.get_weight_quantized_dim(

@@ -22,7 +22,6 @@ import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
-from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -185,14 +184,13 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     )
     scale = quant_params.scale
     zp = quant_params.zero_point
-    expected_zp, expected_scale = (
-        uniform_quantize_tensor.tensor_zp_scale_from_min_max(
-            min_value=np.array([[-7], [-4], [-4], [7]]),
-            max_value=np.array([[7], [4], [4], [7]]),
-            num_bits=4,
-            symmetric=True,
-        )
-    )
+    expected_scale = np.array([
+        [1],
+        [0.5703125],
+        [0.5703125],
+        [1],
+    ])
+    expected_zp = np.zeros([4, 1])
     self.assertTrue(np.array_equal(zp, expected_zp))
     self.assertTrue(np.array_equal(scale, expected_scale))
     self.assertIsNotNone(quant_params.quantized_data)

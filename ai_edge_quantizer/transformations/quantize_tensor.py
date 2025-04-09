@@ -16,6 +16,7 @@
 """quantize a given tensor."""
 
 from typing import Optional, cast
+import ml_dtypes
 import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import transformation_utils
@@ -121,26 +122,6 @@ def _perform_channelwise_quantization(
   return flatbuffer_quantization
 
 
-def _downcast_and_truncate_scale(input_scale: np.ndarray) -> np.ndarray:
-  """Given a fp32 scale, downcast it to fp16 and truncate mantissa to 7 bits.
-
-  CPU kernel can only utilize 7 bits of mantissa for fp16, so we want to produce
-  scale this way to unify behaviours across different platforms.
-
-  Args:
-    input_scale: The input scale in fp32.
-
-  Returns:
-    The downcasted & truncated scale in fp16.
-  """
-
-  # A regular fp16 has 10 bits of mantissa, so we need to zero out the 3 least
-  # significant bits.
-  return (
-      input_scale.astype(np.float16).view(dtype=np.uint16) & np.uint16(0xFFF8)
-  ).view(dtype=np.float16)
-
-
 def _perform_blockwise_quantization(
     transformation_input: transformation_utils.TransformationInput,
 ) -> schema_py_generated.QuantizationParametersT():
@@ -162,13 +143,12 @@ def _perform_blockwise_quantization(
   )
   tensor = transformation_input.subgraph.tensors[transformation_input.tensor_id]
   blockwise_details = schema_py_generated.BlockwiseQuantizationT()
-  # Downcast and truncate the scale to fp16.
-  downcasted_scale = _downcast_and_truncate_scale(
-      transformation_input.quant_params.scale
-  )
+  # Downcast and round the scale to fp16 with 7 bit mantissa.
   scale_tensor_id = transformation_utils.add_new_constant_tensor(
       tensor.name + b"_scales",
-      downcasted_scale,
+      transformation_input.quant_params.scale.astype(ml_dtypes.bfloat16).astype(
+          np.float16
+      ),
       schema_py_generated.TensorType.FLOAT16,
       transformation_input.subgraph,
       transformation_input.buffers,
