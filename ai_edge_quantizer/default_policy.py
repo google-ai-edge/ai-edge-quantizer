@@ -178,7 +178,6 @@ DEFAULT_JSON_POLICY = """
       "INPUT",
       "OUTPUT",
       "SLICE",
-      "EMBEDDING_LOOKUP",
       "SUM",
       "SELECT",
       "SELECT_V2",
@@ -225,7 +224,6 @@ DEFAULT_JSON_POLICY = """
       "INPUT",
       "OUTPUT",
       "SLICE",
-      "EMBEDDING_LOOKUP",
       "SUM",
       "SELECT",
       "SELECT_V2",
@@ -250,8 +248,8 @@ DEFAULT_JSON_POLICY = """
       "EQUAL",
       "NOT_EQUAL"
     ],
-    "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
-    "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
+    "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT"],
+    "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT"],
     "dynamic_wi8_afp32": [
       "BATCH_MATMUL",
       "CONV_2D",
