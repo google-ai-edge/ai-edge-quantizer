@@ -112,6 +112,31 @@ class TransformationPerformerTest(parameterized.TestCase):
     for index, op_id in enumerate(op_id_map[0]):
       self.assertEqual(op_id, index)
 
+  def test_update_op_id_map_not_changing_value_single_op_model(self):
+    """test for _update_op_id_map."""
+    model = tfl_flatbuffer_utils.read_model(
+        os.path.join(
+            TEST_DATA_PREFIX_PATH, "tests/models/single_fc_bias.tflite"
+        )
+    )
+    self._transformation_performer._create_op_id_map(model)
+    instruction = qtyping.TransformationInst(
+        transformation=qtyping.QuantTransformation.NO_QUANTIZE,
+        tensor_id=0,
+        producer=0,
+        consumers=[-1],
+        parameters=qtyping.UniformQuantParams(
+            8, None, np.array([1]), np.array([0])
+        ),
+    )
+    producer, consumers = (
+        self._transformation_performer._update_producer_and_consumers(
+            instruction, 0
+        )
+    )
+    self.assertEqual(producer, 0)
+    self.assertEqual(consumers, [-1])
+
   @parameterized.named_parameters(
       dict(
           testcase_name="test_no_update",
@@ -389,6 +414,7 @@ class TransformationPerformerTest(parameterized.TestCase):
     )
     self.assertEqual(self._test_model.subgraphs[0].operators[3].outputs[0], 8)
     self.assertEqual(self._test_model.subgraphs[0].operators[4].outputs[0], 15)
+
 
 if __name__ == "__main__":
   googletest.main()
