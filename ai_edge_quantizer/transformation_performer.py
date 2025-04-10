@@ -180,6 +180,39 @@ class TransformationPerformer:
             )
           transformation.tensor_id = trans_info.output_tensor_id
 
+  def _update_producer_and_consumers(
+      self,
+      instruction: qtyping.TransformationInst,
+      subgraph_id: int,
+  ) -> tuple[int, list[int]]:
+    """Update the producer and consumers of a transformation instruction."""
+    if instruction.producer is None or instruction.producer < 0:
+      producer = -1
+    elif instruction.producer < len(
+        self._original_op_id_map[subgraph_id]
+    ):
+      producer = self._original_op_id_map[subgraph_id][
+          instruction.producer
+      ]
+    else:
+      # if the producer id is not in the original op map, it's an added op,
+      # go the corresponding new maps
+      producer = self._added_op_id_map[subgraph_id][
+          instruction.producer
+          - len(self._original_op_id_map[subgraph_id])
+      ]
+    consumers = []
+    for original_op_id in instruction.consumers:
+      if original_op_id == -1:
+        consumers.append(-1)
+      else:
+        consumers.append(
+            self._original_op_id_map[subgraph_id][
+                original_op_id
+            ]
+        )
+    return producer, consumers
+
   def _apply_single_transformation(
       self,
       transformation_inst: qtyping.TensorTransformationInsts,
@@ -198,28 +231,9 @@ class TransformationPerformer:
       None, update the transformation_inst & tflite_model in place
     """
     instruction = transformation_inst.instructions[transformation_index]
-    if not instruction.producer or instruction.producer < 0:
-      producer = -1
-    elif instruction.producer < len(
-        self._original_op_id_map[transformation_inst.subgraph_id]
-    ):
-      producer = self._original_op_id_map[transformation_inst.subgraph_id][
-          instruction.producer
-      ]
-    else:
-      # if the producer id is not in the original op map, it's an added op,
-      # go the corresponding new maps
-      producer = self._added_op_id_map[transformation_inst.subgraph_id][
-          instruction.producer
-          - len(self._original_op_id_map[transformation_inst.subgraph_id])
-      ]
-    consumers = []
-    for original_op_id in instruction.consumers:
-      consumers.append(
-          self._original_op_id_map[transformation_inst.subgraph_id][
-              original_op_id
-          ]
-      )
+    producer, consumers = self._update_producer_and_consumers(
+        instruction, transformation_inst.subgraph_id
+    )
     trans_info = self._transformation_registration[instruction.transformation](
         transformation_utils.TransformationInput(
             instruction.tensor_id,
