@@ -57,6 +57,17 @@ DEFAULT_JSON_POLICY = """
       "explicit_dequantize": false,
       "compute_precision": "INTEGER"
     },
+    "dynamic_wi4_afp32_blockwise": {
+      "weight_tensor_config": {
+        "num_bits": 4,
+        "symmetric": [true],
+        "granularity": ["BLOCKWISE"],
+        "dtype": "INT",
+        "block_size": [32, 64, 96, 128, 256]
+      },
+      "explicit_dequantize": false,
+      "compute_precision": "INTEGER"
+    },
     "static_wi8_ai16": {
       "activation_tensor_config": {
         "num_bits": 16,
@@ -216,6 +227,7 @@ DEFAULT_JSON_POLICY = """
       "FULLY_CONNECTED"
     ],
     "dynamic_wi4_afp32": ["FULLY_CONNECTED", "EMBEDDING_LOOKUP", "CONV_2D"],
+    "dynamic_wi4_afp32_blockwise": ["EMBEDDING_LOOKUP", "FULLY_CONNECTED"],
     "weightonly_wi8_afp32": [
       "BATCH_MATMUL",
       "CONV_2D",
@@ -259,6 +271,7 @@ def _unroll_json_config(
 
   # Then unroll weight configs and turn them into quantization configs.
   quant_configs = []
+  weight_configs = []
   for symmetric in json_config["weight_tensor_config"]["symmetric"]:
     for granularity in json_config["weight_tensor_config"]["granularity"]:
       tensor_config = {
@@ -267,6 +280,16 @@ def _unroll_json_config(
           "granularity": granularity,
           "dtype": json_config["weight_tensor_config"]["dtype"],
       }
+      if "block_size" in json_config["weight_tensor_config"]:
+        for block_size in json_config["weight_tensor_config"]["block_size"]:
+          tensor_config["block_size"] = block_size
+          weight_configs.append(
+              qtyping.TensorQuantizationConfig.from_dict(tensor_config)
+          )
+      else:
+        weight_configs.append(
+            qtyping.TensorQuantizationConfig.from_dict(tensor_config)
+        )
 
       if activation_configs:
         for activation_config in activation_configs:
@@ -281,15 +304,14 @@ def _unroll_json_config(
               )
           )
       else:
-        quant_configs.append(
-            qtyping.OpQuantizationConfig(
-                weight_tensor_config=qtyping.TensorQuantizationConfig.from_dict(
-                    tensor_config
-                ),
-                compute_precision=json_config["compute_precision"],
-                explicit_dequantize=json_config["explicit_dequantize"],
-            )
-        )
+        for weight_config in weight_configs:
+          quant_configs.append(
+              qtyping.OpQuantizationConfig(
+                  weight_tensor_config=weight_config,
+                  compute_precision=json_config["compute_precision"],
+                  explicit_dequantize=json_config["explicit_dequantize"],
+              )
+          )
 
   return quant_configs
 

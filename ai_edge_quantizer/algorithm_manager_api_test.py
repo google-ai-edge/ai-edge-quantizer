@@ -18,6 +18,7 @@
 from absl.testing import parameterized
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import algorithm_manager_api
+from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
 
 _TFLOpName = qtyping.TFLOperationName
@@ -204,6 +205,12 @@ class AlgorithmManagerApiTest(parameterized.TestCase):
     self.assertIsNotNone(
         self._alg_manager._config_check_policy_registry[test_algorithm_name]
     )
+
+  def test_default_policy_not_empty(self):
+    """Tests that the default policy is not empty & no empty policy is generated."""
+    self.assertNotEmpty(default_policy.DEFAULT_CONFIG_CHECK_POLICY)
+    for policy in default_policy.DEFAULT_CONFIG_CHECK_POLICY.values():
+      self.assertNotEmpty(policy)
 
 
 if __name__ == "__main__":
