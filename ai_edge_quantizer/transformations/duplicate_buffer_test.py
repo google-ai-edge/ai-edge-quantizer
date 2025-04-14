@@ -43,8 +43,8 @@ class DuplicateBufferTest(googletest.TestCase):
         # Dummy params below.
         op_codes=self.model.operatorCodes,
         subgraph=self.model.subgraphs[subgraph_idx],
-        producer=-1,
-        consumers=[],
+        producer=(-1, -1),
+        consumers=([], []),
         quant_params=qtyping.UniformQuantParams(
             num_bits=8,
             quantized_dimension=None,
