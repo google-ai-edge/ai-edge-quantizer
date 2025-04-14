@@ -49,8 +49,8 @@ class QuantizeTensorTest(parameterized.TestCase):
             model.operatorCodes,
             model.buffers,
             subgraph,
-            -1,
-            [4],
+            (-1, -1),
+            ([4], [4]),
             qtyping.UniformQuantParams(
                 8, None, np.ones(1), np.ones(1), True, data
             ),
@@ -76,8 +76,8 @@ class QuantizeTensorTest(parameterized.TestCase):
             model.operatorCodes,
             model.buffers,
             subgraph,
-            1,
-            [3],
+            (1, 1),
+            ([3], [3]),
             qtyping.UniformQuantParams(
                 8, None, np.array([22]), np.array([127])
             ),
@@ -100,8 +100,8 @@ class QuantizeTensorTest(parameterized.TestCase):
             model.operatorCodes,
             model.buffers,
             subgraph,
-            1,
-            [3],
+            (1, 1),
+            ([3], [3]),
             qtyping.UniformQuantParams(8, 3, np.ones([22]), np.zeros([22])),
         )
     )
@@ -126,8 +126,8 @@ class QuantizeTensorTest(parameterized.TestCase):
             model.operatorCodes,
             model.buffers,
             subgraph,
-            1,
-            [3],
+            (1, 1),
+            ([3], [3]),
             qtyping.NonLinearQuantParams(16, None),
         )
     )
@@ -148,8 +148,8 @@ class QuantizeTensorTest(parameterized.TestCase):
             op_codes=model.operatorCodes,
             buffers=model.buffers,
             subgraph=subgraph,
-            producer=1,
-            consumers=[3],
+            producer=(1, 1),
+            consumers=([3], [3]),
             quant_params=qtyping.UniformQuantParams(
                 num_bits=8,
                 quantized_dimension=None,
@@ -202,8 +202,8 @@ class QuantizeTensorTest(parameterized.TestCase):
             op_codes=model.operatorCodes,
             buffers=model.buffers,
             subgraph=subgraph,
-            producer=-1,
-            consumers=[4],
+            producer=(-1, -1),
+            consumers=([4], [4]),
             quant_params=qtyping.UniformQuantParams(
                 4, None, np.ones(1), np.ones(1), True, data
             ),
@@ -239,8 +239,8 @@ class QuantizeTensorTest(parameterized.TestCase):
             op_codes=model.operatorCodes,
             buffers=model.buffers,
             subgraph=subgraph,
-            producer=-1,
-            consumers=[4],
+            producer=(-1, -1),
+            consumers=([4], [4]),
             quant_params=qtyping.UniformQuantParams(
                 num_bits=num_bits,
                 quantized_dimension=None,

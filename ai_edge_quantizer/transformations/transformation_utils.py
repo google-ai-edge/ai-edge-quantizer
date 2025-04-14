@@ -34,8 +34,12 @@ class TransformationInput:
       we need to insert the op code into the list
     buffers: list of buffer in the original TFlite model for buffer quantization
     subgraph: flatbuffer subgraph object which the tensor resides.
-    producer: op id for the producer of the tensor.
-    consumers: op ids for consumers of the new dequant op.
+    producer: op id for the producer of the tensor. This is a tuple of the op id
+      from the original unmodified graph, and the op id from the current graph
+      that's being transformed.
+    consumers: op ids for consumers of the new dequant op. This is a tuple of
+      the op ids from the original unmodified graph, and the op ids from the
+      current graph that's being transformed.
     quant_params: quantization parameters to be applied on the orignal tensor
   """
 
@@ -43,8 +47,8 @@ class TransformationInput:
   op_codes: list[schema_py_generated.OperatorCodeT]
   buffers: list[schema_py_generated.BufferT]
   subgraph: schema_py_generated.SubGraphT
-  producer: int
-  consumers: list[int]
+  producer: tuple[int, int]
+  consumers: tuple[list[int], list[int]]
   quant_params: Union[qtyping.UniformQuantParams, qtyping.NonLinearQuantParams]
 
 
