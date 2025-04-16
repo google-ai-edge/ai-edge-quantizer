@@ -42,7 +42,9 @@ def emulated_subchannel(
     The transformation info.
   """
   # only apply to a single fully_connected op
-  if len(transformation_input.consumers) > 1:
+  original_consumers, current_consumers = transformation_input.consumers
+  _, current_producer = transformation_input.producer
+  if len(current_consumers) > 1:
     raise ValueError('Emulated Subchannel transformation only support one op')
   if isinstance(
       transformation_input.quant_params, qtyping.NonLinearQuantParams
@@ -53,7 +55,7 @@ def emulated_subchannel(
   if (
       transformation_input.op_codes[
           transformation_input.subgraph.operators[
-              transformation_input.consumers[0]
+              current_consumers[0]
           ].opcodeIndex
       ].builtinCode
       != schema_py_generated.BuiltinOperator.FULLY_CONNECTED
@@ -61,7 +63,7 @@ def emulated_subchannel(
     raise ValueError(
         'Emulated Subchannel transformation only support fully_connected op'
     )
-  if transformation_input.producer != -1:
+  if current_producer != -1:
     raise ValueError(
         'Emulated Subchannel transformation only support constant tensor'
     )
@@ -81,7 +83,7 @@ def emulated_subchannel(
       schema_py_generated.BuiltinOperator.SUM, transformation_input.op_codes
   )
 
-  original_fc_op_idx = transformation_input.consumers[0]
+  original_fc_op_idx = current_consumers[0]
   if cast(
       schema_py_generated.FullyConnectedOptionsT,
       transformation_input.subgraph.operators[
@@ -145,10 +147,10 @@ def emulated_subchannel(
 
   # find the input and output tensor of the fully connected op
   activation_input_id = transformation_input.subgraph.operators[
-      transformation_input.consumers[0]
+      original_fc_op_idx
   ].inputs[0]
   activation_output_id = transformation_input.subgraph.operators[
-      transformation_input.consumers[0]
+      original_fc_op_idx
   ].outputs[0]
   activation_input = transformation_input.subgraph.tensors[activation_input_id]
   activation_output = transformation_input.subgraph.tensors[
@@ -355,9 +357,9 @@ def emulated_subchannel(
         original_fc_op_idx + ops_added, relu_op
     )
     ops_added += 1
-    last_op = relu_op
 
   del transformation_input.subgraph.operators[original_fc_op_idx + ops_added]
+  original_fc_op_idx_in_original_graph = original_consumers[0]
   return qtyping.TransformationInfo(
-      original_fc_op_idx, ops_added - 1, activation_output_id
+      original_fc_op_idx_in_original_graph, ops_added - 1, activation_output_id
   )

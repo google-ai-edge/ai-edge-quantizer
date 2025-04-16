@@ -64,8 +64,10 @@ def insert_dequant(
 
   # update the original consumers of the op to take the dequant op,
   # and find the first consumer of the new tensor
-  first_consumer_id = min(transformation_input.consumers)
-  for consumer_id in transformation_input.consumers:
+  original_consumers, current_consumers = transformation_input.consumers
+  current_first_consumer_id = min(current_consumers)
+  original_first_consumer_id = min(original_consumers)
+  for consumer_id in current_consumers:
     op = transformation_input.subgraph.operators[consumer_id]
     for input_idx in range(len(op.inputs)):
       if op.inputs[input_idx] == transformation_input.tensor_id:
@@ -80,8 +82,14 @@ def insert_dequant(
   # must insert the op right before it's first consumer
   # in the case of output goes to graph output, we need to ensure the dequant
   # op is inserted after the producer
-  op_id = max(transformation_input.producer + 1, first_consumer_id)
-  transformation_input.subgraph.operators.insert(op_id, dequant_op)
+  original_producer, current_producer = transformation_input.producer
+  insertion_op_id = max(current_producer + 1, current_first_consumer_id)
+  insertion_op_id_in_original_graph = max(
+      original_producer + 1, original_first_consumer_id
+  )
+  transformation_input.subgraph.operators.insert(insertion_op_id, dequant_op)
   return qtyping.TransformationInfo(
-      op_id=op_id, num_ops_added=1, output_tensor_id=new_tensor_id
+      op_id=insertion_op_id_in_original_graph,
+      num_ops_added=1,
+      output_tensor_id=new_tensor_id,
   )

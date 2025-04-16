@@ -35,7 +35,6 @@ _TEST_MODEL_FOLDER = test_utils.get_path_to_datafile(
     '../models/dequantized_weights/'
 )
 
-
 # TODO: b/398335637 - Better ways to construct op configs for different cases.
 class FullyConnectedTest(test_utils.BaseOpTestCase):
 
