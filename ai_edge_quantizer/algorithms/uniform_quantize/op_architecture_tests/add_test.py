@@ -133,7 +133,7 @@ class AddTest(op_test_utils.BaseQuantizeTest):
     op = subgraph0.operators[subgraph_op_id]
     op_tensor_names = {}
     op_tensor_names["input"] = "serving_default_input_1:0"
-    op_tensor_names["weight"] = "model/add/ExpandDims"
+    op_tensor_names["weight"] = "Const"
     op_tensor_names["output"] = "PartitionedCall:0"
     self._op_test_info.op_tensor_names = op_tensor_names
 
