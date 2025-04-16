@@ -56,8 +56,8 @@ class EmulatedSubchannelTest(googletest.TestCase):
             op_codes=model.operatorCodes,
             buffers=model.buffers,
             subgraph=subgraph,
-            producer=-1,
-            consumers=[0],
+            producer=(-1, -1),
+            consumers=([0], [0]),
             quant_params=self.params,
         )
     )
@@ -112,8 +112,8 @@ class EmulatedSubchannelTest(googletest.TestCase):
             op_codes=model.operatorCodes,
             buffers=model.buffers,
             subgraph=subgraph,
-            producer=-1,
-            consumers=[0],
+            producer=(-1, -1),
+            consumers=([0], [0]),
             quant_params=self.params,
         )
     )
@@ -173,8 +173,8 @@ class EmulatedSubchannelTest(googletest.TestCase):
             op_codes=model.operatorCodes,
             buffers=model.buffers,
             subgraph=subgraph,
-            producer=-1,
-            consumers=[0],
+            producer=(-1, -1),
+            consumers=([0], [0]),
             quant_params=self.params,
         )
     )
@@ -201,8 +201,8 @@ class EmulatedSubchannelTest(googletest.TestCase):
               op_codes=model.operatorCodes,
               buffers=model.buffers,
               subgraph=subgraph,
-              producer=-1,
-              consumers=[0],
+              producer=(-1, -1),
+              consumers=([0], [0]),
               quant_params=self.params,
           )
       )

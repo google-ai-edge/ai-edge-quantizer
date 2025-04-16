@@ -49,7 +49,8 @@ def duplicate_tensor(
   # Update the consumers' input tensor id to the duplicated tensor id.
   # Assuming transformation_input to contain all and only consumers that are
   # supposed to use this new duplicated tensor.
-  for consumer in transformation_input.consumers:
+  _, current_consumers = transformation_input.consumers
+  for consumer in current_consumers:
     consumer_inputs = subgraph.operators[consumer].inputs
     for i in range(len(consumer_inputs)):
       if consumer_inputs[i] == tensor_id:

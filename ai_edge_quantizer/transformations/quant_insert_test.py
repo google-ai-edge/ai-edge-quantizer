@@ -49,8 +49,8 @@ class QuantInsertTest(googletest.TestCase):
             model.operatorCodes,
             model.buffers,
             subgraph,
-            -1,
-            [4],
+            (-1, -1),
+            ([4], [4]),
             qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
         )
     )
@@ -91,8 +91,8 @@ class QuantInsertTest(googletest.TestCase):
             model.operatorCodes,
             model.buffers,
             subgraph,
-            1,
-            [3],
+            (1, 1),
+            ([3], [3]),
             qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
         )
     )
@@ -135,8 +135,8 @@ class QuantInsertTest(googletest.TestCase):
             model.operatorCodes,
             model.buffers,
             subgraph,
-            -1,
-            [1, 2],
+            (-1, -1),
+            ([1, 2], [1, 2]),
             qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
         )
     )
@@ -181,8 +181,8 @@ class QuantInsertTest(googletest.TestCase):
             model.operatorCodes,
             model.buffers,
             subgraph,
-            0,
-            [1, 2],
+            (0, 0),
+            ([1, 2], [1, 2]),
             qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
         )
     )
@@ -225,8 +225,8 @@ class QuantInsertTest(googletest.TestCase):
             model.operatorCodes,
             model.buffers,
             subgraph,
-            0,
-            [1],
+            (0, 0),
+            ([1], [1]),
             qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
         )
     )
@@ -269,8 +269,8 @@ class QuantInsertTest(googletest.TestCase):
             model.operatorCodes,
             model.buffers,
             subgraph,
-            4,
-            [-1],
+            (4, 4),
+            ([-1], [-1]),
             qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
         )
     )

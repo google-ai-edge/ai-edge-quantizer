@@ -112,6 +112,31 @@ class TransformationPerformerTest(parameterized.TestCase):
     for index, op_id in enumerate(op_id_map[0]):
       self.assertEqual(op_id, index)
 
+  def test_update_op_id_map_not_changing_value_single_op_model(self):
+    """test for _update_op_id_map."""
+    model = tfl_flatbuffer_utils.read_model(
+        os.path.join(
+            TEST_DATA_PREFIX_PATH, "tests/models/single_fc_bias.tflite"
+        )
+    )
+    self._transformation_performer._create_op_id_map(model)
+    instruction = qtyping.TransformationInst(
+        transformation=qtyping.QuantTransformation.NO_QUANTIZE,
+        tensor_id=0,
+        producer=0,
+        consumers=[-1],
+        parameters=qtyping.UniformQuantParams(
+            8, None, np.array([1]), np.array([0])
+        ),
+    )
+    producer, consumers = (
+        self._transformation_performer._update_producer_and_consumers(
+            instruction, 0
+        )
+    )
+    self.assertEqual(producer, 0)
+    self.assertEqual(consumers, [-1])
+
   @parameterized.named_parameters(
       dict(
           testcase_name="test_no_update",
@@ -326,6 +351,7 @@ class TransformationPerformerTest(parameterized.TestCase):
             + "sequential/conv2d/Conv2D;sequential/conv2d/BiasAdd/ReadVariableOp1",
             subgraph_id=0,
             instructions=[
+                # Dequantize output of the Conv2D.
                 qtyping.TransformationInst(
                     transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
                     tensor_id=7,
@@ -350,11 +376,13 @@ class TransformationPerformerTest(parameterized.TestCase):
             tensor_name="sequential/average_pooling2d/AvgPool",
             subgraph_id=0,
             instructions=[
+                # Dequantize output of the AvgPool.
                 qtyping.TransformationInst(
                     transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
                     tensor_id=8,
-                    producer=1,
-                    consumers=[2],
+                    # A dequant was inserted before this, so advance index by 2.
+                    producer=2,
+                    consumers=[3],
                     parameters=qtyping.UniformQuantParams(
                         8, None, np.array([1]), np.array([0])
                     ),
@@ -362,8 +390,8 @@ class TransformationPerformerTest(parameterized.TestCase):
                 qtyping.TransformationInst(
                     transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
                     tensor_id=8,
-                    producer=1,
-                    consumers=[2],
+                    producer=2,
+                    consumers=[3],
                     parameters=qtyping.UniformQuantParams(
                         8, None, np.array([1]), np.array([0])
                     ),
@@ -377,18 +405,23 @@ class TransformationPerformerTest(parameterized.TestCase):
     self.assertLen(self._test_model.subgraphs, 1)
     self.assertLen(self._test_model.subgraphs[0].operators, 10)
     self.assertLen(self._test_model.subgraphs[0].tensors, 17)
+    # Check that the new dequant op is added to the model.
     self.assertEqual(
         self._test_model.subgraphs[0].operators[1].opcodeIndex,
         len(self._test_model.operatorCodes) - 1,
     )
+    # Check tensor ids of the first dequant op.
     self.assertEqual(self._test_model.subgraphs[0].operators[2].inputs[0], 13)
     self.assertEqual(self._test_model.subgraphs[0].operators[2].outputs[0], 14)
+    # Check that the dequant is connected to the avgpool.
     self.assertEqual(
         self._test_model.subgraphs[0].operators[2].outputs[0],
         self._test_model.subgraphs[0].operators[3].inputs[0],
     )
     self.assertEqual(self._test_model.subgraphs[0].operators[3].outputs[0], 8)
+    # Check output index of the second dequant op.
     self.assertEqual(self._test_model.subgraphs[0].operators[4].outputs[0], 15)
+
 
 if __name__ == "__main__":
   googletest.main()

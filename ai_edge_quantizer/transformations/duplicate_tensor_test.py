@@ -43,11 +43,11 @@ class DuplicateTensorTest(googletest.TestCase):
     return transformation_utils.TransformationInput(
         tensor_id=tensor_idx,
         buffers=self.model.buffers,
-        consumers=consumers,
         # Dummy params below.
         op_codes=self.model.operatorCodes,
         subgraph=self.model.subgraphs[subgraph_idx],
-        producer=-1,
+        producer=(-1, -1),
+        consumers=(consumers, consumers),
         quant_params=qtyping.UniformQuantParams(
             num_bits=8,
             quantized_dimension=None,
