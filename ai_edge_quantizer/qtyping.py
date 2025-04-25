@@ -20,7 +20,7 @@ from collections.abc import MutableMapping
 import copy
 import dataclasses
 import enum
-from typing import Any, Optional, Union, Callable
+from typing import Any, Callable, Optional, Union
 
 import numpy as np
 from typing_extensions import TypeAlias
@@ -113,6 +113,8 @@ class QuantTransformation(enum.Enum):
   DUPLICATE_BUFFER = 5
   # Duplicate the tensor.
   DUPLICATE_TENSOR = 6
+  # Insert the aeq.hadamard_rotation op.
+  INSERT_HADAMARD_ROTATION = 7
 
 
 @dataclasses.dataclass(frozen=True)
@@ -128,7 +130,34 @@ class UniformQuantParams:
     quantized_data: The quantized data.
     block_size: The block size for blockwise quantization, block_size=0 meaning
       no blockwise quantization.
+    hadamard: The Hadamard rotation parameters, if set.
   """
+
+  class HadamardRotationParams:
+    """Parameters for the Hadamard rotation.
+
+    Attributes:
+      random_binary_vector: The random binary vector for the Hadamard rotation.
+        TODO(b/415392354): Randomization is an experimental feature that's
+        currently not implemented yet hence this is always 1. We will add
+        support or remove in the future.
+      hadamard_size: The size of the Hadamard matrix.
+    """
+
+    random_binary_vector: np.ndarray
+    hadamard_size: int
+
+    def __init__(self, random_binary_vector: np.ndarray, hadamard_size: int):
+      self.random_binary_vector = random_binary_vector
+      self.hadamard_size = hadamard_size
+
+    def __eq__(self, other):
+      if other.__class__ is not self.__class__:
+        return NotImplemented
+      return (
+          np.array_equal(self.random_binary_vector, other.random_binary_vector)
+          and self.hadamard_size == other.hadamard_size
+      )
 
   num_bits: int
   quantized_dimension: Optional[int]
@@ -137,6 +166,7 @@ class UniformQuantParams:
   symmetric: bool = True
   quantized_data: Optional[np.ndarray] = None
   block_size: int = 0
+  hadamard: Optional[HadamardRotationParams] = None
 
   @classmethod
   def from_tfl_tensor_details(cls, tensor_detail) -> 'UniformQuantParams':
@@ -180,6 +210,7 @@ class UniformQuantParams:
         and self.symmetric == other.symmetric
         and _compare_array_or_none(self.quantized_data, other.quantized_data)
         and self.block_size == other.block_size
+        and self.hadamard == other.hadamard
     )
 
 
@@ -491,6 +522,7 @@ class IOOperator:
   inputs: list[int]
   outputs: list[int]
   op_key: TFLOperationName
+
 
 # The function signature for `get_tensor_quant_params_fn`.
 GetTensorQuantParamsFuncSignature = Callable[
