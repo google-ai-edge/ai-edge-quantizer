@@ -180,6 +180,38 @@ class TransformationPerformer:
             )
           transformation.tensor_id = trans_info.output_tensor_id
 
+  def _get_updated_producer_id(
+      self, original_producer_id: int, subgraph_id: int
+  ) -> int:
+    """Update the producer of a transformation instruction."""
+    if original_producer_id is None or original_producer_id < 0:
+      producer = -1
+    elif original_producer_id < len(self._original_op_id_map[subgraph_id]):
+      producer = self._original_op_id_map[subgraph_id][original_producer_id]
+    else:
+      # If the producer id is not in the original op map, it's an added op,
+      # go the added op map to find the producer.
+      producer = self._added_op_id_map[subgraph_id][
+          original_producer_id - len(self._original_op_id_map[subgraph_id])
+      ]
+    return producer
+
+  def _get_updated_consumer_ids(
+      self,
+      original_consumer_ids: list[int],
+      subgraph_id: int,
+  ) -> list[int]:
+    """Update the consumers of a transformation instruction."""
+    consumers = []
+    for original_op_id in original_consumer_ids:
+      new_consumer_id = (
+          -1
+          if original_op_id == -1
+          else self._original_op_id_map[subgraph_id][original_op_id]
+      )
+      consumers.append(new_consumer_id)
+    return consumers
+
   def _apply_single_transformation(
       self,
       transformation_inst: qtyping.TensorTransformationInsts,
@@ -198,28 +230,12 @@ class TransformationPerformer:
       None, update the transformation_inst & tflite_model in place
     """
     instruction = transformation_inst.instructions[transformation_index]
-    if not instruction.producer or instruction.producer < 0:
-      producer = -1
-    elif instruction.producer < len(
-        self._original_op_id_map[transformation_inst.subgraph_id]
-    ):
-      producer = self._original_op_id_map[transformation_inst.subgraph_id][
-          instruction.producer
-      ]
-    else:
-      # if the producer id is not in the original op map, it's an added op,
-      # go the corresponding new maps
-      producer = self._added_op_id_map[transformation_inst.subgraph_id][
-          instruction.producer
-          - len(self._original_op_id_map[transformation_inst.subgraph_id])
-      ]
-    consumers = []
-    for original_op_id in instruction.consumers:
-      consumers.append(
-          self._original_op_id_map[transformation_inst.subgraph_id][
-              original_op_id
-          ]
-      )
+    producer = self._get_updated_producer_id(
+        instruction.producer, transformation_inst.subgraph_id
+    )
+    consumers = self._get_updated_consumer_ids(
+        instruction.consumers, transformation_inst.subgraph_id
+    )
     trans_info = self._transformation_registration[instruction.transformation](
         transformation_utils.TransformationInput(
             instruction.tensor_id,
@@ -239,7 +255,12 @@ class TransformationPerformer:
     )
     self._update_op_id_map(
         transformation_inst.subgraph_id,
-        min(instruction.consumers),
+        # The added op must be right before the most immediate consumer, unless
+        # the consumer is the graph output (id=-1), then use the producer's
+        # index instead.
+        min(instruction.consumers)
+        if min(instruction.consumers) >= 0
+        else instruction.producer + 1,
         trans_info.num_ops_added,
     )
 
