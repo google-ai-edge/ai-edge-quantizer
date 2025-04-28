@@ -104,8 +104,8 @@ class ModelModifier:
         instructions, quantized_model, tensor_processing_order
     )
     constant_buffer_size = self._process_constant_map(quantized_model)
-    # we leave 64MB for the model architecture.
-    if constant_buffer_size > 2**31 - 2**26:
+    # we leave 256MB for the model architecture.
+    if constant_buffer_size > 2**31 - 2**28:
       return self._serialize_large_model(quantized_model)
     else:
       return self._serialize_small_model(quantized_model)
