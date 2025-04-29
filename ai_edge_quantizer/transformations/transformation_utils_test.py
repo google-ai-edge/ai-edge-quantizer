@@ -41,19 +41,62 @@ class TransformationUtilsTest(parameterized.TestCase):
           testcase_name="add_new_op_code",
           op_code=schema_py_generated.BuiltinOperator.LOGISTIC,
           expected=1,
+          custom_op_name=None,
       ),
       dict(
           testcase_name="add_existing_op_code",
           op_code=schema_py_generated.BuiltinOperator.FULLY_CONNECTED,
           expected=0,
+          custom_op_name=None,
+      ),
+      dict(
+          testcase_name="add_new_custom_op_code",
+          op_code=schema_py_generated.BuiltinOperator.CUSTOM,
+          expected=1,
+          custom_op_name="random_new_custom_op",
       ),
   )
-  def test_add_op_code(self, op_code, expected):
+  def test_add_op_code(self, op_code, expected, custom_op_name):
     """Tests if the op code is added to the model."""
     got = transformation_utils.add_op_code(
-        op_code=op_code, model_op_codes=self.model.operatorCodes
+        op_code=op_code,
+        model_op_codes=self.model.operatorCodes,
+        custom_op_name=custom_op_name,
     )
     self.assertEqual(expected, got)
+    if custom_op_name is not None:
+      self.assertEqual(self.model.operatorCodes[got].customCode, custom_op_name)
+
+  def test_add_custom_op_code_without_op_string_raises_error(self):
+    with self.assertRaisesRegex(ValueError, "Custom string is required"):
+      transformation_utils.add_op_code(
+          op_code=schema_py_generated.BuiltinOperator.CUSTOM,
+          model_op_codes=self.model.operatorCodes,
+          custom_op_name=None,
+      )
+
+  def test_add_two_custom_op_codes(self):
+    custom_op_name = "random_new_custom_op"
+    added_index = transformation_utils.add_op_code(
+        op_code=schema_py_generated.BuiltinOperator.CUSTOM,
+        model_op_codes=self.model.operatorCodes,
+        custom_op_name=custom_op_name,
+    )
+    self.assertEqual(1, added_index)
+    self.assertEqual(
+        self.model.operatorCodes[added_index].customCode, custom_op_name
+    )
+
+    custom_op_name_2 = "random_new_custom_op_2"
+    added_index = transformation_utils.add_op_code(
+        op_code=schema_py_generated.BuiltinOperator.CUSTOM,
+        model_op_codes=self.model.operatorCodes,
+        custom_op_name=custom_op_name_2,
+    )
+    self.assertEqual(2, added_index)
+    self.assertEqual(
+        self.model.operatorCodes[added_index].customCode, custom_op_name_2
+    )
 
   @parameterized.named_parameters(
       dict(
@@ -188,6 +231,25 @@ class TransformationUtilsTest(parameterized.TestCase):
         expected_shape,
         self.model.subgraphs[0].tensors[-1].shape,
     )
+
+  def test_add_new_activation_tensor_with_dynamic_shape(self):
+    """Tests adding an activation tensor with dynamic shape."""
+    subgraph = self.model.subgraphs[0]
+    new_id = transformation_utils.add_new_activation_tensor(
+        tensor_name="test_tensor",
+        shape=[1, -1, -1, 1],
+        tensor_type=schema_py_generated.TensorType.FLOAT32,
+        subgraph=subgraph,
+    )
+    # Originally had 4 tensors, new tensor is added at index 4.
+    self.assertEqual(new_id, 4)
+    self.assertLen(subgraph.tensors, 5)
+    self.assertEqual(subgraph.tensors[-1].name, "test_tensor")
+    self.assertEqual(
+        subgraph.tensors[-1].type, schema_py_generated.TensorType.FLOAT32
+    )
+    self.assertEqual(subgraph.tensors[-1].shape, [1, 1, 1, 1])
+    self.assertEqual(subgraph.tensors[-1].shapeSignature, [1, -1, -1, 1])
 
 
 if __name__ == "__main__":

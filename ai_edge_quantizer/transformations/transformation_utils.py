@@ -51,21 +51,39 @@ class TransformationInput:
 def add_op_code(
     op_code: schema_py_generated.OperatorCodeT,
     model_op_codes: list[schema_py_generated.OperatorCodeT],
+    custom_op_name: Optional[str] = None,
 ) -> int:
   """Add an op code into a model if it's not present.
 
   Args:
     op_code: The op code to be added.
     model_op_codes: The op codes of the model.
+    custom_op_name: The custom string of the op code. If None, the op code will
+      be added as a builtin op code.
 
   Returns:
     The index of the op code in the model.
   """
+  if (
+      op_code == schema_py_generated.BuiltinOperator.CUSTOM
+      and custom_op_name is None
+  ):
+    raise ValueError('Custom string is required for custom op code.')
+
   for i, model_op_code in enumerate(model_op_codes):
+    # If the model already has the op code, just return the index.
     if model_op_code.builtinCode == op_code:
-      return i
+      if custom_op_name is not None:
+        if model_op_code.customCode == custom_op_name:
+          return i
+      else:
+        # Built-in op
+        return i
+
   model_op_codes.append(schema_py_generated.OperatorCodeT())
   model_op_codes[-1].builtinCode = op_code
+  if custom_op_name is not None:
+    model_op_codes[-1].customCode = custom_op_name
   return len(model_op_codes) - 1
 
 
@@ -146,7 +164,14 @@ def add_new_activation_tensor(
     The index of the new tensor in the subgraph.
   """
   new_tensor = schema_py_generated.TensorT()
-  new_tensor.shape = shape
+  # If there's a dynamic shape, we need to read from the shapeSignature field
+  # instead of shape. Shape should contain just 1 for the dynamic dimension but
+  # shapeSignature should contain the true shape.
+  if -1 in shape:
+    new_tensor.shapeSignature = shape
+    new_tensor.shape = [1 if i == -1 else i for i in shape]
+  else:
+    new_tensor.shape = shape
   new_tensor.type = tensor_type
   new_tensor.name = tensor_name
   new_tensor.buffer = 0
