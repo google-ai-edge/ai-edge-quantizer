@@ -319,7 +319,27 @@ def get_signature_main_subgraph_index(
   return signature_runner._subgraph_index  # pylint:disable=protected-access
 
 
-def create_random_normal_dataset(
+def _create_random_normal(
+    rng: np.random.Generator,
+    shape: tuple[int, ...],
+    dtype: np.dtype,
+) -> dict[str, Any]:
+  """Creates a random normal dataset sample for given input details."""
+  return rng.normal(size=shape).astype(dtype)
+
+
+def _create_random_integers(
+    rng: np.random.Generator,
+    shape: tuple[int, ...],
+    dtype: np.dtype,
+    min_value: int = 0,
+    max_value: int = 1024,
+) -> dict[str, Any]:
+  """Creates a random integer dataset sample for given input details."""
+  return rng.integers(min_value, max_value, size=shape, dtype=dtype)
+
+
+def create_random_dataset(
     input_details: dict[str, Any],
     num_samples: int,
     random_seed: Union[int, np._typing.ArrayLike],
@@ -340,9 +360,14 @@ def create_random_normal_dataset(
   for _ in range(num_samples):
     input_data = {}
     for arg_name, input_tensor in input_details.items():
-      new_data = rng.normal(size=input_tensor["shape"]).astype(
-          input_tensor["dtype"]
-      )
+      dtype = input_tensor["dtype"]
+      shape = input_tensor["shape"]
+      if dtype in (np.int32, np.int64):
+        new_data = _create_random_integers(rng, shape, dtype)
+      elif dtype == np.float32:
+        new_data = _create_random_normal(rng, shape, dtype)
+      else:
+        raise ValueError(f"Unsupported dtype: {input_tensor['dtype']}")
       input_data[arg_name] = new_data
     dataset.append(input_data)
   return dataset
@@ -372,7 +397,7 @@ def create_random_normal_input_data(
   for signature_key in signature_keys:
     signature_runner = tfl_interpreter.get_signature_runner(signature_key)
     input_details = signature_runner.get_input_details()
-    test_data[signature_key] = create_random_normal_dataset(
+    test_data[signature_key] = create_random_dataset(
         input_details, num_samples, random_seed
     )
   return test_data

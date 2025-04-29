@@ -19,7 +19,6 @@ from tensorflow.python.platform import googletest
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 
-
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("../tests/models")
 
 
@@ -159,7 +158,6 @@ class TflUtilsQuantizedModelTest(googletest.TestCase):
     signature_output = tfl_interpreter_utils.invoke_interpreter_signature(
         tfl_interpreter, self._signature_input_data
     )
-    print(signature_output)
     self.assertEqual(tuple(signature_output["dense_1"].shape), (1, 10))
 
     # Assert the input data is not modified in-place b/353340272.
@@ -326,6 +324,25 @@ class TflUtilsMultiSignatureModelTest(googletest.TestCase):
     self.assertEqual(weight_content, 10)
     multiply_output_content = mul_tensor_content["PartitionedCall_1:0"]
     self.assertEqual(multiply_output_content, [20.0])
+
+
+class TflUtilsIntegerInputModelTest(googletest.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    np.random.seed(0)
+    self._test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, "toy_model_with_kv_cache_multi_signature.tflite"
+    )
+
+  def test_random_integer_input_data(self):
+    test_data = tfl_interpreter_utils.create_random_normal_input_data(
+        self._test_model_path
+    )
+    self.assertEqual(test_data["signature_1"][0]["cache_0"].dtype, np.float32)
+    self.assertEqual(test_data["signature_1"][0]["cache_1"].dtype, np.float32)
+    self.assertEqual(test_data["signature_1"][0]["positions"].dtype, np.int32)
+    self.assertEqual(test_data["signature_1"][0]["tokens"].dtype, np.int32)
 
 
 if __name__ == "__main__":
