@@ -33,6 +33,39 @@ _OpQuantConfig = qtyping.OpQuantizationConfig
 _AlgorithmName = quantizer.AlgorithmName
 
 
+DEFAULT_ACTIVATION_QUANT_SETTING = _TensorQuantConfig(
+    num_bits=8,
+    symmetric=False,
+    granularity=qtyping.QuantGranularity.TENSORWISE,
+)
+DEFAULT_WEIGHT_QUANT_SETTING = _TensorQuantConfig(
+    num_bits=8,
+    symmetric=True,
+    granularity=qtyping.QuantGranularity.CHANNELWISE,
+)
+
+
+def get_static_activation_quant_setting(
+    num_bits: int, symmetric: bool
+) -> _TensorQuantConfig:
+  return _TensorQuantConfig(
+      num_bits=num_bits,
+      symmetric=symmetric,
+      granularity=qtyping.QuantGranularity.TENSORWISE,
+  )
+
+
+def get_static_op_quant_config(
+    activation_config: _TensorQuantConfig = DEFAULT_ACTIVATION_QUANT_SETTING,
+    weight_config: _TensorQuantConfig = DEFAULT_WEIGHT_QUANT_SETTING,
+) -> _OpQuantConfig:
+  return qtyping.OpQuantizationConfig(
+      activation_tensor_config=activation_config,
+      weight_tensor_config=weight_config,
+      compute_precision=_ComputePrecision.INTEGER,
+  )
+
+
 def get_path_to_datafile(path):
   """Get the path to the specified file in the data dependencies.
 
