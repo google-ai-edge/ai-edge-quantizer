@@ -102,7 +102,7 @@ class SumTest(op_test_utils.BaseQuantizeTest):
         self._op_test_info,
         common_quantize.materialize_sum,
         get_tensor_quant_params_func,
-        same_input_output_params=True,
+        same_input_output_params=num_bits != 8,  # No constraint for 8 bits.
         inputs_to_ignore=[1],  # Ignore axis tensor.
     )
 
