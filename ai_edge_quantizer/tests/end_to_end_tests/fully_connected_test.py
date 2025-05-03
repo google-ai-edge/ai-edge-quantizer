@@ -246,6 +246,41 @@ class FullyConnectedTest(test_utils.BaseOpTestCase):
         output_tolerance,
     )
 
+  @parameterized.product(weight_bit_width=[4, 8])
+  def test_hadamard_rotation_accuracy_and_size_within_tolerance(
+      self, weight_bit_width
+  ):
+    algorithm_key = _AlgorithmName.HADAMARD_ROTATION
+    # Soft skip weight errors because they're rotated hence not expected to
+    # match.
+    weight_tolerance = 1
+    output_tolerance = 1e-2
+    model_path = test_utils.get_path_to_datafile(
+        '../models/conv_fc_mnist.tflite'
+    )
+    granularity = qtyping.QuantGranularity.CHANNELWISE
+    op_config = _OpQuantConfig(
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=weight_bit_width,
+            symmetric=True,
+            granularity=granularity,
+        ),
+        compute_precision=_ComputePrecision.INTEGER,
+        explicit_dequantize=False,
+    )
+    expected_model_size_reduction = (
+        80 if op_config.weight_tensor_config.num_bits == 4 else 65
+    )
+    self.assert_quantization_accuracy_and_size(
+        algorithm_key,
+        model_path,
+        self._op_name,
+        op_config,
+        expected_model_size_reduction,
+        weight_tolerance,
+        output_tolerance,
+    )
+
 
 if __name__ == '__main__':
   googletest.main()

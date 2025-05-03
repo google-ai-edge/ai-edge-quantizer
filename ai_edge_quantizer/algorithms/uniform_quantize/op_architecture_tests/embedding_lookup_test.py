@@ -93,9 +93,9 @@ class EmbeddingLookupTest(op_test_utils.BaseQuantizeTest):
     op = subgraph0.operators[subgraph_op_id]
     op_tensor_names = {}
     op_tensor_names["weight"] = (
-        "jax2tf_export_func_/...y_yz-_...z/pjit__einsum_/MatMul;jax2tf_export_func_/pjit__one_hot_/Equal;jax2tf_export_func_/pjit__one_hot_/Cast_1"
+        "jit(export_func)/jit(main)/...y,yz->...z/dot_general;jit(export_func)/jit(main)/jit(_one_hot)/eq;jit(export_func)/jit(main)/jit(_one_hot)/convert_element_type"
     )
-    op_tensor_names["input"] = "inputs"
+    op_tensor_names["input"] = "lookup"
     op_tensor_names["output"] = "Identity_1"
     self._op_test_info.op_tensor_names = op_tensor_names
     self._op_test_info.quantized_dimension = 0
