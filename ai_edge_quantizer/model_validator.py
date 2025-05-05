@@ -306,6 +306,9 @@ def compare_model(
       for tensor_name, detail in ref_tensor_name_to_details.items():
         if detail['dtype'] == np.object_:
           continue
+        # Ignore tensors where any dimension of the shape is 0.
+        if not np.all(detail['shape']):
+          continue
         if tensor_name in targ_tensor_name_to_details:
           if tensor_name not in comparison_results:
             comparison_results[tensor_name] = []
