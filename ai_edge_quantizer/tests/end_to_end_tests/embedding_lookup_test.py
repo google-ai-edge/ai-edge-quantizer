@@ -52,18 +52,20 @@ class EmbeddingLookupTest(parameterized.TestCase):
     self._quantizer = quantizer.Quantizer(self.float_model_path)
 
   @parameterized.parameters(
-      '../../recipes/default_af32w8float_recipe.json',
-      '../../recipes/default_af32w4float_recipe.json',
-      '../../recipes/dynamic_legacy_wi8_afp32_recipe.json',
-      '../../recipes/dynamic_wi8_afp32_recipe.json',
+      ('../../recipes/default_af32w8float_recipe.json', 1700),
+      ('../../recipes/default_af32w4float_recipe.json', 1600),
+      ('../../recipes/dynamic_legacy_wi8_afp32_recipe.json', 1400),
+      ('../../recipes/dynamic_wi8_afp32_recipe.json', 1400),
   )
-  def test_embedding_lookup_model_int_weight_only(self, recipe_path):
+  def test_embedding_lookup_model_int_weight_only(
+      self, recipe_path, expected_model_size
+  ):
     recipe_path = test_utils.get_path_to_datafile(recipe_path)
     self._quantizer.load_quantization_recipe(recipe_path)
     self.assertFalse(self._quantizer.need_calibration)
     quant_result = self._quantizer.quantize()
     # Check model size.
-    self.assertLess(len(quant_result.quantized_model), 2000)
+    self.assertLess(len(quant_result.quantized_model), expected_model_size)
 
     # TODO: b/364405203 - Enable after 0 signature works.
     # comparison_result = self._quantizer.validate(
@@ -91,8 +93,7 @@ class EmbeddingLookupTest(parameterized.TestCase):
         ),
     )
     quant_result = self._quantizer.quantize()
-    print(len(quant_result.quantized_model))
-    self.assertLess(len(quant_result.quantized_model), 2000)
+    self.assertLess(len(quant_result.quantized_model), 1600)
 
     # TODO: b/364405203 - Enable after 0 signature works.
     # comparion_result = self._quantizer.validate(
@@ -106,10 +107,12 @@ class EmbeddingLookupTest(parameterized.TestCase):
     # )
 
   @parameterized.parameters(
-      '../../recipes/default_a8w8_recipe.json',
-      '../../recipes/default_a16w8_recipe.json',
+      ('../../recipes/default_a8w8_recipe.json', 1400),
+      ('../../recipes/default_a16w8_recipe.json', 1400),
   )
-  def test_embedding_lookup_model_full_integer(self, recipe_path):
+  def test_embedding_lookup_model_full_integer(
+      self, recipe_path, expected_model_size
+  ):
     calibration_result = {
         'Identity_1': {'min': -2.0, 'max': 2.0},
     }
@@ -117,7 +120,7 @@ class EmbeddingLookupTest(parameterized.TestCase):
     self._quantizer.load_quantization_recipe(recipe_path)
     self.assertTrue(self._quantizer.need_calibration)
     quant_result = self._quantizer.quantize(calibration_result)
-    self.assertLess(len(quant_result.quantized_model), 2000)
+    self.assertLess(len(quant_result.quantized_model), expected_model_size)
     # TODO: b/364405203 - Enable after 0 signature works.
     # comparion_result = self._quantizer.validate(
     #     error_metrics='mse',
