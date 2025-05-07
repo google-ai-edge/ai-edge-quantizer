@@ -24,6 +24,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.nonlinear_quantize import float_casting
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import dequantized_weight_recovery
+from ai_edge_quantizer.algorithms.uniform_quantize import hadamard_rotation
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import octav
 
@@ -58,6 +59,8 @@ class AlgorithmName(str, enum.Enum):
   FLOAT_CASTING = float_casting.ALGORITHM_KEY
   DEQUANTIZED_WEIGHT_RECOVERY = dequantized_weight_recovery.ALGORITHM_KEY
   OCTAV = octav.ALGORITHM_KEY
+  HADAMARD_ROTATION = hadamard_rotation.ALGORITHM_KEY
+
 
 ### MIN/MAX_UNIFORM_QUANT ###
 
@@ -249,4 +252,33 @@ for op_name, materialize_func in _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT.items():
           materialize_func,
           octav.get_tensor_quant_params,
       ),
+  )
+
+# Register the Hadamard Rotation algorithm.
+register_op_quant_config_validation_func(
+    AlgorithmName.HADAMARD_ROTATION,
+    common_quantize.check_op_quantization_config,
+)
+
+# Register a config check policy for the Hadamard Rotation algorithm.
+register_config_check_policy_func(
+    AlgorithmName.HADAMARD_ROTATION,
+    default_policy.DEFAULT_CONFIG_CHECK_POLICY,
+)
+
+# Register specialized hadamard rotation materialize functions.
+_HADAMARD_ROTATION_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
+    _TFLOpName.FULLY_CONNECTED: hadamard_rotation.materialize_fully_connected,
+    _TFLOpName.EMBEDDING_LOOKUP: hadamard_rotation.materialize_embedding_lookup,
+})
+for (
+    op_name,
+    materialize_func,
+) in _HADAMARD_ROTATION_OP_NAME_MATERIALIZE_FUNC_DICT.items():
+  register_quantized_op(
+      AlgorithmName.HADAMARD_ROTATION,
+      op_name,
+      naive_min_max_quantize.init_qsvs,
+      calibration_func=naive_min_max_quantize.min_max_calibrate,
+      materialize_func=materialize_func,
   )

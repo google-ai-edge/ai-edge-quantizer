@@ -508,6 +508,7 @@ def _compatible_tensor_params(
   float_source_transformations = [
       _QuantTrans.ADD_QUANTIZE,
       _QuantTrans.NO_QUANTIZE,
+      _QuantTrans.INSERT_HADAMARD_ROTATION,
   ]
   quantized_source_transformations = [
       _QuantTrans.QUANTIZE_TENSOR,
