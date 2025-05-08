@@ -721,6 +721,11 @@ def _reshape_data_for_blockwise(
   Returns:
     A tuple containing the reshaped tensor data and the new reduce dimension.
   """
+  if tensor_data.shape[quantized_dim] % block_size != 0:
+    raise ValueError(
+        "Tensor shape must be divisible by block size for blockwise"
+        " quantization."
+    )
   new_shape = _get_tensor_shape_for_blockwise(
       tensor_data.shape, quantized_dim, block_size
   )
