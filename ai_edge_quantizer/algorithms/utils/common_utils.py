@@ -905,23 +905,36 @@ def get_tensor_transformation_params(
   )
 
 
-def get_weight_quantized_dim(op_info: qtyping.OpInfo, tensor_data: np.ndarray):
+def get_weight_quantized_dim(
+    op_info: qtyping.OpInfo,
+    tensor_data: np.ndarray,
+    granularity: qtyping.QuantGranularity,
+):
   """Get the quantized dimension for the weight tensor.
 
   Args:
     op_info: Aggregated information about the op (e.g., quantization config).
     tensor_data: The weight tensor data.
+    granularity: The granularity of the weight tensor.
 
   Returns:
     The quantized dimension for the weight tensor.
   """
-  if op_info.op_name == _TFLOpName.BATCH_MATMUL:
-    quantized_dim = get_bmm_weight_quantized_dim(
-        tensor_data, adj_y=op_info.op.builtinOptions.adjY
-    )
-  else:
-    quantized_dim = tfl_flatbuffer_utils.TFL_OP_TO_WEIGHT_QUANTIZED_DIM.get(
-        op_info.op_name, None
+  quantized_dim = None
+  if granularity == qtyping.QuantGranularity.CHANNELWISE:
+    if op_info.op_name == _TFLOpName.BATCH_MATMUL:
+      quantized_dim = get_bmm_weight_quantized_dim(
+          tensor_data, adj_y=op_info.op.builtinOptions.adjY
+      )
+    else:
+      quantized_dim = tfl_flatbuffer_utils.TFL_OP_TO_WEIGHT_QUANTIZED_DIM.get(
+          op_info.op_name, None
+      )
+  elif granularity == qtyping.QuantGranularity.BLOCKWISE:
+    quantized_dim = (
+        tfl_flatbuffer_utils.TFL_OP_TO_BLOCKWISE_WEIGHT_QUANTIZED_DIM[
+            op_info.op_name
+        ]
     )
   return quantized_dim
 
