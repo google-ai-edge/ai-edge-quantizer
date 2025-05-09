@@ -336,7 +336,11 @@ class TensorUtilsTest(parameterized.TestCase):
     max_val = np.max(self._test_data, keepdims=True)
 
     zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
-        min_val, max_val, num_bits, symmetric
+        min_val,
+        max_val,
+        num_bits,
+        symmetric,
+        qtyping.QuantGranularity.TENSORWISE,
     )
     self.assertEqual(zp.shape, scale.shape)
     max_q = 2**num_bits / 2 - 1
@@ -364,7 +368,12 @@ class TensorUtilsTest(parameterized.TestCase):
     max_val = np.array([[5.0]])
     clipping_values = np.array([4.0])
     zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
-        min_val, max_val, num_bits, symmetric, clipping_values
+        min_val,
+        max_val,
+        num_bits,
+        symmetric,
+        qtyping.QuantGranularity.TENSORWISE,
+        clipping_values,
     )
     expected_scale = clipping_values / quantized_bound
 
