@@ -25,6 +25,7 @@ from ai_edge_quantizer.transformations import dequant_insert
 from ai_edge_quantizer.transformations import duplicate_buffer
 from ai_edge_quantizer.transformations import duplicate_tensor
 from ai_edge_quantizer.transformations import emulated_subchannel
+from ai_edge_quantizer.transformations import insert_hadamard_rotation
 from ai_edge_quantizer.transformations import quant_insert
 from ai_edge_quantizer.transformations import quantize_tensor
 from ai_edge_quantizer.transformations import transformation_utils
@@ -80,6 +81,9 @@ class TransformationPerformer:
         qtyping.QuantTransformation.DUPLICATE_TENSOR: (
             duplicate_tensor.duplicate_tensor
         ),
+        qtyping.QuantTransformation.INSERT_HADAMARD_ROTATION: (
+            insert_hadamard_rotation.insert_hadamard_rotation
+        ),
     }
     # transformations are seprated in two categories:
     # op_insertion_transformations are transformations that only insert ops
@@ -91,6 +95,7 @@ class TransformationPerformer:
         qtyping.QuantTransformation.ADD_QUANTIZE,
         qtyping.QuantTransformation.DUPLICATE_BUFFER,
         qtyping.QuantTransformation.DUPLICATE_TENSOR,
+        qtyping.QuantTransformation.INSERT_HADAMARD_ROTATION,
     ])
     self._op_replacement_transformations = set(
         [qtyping.QuantTransformation.EMULATED_SUBCHANNEL]
