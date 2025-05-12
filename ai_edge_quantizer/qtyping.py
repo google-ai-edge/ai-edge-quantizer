@@ -62,6 +62,7 @@ class TFLOperationName(str, enum.Enum):
   SELECT_V2 = 'SELECT_V2'
   DYNAMIC_UPDATE_SLICE = 'DYNAMIC_UPDATE_SLICE'
   STABLEHLO_COMPOSITE = 'STABLEHLO_COMPOSITE'
+  PAD = 'PAD'
 
 
 class QuantizeMode(enum.Enum):
