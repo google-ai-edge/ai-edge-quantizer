@@ -136,11 +136,9 @@ def get_tensor_quant_params(
         " the ParamsGenerator."
     )
 
-  quantized_dim = None
-  if tensor_quant_config.granularity == qtyping.QuantGranularity.CHANNELWISE:
-    quantized_dim = common_utils.get_weight_quantized_dim(
-        op_info, tensor_content
-    )
+  quantized_dim = common_utils.get_weight_quantized_dim(
+      op_info, tensor_content, tensor_quant_config.granularity
+  )
 
   clipping_constants = _guess_clipping_with_octav(
       tensor_content,
@@ -155,6 +153,7 @@ def get_tensor_quant_params(
       tensor_min_max["max"],
       tensor_quant_config.num_bits,
       tensor_quant_config.symmetric,
+      tensor_quant_config.granularity,
       clipping_constants,
   )
 

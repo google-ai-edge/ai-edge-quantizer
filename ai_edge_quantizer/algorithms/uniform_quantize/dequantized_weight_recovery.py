@@ -168,11 +168,9 @@ def get_tensor_quant_params(
         "Only symmetric weights are supported for dequantized weight recovery."
     )
 
-  quantized_dim = None
-  if tensor_quant_config.granularity == qtyping.QuantGranularity.CHANNELWISE:
-    quantized_dim = common_utils.get_weight_quantized_dim(
-        op_info, tensor_content
-    )
+  quantized_dim = common_utils.get_weight_quantized_dim(
+      op_info, tensor_content, tensor_quant_config.granularity
+  )
 
   zp, scale = get_zp_scale_from_dequantized_symmetric_weights(
       dequant_vals=tensor_content,

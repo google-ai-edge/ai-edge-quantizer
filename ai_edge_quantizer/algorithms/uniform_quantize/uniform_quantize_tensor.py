@@ -16,9 +16,11 @@
 """Uniform quantize in tensor level."""
 
 import dataclasses
-from typing import Optional
+from typing import Optional, Sequence
+import ml_dtypes
 import numpy as np
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 
 @dataclasses.dataclass(frozen=True)
@@ -120,19 +122,127 @@ def fix_quantization_params_rank(
   )
 
 
+def _get_tensor_shape_for_blockwise(
+    tensor_shape: Sequence[int], quantized_dim: int, block_size: int
+) -> list[int]:
+  """Get the tensor shape for blockwise quantization.
+
+  This function splits the quantize dimension of the tensor into blocks and the
+  dim/blocks. Hence, min/max of the tensor can be calculated for each block
+  using existing functions.
+
+  Args:
+    tensor_shape: The original shape of the tensor.
+    quantized_dim: The dimension to be quantized blockwise.
+    block_size: The size of the block.
+
+  Returns:
+    The new tensor shape for calculating scale and zp for blockwise
+    quantization.
+  """
+  new_shape = []
+  for index, val in enumerate(tensor_shape):
+    if index == quantized_dim:
+      new_shape.append(int(val / block_size))
+      new_shape.append(block_size)
+    else:
+      new_shape.append(val)
+  return new_shape
+
+
+def reshape_data_for_blockwise(
+    tensor_data: np.ndarray, op_name: qtyping.TFLOperationName, block_size: int
+) -> tuple[np.ndarray, int]:
+  """Reshapes data for blockwise quantization.
+
+  Args:
+    tensor_data: The original tensor data.
+    op_name: The name of the TFL op.
+    block_size: The size of the block.
+
+  Returns:
+    A tuple containing the reshaped tensor data and the new reduce dimension.
+  """
+  quantized_dim = tfl_flatbuffer_utils.TFL_OP_TO_BLOCKWISE_WEIGHT_QUANTIZED_DIM[
+      op_name
+  ]
+  new_shape = _get_tensor_shape_for_blockwise(
+      tensor_data.shape, quantized_dim, block_size
+  )
+  reshaped_data = tensor_data.reshape(new_shape)
+  return reshaped_data, quantized_dim + 1
+
+
+def _broadcast_scale_zp_for_blockwise(
+    tensor_content: np.ndarray,
+    quant_params: qtyping.UniformQuantParams,
+) -> qtyping.UniformQuantParams:
+  """Broadcasts scale and zp for blockwise quantization.
+
+  Args:
+    tensor_content: The original tensor data.
+    quant_params: The quantization parameters.
+      `quant_params.quantized_dimension` must be specified.
+      `quant_params.block_size` must be specified and positive.
+
+  Returns:
+    The updated quantization parameters with broadcasted scale and zp for
+    correct constant quantization.
+  """
+  if quant_params.quantized_dimension is None:
+    raise ValueError("Quantized dimension must be specified.")
+  if quant_params.block_size is None or quant_params.block_size <= 0:
+    raise ValueError("Block size must be specified and positive.")
+  quantized_dim = quant_params.quantized_dimension
+  expanded_tensor_shape = _get_tensor_shape_for_blockwise(
+      tensor_content.shape, quantized_dim, quant_params.block_size
+  )
+  expanded_scale = np.reshape(
+      np.broadcast_to(
+          np.expand_dims(quant_params.scale, quantized_dim + 1),
+          expanded_tensor_shape,
+      ),
+      tensor_content.shape,
+  )
+  expanded_zp = np.reshape(
+      np.broadcast_to(
+          np.expand_dims(quant_params.zero_point, quantized_dim + 1),
+          expanded_tensor_shape,
+      ),
+      tensor_content.shape,
+  )
+  return qtyping.UniformQuantParams(
+      scale=expanded_scale,
+      zero_point=expanded_zp,
+      num_bits=quant_params.num_bits,
+      symmetric=quant_params.symmetric,
+      quantized_dimension=quantized_dim,
+      block_size=quant_params.block_size,
+  )
+
+
 def uniform_quantize(
     tensor_data: np.ndarray,
     quantization_params: qtyping.UniformQuantParams,
+    is_blockwise: bool = False,
 ):
   """Uniform quantize a tensor.
 
   Args:
     tensor_data: The tensor to be quantized.
     quantization_params: The quantization parameters.
+    is_blockwise: Whether the tensor is blockwise quantized.
 
   Returns:
     The quantized tensor.
   """
+  # The reshaping for blockwise quantization is unique hence we do this here
+  # to avoid unexpected broadcast behavior downstream.
+  if is_blockwise:
+    quantization_params = _broadcast_scale_zp_for_blockwise(
+        tensor_data, quantization_params
+    )
+
   # quant params in flatbuffer is flattened, expand the rank to be the same
   # as the tensor rank to avoid ambiguous broadcasting.
   quantization_params = fix_quantization_params_rank(
@@ -242,15 +352,19 @@ def tensor_zp_scale_from_min_max(
     max_value,
     num_bits: int,
     symmetric: bool,
+    granularity: qtyping.QuantGranularity,
     clipping_values: Optional[np.ndarray] = None,
 ):
   """Get zero point and scale from min and max value.
 
   Args:
-    min_value: The minimum value of the tensor (channel-wise supported).
-    max_value: The maximum value of the tensor (channel-wise supported).
+    min_value: The minimum value of the tensor (channelwise and blockwise
+      supported).
+    max_value: The maximum value of the tensor (channelwise and blockwise
+      supported).
     num_bits: The number of bits of the tensor.
     symmetric: Whether the tensor is symmetric.
+    granularity: The granularity of the tensor.
     clipping_values: Absolute clipping values to apply to the tensor. This will
       clip the tensors to the range [-clipping_values, clipping_values]. This
       should be the same shape as min_value and max_value. If None, no clipping
@@ -266,6 +380,16 @@ def tensor_zp_scale_from_min_max(
   )
   qmin, qmax = get_quantized_range(qtype)
   min_bound = 1e-4  # 1e-6 precision for int8 and 1e-8 for int16.
+
+  if granularity == qtyping.QuantGranularity.BLOCKWISE:
+    # Blockwise quantization uses float16 scale, with 7 bit mantissa,
+    # so the maximum representable value is 65280.
+    float16_max = np.broadcast_to(np.array(65280), min_value.shape)
+    clipping_values = (
+        float16_max
+        if clipping_values is None
+        else np.minimum(clipping_values, float16_max)
+    )
 
   if symmetric:
     bound = np.maximum(np.abs(min_value), np.abs(max_value))
@@ -291,6 +415,12 @@ def tensor_zp_scale_from_min_max(
     scale = bound / (qmax - qmin)
     zp = qmin - bound_min / scale
     zp = np.rint(zp)
+
+  if granularity == qtyping.QuantGranularity.BLOCKWISE:
+    # Round the scale values to 7 bit mantissa.
+    scale = (
+        scale.astype(ml_dtypes.bfloat16).astype(np.float16).astype(np.float32)
+    )
 
   # It's safe to cast zp to qtype without clipping because we can infer
   # qmin <= zp <= qmax from bound_min <= 0 <= bound_max.

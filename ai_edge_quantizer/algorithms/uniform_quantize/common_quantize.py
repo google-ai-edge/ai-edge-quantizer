@@ -818,22 +818,19 @@ def init_tensor_min_max(
         weight_tensor_config.granularity == qtyping.QuantGranularity.CHANNELWISE
     ):
       quantized_dim = common_utils.get_weight_quantized_dim(
-          op_info, tensor_data
+          op_info, tensor_data, weight_tensor_config.granularity
       )
     if (
         weight_tensor_config is not None
         and weight_tensor_config.granularity
         == qtyping.QuantGranularity.BLOCKWISE
     ):
-      quantized_dim = (
-          tfl_flatbuffer_utils.TFL_OP_TO_BLOCKWISE_WEIGHT_QUANTIZED_DIM[
-              op_info.op_name
-          ]
-      )
-      reshaped_data, reduce_dims = _reshape_data_for_blockwise(
-          tensor_data,
-          quantized_dim,
-          weight_tensor_config.block_size,
+      reshaped_data, reduce_dims = (
+          uniform_quantize_tensor.reshape_data_for_blockwise(
+              tensor_data,
+              op_info.op_name,
+              weight_tensor_config.block_size,
+          )
       )
       return {
           "min": np.min(reshaped_data, axis=reduce_dims, keepdims=False),

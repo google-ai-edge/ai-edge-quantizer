@@ -131,7 +131,9 @@ def get_tensor_quant_params(
         f" {tensor_quant_config.granularity} granularity."
     )
 
-  quantized_dim = common_utils.get_weight_quantized_dim(op_info, tensor_content)
+  quantized_dim = common_utils.get_weight_quantized_dim(
+      op_info, tensor_content, tensor_quant_config.granularity
+  )
   if quantized_dim != 0:
     raise ValueError(
         f"Unsupported quantized dimension: {quantized_dim}. Only 0 is"

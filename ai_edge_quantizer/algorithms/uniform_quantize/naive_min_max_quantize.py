@@ -16,7 +16,6 @@
 """Performs naive min/max uniform quantization."""
 
 from typing import Any, Optional
-import ml_dtypes
 import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
@@ -75,35 +74,17 @@ def get_tensor_quant_params(
         " the ParamsGenerator."
     )
   clipping_values = None
-  # Blockwise quantization uses float16 scale, with 7 bit mantissa,
-  # so the maximum representable value is 65280.
-  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
-    clipping_values = np.broadcast_to(
-        np.array(65280), tensor_min_max["min"].shape
-    )
   zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
       tensor_min_max["min"],
       tensor_min_max["max"],
       tensor_quant_config.num_bits,
       tensor_quant_config.symmetric,
+      tensor_quant_config.granularity,
       clipping_values,
   )
-  # Round the scale values to 7 bit mantissa.
-  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
-    scale = (
-        scale.astype(ml_dtypes.bfloat16).astype(np.float16).astype(np.float32)
-    )
-  quantized_dim = None
-  if tensor_quant_config.granularity == qtyping.QuantGranularity.CHANNELWISE:
-    quantized_dim = common_utils.get_weight_quantized_dim(
-        op_info, tensor_content
-    )
-  elif tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
-    quantized_dim = (
-        tfl_flatbuffer_utils.TFL_OP_TO_BLOCKWISE_WEIGHT_QUANTIZED_DIM[
-            op_info.op_name
-        ]
-    )
+  quantized_dim = common_utils.get_weight_quantized_dim(
+      op_info, tensor_content, tensor_quant_config.granularity
+  )
   quant_params = qtyping.UniformQuantParams(
       scale=scale,
       zero_point=zp,
@@ -115,15 +96,10 @@ def get_tensor_quant_params(
   if tensor_content is None:
     return quant_params
 
-  # The reshaping for blockwise quantization is unique hence we do this here
-  # to avoid unexpected broadcast behavior downstream.
-  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
-    quant_params = common_quantize.broadcast_scale_zp_for_blockwise(
-        tensor_content, quant_params
-    )
-
   quantized_vars = uniform_quantize_tensor.uniform_quantize(
-      tensor_content, quant_params
+      tensor_content,
+      quant_params,
+      tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE,
   )
   # Update with quantized values.
   return qtyping.UniformQuantParams(
