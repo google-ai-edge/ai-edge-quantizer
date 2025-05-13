@@ -78,13 +78,16 @@ def _rotate_with_diagonal_hadamard(
   # of 2 to calculate this factor.
   hadamard_size = np.gcd(tensor_content.shape[axis], 2 ** 30)
   diagonal_size = tensor_content.shape[axis] // hadamard_size
+  output_size = tensor_content.shape[1 - axis]
   random_vector = np.ones(hadamard_size, dtype=np.int8)
 
   # Use a canonical Hadamard matrix.
   hadamard = _make_hadamard_matrix(hadamard_size)
-  hadamard_diagonal = np.kron(np.eye(diagonal_size), hadamard)
-  w_rotated = np.einsum("ij,aj->ai", hadamard_diagonal, tensor_content)
-  return w_rotated, hadamard_size, random_vector
+  reshaped_tensor = tensor_content.reshape(
+      diagonal_size, output_size, hadamard_size
+  )
+  w_rotated = np.einsum("jk,ilk->ilj", hadamard, reshaped_tensor)
+  return w_rotated.reshape(tensor_content.shape), hadamard_size, random_vector
 
 
 def get_tensor_quant_params(
