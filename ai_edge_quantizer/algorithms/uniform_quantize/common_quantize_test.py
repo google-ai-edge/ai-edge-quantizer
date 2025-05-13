@@ -31,8 +31,7 @@ _TensorQuantConfig = qtyping.TensorQuantizationConfig
 
 
 class CommonQuantizeTest(parameterized.TestCase):
-  """Tests for general quantize functions.
-  """
+  """Tests for general quantize functions."""
 
   def setUp(self):
     super().setUp()
@@ -68,6 +67,34 @@ class CommonQuantizeTest(parameterized.TestCase):
           op_quant_config,
           default_policy.DEFAULT_CONFIG_CHECK_POLICY,
       )
+
+  def test_reshape_data_for_blockwise_raises_error_when_quantized_dim_not_divisible_by_block_size(
+      self,
+  ):
+    tensor_data = np.ones((24, 128), dtype=np.float32)
+    block_size = 256
+    quantized_dim = 1
+    with self.assertRaisesWithPredicateMatch(
+        ValueError,
+        lambda err: (
+            "Tensor quantization dimension must be divisible by block"
+            " size for blockwise quantization."
+        )
+        in str(err),
+    ):
+      common_quantize._reshape_data_for_blockwise(
+          tensor_data, quantized_dim, block_size
+      )
+
+  def test_reshape_data_for_blockwise_returns_correct_values(self):
+    tensor_data = np.ones((24, 128), dtype=np.float32)
+    block_size = 32
+    quantized_dim = 1
+    new_tensor_data, reduce_dim = common_quantize._reshape_data_for_blockwise(
+        tensor_data, quantized_dim, block_size
+    )
+    self.assertEqual(new_tensor_data.shape, (24, 4, 32))
+    self.assertEqual(reduce_dim, 2)
 
 
 if __name__ == "__main__":

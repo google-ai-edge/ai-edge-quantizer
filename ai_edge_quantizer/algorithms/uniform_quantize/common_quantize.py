@@ -726,18 +726,29 @@ def _get_tensor_shape_for_blockwise(
 
 
 def _reshape_data_for_blockwise(
-    tensor_data: np.ndarray, quantized_dim: int, block_size: int
+    tensor_data: np.ndarray,
+    quantized_dim: int,
+    block_size: int,
 ) -> tuple[np.ndarray, int]:
   """Reshapes data for blockwise quantization.
 
   Args:
     tensor_data: The original tensor data.
     quantized_dim: The dimension to be quantized blockwise.
-    block_size: The size of the block.
+    block_size: The size of the block. `block_size must be a multiple of 32. `
+      `The tensor quantized dimension shape must be divisible by block_size.
 
   Returns:
     A tuple containing the reshaped tensor data and the new reduce dimension.
   """
+
+  # TODO: b/417508018 - create AEQ specific error class instead of
+  # using generic ValueError.
+  if tensor_data.shape[quantized_dim] % block_size != 0:
+    raise ValueError(
+        "Tensor quantization dimension must be divisible by block size for"
+        " blockwise quantization."
+    )
   new_shape = _get_tensor_shape_for_blockwise(
       tensor_data.shape, quantized_dim, block_size
   )
