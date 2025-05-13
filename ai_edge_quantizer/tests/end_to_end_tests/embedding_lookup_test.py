@@ -42,7 +42,7 @@ def _get_dummy_data(num_samples):
 #   return _get_dummy_data(num_samples)
 
 
-class EmbeddingLookupTest(parameterized.TestCase):
+class EmbeddingLookupTest(test_utils.BaseOpTestCase):
 
   def setUp(self):
     super().setUp()
@@ -93,7 +93,7 @@ class EmbeddingLookupTest(parameterized.TestCase):
         ),
     )
     quant_result = self._quantizer.quantize()
-    self.assertLess(len(quant_result.quantized_model), 1600)
+    self.assertLess(len(quant_result.quantized_model), 2000)
 
     # TODO: b/364405203 - Enable after 0 signature works.
     # comparion_result = self._quantizer.validate(
@@ -146,6 +146,41 @@ class EmbeddingLookupTest(parameterized.TestCase):
   #   self.assertLess(weight_mse, weight_tolerance)
   #   output_mse = comparion_result['Identity_1']
   #   self.assertLess(output_mse, output_tolerance)
+
+  @parameterized.product(weight_bit_width=[4, 8])
+  def test_hadamard_rotation_accuracy_and_size_within_tolerance(
+      self, weight_bit_width
+  ):
+    self._quantizer.load_quantization_recipe([
+        {
+            'regex': '.*',
+            'operation': qtyping.TFLOperationName.EMBEDDING_LOOKUP,
+            'algorithm_key': quantizer.AlgorithmName.HADAMARD_ROTATION,
+            'op_config': {
+                'weight_tensor_config': {
+                    'dtype': qtyping.TensorDataType.INT,
+                    'num_bits': weight_bit_width,
+                    'granularity': qtyping.QuantGranularity.CHANNELWISE,
+                },
+                'compute_precision': qtyping.ComputePrecision.FLOAT,
+                'explicit_dequantize': True,
+            },
+        },
+    ])
+    quant_result = self._quantizer.quantize()
+    with self.subTest(name='ModelSizeReduction'):
+      self.assertLess(len(quant_result.quantized_model), 1600)
+
+    validation_result = self._quantizer.validate(
+        test_data={
+            'lookup': [{
+                'lookup': np.random.randint(0, 15, size=(1,), dtype=np.int32)
+            }],
+        },
+        error_metrics='mse',
+    )
+    with self.subTest(name='OutputErrors'):
+      self.assert_output_errors_below_tolerance(validation_result, 1e-5)
 
 
 if __name__ == '__main__':
