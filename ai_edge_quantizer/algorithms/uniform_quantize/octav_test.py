@@ -44,32 +44,16 @@ class OctavQuantizeTest(parameterized.TestCase):
     )
     self._tensor_name_to_qsv = {}
     subgraph0 = self._test_model.subgraphs[0]
-    subgraph_op_index = 3
-    fc_op = subgraph0.operators[subgraph_op_index]
+    self._subgraph_op_index = 3
+    self._fc_op = subgraph0.operators[self._subgraph_op_index]
     self._fc_op_info = qtyping.OpInfo(
-        op=fc_op,
+        op=self._fc_op,
         op_name=qtyping.TFLOperationName.FULLY_CONNECTED,
-        subgraph_op_index=subgraph_op_index,
+        subgraph_op_index=self._subgraph_op_index,
         op_quant_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=None,
         ),
     )
-
-  def test_get_tensor_quant_params_unsupported_granularity_assert(self):
-    err_msg = "Unsupported granularity"
-    test_data = np.array([[-7, 7], [4, -4], [4, -4], [7, 7]])
-    with self.assertRaisesWithPredicateMatch(
-        ValueError, lambda err: err_msg in str(err)
-    ):
-      _ = octav.get_tensor_quant_params(
-          op_info=self._fc_op_info,
-          tensor_quant_config=qtyping.TensorQuantizationConfig(
-              num_bits=4,
-              symmetric=True,
-              granularity=qtyping.QuantGranularity.BLOCKWISE,
-          ),
-          tensor_content=test_data,
-      )
 
   def test_get_tensor_quant_params_unsupported_symmetry(self):
     err_msg = "Unsupported symmetry"
@@ -117,13 +101,22 @@ class OctavQuantizeTest(parameterized.TestCase):
         [25, -30, 50, -75, 1e5, -125],
         [50, -60, 70, -80, 90, -100],
     ])
-    quant_params = octav.get_tensor_quant_params(
-        op_info=self._fc_op_info,
-        tensor_quant_config=qtyping.TensorQuantizationConfig(
-            num_bits=4,
-            symmetric=True,
-            granularity=qtyping.QuantGranularity.TENSORWISE,
+    tensor_config = qtyping.TensorQuantizationConfig(
+        num_bits=4,
+        symmetric=True,
+        granularity=qtyping.QuantGranularity.TENSORWISE,
+    )
+    fc_op_info = qtyping.OpInfo(
+        op=self._fc_op,
+        op_name=qtyping.TFLOperationName.FULLY_CONNECTED,
+        subgraph_op_index=self._subgraph_op_index,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=tensor_config,
         ),
+    )
+    quant_params = octav.get_tensor_quant_params(
+        op_info=fc_op_info,
+        tensor_quant_config=tensor_config,
         tensor_content=test_data,
     )
     adjusted_test_data = quant_params.quantized_data * quant_params.scale
@@ -131,10 +124,10 @@ class OctavQuantizeTest(parameterized.TestCase):
     adjusted_max = np.max(np.abs(adjusted_test_data))
 
     # Check that some clipping occurred.
-    with self.subTest(name="SanityCheckClipping"):
+    with self.subTest(name="CheckClipping"):
       self.assertLess(adjusted_max, real_max)
 
-    with self.subTest(name="SanityCheckQuantParamsShapes"):
+    with self.subTest(name="CheckQuantParamsShapes"):
       self.assertEqual(quant_params.zero_point.shape, (1, 1))
       self.assertEqual(quant_params.scale.shape, (1, 1))
       self.assertIsNone(quant_params.quantized_dimension)
@@ -143,33 +136,47 @@ class OctavQuantizeTest(parameterized.TestCase):
           cast(np.ndarray, quant_params.quantized_data).shape, test_data.shape
       )
 
-    with self.subTest(name="SanityCheckQuantParamsValues"):
+    with self.subTest(name="CheckQuantParamsValues"):
       self.assertTrue(np.all(quant_params.zero_point == 0))
 
   def test_get_tensor_quant_params_sanity_channelwise(self):
+    # Test that the call generates quant params that are appropriately shaped,
+    # have some clipping, and correct config values without checking the
+    # actual values numerically.
     test_data = np.array([
         [-1e5, 25, -50, 75, -100, 125],
         [25, -30, 50, -75, 1e5, -125],
         [50, -60, 70, -80, 90, -100],
     ])
-    quant_params = octav.get_tensor_quant_params(
-        op_info=self._fc_op_info,
-        tensor_quant_config=qtyping.TensorQuantizationConfig(
-            num_bits=4,
-            symmetric=True,
-            granularity=qtyping.QuantGranularity.CHANNELWISE,
+    tensor_config = qtyping.TensorQuantizationConfig(
+        num_bits=4,
+        symmetric=True,
+        granularity=qtyping.QuantGranularity.CHANNELWISE,
+    )
+    fc_op_info = qtyping.OpInfo(
+        op=self._fc_op,
+        op_name=qtyping.TFLOperationName.FULLY_CONNECTED,
+        subgraph_op_index=self._subgraph_op_index,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=tensor_config,
         ),
+    )
+    quant_params = octav.get_tensor_quant_params(
+        op_info=fc_op_info,
+        tensor_quant_config=tensor_config,
         tensor_content=test_data,
     )
+    # Dequantize output to compare with the original test data.
     adjusted_test_data = quant_params.quantized_data * quant_params.scale
+
     for i, row in enumerate(test_data):
       real_max = np.max(np.abs(row))
       adjusted_max = np.max(np.abs(adjusted_test_data[i]))
       # Check that some clipping occurred.
-      with self.subTest(name="SanityCheckClipping"):
+      with self.subTest(name="CheckClipping"):
         self.assertLess(adjusted_max, real_max)
 
-    with self.subTest(name="SanityCheckQuantParamsShapes"):
+    with self.subTest(name="CheckQuantParamsShapes"):
       self.assertEqual(quant_params.zero_point.shape, (test_data.shape[0], 1))
       self.assertEqual(quant_params.scale.shape, (test_data.shape[0], 1))
       self.assertIsNotNone(quant_params.quantized_data)
@@ -177,9 +184,57 @@ class OctavQuantizeTest(parameterized.TestCase):
           cast(np.ndarray, quant_params.quantized_data).shape, test_data.shape
       )
 
-    with self.subTest(name="SanityCheckQuantParamsValues"):
+    with self.subTest(name="CheckQuantParamsValues"):
       self.assertTrue(np.all(quant_params.zero_point == 0))
       self.assertEqual(quant_params.quantized_dimension, 0)
+
+  def test_get_tensor_quant_params_sanity_blockwise(self):
+    # Test that the call generates quant params that are appropriately shaped,
+    # have some clipping, and correct config values without checking the
+    # actual values numerically.
+    test_data = np.random.randint(0, 1024, size=(32, 128))
+    tensor_config = qtyping.TensorQuantizationConfig(
+        num_bits=4,
+        symmetric=True,
+        granularity=qtyping.QuantGranularity.BLOCKWISE,
+        block_size=32,
+    )
+    fc_op_info = qtyping.OpInfo(
+        op=self._fc_op,
+        op_name=qtyping.TFLOperationName.FULLY_CONNECTED,
+        subgraph_op_index=self._subgraph_op_index,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=tensor_config,
+        ),
+    )
+    quant_params = octav.get_tensor_quant_params(
+        op_info=fc_op_info,
+        tensor_quant_config=tensor_config,
+        tensor_content=test_data,
+    )
+
+    with self.subTest(name="CheckQuantParamsShapes"):
+      # Check that quant params have appropriate shapes.
+      self.assertEqual(quant_params.zero_point.shape, (32, 4))
+      self.assertEqual(quant_params.scale.shape, (32, 4))
+      self.assertIsNotNone(quant_params.quantized_data)
+      self.assertTupleEqual(
+          cast(np.ndarray, quant_params.quantized_data).shape, test_data.shape
+      )
+
+    scales = np.repeat(quant_params.scale, 32, axis=1)
+    adjusted_test_data = quant_params.quantized_data * scales
+    for i, row in enumerate(test_data):
+      real_max = np.max(np.abs(row))
+      adjusted_max = np.max(np.abs(adjusted_test_data[i]))
+      # Check that some clipping occurred.
+      with self.subTest(name="CheckClipping"):
+        self.assertLess(adjusted_max, real_max)
+
+    with self.subTest(name="CheckQuantParamsValues"):
+      self.assertTrue(np.all(quant_params.zero_point == 0))
+      # See TFL_OP_TO_BLOCKWISE_WEIGHT_QUANTIZED_DIM.
+      self.assertEqual(quant_params.quantized_dimension, 1)
 
 
 if __name__ == "__main__":

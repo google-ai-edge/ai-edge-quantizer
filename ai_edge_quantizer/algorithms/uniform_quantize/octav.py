@@ -102,21 +102,13 @@ def get_tensor_quant_params(
         op_info, tensor_quant_config, tensor_content, tensor_qsv
     )
 
-  if (
-      tensor_quant_config.granularity != qtyping.QuantGranularity.CHANNELWISE
-      and tensor_quant_config.granularity != qtyping.QuantGranularity.TENSORWISE
-  ):
-    raise ValueError(
-        f"Unsupported granularity: {tensor_quant_config.granularity}."
-    )
-
   if not tensor_quant_config.symmetric:
     raise ValueError(
         f"Unsupported symmetry: {tensor_quant_config.symmetric}. OCTAV"
         " supports symmetric quantization only for now."
     )
 
-  if tensor_qsv is None:
+  if not tensor_qsv:
     # We need min/max to calculate quantization parameters, which
     # should be collected during the calibration process. However,
     # weight-only and DRQ do not require calibration, thus it is
@@ -139,14 +131,31 @@ def get_tensor_quant_params(
   quantized_dim = common_utils.get_weight_quantized_dim(
       op_info, tensor_content, tensor_quant_config.granularity
   )
-
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
+    reshaped_data, reduce_dims = (
+        uniform_quantize_tensor.reshape_data_for_blockwise(
+            tensor_content,
+            op_info.op_name,
+            tensor_quant_config.block_size,
+        )
+    )
+  else:
+    reshaped_data = tensor_content
+    reduce_dims = common_utils.get_reduce_dims(
+        quantized_dim, tensor_content.shape
+    )
   clipping_constants = _guess_clipping_with_octav(
-      tensor_content,
+      reshaped_data,
       tensor_quant_config.num_bits,
-      common_utils.get_reduce_dims(quantized_dim, tensor_content.shape),
+      reduce_dims,
       max_iterations=10,
       exponent_divisor=3.0 if tensor_quant_config.symmetric else 12.0,
   )
+  # We created a new dimension in order to reduce properly for blockwise
+  # quantization, so we need to reshape the clipping constants back to the
+  # min/max shape for the next step.
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
+    clipping_constants = clipping_constants.reshape(tensor_min_max["min"].shape)
 
   zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
       tensor_min_max["min"],
@@ -167,7 +176,9 @@ def get_tensor_quant_params(
   )
 
   quantized_vars = uniform_quantize_tensor.uniform_quantize(
-      tensor_content, quant_params
+      tensor_content,
+      quant_params,
+      tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE,
   )
 
   return dataclasses.replace(quant_params, quantized_data=quantized_vars)
