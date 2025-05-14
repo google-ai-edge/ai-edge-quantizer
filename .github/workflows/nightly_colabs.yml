@@ -28,7 +28,31 @@ jobs:
 
       - name: Run Colab notebook
         run: |
-          papermill colabs/getting_started.ipynb /tmp/out -k python3 -p visualize_model 0
-          papermill colabs/torch_convert_and_quantize.ipynb /tmp/out -k python3 -p visualize_model 0
-          papermill colabs/selective_quantization_isnet.ipynb /tmp/out -k python3 -p visualize_model 0
+          echo "Simulating a failing test..."
+          exit 1
+          # papermill colabs/getting_started.ipynb /tmp/out -k python3 -p visualize_model 0
+          # papermill colabs/torch_convert_and_quantize.ipynb /tmp/out -k python3 -p visualize_model 0
+          # papermill colabs/selective_quantization_isnet.ipynb /tmp/out -k python3 -p visualize_model 0
+
+      - name: Create Issue on Failure
+        if: failure() # This condition ensures the step runs only on failure of previous steps in this job
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Automatically available, no need to create this secret
+        with:
+          filename: .github/action_failure_issue_template.md # Optional: Path to an issue template
+          title: 'Workflow Failure: ${{ github.workflow }} in ${{ github.repository }}'
+          body: |
+            The workflow "${{ github.workflow }}" failed in the repository "${{ github.repository }}".
+
+            **Triggered by:** ${{ github.event_name }} (Actor: ${{ github.actor }})
+            **Commit:** `${{ github.sha }}`
+            **Branch/Ref:** `${{ github.ref }}`
+
+            **View Workflow Run:**
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Please investigate the failure.
+          assignees: 'v-dziuba,vdziuba' # Optional: Assign to specific users
+          labels: 'bug,workflow-failure,automated-issue' # Optional: Add labels
 
