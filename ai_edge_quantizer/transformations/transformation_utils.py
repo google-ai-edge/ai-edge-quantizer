@@ -87,21 +87,32 @@ def add_op_code(
   return len(model_op_codes) - 1
 
 
-def add_new_constant_buffer(
+def get_constant_buffer(
     data: np.ndarray,
     buffers: list[schema_py_generated.BufferT],
+    force_duplicate_buffer: bool = False,
 ) -> int:
-  """Add a new constant buffer to the model.
+  """Get the index of the constant buffer that contains the given data.
+
+  creating new buffer if provided data is not found in buffers list.
 
   Args:
     data: The data of the new tensor.
     buffers: The buffers of the model.
+    force_duplicate_buffer: Whether to add a new buffer even if the same buffer
+      already exists.
 
   Returns:
     The index of the new buffer in the model.
   """
+  new_data = np.frombuffer(data.tobytes(), dtype=np.uint8).flatten()
+  # TODO: b/417811116 - we should make this more efficient.
+  if not force_duplicate_buffer:
+    for index, buffer in enumerate(buffers):
+      if np.array_equal(buffer.data, new_data):
+        return index
   new_buffer = schema_py_generated.BufferT()
-  new_buffer.data = np.frombuffer(data.tobytes(), dtype=np.uint8).flatten()
+  new_buffer.data = new_data
   new_buffer.offset = 0
   new_buffer.size = 0
   new_buffer_id = len(buffers)
@@ -117,6 +128,7 @@ def add_new_constant_tensor(
     subgraph: schema_py_generated.SubGraphT,
     buffers: list[schema_py_generated.BufferT],
     tensor_shape: Optional[list[int]] = None,
+    force_duplicate_buffer: bool = False,
 ) -> int:
   """Add a new constant tensor to the model.
 
@@ -128,11 +140,13 @@ def add_new_constant_tensor(
     buffers: The buffers of the model.
     tensor_shape: The shape of the new tensor. If not provided, the shape of the
       data will be used.
+    force_duplicate_buffer: Whether to add a new buffer even if the same buffer
+      already exists.
 
   Returns:
     The index of the new tensor in the subgraph.
   """
-  new_buffer_id = add_new_constant_buffer(data, buffers)
+  new_buffer_id = get_constant_buffer(data, buffers, force_duplicate_buffer)
 
   new_tensor = schema_py_generated.TensorT()
   if tensor_shape is None:

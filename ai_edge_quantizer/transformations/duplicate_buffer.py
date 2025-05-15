@@ -34,9 +34,10 @@ def duplicate_buffer(
         f' Tensor {tensor_name} is not constant.'
     )
 
-  duplicated_buffer_id = transformation_utils.add_new_constant_buffer(
+  duplicated_buffer_id = transformation_utils.get_constant_buffer(
       data=buffer_data,
       buffers=transformation_input.buffers,
+      force_duplicate_buffer=True,
   )
   tensor.buffer = duplicated_buffer_id
 

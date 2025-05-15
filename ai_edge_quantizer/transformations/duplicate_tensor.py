@@ -41,6 +41,7 @@ def duplicate_tensor(
       tensor_shape=tensor.shape,
       subgraph=subgraph,
       buffers=transformation_input.buffers,
+      force_duplicate_buffer=True,
   )
   # Update the tensor name to avoid name collision in case when tensor is
   # duplicated mulitple times.

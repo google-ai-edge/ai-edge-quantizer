@@ -111,7 +111,7 @@ class TransformationUtilsTest(parameterized.TestCase):
   def test_add_new_constant_buffer(self, data):
     """Tests if the constant buffer is added to the model."""
     prev_num_buffers = len(self.model.buffers) - 1
-    new_buffer_idx = transformation_utils.add_new_constant_buffer(
+    new_buffer_idx = transformation_utils.get_constant_buffer(
         data=data,
         buffers=self.model.buffers,
     )
