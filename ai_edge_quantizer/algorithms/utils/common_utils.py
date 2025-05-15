@@ -351,18 +351,52 @@ def _materialize_standard_op_with_same_as_output_scale(
   # Use output quantization params for all input tensors.
   if output_tensor_params.producer is None:
     quant_params = None
+    _materialize_op_tensors(
+        op_tensor_params,
+        input_tensors,
+        is_inbounding_tensor=True,
+        op_info=op_info,
+        graph_info=graph_info,
+        tensor_name_to_qsv=tensor_name_to_qsv,
+        get_tensor_quant_params_fn=get_tensor_quant_params_fn,
+        quant_params=quant_params,
+    )
   else:
-    quant_params = output_tensor_params.producer.parameters
-  _materialize_op_tensors(
-      op_tensor_params,
-      input_tensors,
-      is_inbounding_tensor=True,
-      op_info=op_info,
-      graph_info=graph_info,
-      tensor_name_to_qsv=tensor_name_to_qsv,
-      get_tensor_quant_params_fn=get_tensor_quant_params_fn,
-      quant_params=quant_params,
-  )
+    output_quant_params = output_tensor_params.producer.parameters
+    if not isinstance(output_quant_params, qtyping.UniformQuantParams):
+      raise ValueError(
+          "_materialize_standard_op_with_same_as_output_scale only supports"
+          f" UniformQuantParams. For tensor {output_tensor_params.tensor_name},"
+          f" got {type(output_quant_params)}"
+      )
+    # Materialize each of the input tensors separately in case there are
+    # constants among them, requiring updating `quantized_data` first.
+    for input_tensor in input_tensors:
+      input_tensor_data = tfl_flatbuffer_utils.get_tensor_data(
+          input_tensor, graph_info.buffers
+      )
+      # Quantize constant inputs' data with the output quantization params.
+      if input_tensor_data is None:
+        quant_params = output_quant_params
+      else:
+        quantized_data = uniform_quantize_tensor.uniform_quantize(
+            input_tensor_data, output_quant_params
+        )
+        quant_params = dataclasses.replace(
+            output_quant_params,
+            quantized_data=quantized_data,
+        )
+      _materialize_op_tensors(
+          op_tensor_params,
+          [input_tensor],
+          is_inbounding_tensor=True,
+          op_info=op_info,
+          graph_info=graph_info,
+          tensor_name_to_qsv=tensor_name_to_qsv,
+          get_tensor_quant_params_fn=get_tensor_quant_params_fn,
+          quant_params=quant_params,
+      )
+
   op_tensor_params.append(output_tensor_params)
 
   return op_tensor_params
