@@ -32,3 +32,11 @@ jobs:
           papermill colabs/torch_convert_and_quantize.ipynb /tmp/out -k python3 -p visualize_model 0
           papermill colabs/selective_quantization_isnet.ipynb /tmp/out -k python3 -p visualize_model 0
 
+
+      - name: Create Issue on Failure
+        if: failure() && github.event_name != 'workflow_dispatch'
+        uses: JasonEtco/create-an-issue@v2.5.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          filename: .github/workflows/action_failure_issue_template.md
