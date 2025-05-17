@@ -190,9 +190,9 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
           self._graph_info.buffers[self._fc_buffer_id],
       )
 
-  def test_raise_non_2d_constant(self):
+  def test_raise_1d_constant(self):
     with self.assertRaisesWithPredicateMatch(
-        ValueError, lambda err: "2D tensors" in str(err)
+        ValueError, lambda err: "rank >= 2" in str(err)
     ):
       hadamard_rotation.get_tensor_quant_params(
           self._op_info,
