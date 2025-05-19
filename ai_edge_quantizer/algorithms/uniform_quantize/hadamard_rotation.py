@@ -58,19 +58,19 @@ def _rotate_with_diagonal_hadamard(
 
   Args:
     tensor_content: The float array to quantize.
-    axis: The axis of the tensor to quantize.
+    axis: The axis of the tensor to rotate.
 
   Returns:
     A tuple containing the quantized array and the recovered array.
 
   Raises:
-    ValueError: If the axis is not 1. To support other axes, please add
-      support to the matrix multiplication.
+    ValueError: If the axis is not the last axis of tensor_content. To support
+      other axes, please add support to the matrix multiplication.
   """
-  if axis != 1:
+  if axis != tensor_content.ndim - 1:
     raise ValueError(
-        "Hadamard rotation is only supported for 2D tensors with quantized"
-        " dimension 0."
+        "Hadamard rotation is only supported for tensors with quantized"
+        " dimension 0 (rotate last dimension)."
     )
 
   # Use the largest power of 2 that is a factor of the dimension and then
@@ -78,15 +78,15 @@ def _rotate_with_diagonal_hadamard(
   # of 2 to calculate this factor.
   hadamard_size = np.gcd(tensor_content.shape[axis], 2 ** 30)
   diagonal_size = tensor_content.shape[axis] // hadamard_size
-  output_size = tensor_content.shape[1 - axis]
+  # Output size is the product of all dimensions except the one being rotated.
+  output_size = np.prod(np.delete(tensor_content.shape, axis))
   random_vector = np.ones(hadamard_size, dtype=np.int8)
 
   # Use a canonical Hadamard matrix.
   hadamard = _make_hadamard_matrix(hadamard_size)
   reshaped_tensor = tensor_content.reshape(
-      diagonal_size, output_size, hadamard_size
-  )
-  w_rotated = np.einsum("jk,ilk->ilj", hadamard, reshaped_tensor)
+      diagonal_size * output_size, hadamard_size)
+  w_rotated = np.matmul(hadamard, reshaped_tensor.mT).mT
   return w_rotated.reshape(tensor_content.shape), hadamard_size, random_vector
 
 
@@ -122,8 +122,10 @@ def get_tensor_quant_params(
         "Hadamard rotation is not supported for static quantization."
     )
 
-  if tensor_content.ndim != 2:
-    raise ValueError("Hadamard rotation is only supported for 2D tensors.")
+  if tensor_content.ndim < 2:
+    raise ValueError(
+        "Hadamard rotation is only supported for tensors with rank >= 2."
+    )
 
   if tensor_quant_config.granularity != qtyping.QuantGranularity.CHANNELWISE:
     raise ValueError(
@@ -140,9 +142,9 @@ def get_tensor_quant_params(
         " supported."
     )
 
-  # Reduction axis is the non-quantized dimension. Since we only support 2D
-  # tensors and quantized_dim of 0, the reduction axis is 1.
-  reduce_axis = 1
+  # Reduction axis is the last non-quantized dimension. Since we only support
+  # quantized_dim of 0, the reduction axis is the last axis.
+  reduce_axis = tensor_content.ndim - 1
 
   # Rotate the tensor with a Hadamard matrix.
   w_rotated, hadamard_size, random_vector = _rotate_with_diagonal_hadamard(

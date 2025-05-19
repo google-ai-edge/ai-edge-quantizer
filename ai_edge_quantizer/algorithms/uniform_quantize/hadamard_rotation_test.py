@@ -168,6 +168,36 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
         np.array(qparams.quantized_data), expected
     )
 
+  def test_get_tensor_quant_params_golden_3(self):
+    # test_data:
+    #   [[[1 2 1 2 1 2]
+    #     [3 4 3 4 3 4]
+    #     [1 2 1 2 1 2]]
+    #    [[3 4 3 4 3 4]
+    #     [1 2 1 2 1 2]
+    #     [3 4 3 4 3 4]]]
+    test_data = np.tile([[1, 2], [3, 4]], [3, 3])
+    test_data = np.reshape(test_data, (2, 3, 6))
+    # expected:
+    #   [[[ 54 -18  54 -18  54 -18]
+    #     [127 -18 127 -18 127 -18]
+    #     [ 54 -18  54 -18  54 -18]]
+    #    [[127 -18 127 -18 127 -18]
+    #     [ 54 -18  54 -18  54 -18]
+    #     [127 -18 127 -18 127 -18]]]
+    expected = np.tile([[54, -18], [127, -18]], [3, 3])
+    expected = np.reshape(expected, (2, 3, 6))
+    qparams = hadamard_rotation.get_tensor_quant_params(
+        self._op_info,
+        self._op_info.op_quant_config.weight_tensor_config,
+        test_data,
+        self._tensor_name_to_qsv,
+    )
+    self.assertIsNotNone(qparams.quantized_data)
+    np.testing.assert_array_equal(
+        np.array(qparams.quantized_data), expected
+    )
+
   def test_raise_missing_tensor_content(self):
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: "weight tensor" in str(err)
@@ -190,9 +220,9 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
           self._graph_info.buffers[self._fc_buffer_id],
       )
 
-  def test_raise_non_2d_constant(self):
+  def test_raise_1d_constant(self):
     with self.assertRaisesWithPredicateMatch(
-        ValueError, lambda err: "2D tensors" in str(err)
+        ValueError, lambda err: "rank >= 2" in str(err)
     ):
       hadamard_rotation.get_tensor_quant_params(
           self._op_info,
