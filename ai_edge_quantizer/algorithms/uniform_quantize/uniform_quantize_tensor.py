@@ -435,7 +435,8 @@ def _is_valid_quantization_params(
   """Checks if the quantization parameters are valid.
 
   A valid quantization params requires:
-    1. scale and zero point have the same shape (TFL Runtime requirement).
+    1. scale and zero point either have the same shape or the zero point is a
+    scalar.
     2. scale and zero point have the same rank as the tensor content (avoid
     ambiguous broadcasting).
 
@@ -446,7 +447,10 @@ def _is_valid_quantization_params(
   Returns:
     True if the quantization parameters are valid.
   """
-  if quantization_params.scale.shape != quantization_params.zero_point.shape:
+  if (
+      quantization_params.scale.shape != quantization_params.zero_point.shape
+      and quantization_params.zero_point.size != 1
+  ):
     raise ValueError(
         "scale and zero_point must have the same shape. Got"
         f" {quantization_params.scale.shape} and"
