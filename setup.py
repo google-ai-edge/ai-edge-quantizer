@@ -28,7 +28,9 @@ here = pathlib.Path(__file__).parent.resolve()
 DOCLINES = __doc__.split("\n")
 
 name = "ai-edge-quantizer"
-version = "0.1.0"
+# The next version of ai-edge-quantizer.
+# The minor version code should be bumped after every release.
+version = "0.3.0"
 if nightly_release_date := os.environ.get("NIGHTLY_RELEASE_DATE"):
   name += "-nightly"
   version += ".dev" + nightly_release_date
