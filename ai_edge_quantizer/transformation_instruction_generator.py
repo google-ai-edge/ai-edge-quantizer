@@ -186,11 +186,13 @@ class TransformationInstructionsGenerator:
       A tuple of tensor_name and TensorGraphInfo.
     """
     for tensor_id, tensor in enumerate(subgraph.tensors):
-      consumers = [
-          op_id
-          for (op_id, op) in enumerate(subgraph.operators)
-          if tensor_id in op.inputs
-      ]
+      consumers = []
+      for op_id, op in enumerate(subgraph.operators):
+        # Some ops may use the same input tensor multiple times,
+        # and we should handle each time independently.
+        for op_input in op.inputs:
+          if op_input == tensor_id:
+            consumers.append(op_id)
       producer = -1
       for op_id, op in enumerate(subgraph.operators):
         if tensor_id in op.outputs:
