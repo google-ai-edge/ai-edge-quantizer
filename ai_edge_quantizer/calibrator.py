@@ -140,10 +140,15 @@ class Calibrator:
           graph_info = qtyping.GraphInfo(
               subgraph.tensors, self._flatbuffer_model.buffers
           )
-          # Add input/output operators to the subgraph.
-          subgraph.operators += (
-              tfl_flatbuffer_utils.get_subgraph_input_output_operators(subgraph)
-          )
+          # Add input/output operators if they are not in the subgraph.
+          if not any(
+              isinstance(op, qtyping.IOOperator) for op in subgraph.operators
+          ):
+            subgraph.operators += (
+                tfl_flatbuffer_utils.get_subgraph_input_output_operators(
+                    subgraph
+                )
+            )
           for op in subgraph.operators:
             if isinstance(op, qtyping.IOOperator):
               op_key = op.op_key
