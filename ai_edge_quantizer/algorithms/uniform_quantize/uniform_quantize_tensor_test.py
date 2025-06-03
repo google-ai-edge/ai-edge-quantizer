@@ -160,7 +160,9 @@ class TensorUtilsTest(parameterized.TestCase):
   def test_uniform_quantize_wrong_shape(self):
     tensor = [-3.0, 1.3, 2.4, 16.0]
 
-    error_message = "scale and zero_point must have the same shape."
+    error_message = (
+        "Ranks of scales (3) and zps (2) must be the same as the tensor rank"
+    )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
@@ -233,7 +235,9 @@ class TensorUtilsTest(parameterized.TestCase):
   def test_uniform_dequantize_wrong_shape(self):
     tensor = [-3.0, 1.3, 2.4, 16.0]
 
-    error_message = "scale and zero_point must have the same shape."
+    error_message = (
+        "Ranks of scales (3) and zps (2) must be the same as the tensor rank"
+    )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
