@@ -15,6 +15,7 @@
 
 """Utility functions for graph transformations."""
 
+import copy
 import dataclasses
 from typing import Optional, Union
 
@@ -105,7 +106,17 @@ def get_constant_buffer(
   Returns:
     The index of the new buffer in the model.
   """
-  new_data = np.frombuffer(data.tobytes(), dtype=np.uint8).flatten()
+
+  if isinstance(data, np.ndarray):
+    # in the case where the data is passed from quantization_params.
+    new_data = np.frombuffer(data.tobytes(), dtype=np.uint8).flatten()
+  elif isinstance(data, bytes):
+    # in the case where the data is coming from duplicating buffers, we need to
+    # make a copy of the data to avoid having two buffers pointing to the same
+    # data.
+    new_data = copy.deepcopy(data)
+  else:
+    raise ValueError('data passed in must be either np.ndarray or bytes.')
   # TODO: b/417811116 - we should make this more efficient.
   if not force_duplicate_buffer:
     for index, buffer in enumerate(buffers):
