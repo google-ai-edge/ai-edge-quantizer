@@ -17,6 +17,7 @@
 
 from typing import Any, Optional, Union
 
+import ml_dtypes
 import numpy as np
 
 from ai_edge_quantizer import qtyping
@@ -339,6 +340,15 @@ def _create_random_integers(
   return rng.integers(min_value, max_value, size=shape, dtype=dtype)
 
 
+def _create_random_bool(
+    rng: np.random.Generator,
+    shape: tuple[int, ...],
+    dtype: np.dtype,
+) -> dict[str, Any]:
+  """Creates a random bool dataset sample for given input details."""
+  return rng.choice([True, False], size=shape, replace=False).astype(dtype)
+
+
 def create_random_dataset(
     input_details: dict[str, Any],
     num_samples: int,
@@ -364,8 +374,10 @@ def create_random_dataset(
       shape = input_tensor["shape"]
       if dtype in (np.int32, np.int64):
         new_data = _create_random_integers(rng, shape, dtype)
-      elif dtype == np.float32:
+      elif dtype in (np.float32, ml_dtypes.bfloat16):
         new_data = _create_random_normal(rng, shape, dtype)
+      elif dtype == np.bool:
+        new_data = _create_random_bool(rng, shape, dtype)
       else:
         raise ValueError(f"Unsupported dtype: {input_tensor['dtype']}")
       input_data[arg_name] = new_data
