@@ -57,6 +57,7 @@ TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
         schema.BuiltinOperator.DYNAMIC_UPDATE_SLICE
     ),
     _TFLOpName.PAD: schema.BuiltinOperator.PAD,
+    _TFLOpName.SQUARED_DIFFERENCE: schema.BuiltinOperator.SQUARED_DIFFERENCE,
 })
 
 TFL_OP_CODE_TO_NAME = immutabledict.immutabledict(

@@ -18,6 +18,7 @@
 import inspect as _inspect
 import os.path as _os_path
 import sys as _sys
+from typing import Union
 
 from absl.testing import parameterized
 
@@ -97,6 +98,7 @@ class BaseOpTestCase(parameterized.TestCase):
       op_name: _OpName,
       op_config: _OpQuantConfig,
       num_validation_samples: int = 4,
+      num_calibration_samples: Union[int, None] = None,
       error_metric: str = 'mse',
   ) -> model_validator.ComparisonResult:
     """Quantizes and validates the given model with the given configurations.
@@ -107,6 +109,8 @@ class BaseOpTestCase(parameterized.TestCase):
       op_name: The name of the operation to be quantized.
       op_config: The configuration for the operation to be quantized.
       num_validation_samples: The number of samples to use for validation.
+      num_calibration_samples: The number of samples to use for calibration. If
+        None then it will be set to num_validation_samples * 8.
       error_metric: The error error_metric to use for validation.
 
     Returns:
@@ -120,8 +124,11 @@ class BaseOpTestCase(parameterized.TestCase):
         op_config=op_config,
     )
     if quantizer_instance.need_calibration:
+      if num_calibration_samples is None:
+        num_calibration_samples = num_validation_samples * 8
       calibration_data = tfl_interpreter_utils.create_random_normal_input_data(
-          quantizer_instance.float_model, num_samples=num_validation_samples * 8
+          quantizer_instance.float_model,
+          num_samples=num_calibration_samples,
       )
       calibration_result = quantizer_instance.calibrate(calibration_data)
       quantization_result = quantizer_instance.quantize(calibration_result)
@@ -198,3 +205,26 @@ class BaseOpTestCase(parameterized.TestCase):
       self.assert_output_errors_below_tolerance(
           validation_result, output_tolerance
       )
+
+  def assert_quantization_accuracy(
+      self,
+      algorithm_key: _AlgorithmName,
+      model_path: str,
+      op_name: _OpName,
+      op_config: _OpQuantConfig,
+      num_validation_samples: int = 4,
+      num_calibration_samples: Union[int, None] = None,
+      output_tolerance: float = 1e-4,
+  ):
+    """Check if the output errors after quantization are within the tolerance."""
+    validation_result = self.quantize_and_validate(
+        model_path=model_path,
+        algorithm_key=algorithm_key,
+        num_validation_samples=num_validation_samples,
+        num_calibration_samples=num_calibration_samples,
+        op_name=op_name,
+        op_config=op_config,
+    )
+    self.assert_output_errors_below_tolerance(
+        validation_result, output_tolerance
+    )
