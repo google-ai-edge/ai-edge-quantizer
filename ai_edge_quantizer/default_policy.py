@@ -184,7 +184,8 @@ DEFAULT_JSON_POLICY = """
       "DYNAMIC_UPDATE_SLICE",
       "SELECT_V2",
       "STABLEHLO_COMPOSITE",
-      "PAD"
+      "PAD",
+      "SQUARED_DIFFERENCE"
     ],
     "static_wi8_ai8": [
       "ADD",
@@ -216,7 +217,8 @@ DEFAULT_JSON_POLICY = """
       "DYNAMIC_UPDATE_SLICE",
       "SELECT_V2",
       "STABLEHLO_COMPOSITE",
-      "PAD"
+      "PAD",
+      "SQUARED_DIFFERENCE"
     ],
     "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
     "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],

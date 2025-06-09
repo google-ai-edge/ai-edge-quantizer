@@ -108,6 +108,9 @@ MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT = {
     ),
     _TFLOpName.STABLEHLO_COMPOSITE: common_quantize.materialize_composite,
     _TFLOpName.PAD: common_quantize.materialize_pad,
+    _TFLOpName.SQUARED_DIFFERENCE: (
+        common_quantize.materialize_squared_difference
+    ),
 }
 for op_name, materialize_func in MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT.items():
   register_quantized_op(
@@ -242,6 +245,9 @@ _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
     ),
     _TFLOpName.STABLEHLO_COMPOSITE: common_quantize.materialize_composite,
     _TFLOpName.PAD: common_quantize.materialize_pad,
+    _TFLOpName.SQUARED_DIFFERENCE: (
+        common_quantize.materialize_squared_difference
+    ),
 })
 
 for op_name, materialize_func in _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT.items():
