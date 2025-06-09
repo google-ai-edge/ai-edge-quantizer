@@ -141,3 +141,4 @@ The table below outlines the allowed configurations for available recipes.
 |SLICE         |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |SELECT_V2         |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |SUM         |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|PAD         |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
