@@ -111,6 +111,7 @@ MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT = {
     _TFLOpName.SQUARED_DIFFERENCE: (
         common_quantize.materialize_squared_difference
     ),
+    _TFLOpName.MAX_POOL_2D: common_quantize.materialize_max_pool_2d,
 }
 for op_name, materialize_func in MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT.items():
   register_quantized_op(
@@ -248,6 +249,7 @@ _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
     _TFLOpName.SQUARED_DIFFERENCE: (
         common_quantize.materialize_squared_difference
     ),
+    _TFLOpName.MAX_POOL_2D: common_quantize.materialize_max_pool_2d,
 })
 
 for op_name, materialize_func in _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT.items():

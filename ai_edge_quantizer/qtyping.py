@@ -64,6 +64,7 @@ class TFLOperationName(str, enum.Enum):
   STABLEHLO_COMPOSITE = 'STABLEHLO_COMPOSITE'
   PAD = 'PAD'
   SQUARED_DIFFERENCE = 'SQUARED_DIFFERENCE'
+  MAX_POOL_2D = 'MAX_POOL_2D'
 
 
 class QuantizeMode(enum.Enum):
