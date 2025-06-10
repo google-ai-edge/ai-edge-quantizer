@@ -145,3 +145,4 @@ The table below outlines the allowed configurations for available recipes.
 |SQUARED_DIFFERENCE |     |     |     |     |<div align="center"> &check; </div>|    |    |    |
 |MAX_POOL_2D      |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |RESIZE_BILINEAR  |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|GATHER_ND        |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
