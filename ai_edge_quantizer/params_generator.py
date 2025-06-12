@@ -109,7 +109,7 @@ class ParamsGenerator:
         algorithm_name, op_quant_config = (
             model_recipe_manager.get_quantization_configs(op_key, op_scope)
         )
-        if policy.is_conditionally_unquantized(op):
+        if policy.is_non_quantizable_composite_op(op):
           algorithm_name = algorithm_manager.AlgorithmName.NO_QUANTIZE
 
         if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:

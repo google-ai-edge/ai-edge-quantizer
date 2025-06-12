@@ -245,6 +245,7 @@ DEFAULT_JSON_POLICY = """
   }
 }
 """
+QUANTIZABLE_COMPOSITES = ["od" + "ml.npu_call", "od" + "ml.rms_norm"]
 
 
 def _unroll_json_config(
@@ -322,10 +323,10 @@ def _unroll_json_config(
 
 
 # TODO: b/401024954 - Have a better way to specify recipes based on op options.
-def is_conditionally_unquantized(
+def is_non_quantizable_composite_op(
     op: Union[schema.Operator, schema.OperatorT],
 ) -> bool:
-  """Checks if the operator is conditionally unquantized.
+  """Checks if the operator is a non-quantizable composite op.
 
   We may want to quantize an op only when its has certain options.
   Policies/recipes
@@ -340,10 +341,9 @@ def is_conditionally_unquantized(
   if opts := flatbuffer_utils.get_options_as(
       op, schema.StableHLOCompositeOptionsT
   ):
-    name: bytes = opts.name
-    # Non npu_call composites may have a kernel and as such will not be
-    # quantized.
-    return ("od" + "ml.npu_call") not in name.decode("utf-8")
+    name = opts.name.decode("utf-8")
+    if name not in QUANTIZABLE_COMPOSITES:
+      return True
 
   return False
 

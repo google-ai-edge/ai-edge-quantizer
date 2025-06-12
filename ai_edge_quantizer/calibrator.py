@@ -165,7 +165,7 @@ class Calibrator:
             )
             if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
               continue
-            if policy.is_conditionally_unquantized(op):
+            if policy.is_non_quantizable_composite_op(op):
               continue
 
             # Step2.2: query algorithm_manager to get/call the related
