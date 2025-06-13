@@ -728,6 +728,23 @@ def materialize_max_pool_2d(
   )
 
 
+def materialize_resize_bilinear(
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.resize_bilinear."""
+  return common_utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      get_tensor_quant_params_fn,
+      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
+      inputs_to_ignore=[1],  # Resize size does not need to be quantized.
+  )
+
+
 def _get_tensor_shape_for_blockwise(
     tensor_shape: Sequence[int], quantized_dim: int, block_size: int
 ) -> list[int]:

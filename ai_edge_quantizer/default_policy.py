@@ -185,7 +185,8 @@ DEFAULT_JSON_POLICY = """
       "SELECT_V2",
       "STABLEHLO_COMPOSITE",
       "PAD",
-      "MAX_POOL_2D"
+      "MAX_POOL_2D",
+      "RESIZE_BILINEAR"
     ],
     "static_wi8_ai8": [
       "ADD",
@@ -219,7 +220,8 @@ DEFAULT_JSON_POLICY = """
       "STABLEHLO_COMPOSITE",
       "PAD",
       "SQUARED_DIFFERENCE",
-      "MAX_POOL_2D"
+      "MAX_POOL_2D",
+      "RESIZE_BILINEAR"
     ],
     "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
     "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
