@@ -29,19 +29,6 @@ _AlgorithmName = recipe_manager.AlgorithmName
 _QuantGranularity = qtyping.QuantGranularity
 
 
-# Sample functions for test cases.
-def _sample_init_qsvs(*_, **__):
-  return 1.0, dict()
-
-
-def _sample_calibration_func(*_, **__):
-  return 2.0, dict()
-
-
-def _sample_materialize_func(*_, **__):
-  return 3.0, dict()
-
-
 def _sample_check_op_config_func(op_name, op_config, _):
   if (
       op_config.weight_tensor_config is not None
@@ -67,6 +54,16 @@ def _add_default_int8xint8_integer_recipe(recipe_manager_object):
 
 # register some currently unsupported ops for testing purposes
 def _register_testing_op(algorithm_key, tfl_op):
+  # Sample functions for test cases.
+  def _sample_init_qsvs(*_, **__):
+    return {'name': dict()}
+
+  def _sample_calibration_func(*_, **__):
+    return {'name2': dict()}
+
+  def _sample_materialize_func(*_, **__):
+    return []
+
   algorithm_manager.register_op_quant_config_validation_func(
       algorithm_key, _sample_check_op_config_func
   )
