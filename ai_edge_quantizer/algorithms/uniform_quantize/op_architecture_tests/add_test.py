@@ -133,7 +133,7 @@ class AddTest(op_test_utils.BaseQuantizeTest):
     op = subgraph0.operators[subgraph_op_id]
     op_tensor_names = {}
     op_tensor_names["input"] = "serving_default_input_1:0"
-    op_tensor_names["weight"] = "Const"
+    op_tensor_names["input2"] = "Const"
     op_tensor_names["output"] = "PartitionedCall:0"
     self._op_test_info.op_tensor_names = op_tensor_names
 
@@ -152,14 +152,13 @@ class AddTest(op_test_utils.BaseQuantizeTest):
             compute_precision=_ComputePrecision.INTEGER,  # SRQ.
         ),
     )
-    # We re-use the fc_bmm_conv helper test function here because the constant
-    # tensor is treated as a weight tensor.
-    self._test_fc_bmm_conv(
+    self._test_no_weights_op(
         op_info,
         self._graph_info,
         self._op_test_info,
         common_quantize.materialize_add,
         get_tensor_quant_params_func,
+        constant_inputs=[1],
     )
 
 
