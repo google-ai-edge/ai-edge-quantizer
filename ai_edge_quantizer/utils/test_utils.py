@@ -100,6 +100,7 @@ class BaseOpTestCase(parameterized.TestCase):
       num_validation_samples: int = 4,
       num_calibration_samples: Union[int, None] = None,
       error_metric: str = 'mse',
+      int_min_max: Union[tuple[int, int], None] = None,
   ) -> model_validator.ComparisonResult:
     """Quantizes and validates the given model with the given configurations.
 
@@ -112,6 +113,7 @@ class BaseOpTestCase(parameterized.TestCase):
       num_calibration_samples: The number of samples to use for calibration. If
         None then it will be set to num_validation_samples * 8.
       error_metric: The error error_metric to use for validation.
+      int_min_max: The min and max of the integer input range.
 
     Returns:
       The comparison result of the validation.
@@ -129,13 +131,16 @@ class BaseOpTestCase(parameterized.TestCase):
       calibration_data = tfl_interpreter_utils.create_random_normal_input_data(
           quantizer_instance.float_model,
           num_samples=num_calibration_samples,
+          int_min_max=int_min_max,
       )
       calibration_result = quantizer_instance.calibrate(calibration_data)
       quantization_result = quantizer_instance.quantize(calibration_result)
     else:
       quantization_result = quantizer_instance.quantize()
     test_data = tfl_interpreter_utils.create_random_normal_input_data(
-        quantization_result.quantized_model, num_samples=num_validation_samples
+        quantization_result.quantized_model,
+        num_samples=num_validation_samples,
+        int_min_max=int_min_max,
     )
     return quantizer_instance.validate(test_data, error_metric)
 
@@ -185,6 +190,7 @@ class BaseOpTestCase(parameterized.TestCase):
       expected_model_size_reduction: float,
       weight_tolerance: float = 1e-4,
       output_tolerance: float = 1e-4,
+      int_min_max: Union[tuple[int, int], None] = None,
   ):
     """Check if the quantization is successful and the result is valid."""
     validation_result = self.quantize_and_validate(
@@ -192,6 +198,7 @@ class BaseOpTestCase(parameterized.TestCase):
         algorithm_key=algorithm_key,
         op_name=op_name,
         op_config=op_config,
+        int_min_max=int_min_max,
     )
     with self.subTest(name='ModelSizeReduction'):
       self.assert_model_size_reduction_above_min_pct(
@@ -215,8 +222,9 @@ class BaseOpTestCase(parameterized.TestCase):
       num_validation_samples: int = 4,
       num_calibration_samples: Union[int, None] = None,
       output_tolerance: float = 1e-4,
+      int_min_max: Union[tuple[int, int], None] = None,
   ):
-    """Check if the output errors after quantization are within the tolerance."""
+    """Checks if the output errors after quantization are within the tolerance."""
     validation_result = self.quantize_and_validate(
         model_path=model_path,
         algorithm_key=algorithm_key,
@@ -224,6 +232,7 @@ class BaseOpTestCase(parameterized.TestCase):
         num_calibration_samples=num_calibration_samples,
         op_name=op_name,
         op_config=op_config,
+        int_min_max=int_min_max,
     )
     self.assert_output_errors_below_tolerance(
         validation_result, output_tolerance

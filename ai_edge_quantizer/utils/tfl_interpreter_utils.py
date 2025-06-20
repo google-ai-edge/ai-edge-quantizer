@@ -353,6 +353,7 @@ def create_random_dataset(
     input_details: dict[str, Any],
     num_samples: int,
     random_seed: Union[int, np._typing.ArrayLike],
+    int_min_max: Union[tuple[int, int], None] = None,
 ) -> list[dict[str, Any]]:
   """Creates a random normal dataset for given input details.
 
@@ -360,6 +361,7 @@ def create_random_dataset(
     input_details: A dictionary of input details.
     num_samples: The number of samples to generate.
     random_seed: The random seed to use.
+    int_min_max: The min and max of the integer input range.
 
   Returns:
     A list of dictionaries, each containing a sample of input data (for all
@@ -373,7 +375,13 @@ def create_random_dataset(
       dtype = input_tensor["dtype"]
       shape = input_tensor["shape"]
       if dtype in (np.int32, np.int64):
-        new_data = _create_random_integers(rng, shape, dtype)
+        if int_min_max is None:
+          new_data = _create_random_integers(rng, shape, dtype)
+        else:
+          min_value, max_value = int_min_max
+          new_data = _create_random_integers(
+              rng, shape, dtype, min_value, max_value
+          )
       elif dtype in (np.float32, ml_dtypes.bfloat16):
         new_data = _create_random_normal(rng, shape, dtype)
       elif dtype == np.bool:
@@ -389,18 +397,20 @@ def create_random_normal_input_data(
     tflite_model: Union[str, bytes],
     num_samples: int = 4,
     random_seed: int = 666,
+    int_min_max: Union[tuple[int, int], None] = None,
 ) -> dict[str, list[dict[str, Any]]]:
-  """create random dataset following random distribution for signature runner.
+  """Creates a random normal dataset for a signature runner.
 
   Args:
-    tflite_model: TFLite model path or bytearray
-    num_samples: number of input samples to be generated
-    random_seed: random seed to be used for function
+    tflite_model: TFLite model path or bytearray.
+    num_samples: Number of input samples to be generated.
+    random_seed: Random seed to be used for function.
+    int_min_max: The min and max of the integer input range.
 
   Returns:
-    a list of inputs to the given interpreter, for a single interpreter we may
+    A list of inputs to the given interpreter, for a single interpreter we may
     have multiple signatures so each set of inputs is also represented as
-    list
+    list.
   """
   tfl_interpreter = create_tfl_interpreter(tflite_model)
   signature_defs = tfl_interpreter.get_signature_list()
@@ -410,6 +420,6 @@ def create_random_normal_input_data(
     signature_runner = tfl_interpreter.get_signature_runner(signature_key)
     input_details = signature_runner.get_input_details()
     test_data[signature_key] = create_random_dataset(
-        input_details, num_samples, random_seed
+        input_details, num_samples, random_seed, int_min_max
     )
   return test_data
