@@ -124,6 +124,7 @@ class BaseQuantizeTest(parameterized.TestCase):
       num_tensors,
       indices_to_ignore,
       is_inbounding_tensor,
+      constant_inputs=None,
   ):
     """Tests all input or output tensors in provided quant params.
 
@@ -135,7 +136,13 @@ class BaseQuantizeTest(parameterized.TestCase):
       num_tensors: Number of tensors to test.
       indices_to_ignore: Indices of tensors to ignore.
       is_inbounding_tensor: Whether to test all inbounding tensors.
+      constant_inputs: Constant inputs indices.
     """
+    if not is_inbounding_tensor and constant_inputs is not None:
+      raise ValueError(
+          "Constant inputs should only be used for inbounding tensors."
+      )
+    constant_inputs = constant_inputs or []
     tensor_base_name = "input" if is_inbounding_tensor else "output"
     tensor_names = [tensor_base_name] + [
         f"{tensor_base_name}{i+2}" for i in range(num_tensors - 1)
@@ -148,9 +155,15 @@ class BaseQuantizeTest(parameterized.TestCase):
           and i not in indices_to_ignore
       ):
         if is_inbounding_tensor:
-          transformations = [_QuantTransformation.ADD_QUANTIZE]
+          if i in constant_inputs:
+            transformations = [_QuantTransformation.QUANTIZE_TENSOR]
+          else:
+            transformations = [_QuantTransformation.ADD_QUANTIZE]
         else:
-          transformations = [_QuantTransformation.ADD_DEQUANTIZE]
+          if i in constant_inputs:
+            transformations = []
+          else:
+            transformations = [_QuantTransformation.ADD_DEQUANTIZE]
       else:
         transformations = [_QuantTransformation.NO_QUANTIZE]
       self._test_tensor_transformation_params(
@@ -172,6 +185,8 @@ class BaseQuantizeTest(parameterized.TestCase):
   ):
     """Tests input and output tensor transformation parameters are the same.
 
+    Assumes that each of non-ignored input tensors has exactly one consumer.
+
     Args:
       tensor_quant_params: Tensor transformation parameters.
       num_inputs: Number of inputs in materialization function result.
@@ -183,18 +198,19 @@ class BaseQuantizeTest(parameterized.TestCase):
     num_quant_outputs = num_outputs - len(outputs_to_ignore)
     self.assertTrue(num_quant_inputs == 1 or num_quant_outputs == 1)
 
-    # Test inputs.
+    # Test inputs. Ignoring `quantized_data` in comparison because inputs can be
+    # constants and therefore have different quantized data.
     inputs_to_ignore = inputs_to_ignore or []
-    expected_params = None
-    for i in range(num_inputs):
-      if i not in inputs_to_ignore:
-        if expected_params is None:
-          expected_params = tensor_quant_params[i].consumers[0].parameters  # pytype: disable=attribute-error
-        else:
-          input_tensor_quant_params = (
-              tensor_quant_params[i].consumers[0].parameters
-          )  # pytype: disable=attribute-error
-          self.assertEqual(input_tensor_quant_params, expected_params)
+    input_quant_params = [
+        dataclasses.replace(
+            tensor_quant_params[i].consumers[0].parameters, quantized_data=None  # pytype: disable=attribute-error
+        )
+        for i in range(num_inputs)
+        if i not in inputs_to_ignore
+    ]
+    expected_params = input_quant_params[0]
+    for i in range(1, num_quant_inputs):
+      self.assertEqual(input_quant_params[i], expected_params)
 
     # Test outputs.
     outputs_to_ignore = outputs_to_ignore or []
@@ -215,6 +231,7 @@ class BaseQuantizeTest(parameterized.TestCase):
       same_input_output_params=False,
       inputs_to_ignore=None,
       outputs_to_ignore=None,
+      constant_inputs=None,
   ):
     """Test an op without weights and bias.
 
@@ -232,6 +249,7 @@ class BaseQuantizeTest(parameterized.TestCase):
         transformation parameters are the same.
       inputs_to_ignore: Inputs to ignore.
       outputs_to_ignore: Outputs to ignore.
+      constant_inputs: Indices of constant inputs.
     """
     num_inputs = len(op_info.op.inputs)
     num_outputs = len(op_info.op.outputs)
@@ -261,6 +279,7 @@ class BaseQuantizeTest(parameterized.TestCase):
         num_inputs,
         inputs_to_ignore,
         is_inbounding_tensor=True,
+        constant_inputs=constant_inputs,
     )
     # Test output tensor settings.
     outputs_to_ignore = outputs_to_ignore or []
