@@ -24,7 +24,6 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import dequant_insert
 from ai_edge_quantizer.transformations import duplicate_buffer
 from ai_edge_quantizer.transformations import duplicate_tensor
-from ai_edge_quantizer.transformations import emulated_subchannel
 from ai_edge_quantizer.transformations import insert_hadamard_rotation
 from ai_edge_quantizer.transformations import quant_insert
 from ai_edge_quantizer.transformations import quantize_tensor
@@ -72,7 +71,7 @@ class TransformationPerformer:
             quantize_tensor.quantize_tensor
         ),
         qtyping.QuantTransformation.EMULATED_SUBCHANNEL: (
-            emulated_subchannel.emulated_subchannel
+            transformation_utils.raise_deprecated_error
         ),
         qtyping.QuantTransformation.ADD_QUANTIZE: quant_insert.insert_quant,
         qtyping.QuantTransformation.DUPLICATE_BUFFER: (

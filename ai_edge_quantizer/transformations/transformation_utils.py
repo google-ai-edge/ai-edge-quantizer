@@ -203,3 +203,10 @@ def add_new_activation_tensor(
   new_tensor_id = len(subgraph.tensors)
   subgraph.tensors.append(new_tensor)
   return new_tensor_id
+
+
+def raise_deprecated_error(_: TransformationInput):
+  raise NotImplementedError(
+      'This transformation is deprecated. Please contact AI Edge Quantizer team'
+      ' if you see this error.'
+  )

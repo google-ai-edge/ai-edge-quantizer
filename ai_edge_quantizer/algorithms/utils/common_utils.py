@@ -870,13 +870,6 @@ def get_tensor_transformations(
       transformations = [_QuantTransformation.QUANTIZE_TENSOR]
     else:
       transformations = [_QuantTransformation.NO_QUANTIZE]
-  elif (
-      op_quant_config.weight_tensor_config is not None
-      and op_quant_config.weight_tensor_config.granularity
-      == qtyping.QuantGranularity.BLOCKWISE
-      and is_constant
-  ):
-    transformations = [_QuantTransformation.EMULATED_SUBCHANNEL]
   # Check if WEIGHT_ONLY.
   elif (
       op_quant_config.compute_precision == qtyping.ComputePrecision.FLOAT

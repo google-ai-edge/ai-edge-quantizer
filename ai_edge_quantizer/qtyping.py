@@ -111,8 +111,8 @@ class QuantTransformation(enum.Enum):
   ADD_DEQUANTIZE = 2
   # Quantize the float tensor: float_tensor -> quantized_tensor.
   QUANTIZE_TENSOR = 3
-  # Create pattern for emulated subchannel quantization, only support fully
-  # connected op.
+  # (Deprecated) Create pattern for emulated subchannel quantization,
+  # only support fully connected op.
   EMULATED_SUBCHANNEL = 4
   # Duplicate the buffer.
   DUPLICATE_BUFFER = 5

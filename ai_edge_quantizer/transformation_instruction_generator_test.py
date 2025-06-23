@@ -953,33 +953,6 @@ class InstructionGeneratorTest(parameterized.TestCase):
         instructions["StatefulPartitionedCall:0"], output_transformation
     )
 
-  def test_raise_error_on_op_replacement_transformation_is_not_unique(self):
-    test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "tests/models/insert_dequant_test.tflite"
-    )
-    quant_parameters = {}
-    quant_parameters["tfl.quantize"] = qtyping.TensorTransformationParams(
-        "tfl.quantize",
-        qtyping.OpToTensorParams(
-            subgraph_op_id=0,
-            transformations=[
-                qtyping.QuantTransformation.ADD_DEQUANTIZE,
-                qtyping.QuantTransformation.EMULATED_SUBCHANNEL,
-            ],
-            parameters=qtyping.UniformQuantParams(
-                8, None, np.array([1]), np.array([0])
-            ),
-        ),
-        [],
-    )
-    ins_gen = instruction_generator.TransformationInstructionsGenerator(
-        test_model_path
-    )
-    with self.assertRaisesRegex(
-        ValueError, "op replacement transformation can not be combined"
-    ):
-      ins_gen.quant_params_to_transformation_insts(quant_parameters)
-
   def test_raise_error_on_no_quant_conflict(self):
     test_model_path = os.path.join(
         TEST_DATA_PREFIX_PATH, "tests/models/insert_dequant_test.tflite"
