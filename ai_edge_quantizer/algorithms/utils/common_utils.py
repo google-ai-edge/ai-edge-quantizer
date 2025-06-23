@@ -293,17 +293,46 @@ def _materialize_standard_op_with_same_as_input_scale(
       get_tensor_quant_params_fn=get_tensor_quant_params_fn,
   )
   op_tensor_params.append(input_tensor_params)
-  # Use input quantization params for all output tensors.
-  _materialize_op_tensors(
-      op_tensor_params,
-      output_tensors,
-      is_inbounding_tensor=False,
-      op_info=op_info,
-      graph_info=graph_info,
-      tensor_name_to_qsv=tensor_name_to_qsv,
-      get_tensor_quant_params_fn=get_tensor_quant_params_fn,
-      quant_params=input_tensor_params.consumers[0].parameters,
+  # Use input quantization params for all output tensors but without
+  # quantized_data in case the input is a constant tensor.
+  input_quant_params = dataclasses.replace(
+      input_tensor_params.consumers[0].parameters,
+      quantized_data=None,
   )
+  if not isinstance(input_quant_params, qtyping.UniformQuantParams):
+    raise ValueError(
+        "_materialize_standard_op_with_same_as_input_scale only supports"
+        f" UniformQuantParams. For tensor {input_tensor_params.tensor_name},"
+        f" got {type(input_quant_params)}"
+    )
+  # Materialize each of the output tensors separately in case there are
+  # constants among them, requiring updating `quantized_data` first.
+  for output_tensor in output_tensors:
+    output_tensor_data = tfl_flatbuffer_utils.get_tensor_data(
+        output_tensor, graph_info.buffers
+    )
+    # Quantize constant inputs' data with the output quantization params.
+    if output_tensor_data is None:
+      quant_params = input_quant_params
+    else:
+      quantized_data = uniform_quantize_tensor.uniform_quantize(
+          output_tensor_data, input_quant_params
+      )
+      quant_params = dataclasses.replace(
+          input_quant_params,
+          quantized_data=quantized_data,
+      )
+    _materialize_op_tensors(
+        op_tensor_params,
+        [output_tensor],
+        is_inbounding_tensor=False,
+        op_info=op_info,
+        graph_info=graph_info,
+        tensor_name_to_qsv=tensor_name_to_qsv,
+        get_tensor_quant_params_fn=get_tensor_quant_params_fn,
+        quant_params=quant_params,
+    )
+
   # Change output qsv to be the same as input qsv. This is safe since TFL
   # subgraph is acyclic.
   input_tensor_qsv = tensor_name_to_qsv[input_tensor_params.tensor_name]

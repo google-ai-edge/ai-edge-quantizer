@@ -66,6 +66,7 @@ class TFLOperationName(str, enum.Enum):
   SQUARED_DIFFERENCE = 'SQUARED_DIFFERENCE'
   MAX_POOL_2D = 'MAX_POOL_2D'
   RESIZE_BILINEAR = 'RESIZE_BILINEAR'
+  GATHER_ND = 'GATHER_ND'
 
 
 class QuantizeMode(enum.Enum):

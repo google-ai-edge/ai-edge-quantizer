@@ -113,6 +113,7 @@ MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT = {
     ),
     _TFLOpName.MAX_POOL_2D: common_quantize.materialize_max_pool_2d,
     _TFLOpName.RESIZE_BILINEAR: common_quantize.materialize_resize_bilinear,
+    _TFLOpName.GATHER_ND: common_quantize.materialize_gather_nd,
 }
 for op_name, materialize_func in MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT.items():
   register_quantized_op(
@@ -252,6 +253,7 @@ _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
     ),
     _TFLOpName.MAX_POOL_2D: common_quantize.materialize_max_pool_2d,
     _TFLOpName.RESIZE_BILINEAR: common_quantize.materialize_resize_bilinear,
+    _TFLOpName.GATHER_ND: common_quantize.materialize_gather_nd,
 })
 
 for op_name, materialize_func in _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT.items():
