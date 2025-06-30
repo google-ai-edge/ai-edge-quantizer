@@ -762,6 +762,38 @@ def materialize_gather_nd(
   )
 
 
+def materialize_pack(
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.pack."""
+  return common_utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      get_tensor_quant_params_fn,
+      constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
+  )
+
+
+def materialize_unpack(
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.unpack."""
+  return common_utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      get_tensor_quant_params_fn,
+      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
+  )
+
+
 def _get_tensor_shape_for_blockwise(
     tensor_shape: Sequence[int], quantized_dim: int, block_size: int
 ) -> list[int]:

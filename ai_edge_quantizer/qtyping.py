@@ -67,6 +67,8 @@ class TFLOperationName(str, enum.Enum):
   MAX_POOL_2D = 'MAX_POOL_2D'
   RESIZE_BILINEAR = 'RESIZE_BILINEAR'
   GATHER_ND = 'GATHER_ND'
+  PACK = 'PACK'
+  UNPACK = 'UNPACK'
 
 
 class QuantizeMode(enum.Enum):
