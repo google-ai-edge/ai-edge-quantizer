@@ -188,7 +188,8 @@ DEFAULT_JSON_POLICY = """
       "MAX_POOL_2D",
       "RESIZE_BILINEAR",
       "GATHER_ND",
-      "PACK"
+      "PACK",
+      "UNPACK"
     ],
     "static_wi8_ai8": [
       "ADD",
@@ -225,7 +226,8 @@ DEFAULT_JSON_POLICY = """
       "MAX_POOL_2D",
       "RESIZE_BILINEAR",
       "GATHER_ND",
-      "PACK"
+      "PACK",
+      "UNPACK"
     ],
     "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
     "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],

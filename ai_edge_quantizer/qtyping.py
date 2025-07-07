@@ -68,6 +68,7 @@ class TFLOperationName(str, enum.Enum):
   RESIZE_BILINEAR = 'RESIZE_BILINEAR'
   GATHER_ND = 'GATHER_ND'
   PACK = 'PACK'
+  UNPACK = 'UNPACK'
 
 
 class QuantizeMode(enum.Enum):
