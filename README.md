@@ -146,3 +146,4 @@ The table below outlines the allowed configurations for available recipes.
 |MAX_POOL_2D      |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |RESIZE_BILINEAR  |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |GATHER_ND        |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|PACK             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |

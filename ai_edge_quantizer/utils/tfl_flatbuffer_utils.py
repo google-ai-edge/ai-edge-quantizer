@@ -61,6 +61,7 @@ TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
     _TFLOpName.MAX_POOL_2D: schema.BuiltinOperator.MAX_POOL_2D,
     _TFLOpName.RESIZE_BILINEAR: schema.BuiltinOperator.RESIZE_BILINEAR,
     _TFLOpName.GATHER_ND: schema.BuiltinOperator.GATHER_ND,
+    _TFLOpName.PACK: schema.BuiltinOperator.PACK,
 })
 
 TFL_OP_CODE_TO_NAME = immutabledict.immutabledict(
