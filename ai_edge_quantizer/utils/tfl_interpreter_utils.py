@@ -346,7 +346,7 @@ def _create_random_bool(
     dtype: np.dtype,
 ) -> dict[str, Any]:
   """Creates a random bool dataset sample for given input details."""
-  return rng.choice([True, False], size=shape, replace=False).astype(dtype)
+  return rng.choice([True, False], size=shape, replace=True).astype(dtype)
 
 
 def create_random_dataset(
