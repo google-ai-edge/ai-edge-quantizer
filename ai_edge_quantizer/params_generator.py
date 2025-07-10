@@ -78,8 +78,6 @@ class ParamsGenerator:
     skip_subgraphs = set()
     op_codes = self.flatbuffer_model.operatorCodes
     for sg_ind, subgraph in enumerate(self.flatbuffer_model.subgraphs):
-      if sg_ind in skip_subgraphs:
-        continue
 
       graph_info = qtyping.GraphInfo(
           subgraph.tensors, self.flatbuffer_model.buffers
@@ -109,7 +107,10 @@ class ParamsGenerator:
         algorithm_name, op_quant_config = (
             model_recipe_manager.get_quantization_configs(op_key, op_scope)
         )
-        if policy.is_non_quantizable_composite_op(op):
+
+        if sg_ind in skip_subgraphs or policy.is_non_quantizable_composite_op(
+            op
+        ):
           algorithm_name = algorithm_manager.AlgorithmName.NO_QUANTIZE
 
         if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
