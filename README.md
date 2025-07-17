@@ -148,3 +148,4 @@ The table below outlines the allowed configurations for available recipes.
 |GATHER_ND        |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |PACK             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |UNPACK           |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|DIV              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |

@@ -69,6 +69,7 @@ class TFLOperationName(str, enum.Enum):
   GATHER_ND = 'GATHER_ND'
   PACK = 'PACK'
   UNPACK = 'UNPACK'
+  DIV = 'DIV'
 
 
 class QuantizeMode(enum.Enum):
