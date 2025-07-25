@@ -27,6 +27,8 @@ from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorf
 
 DEFAULT_SIGNATURE_KEY = "serving_default"
 
+_Numeric = Union[int, float]
+
 
 def create_tfl_interpreter(
     tflite_model: Union[str, bytes],
@@ -329,6 +331,17 @@ def _create_random_normal(
   return rng.normal(size=shape).astype(dtype)
 
 
+def _create_random_uniform(
+    rng: np.random.Generator,
+    shape: tuple[int, ...],
+    dtype: np.dtype,
+    min_value: float = 0.0,
+    max_value: float = 1.0,
+) -> dict[str, Any]:
+  """Creates a random uniform dataset sample for given input details."""
+  return rng.uniform(min_value, max_value, size=shape).astype(dtype)
+
+
 def _create_random_integers(
     rng: np.random.Generator,
     shape: tuple[int, ...],
@@ -353,7 +366,7 @@ def create_random_dataset(
     input_details: dict[str, Any],
     num_samples: int,
     random_seed: Union[int, np._typing.ArrayLike],
-    int_min_max: Union[tuple[int, int], None] = None,
+    min_max_range: Optional[tuple[_Numeric, _Numeric]] = None,
 ) -> list[dict[str, Any]]:
   """Creates a random normal dataset for given input details.
 
@@ -361,7 +374,7 @@ def create_random_dataset(
     input_details: A dictionary of input details.
     num_samples: The number of samples to generate.
     random_seed: The random seed to use.
-    int_min_max: The min and max of the integer input range.
+    min_max_range: The min and max of the input range.
 
   Returns:
     A list of dictionaries, each containing a sample of input data (for all
@@ -375,15 +388,21 @@ def create_random_dataset(
       dtype = input_tensor["dtype"]
       shape = input_tensor["shape"]
       if dtype in (np.int32, np.int64):
-        if int_min_max is None:
+        if min_max_range is None:
           new_data = _create_random_integers(rng, shape, dtype)
         else:
-          min_value, max_value = int_min_max
+          min_value, max_value = min_max_range
           new_data = _create_random_integers(
               rng, shape, dtype, min_value, max_value
           )
       elif dtype in (np.float32, ml_dtypes.bfloat16):
-        new_data = _create_random_normal(rng, shape, dtype)
+        if min_max_range is None:
+          new_data = _create_random_normal(rng, shape, dtype)
+        else:
+          min_value, max_value = min_max_range
+          new_data = _create_random_uniform(
+              rng, shape, dtype, min_value, max_value
+          )
       elif dtype == np.bool:
         new_data = _create_random_bool(rng, shape, dtype)
       else:
@@ -397,7 +416,7 @@ def create_random_normal_input_data(
     tflite_model: Union[str, bytes],
     num_samples: int = 4,
     random_seed: int = 666,
-    int_min_max: Union[tuple[int, int], None] = None,
+    min_max_range: Optional[tuple[_Numeric, _Numeric]] = None,
 ) -> dict[str, list[dict[str, Any]]]:
   """Creates a random normal dataset for a signature runner.
 
@@ -405,7 +424,7 @@ def create_random_normal_input_data(
     tflite_model: TFLite model path or bytearray.
     num_samples: Number of input samples to be generated.
     random_seed: Random seed to be used for function.
-    int_min_max: The min and max of the integer input range.
+    min_max_range: The min and max of the input range.
 
   Returns:
     A list of inputs to the given interpreter, for a single interpreter we may
@@ -420,6 +439,9 @@ def create_random_normal_input_data(
     signature_runner = tfl_interpreter.get_signature_runner(signature_key)
     input_details = signature_runner.get_input_details()
     test_data[signature_key] = create_random_dataset(
-        input_details, num_samples, random_seed, int_min_max
+        input_details,
+        num_samples,
+        random_seed,
+        min_max_range,
     )
   return test_data

@@ -88,7 +88,7 @@ class GatherNdTest(test_utils.BaseOpTestCase):
         op_name=self._op_name,
         op_config=op_config,
         output_tolerance=output_tolerance,
-        int_min_max=(0, 2),
+        min_max_range=(0, 2),
     )
 
 
