@@ -71,6 +71,7 @@ class TFLOperationName(str, enum.Enum):
   UNPACK = 'UNPACK'
   DIV = 'DIV'
   BROADCAST_TO = 'BROADCAST_TO'
+  SQRT = 'SQRT'
 
 
 class QuantizeMode(enum.Enum):

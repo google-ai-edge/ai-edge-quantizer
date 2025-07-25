@@ -118,6 +118,7 @@ MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT = {
     _TFLOpName.UNPACK: common_quantize.materialize_unpack,
     _TFLOpName.DIV: common_quantize.materialize_div,
     _TFLOpName.BROADCAST_TO: common_quantize.materialize_broadcast_to,
+    _TFLOpName.SQRT: common_quantize.materialize_sqrt,
 }
 for op_name, materialize_func in MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT.items():
   register_quantized_op(
@@ -262,6 +263,7 @@ _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
     _TFLOpName.UNPACK: common_quantize.materialize_unpack,
     _TFLOpName.DIV: common_quantize.materialize_div,
     _TFLOpName.BROADCAST_TO: common_quantize.materialize_broadcast_to,
+    _TFLOpName.SQRT: common_quantize.materialize_sqrt,
 })
 
 for op_name, materialize_func in _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT.items():

@@ -826,6 +826,21 @@ def materialize_broadcast_to(
   )
 
 
+def materialize_sqrt(
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.sqrt."""
+  return common_utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      get_tensor_quant_params_fn,
+  )
+
+
 def _get_tensor_shape_for_blockwise(
     tensor_shape: Sequence[int], quantized_dim: int, block_size: int
 ) -> list[int]:

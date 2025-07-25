@@ -149,3 +149,4 @@ The table below outlines the allowed configurations for available recipes.
 |PACK             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |UNPACK           |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |DIV              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|SQRT             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
