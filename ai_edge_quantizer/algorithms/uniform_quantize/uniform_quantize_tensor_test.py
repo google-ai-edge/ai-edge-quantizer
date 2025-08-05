@@ -124,6 +124,14 @@ class TensorUtilsTest(parameterized.TestCase):
           [-24, 10, 19, 127],
       ),
       (
+          [-16.0, 1.3, 2.4, 16.0],
+          [0.12598425],
+          [0],
+          8,
+          True,
+          [-127, 10, 19, 127],  # int8 symmetric is narrow range, -127 to 127
+      ),
+      (
           [-3.0, 1.3, 2.4, 16.0],
           [1.2666667],
           [-6],
@@ -137,7 +145,7 @@ class TensorUtilsTest(parameterized.TestCase):
           [-6],
           4,
           True,
-          [-7, -5, -4, 7],
+          [-8, -5, -4, 7],  # int4 symmetric is not narrow range, -8 to 7
       ),
   )
   def test_uniform_quantize(

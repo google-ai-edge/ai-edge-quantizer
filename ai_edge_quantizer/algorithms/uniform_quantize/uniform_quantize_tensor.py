@@ -256,8 +256,15 @@ def uniform_quantize(
   inverse_scales = 1.0 / scales
   # TODO: b/332574603 - support unsigned data type.
   qtype = IntType(quantization_params.num_bits, signed=True)
-  # Symmetric means narrow range (e.g., -127 to 127)
-  narrow_range = quantization_params.symmetric
+  # For quantization with more than 8 bits, symmetric narrow-range quantization
+  # is required due to assumptions made by legacy TFLite kernels. However, this
+  # method is not ideal for low-bit quantization (e.g., 2-bit quantization,
+  # which only has 4 bins), as it wastes a bin and there are no kernel
+  # requirements for a narrow range when < 8 bits because the data is unpacked
+  # to int8 before being used in the kernel.
+  narrow_range = (
+      quantization_params.symmetric and quantization_params.num_bits >= 8
+  )
   required_dtype = np.signedinteger if qtype.signed else np.unsignedinteger
   if not np.issubdtype(zero_points.dtype, required_dtype):
     raise ValueError(
