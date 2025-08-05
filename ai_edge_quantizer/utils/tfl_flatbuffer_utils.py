@@ -66,6 +66,7 @@ TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
     _TFLOpName.DIV: schema.BuiltinOperator.DIV,
     _TFLOpName.BROADCAST_TO: schema.BuiltinOperator.BROADCAST_TO,
     _TFLOpName.SQRT: schema.BuiltinOperator.SQRT,
+    _TFLOpName.GATHER: schema.BuiltinOperator.GATHER,
 })
 
 TFL_OP_CODE_TO_NAME = immutabledict.immutabledict(

@@ -192,7 +192,8 @@ DEFAULT_JSON_POLICY = """
       "UNPACK",
       "DIV",
       "BROADCAST_TO",
-      "SQRT"
+      "SQRT",
+      "GATHER"
     ],
     "static_wi8_ai8": [
       "ADD",
@@ -233,7 +234,8 @@ DEFAULT_JSON_POLICY = """
       "UNPACK",
       "DIV",
       "BROADCAST_TO",
-      "SQRT"
+      "SQRT",
+      "GATHER"
     ],
     "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
     "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
