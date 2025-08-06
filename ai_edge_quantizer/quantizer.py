@@ -18,8 +18,10 @@
 from collections.abc import Iterable
 import dataclasses
 import json
+import logging
 import os
 from typing import Any, Optional, Union
+
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import default_policy
@@ -32,6 +34,7 @@ from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
 from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
+
 
 # Expose algorithm names to users.
 AlgorithmName = algorithm_manager.AlgorithmName
@@ -67,19 +70,17 @@ class QuantizationResult:
 
     Raises:
       RuntimeError: If no quantized model is available.
-      FileExistsError: If the model already exists in the folder.
     """
-    if self.quantized_model is None:
-      raise RuntimeError(
-          'No quantized model to save. Make sure .quantize() is called.'
-      )
+    if not gfile.Exists(save_folder):
+      gfile.MakeDirs(save_folder)
+
     model_save_path = os.path.join(save_folder, f'{model_name}.tflite')
     if gfile.Exists(model_save_path):
-      raise FileExistsError(
-          f'The model {model_save_path} already exists in the folder.'
+      logging.warning(
+          'The model %s already exists in the folder. Overwriting the model.',
+          model_save_path,
       )
-    with gfile.GFile(model_save_path, 'wb') as output_file_handle:
-      output_file_handle.write(self.quantized_model)
+    self.export_model(model_save_path)
 
     recipe = json.dumps(self.recipe)
     recipe_save_path = os.path.join(save_folder, model_name + '_recipe.json')
@@ -204,6 +205,90 @@ class Quantizer:
     """
     self._recipe_manager.add_quantization_config(
         regex, operation_name, op_config, algorithm_key
+    )
+
+  def add_dynamic_range_config(
+      self,
+      regex: str,
+      operation_name: _TFLOpName,
+      num_bits: int,
+      granularity: qtyping.QuantGranularity = qtyping.QuantGranularity.CHANNELWISE,
+      algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+  ):
+    """Adds a dynamic range quantization configuration to the recipe.
+
+    During dynamic range quantization, activations are not processed by AEQ and
+    remain in float format. The runtime kernel is expected to quantize these
+    activations on-the-fly, as indicated by compute_precision=Integer and
+    explicit_dequantize=False. The model quality may suffer due to the
+    on-the-fly quantization. If quality is a concern, consider using weight-only
+    quantization.
+
+    Args:
+      regex: Regular expression for layer name matching.
+      operation_name: Target TFLite operation.
+      num_bits: Number of bits for quantization.
+      granularity: Granularity of quantization.
+      algorithm_key: Algorithm key to be applied.
+    """
+    weight_config = qtyping.TensorQuantizationConfig(
+        num_bits=num_bits,
+        symmetric=True,  # TFL kernels only support symmetric quantized weights.
+        granularity=granularity,
+    )
+    self.update_quantization_recipe(
+        regex,
+        operation_name,
+        op_config=_OpQuantizationConfig(
+            weight_tensor_config=weight_config,
+            compute_precision=qtyping.ComputePrecision.INTEGER,
+            explicit_dequantize=False,
+        ),
+        algorithm_key=algorithm_key,
+    )
+
+  def add_weight_only_config(
+      self,
+      regex: str,
+      operation_name: _TFLOpName,
+      num_bits: int,
+      granularity: qtyping.QuantGranularity = qtyping.QuantGranularity.CHANNELWISE,
+      algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+  ):
+    """Adds a weight only quantization configuration to the recipe.
+
+    In weight-only quantization, weights are quantized, but the actual operation
+    (op) computation remains in float. The quantized weight is explicitly
+    dequantized before being fed into the op. This is achieved by inserting a
+    dequantize op between the quantized weight and the consuming op. To enable
+    this, both compute_precision will be set to Float and explicit_dequantize to
+    True. Weight-only quantization is useful for reducing model size but may
+    not decrease latency due to float computation. However, quantized model
+    generally has better quality than other quantization options (e.g., dynamic
+    range quantization) due to no loss of precision on activations. If latency
+    is a concern, consider using dynamic range quantization.
+
+    Args:
+      regex: Regular expression for layer name matching.
+      operation_name: Target TFLite operation.
+      num_bits: Number of bits for quantization.
+      granularity: Granularity of quantization.
+      algorithm_key: Algorithm key to be applied.
+    """
+    weight_config = qtyping.TensorQuantizationConfig(
+        num_bits=num_bits,
+        symmetric=True,  # TFL kernels only support symmetric quantized weights.
+        granularity=granularity,
+    )
+    self.update_quantization_recipe(
+        regex,
+        operation_name,
+        op_config=_OpQuantizationConfig(
+            weight_tensor_config=weight_config,
+            compute_precision=qtyping.ComputePrecision.FLOAT,
+            explicit_dequantize=True,
+        ),
+        algorithm_key=algorithm_key,
     )
 
   @property
