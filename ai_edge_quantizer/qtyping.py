@@ -73,6 +73,7 @@ class TFLOperationName(str, enum.Enum):
   BROADCAST_TO = 'BROADCAST_TO'
   SQRT = 'SQRT'
   GATHER = 'GATHER'
+  HARD_SWISH = 'HARD_SWISH'
 
 
 class QuantizeMode(enum.Enum):

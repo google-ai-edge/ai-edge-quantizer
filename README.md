@@ -151,3 +151,4 @@ The table below outlines the allowed configurations for available recipes.
 |DIV              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |SQRT             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |GATHER           |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|HARD_SWISH       |     |     |    |     |<div align="center"> &check; </div>|    |    |    |

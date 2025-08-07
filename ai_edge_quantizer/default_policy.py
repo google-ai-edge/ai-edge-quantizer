@@ -235,7 +235,8 @@ DEFAULT_JSON_POLICY = """
       "DIV",
       "BROADCAST_TO",
       "SQRT",
-      "GATHER"
+      "GATHER",
+      "HARD_SWISH"
     ],
     "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
     "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],

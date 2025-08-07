@@ -841,6 +841,21 @@ def materialize_sqrt(
   )
 
 
+def materialize_hard_swish(
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.hard_swish."""
+  return common_utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      get_tensor_quant_params_fn,
+  )
+
+
 def materialize_gather(
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
     op_info: qtyping.OpInfo,
