@@ -18,8 +18,10 @@
 from collections.abc import Iterable
 import dataclasses
 import json
+import logging
 import os
 from typing import Any, Optional, Union
+
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import default_policy
@@ -57,49 +59,61 @@ class QuantizationResult:
   recipe: _QuantRecipe
   quantized_model: Optional[bytearray]
 
-  def save(self, save_folder: str, model_name: str) -> None:
+  def save(
+      self, save_folder: str, model_name: str, overwrite: bool = False
+  ) -> None:
     """Saves the quantized model and the quantization recipe.
 
     Args:
       save_folder: Path to the folder to save the quantized model and the
         quantization recipe.
       model_name: Name of the model.
+      overwrite: Whether to overwrite the model if it already exists.
 
     Raises:
       RuntimeError: If no quantized model is available.
-      FileExistsError: If the model already exists in the folder.
     """
-    if self.quantized_model is None:
-      raise RuntimeError(
-          'No quantized model to save. Make sure .quantize() is called.'
-      )
-    model_save_path = os.path.join(save_folder, f'{model_name}.tflite')
-    if gfile.Exists(model_save_path):
-      raise FileExistsError(
-          f'The model {model_save_path} already exists in the folder.'
-      )
-    with gfile.GFile(model_save_path, 'wb') as output_file_handle:
-      output_file_handle.write(self.quantized_model)
+    if not gfile.Exists(save_folder):
+      gfile.MakeDirs(save_folder)
 
-    recipe = json.dumps(self.recipe)
+    model_save_path = os.path.join(save_folder, f'{model_name}.tflite')
+    self.export_model(model_save_path, overwrite)
+
     recipe_save_path = os.path.join(save_folder, model_name + '_recipe.json')
+    recipe = json.dumps(self.recipe)
     with gfile.GFile(recipe_save_path, 'w') as output_file_handle:
       output_file_handle.write(recipe)
 
-  def export_model(self, filepath: str) -> None:
+  def export_model(self, filepath: str, overwrite: bool = False) -> None:
     """Exports the quantized model to a .tflite flatbuffer.
 
     Args:
       filepath: Path (including file name) that the exported model should be
         serialized to.
+      overwrite: Whether to overwrite the model if it already exists.
 
     Raises:
       RuntimeError: If no quantized model is available.
+      ValueError: If the model already exists in the folder and overwrite is
+        False.
     """
     if self.quantized_model is None:
       raise RuntimeError(
           'No quantized model to save. Make sure .quantize() is called.'
       )
+    if gfile.Exists(filepath):
+      if overwrite:
+        logging.warning(
+            'The model %s already exists in the folder. Overwriting the model'
+            ' since overwrite=True.',
+            filepath,
+        )
+      else:
+        raise ValueError(
+            f'The model {filepath} already exists in the folder. Please'
+            ' consider change the model name or specify overwrite=True to'
+            ' overwrite the model if needed.'
+        )
     with gfile.GFile(filepath, 'wb') as output_file_handle:
       output_file_handle.write(self.quantized_model)
 
