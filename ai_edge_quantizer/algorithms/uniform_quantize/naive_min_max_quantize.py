@@ -166,6 +166,7 @@ def min_max_calibrate(
     tensor_content_map: dict[str, np.ndarray],
     inputs_to_ignore: Optional[list[int]] = None,
     outputs_to_ignore: Optional[list[int]] = None,
+    valid_range: tuple[float, float] = (-3e38, 3e38),
 ) -> dict[str, qtyping.QSV]:
   """Collect quantization statistics variable (QSV, e.g., min/max) for the op.
 
@@ -175,11 +176,18 @@ def min_max_calibrate(
     tensor_content_map: A map of tensor name to tensor content.
     inputs_to_ignore: Input tensor indices to ignore.
     outputs_to_ignore: Output tensor indices to ignore.
+    valid_range: The valid range for tensor content, excluding the boundaries.
+      Tensor values outside this range are ignored during calibration. Defaults
+      to an approximate bfloat16 range. This range is chosen to address issues
+      with `padv2` where a bfloat16 -inf padding constant can cause problems.
+      Values exceeding this range can lead to quantization issues and are
+      therefore excluded from min/max calibration.
 
   Returns:
     A dictionary with key as tensor name and value as the collected QSV.
   """
   op_qsvs = {}
+  min_val, max_val = valid_range
 
   def _collect_activation_tensor_min_max(tensor_idx):
     tensor = graph_info.subgraph_tensors[tensor_idx]
@@ -191,9 +199,16 @@ def min_max_calibrate(
       return
     tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
     tensor_content = tensor_content_map[tensor_name]
+    qsv_shape = (1,) * tensor_content.ndim
+    filter_mask = (tensor_content > min_val) & (tensor_content < max_val)
+    if np.any(filter_mask):
+      tensor_content = tensor_content[filter_mask]
+    # Reshape is needed to ensure the scalar min/max have the same number of
+    # dimensions as the input tensor array, for compatibility with subsequent
+    # operations.
     op_qsvs[tensor_name] = {
-        "min": np.min(tensor_content, axis=None, keepdims=True),
-        "max": np.max(tensor_content, axis=None, keepdims=True),
+        "min": np.min(tensor_content, axis=None).reshape(qsv_shape),
+        "max": np.max(tensor_content, axis=None).reshape(qsv_shape),
     }
 
   inputs_to_ignore = inputs_to_ignore or []

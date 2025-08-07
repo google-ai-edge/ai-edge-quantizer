@@ -200,6 +200,41 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     self.assertEqual(quant_params.block_size, 2)
     self.assertEqual(quant_params.quantized_dimension, 1)
 
+  def test_calibrate_ignores_inf_min_max(self):
+    """Tests that calibration ignores infinity values."""
+    # Sample input/output data for the fc op.
+    input_tensor_name = "sequential/flatten/Reshape"
+    output_tensor_name = (
+        "sequential/dense/MatMul;sequential/dense/Relu;sequential/dense/BiasAdd"
+    )
+    bloat16_inf = 3.39e38
+    tensor_content_map = {
+        input_tensor_name: np.array(
+            [[-np.inf, 1.0, 5.0, np.inf, bloat16_inf]], dtype=np.float32
+        ),
+        output_tensor_name: np.array(
+            [[6.0, 7.0, -bloat16_inf, 9.0, np.inf]], dtype=np.float32
+        ),
+    }
+    # Read from Model Explorer.
+    subgraph0 = self._test_model.subgraphs[0]
+    fc_op = subgraph0.operators[3]
+    op_qsvs = naive_min_max_quantize.min_max_calibrate(
+        fc_op,
+        self._graph_info,
+        tensor_content_map,
+        inputs_to_ignore=[1, 2],  # Ignore weight and bias.
+        outputs_to_ignore=[],
+    )
+
+    self.assertIn(input_tensor_name, op_qsvs)
+    self.assertEqual(op_qsvs[input_tensor_name]["min"], 1.0)
+    self.assertEqual(op_qsvs[input_tensor_name]["max"], 5.0)
+
+    self.assertIn(output_tensor_name, op_qsvs)
+    self.assertEqual(op_qsvs[output_tensor_name]["min"], 6.0)
+    self.assertEqual(op_qsvs[output_tensor_name]["max"], 9.0)
+
 
 if __name__ == "__main__":
   googletest.main()
