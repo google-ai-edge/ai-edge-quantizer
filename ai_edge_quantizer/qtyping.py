@@ -74,6 +74,7 @@ class TFLOperationName(str, enum.Enum):
   SQRT = 'SQRT'
   GATHER = 'GATHER'
   HARD_SWISH = 'HARD_SWISH'
+  MAXIMUM = 'MAXIMUM'
 
 
 class QuantizeMode(enum.Enum):

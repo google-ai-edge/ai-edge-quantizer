@@ -121,6 +121,7 @@ MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT = {
     _TFLOpName.SQRT: common_quantize.materialize_sqrt,
     _TFLOpName.GATHER: common_quantize.materialize_gather,
     _TFLOpName.HARD_SWISH: common_quantize.materialize_hard_swish,
+    _TFLOpName.MAXIMUM: common_quantize.materialize_maximum,
 }
 for op_name, materialize_func in MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT.items():
   register_quantized_op(
@@ -268,6 +269,7 @@ _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
     _TFLOpName.SQRT: common_quantize.materialize_sqrt,
     _TFLOpName.GATHER: common_quantize.materialize_gather,
     _TFLOpName.HARD_SWISH: common_quantize.materialize_hard_swish,
+    _TFLOpName.MAXIMUM: common_quantize.materialize_maximum,
 })
 
 for op_name, materialize_func in _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT.items():

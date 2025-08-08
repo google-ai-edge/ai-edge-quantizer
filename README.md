@@ -152,3 +152,4 @@ The table below outlines the allowed configurations for available recipes.
 |SQRT             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |GATHER           |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |HARD_SWISH       |     |     |    |     |<div align="center"> &check; </div>|    |    |    |
+|MAXIMUM          |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |

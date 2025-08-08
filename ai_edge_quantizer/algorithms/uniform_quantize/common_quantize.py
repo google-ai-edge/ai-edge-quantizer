@@ -762,6 +762,22 @@ def materialize_gather_nd(
   )
 
 
+def materialize_maximum(
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.maximum."""
+  return common_utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      get_tensor_quant_params_fn,
+      constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
+  )
+
+
 def materialize_pack(
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
     op_info: qtyping.OpInfo,
