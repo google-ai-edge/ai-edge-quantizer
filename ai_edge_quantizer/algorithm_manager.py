@@ -102,6 +102,7 @@ MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT = {
     _TFLOpName.LOGISTIC: common_quantize.materialize_softmax_and_logistic,
     _TFLOpName.SLICE: common_quantize.materialize_slice,
     _TFLOpName.SUM: common_quantize.materialize_sum,
+    _TFLOpName.SELECT: common_quantize.materialize_select,
     _TFLOpName.SELECT_V2: common_quantize.materialize_select_v2,
     _TFLOpName.DYNAMIC_UPDATE_SLICE: (
         common_quantize.materialize_dynamic_update_slice
@@ -250,6 +251,7 @@ _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
     _TFLOpName.LOGISTIC: common_quantize.materialize_softmax_and_logistic,
     _TFLOpName.SLICE: common_quantize.materialize_slice,
     _TFLOpName.SUM: common_quantize.materialize_sum,
+    _TFLOpName.SELECT: common_quantize.materialize_select,
     _TFLOpName.SELECT_V2: common_quantize.materialize_select_v2,
     _TFLOpName.DYNAMIC_UPDATE_SLICE: (
         common_quantize.materialize_dynamic_update_slice

@@ -51,6 +51,7 @@ TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
     _TFLOpName.LOGISTIC: schema.BuiltinOperator.LOGISTIC,
     _TFLOpName.SLICE: schema.BuiltinOperator.SLICE,
     _TFLOpName.SUM: schema.BuiltinOperator.SUM,
+    _TFLOpName.SELECT: schema.BuiltinOperator.SELECT,
     _TFLOpName.SELECT_V2: schema.BuiltinOperator.SELECT_V2,
     _TFLOpName.STABLEHLO_COMPOSITE: schema.BuiltinOperator.STABLEHLO_COMPOSITE,
     _TFLOpName.DYNAMIC_UPDATE_SLICE: (
