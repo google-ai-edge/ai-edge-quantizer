@@ -387,22 +387,37 @@ def tensor_zp_scale_from_min_max(
   )
   qmin, qmax = get_quantized_range(qtype)
   min_bound = 1e-4  # 1e-6 precision for int8 and 1e-8 for int16.
+  pos_clipping_values = None if clipping_values is None else clipping_values
+  neg_clipping_values = None if clipping_values is None else -clipping_values
 
   if granularity == qtyping.QuantGranularity.BLOCKWISE:
-    # Blockwise quantization uses float16 scale, with 7 bit mantissa,
-    # so the maximum representable value is 65280.
-    float16_max = np.broadcast_to(np.array(65280), min_value.shape)
-    clipping_values = (
+    # Blockwise quantization uses float16 scale,
+    # with 7 bit mantissa, so the maximum scale value is 65280 and maximum
+    # representable range is [-65280 * (2 ** num_bits),
+    # 65280 * (2 ** num_bits - 1)].
+    # Note that we have one extra value on the negative side.
+    float16_max = np.broadcast_to(
+        np.array(65280) * (2**num_bits - 1), max_value.shape
+    )
+    float16_min = np.broadcast_to(
+        np.array(-65280) * (2**num_bits), min_value.shape
+    )
+    pos_clipping_values = (
         float16_max
-        if clipping_values is None
-        else np.minimum(clipping_values, float16_max)
+        if pos_clipping_values is None
+        else np.minimum(pos_clipping_values, float16_max)
+    )
+    neg_clipping_values = (
+        float16_min
+        if neg_clipping_values is None
+        else np.maximum(neg_clipping_values, float16_min)
     )
 
   if symmetric:
     bound = np.maximum(np.abs(min_value), np.abs(max_value))
     bound = np.maximum(bound, min_bound)
     if clipping_values is not None:
-      bound = np.clip(bound, -clipping_values, clipping_values)
+      bound = np.clip(bound, neg_clipping_values, pos_clipping_values)
     if not qtype.signed:
       half_q = (qmax - 1) / 2
       scale = bound / half_q
