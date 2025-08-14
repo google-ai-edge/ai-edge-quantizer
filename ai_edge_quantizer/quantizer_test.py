@@ -92,6 +92,76 @@ class QuantizerTest(parameterized.TestCase):
         new_op_config.compute_precision,
     )
 
+  def test_add_dynamic_config_succeeds(self):
+    self._quantizer.load_quantization_recipe(self._test_recipe_path)
+    scope_regex = '.*/Dense/.*'
+    self._quantizer.add_dynamic_config(
+        regex=scope_regex,
+        operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
+        num_bits=8,
+    )
+    updated_recipe = self._quantizer.get_quantization_recipe()
+    self.assertLen(updated_recipe, 2)
+
+    added_config = updated_recipe[-1]
+    self.assertEqual(added_config['regex'], scope_regex)
+    self.assertEqual(
+        added_config['op_config']['compute_precision'],
+        qtyping.ComputePrecision.INTEGER,
+    )
+    self.assertFalse(added_config['op_config']['explicit_dequantize'])
+    self.assertEqual(
+        added_config['op_config']['weight_tensor_config']['num_bits'], 8
+    )
+
+  def test_add_weight_only_config_succeeds(self):
+    self._quantizer.load_quantization_recipe(self._test_recipe_path)
+    scope_regex = '.*/Dense/.*'
+    self._quantizer.add_weight_only_config(
+        regex=scope_regex,
+        operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
+        num_bits=4,
+    )
+    updated_recipe = self._quantizer.get_quantization_recipe()
+    self.assertLen(updated_recipe, 2)
+
+    added_config = updated_recipe[-1]
+    self.assertEqual(added_config['regex'], scope_regex)
+    self.assertEqual(
+        added_config['op_config']['compute_precision'],
+        qtyping.ComputePrecision.FLOAT,
+    )
+    self.assertTrue(added_config['op_config']['explicit_dequantize'])
+    self.assertEqual(
+        added_config['op_config']['weight_tensor_config']['num_bits'], 4
+    )
+
+  def test_add_static_config_succeeds(self):
+    self._quantizer.load_quantization_recipe(self._test_recipe_path)
+    scope_regex = '.*/Dense/.*'
+    self._quantizer.add_static_config(
+        regex=scope_regex,
+        operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
+        activation_num_bits=8,
+        weight_num_bits=4,
+    )
+    updated_recipe = self._quantizer.get_quantization_recipe()
+    self.assertLen(updated_recipe, 2)
+
+    added_config = updated_recipe[-1]
+    self.assertEqual(added_config['regex'], scope_regex)
+    self.assertEqual(
+        added_config['op_config']['compute_precision'],
+        qtyping.ComputePrecision.INTEGER,
+    )
+    self.assertFalse(added_config['op_config']['explicit_dequantize'])
+    self.assertEqual(
+        added_config['op_config']['activation_tensor_config']['num_bits'], 8
+    )
+    self.assertEqual(
+        added_config['op_config']['weight_tensor_config']['num_bits'], 4
+    )
+
   def test_load_quantization_recipe_succeeds(self):
     qt = quantizer.Quantizer(self._test_model_path, None)
     qt.load_quantization_recipe(self._test_recipe_path)

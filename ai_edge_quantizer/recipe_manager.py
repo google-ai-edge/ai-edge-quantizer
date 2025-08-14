@@ -243,3 +243,146 @@ class RecipeManager:
       ):
         return True
     return False
+
+  def add_dynamic_config(
+      self,
+      regex: str,
+      operation_name: _TFLOpName,
+      num_bits: int,
+      granularity: qtyping.QuantGranularity = qtyping.QuantGranularity.CHANNELWISE,
+      algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+  ):
+    """Adds a dynamic quantization configuration to the recipe.
+
+    During dynamic quantization, activations are not processed by AEQ and
+    remain in float format. The runtime kernel is expected to quantize these
+    activations on-the-fly, as indicated by compute_precision=Integer and
+    explicit_dequantize=False.
+
+    The model quality may suffer due to the on-the-fly quantization. If quality
+    is a concern, consider using weight-only
+    quantization.
+
+    Args:
+      regex: Regular expression for layer name matching.
+      operation_name: Target TFLite operation.
+      num_bits: Number of bits for quantization.
+      granularity: Granularity of quantization.
+      algorithm_key: Algorithm key to be applied.
+    """
+    weight_config = qtyping.TensorQuantizationConfig(
+        num_bits=num_bits,
+        symmetric=True,  # LiteRT kernels only support symmetric quantized weights.
+        granularity=granularity,
+    )
+    self.add_quantization_config(
+        regex,
+        operation_name,
+        op_config=_OpQuantizationConfig(
+            weight_tensor_config=weight_config,
+            compute_precision=qtyping.ComputePrecision.INTEGER,
+            explicit_dequantize=False,
+        ),
+        algorithm_key=algorithm_key,
+    )
+
+  def add_weight_only_config(
+      self,
+      regex: str,
+      operation_name: _TFLOpName,
+      num_bits: int,
+      granularity: qtyping.QuantGranularity = qtyping.QuantGranularity.CHANNELWISE,
+      algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+  ):
+    """Adds a weight only quantization configuration to the recipe.
+
+    In weight-only quantization, weights are quantized, but the actual operation
+    (op) computation remains in float. The quantized weight is explicitly
+    dequantized before being fed into the op. This is achieved by inserting a
+    dequantize op between the quantized weight and the consuming op. To enable
+    this, both compute_precision will be set to Float and explicit_dequantize to
+    True.
+
+    Weight-only quantization is useful for reducing model size but may
+    not decrease latency due to float computation. However, quantized model
+    generally has better quality than other quantization options (e.g., dynamic
+    range quantization) due to no loss of precision on activations. If latency
+    is a concern, consider using dynamic quantization.
+
+    Args:
+      regex: Regular expression for layer name matching.
+      operation_name: Target TFLite operation.
+      num_bits: Number of bits for quantization.
+      granularity: Granularity of quantization.
+      algorithm_key: Algorithm key to be applied.
+    """
+    weight_config = qtyping.TensorQuantizationConfig(
+        num_bits=num_bits,
+        symmetric=True,  # TFL kernels only support symmetric quantized weights.
+        granularity=granularity,
+    )
+    self.add_quantization_config(
+        regex,
+        operation_name,
+        op_config=_OpQuantizationConfig(
+            weight_tensor_config=weight_config,
+            compute_precision=qtyping.ComputePrecision.FLOAT,
+            explicit_dequantize=True,
+        ),
+        algorithm_key=algorithm_key,
+    )
+
+  def add_static_config(
+      self,
+      regex: str,
+      operation_name: _TFLOpName,
+      activation_num_bits: int,
+      weight_num_bits: int,
+      weight_granularity: qtyping.QuantGranularity = qtyping.QuantGranularity.CHANNELWISE,
+      algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+  ):
+    """Adds a static range quantization configuration to the recipe.
+
+    In static quantization, both weights and activations are quantized. This
+    requires a calibration step to determine the quantization parameters (e.g.,
+    min/max ranges) for activations. The quantized model uses integer arithmetic
+    for computations, which can lead to significant latency reductions.
+
+    However, calibration is needed to determine the quantization parameters for
+    activations, which requires sample data and may lead to quality loss. If
+    there is no hardware requirement for full integer quantization, consider
+    using dynamic quantization for simplicity.
+
+    Args:
+      regex: Regular expression for layer name matching.
+      operation_name: Target TFLite operation.
+      activation_num_bits: Number of bits for activation quantization.
+      weight_num_bits: Number of bits for weight quantization.
+      weight_granularity: Granularity of weight quantization.
+      algorithm_key: Algorithm key to be applied.
+    """
+    if activation_num_bits not in [16, 8]:
+      raise ValueError(
+          'Activation quantization is only supported for 16 or 8 bits.'
+      )
+    # INT16 is symmetric and INT8 is asymmetric due to LiteRT kernel limitations.
+    activation_symmetric = activation_num_bits == 16
+    activation_config = qtyping.TensorQuantizationConfig(
+        num_bits=activation_num_bits, symmetric=activation_symmetric
+    )
+    weight_config = qtyping.TensorQuantizationConfig(
+        num_bits=weight_num_bits,
+        symmetric=True,  # TFL kernels only support symmetric quantized weights.
+        granularity=weight_granularity,
+    )
+    self.add_quantization_config(
+        regex,
+        operation_name,
+        op_config=_OpQuantizationConfig(
+            activation_tensor_config=activation_config,
+            weight_tensor_config=weight_config,
+            compute_precision=qtyping.ComputePrecision.INTEGER,
+            explicit_dequantize=False,
+        ),
+        algorithm_key=algorithm_key,
+    )

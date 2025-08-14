@@ -293,6 +293,50 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     # DRQ check.
     self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
 
+  def test_add_dynamic_config(self):
+    self._recipe_manager.add_dynamic_config(
+        regex='.*/Dense/.*',
+        operation_name=_TFLOpName.FULLY_CONNECTED,
+        num_bits=8,
+    )
+    alg_key, op_config = self._recipe_manager.get_quantization_configs(
+        _TFLOpName.FULLY_CONNECTED, 'model/Dense/op'
+    )
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
+    self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
+    self.assertFalse(op_config.explicit_dequantize)
+    self.assertIsNone(op_config.activation_tensor_config)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
+    self.assertEqual(weight_tensor_config.num_bits, 8)
+    self.assertTrue(weight_tensor_config.symmetric)
+    self.assertEqual(
+        weight_tensor_config.granularity,
+        _QuantGranularity.CHANNELWISE,
+    )
+
+  def test_add_weight_only_config(self):
+    self._recipe_manager.add_weight_only_config(
+        regex='.*/Dense/.*',
+        operation_name=_TFLOpName.FULLY_CONNECTED,
+        num_bits=4,
+    )
+    alg_key, op_config = self._recipe_manager.get_quantization_configs(
+        _TFLOpName.FULLY_CONNECTED, 'model/Dense/op'
+    )
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
+    self.assertEqual(op_config.compute_precision, _ComputePrecision.FLOAT)
+    self.assertTrue(op_config.explicit_dequantize)
+    self.assertIsNone(op_config.activation_tensor_config)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
+    self.assertEqual(weight_tensor_config.num_bits, 4)
+    self.assertTrue(weight_tensor_config.symmetric)
+    self.assertEqual(
+        weight_tensor_config.granularity,
+        _QuantGranularity.CHANNELWISE,
+    )
+
   def test_set_full_integer_quantization_config(self):
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
     # Full integer setting is global
