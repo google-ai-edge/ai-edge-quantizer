@@ -71,7 +71,32 @@ _\"**Uniformly quantize** the **FullyConnected op** under scope **'dense1/'** wi
 
 All the unspecified ops will be kept as FP32 (unquantized). The scope of an operator in TFLite is defined as the output tensor name of the op, which preserves the hierarchical model information from the source model (e.g., scope in TF). The best way to obtain scope name is by visualizing the model with [Model Explorer](https://ai.google.dev/edge/model-explorer).
 
-The simplest recipe to get started with is using existing recipes from [recipe.py](ai_edge_quantizer/recipe.py). This is demonstrated in the [getting started colab](colabs/getting_started.ipynb) example.
+Currently, there are three ways to quantize an operator:
+
+* **dynamic quantization (recommended)**: weights are quantized while activations
+  remain in a float format and are not processed by AEQ. The runtime kernel
+  handles the on-the-fly quantization of these activations, as identified by
+  `compute_precision=integer` and `explicit_dequantize=False`.
+  * Pros: reduced model size and memory usage. Latency improvement due to integer computation. No sample data requirement (calibration).
+  * Cons: on-the-fly quantization of activation tensors can affect model quality; Not supported in all hardware (e.g., some GPU and NPU).
+
+* **weight only quantization**: only model weights are quantized, not activations. The
+  actual operation (op) computation remains in float (integer computation in dynamic
+  quantization). The quantized weight is explicitly dequantized before being fed into
+  the op, by inserting a dequantize op between the quantized weight and the consuming
+  op. To enable this, `compute_precision` will be set to `float` and
+  `explicit_dequantize` to `True`.
+  * Pros: reduced model size and memory usage. No sample data requirement (calibration). Usually has the best model quality.
+  * Cons: no latency benefit (may worse) due to float computation with explicit dequantization.
+
+* **static quantization**: both weights and activations are quantized. This requires a calibration phase to estimate quantization parameters of runtime tensors (activations).
+  * Pros: reduced model size, memory usage, and latency.
+  * Cons: requires sample data for calibration. Imposing static quantization parameters (derived from calibration) on runtime tensors can compromise quality.
+
+Generally, we recommend dynamic quantization for CPU/GPU deployment and static
+quantization for NPU deployment.
+
+We include common used recipes in [recipe.py](ai_edge_quantizer/recipe.py). This is demonstrated in the [getting started colab](colabs/getting_started.ipynb) example. Advanced users can build their own recipe through the quantizer API.
 
 #### Deployment
 Please refer to the [LiteRT deployment documentation](https://ai.google.dev/edge/litert/inference) for ways to deploy a quantized LiteRT model.
