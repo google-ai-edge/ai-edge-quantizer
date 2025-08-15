@@ -295,10 +295,11 @@ def _materialize_standard_op_with_same_as_input_scale(
   op_tensor_params.append(input_tensor_params)
   # Use input quantization params for all output tensors but without
   # quantized_data in case the input is a constant tensor.
-  input_quant_params = dataclasses.replace(
-      input_tensor_params.consumers[0].parameters,
-      quantized_data=None,
-  )
+  input_quant_params = input_tensor_params.consumers[0].parameters
+  if input_quant_params is not None:
+    input_quant_params = dataclasses.replace(
+        input_quant_params, quantized_data=None
+    )
   if not isinstance(input_quant_params, qtyping.UniformQuantParams):
     raise ValueError(
         "_materialize_standard_op_with_same_as_input_scale only supports"
