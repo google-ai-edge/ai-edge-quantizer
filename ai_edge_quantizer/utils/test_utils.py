@@ -189,8 +189,8 @@ class BaseOpTestCase(parameterized.TestCase):
       op_name: _OpName,
       op_config: _OpQuantConfig,
       expected_model_size_reduction: float,
-      weight_tolerance: float = 1e-3,
-      output_tolerance: float = 1e-3,
+      weight_tolerance: float = 1e-4,
+      output_tolerance: float = 1e-4,
       min_max_range: Optional[tuple[_Numeric, _Numeric]] = None,
   ):
     """Check if the quantization is successful and the result is valid."""
