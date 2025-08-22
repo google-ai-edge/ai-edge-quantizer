@@ -30,7 +30,7 @@ DOCLINES = __doc__.split("\n")
 name = "ai-edge-quantizer"
 # The next version of ai-edge-quantizer.
 # The minor version code should be bumped after every release.
-version = "0.3.0"
+version = "0.4.0"
 if nightly_release_date := os.environ.get("NIGHTLY_RELEASE_DATE"):
   name += "-nightly"
   version += ".dev" + nightly_release_date
@@ -70,7 +70,7 @@ setuptools.setup(
     install_requires=[
         "immutabledict",
         "numpy",
-        "tf-nightly>=2.17.0.dev20240509",
-        "ai-edge-litert-nightly",
+        "ai-edge-tensorflow==2.21.0.dev20250818",
+        "ai-edge-litert==1.4.*",
     ],
 )
