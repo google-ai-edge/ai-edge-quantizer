@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install papermill tensorflow-cpu ipykernel jupyter matplotlib torchvision scikit-image
+          python -m pip install papermill jupyter matplotlib torchvision scikit-image
 
       - name: Run Colab notebook
         run: |
