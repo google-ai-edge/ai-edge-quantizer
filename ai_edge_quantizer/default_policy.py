@@ -266,7 +266,11 @@ DEFAULT_JSON_POLICY = """
   }
 }
 """
-QUANTIZABLE_COMPOSITES = ["od" + "ml.npu_call", "od" + "ml.rms_norm"]
+QUANTIZABLE_COMPOSITES = [
+    "od" + "ml.npu_call",
+    "od" + "ml.rms_norm",
+    "od" + "ml.l2_norm",
+]
 
 
 def _unroll_json_config(
