@@ -20,13 +20,11 @@ from typing import Any, Union
 
 import numpy as np
 
-from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import qtyping
-from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.utils import common_utils
+from ai_edge_quantizer.utils import constrained_ops_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
-from ai_edge_litert import schema_py_generated as schema_fb  # pylint: disable=g-direct-tensorflow-import
 from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
 
 
@@ -133,7 +131,11 @@ class CalibrationQsvAlignmentUtils:
   """
 
   def __init__(self, model_path: str):
-    self._same_as_input_scale_ops = []
+    self._same_as_input_scale_ops = (
+        constrained_ops_utils.get_constrained_op_list(
+            _OpQuantConstraint.SAME_AS_INPUT_SCALE
+        )
+    )
 
     tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(model_path)
     self._flatbuffer_object = tfl_flatbuffer_utils.read_model(model_path)
@@ -145,87 +147,6 @@ class CalibrationQsvAlignmentUtils:
     for signature_key in signature_keys:
       signature_runner = tfl_interpreter.get_signature_runner(signature_key)
       self._signature_runners[signature_key] = signature_runner
-
-    # Make a list of `SAME_AS_INPUT_SCALE` operators. This is used to identify
-    # the operators that need to be constrained to the same scale as the input.
-    self._build_same_as_input_scale_op_list()
-
-  def _build_same_as_input_scale_op_list(self, verbose: bool = False):
-    """Constructs a list of SAME_AS_INPUT_SCALE operators.
-
-    This is achieved by invoking all materialization functions and extracting
-    the constraint argument, using monkey patching to redirect logic to wrapper
-    functions.
-
-    Args:
-      verbose: Flag to enable verbose output.
-    """
-
-    def materialize_standard_op_wrapper(
-        op_info: qtyping.OpInfo,
-        *_args,
-        constraint: _OpQuantConstraint = _OpQuantConstraint.NO_CONSTRAIN,
-        **_kwargs,
-    ) -> list[qtyping.TensorTransformationParams]:
-      if constraint == _OpQuantConstraint.SAME_AS_INPUT_SCALE:
-        self._same_as_input_scale_ops.append(op_info.op_name)
-      # Return dummy values to avoid exceptions.
-      dummy_value = [qtyping.TensorTransformationParams("")] * 2
-      return dummy_value
-
-    # Dummy implementation of the `_are_weights_too_small` function to support
-    # `materialize_standard_op_wrapper` above.
-    def are_weights_too_small_wrapper(*_args, **_kwargs) -> bool:
-      return False
-
-    # Dummy implementation of the `_materialize_bias_for_conv_ops` function to
-    # support `materialize_standard_op_wrapper` above.
-    def materialize_bias_for_conv_ops_wrapper(*_args, **_kwargs):
-      return
-
-    # Do monkey patch to intercept the `materialize_standard_op` function to
-    # support `materialize_standard_op_wrapper` above.
-    original_materialize_standard_op = common_utils.materialize_standard_op
-    original_are_weights_too_small = common_quantize._are_weights_too_small  # pylint: disable=protected-access
-    original_materialize_bias_for_conv_ops = (
-        common_quantize._materialize_bias_for_conv_ops  # pylint: disable=protected-access
-    )
-    common_utils.materialize_standard_op = materialize_standard_op_wrapper
-    common_quantize._are_weights_too_small = are_weights_too_small_wrapper  # pylint: disable=protected-access
-    common_quantize._materialize_bias_for_conv_ops = (  # pylint: disable=protected-access
-        materialize_bias_for_conv_ops_wrapper
-    )
-    minmax_func_dict = algorithm_manager.MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT
-
-    # Loop over all available materialization functions to build up a list of
-    # `SAME_AS_INPUT_SCALE` constrained ops.
-    for op, materialize_fn in minmax_func_dict.items():
-      # Create a dummy op info to trigger the materialization.
-      mock_op = schema_fb.OperatorT()
-      mock_op.inputs = [0]
-      mock_op.outputs = [0]
-      op_info = qtyping.OpInfo(
-          op=mock_op,
-          op_name=op,
-          subgraph_op_index=0,
-          op_quant_config=qtyping.OpQuantizationConfig(),
-      )
-      materialize_fn(
-          get_tensor_quant_params_fn=None,
-          op_info=op_info,
-          graph_info=None,
-          tensor_name_to_qsv=None,
-      )
-
-    if verbose:
-      print(f"  Constrained op list: {self._same_as_input_scale_ops}")
-
-    # Restore the original functions.
-    common_utils.materialize_standard_op = original_materialize_standard_op
-    common_quantize._are_weights_too_small = original_are_weights_too_small  # pylint: disable=protected-access
-    common_quantize._materialize_bias_for_conv_ops = (  # pylint: disable=protected-access
-        original_materialize_bias_for_conv_ops
-    )
 
   def _search_tensor_by_signature_name(
       self, signature_key: str, signature_input_output_name: str, verbose=False

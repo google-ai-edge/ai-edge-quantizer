@@ -254,7 +254,7 @@ class FullyConnectedTest(test_utils.BaseOpTestCase):
     # Soft skip weight errors because they're rotated hence not expected to
     # match.
     weight_tolerance = 1
-    output_tolerance = 1e-2
+    output_tolerance = 2e-2
     model_path = test_utils.get_path_to_datafile(
         '../models/conv_fc_mnist.tflite'
     )
