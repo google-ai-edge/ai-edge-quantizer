@@ -15,7 +15,9 @@
 
 """Tests for instruction_generator."""
 
+from collections.abc import Sequence
 import os
+from typing import Optional
 
 import numpy as np
 
@@ -1335,6 +1337,167 @@ class InstructionGeneratorTest(parameterized.TestCase):
       instruction_gen._check_tensor_transformation_instructions_valid(
           tensor_instructions
       )
+
+
+class EliminateUnnecessaryRequantizationTest(parameterized.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    self.ins_gen = instruction_generator.TransformationInstructionsGenerator(
+        os.path.join(TEST_DATA_PREFIX_PATH, "tests/models/conv_fc_mnist.tflite")
+    )
+
+  def _get_test_instruction(
+      self,
+      transformation: qtyping.QuantTransformation,
+      producer: int = -1,
+      consumers: Optional[Sequence[int]] = None,
+      qparams: Optional[qtyping.UniformQuantParams] = None,
+  ) -> qtyping.TransformationInst:
+    if consumers is None:
+      consumers = []
+    if qparams is None:
+      qparams = qtyping.UniformQuantParams(
+          num_bits=8,
+          quantized_dimension=None,
+          scale=np.array([1]),
+          zero_point=np.array([0]),
+      )
+    return qtyping.TransformationInst(
+        transformation=transformation,
+        producer=producer,
+        consumers=consumers,
+        parameters=qparams,
+        # Dummy values below.
+        tensor_id=0,
+    )
+
+  def _create_test_insts(
+      self, instructions: list[qtyping.TransformationInst]
+  ) -> qtyping.TensorTransformationInsts:
+    return qtyping.TensorTransformationInsts(
+        tensor_name="test_tensor", subgraph_id=0, instructions=instructions
+    )
+
+  def test_no_fusion_when_too_few_instructions(self):
+    tensor_insts = self._create_test_insts([
+        self._get_test_instruction(_QTransf.QUANTIZE_TENSOR),
+    ])
+    self.ins_gen._eliminate_requantization_for_nonconstrained_provider(
+        tensor_insts
+    )
+    self.assertLen(tensor_insts.instructions, 1)
+
+  def test_no_fusion_when_too_many_instructions(self):
+    tensor_insts = self._create_test_insts([
+        self._get_test_instruction(_QTransf.QUANTIZE_TENSOR),
+        self._get_test_instruction(_QTransf.ADD_QUANTIZE),
+        self._get_test_instruction(_QTransf.ADD_DEQUANTIZE),
+    ])
+    self.ins_gen._eliminate_requantization_for_nonconstrained_provider(
+        tensor_insts
+    )
+    self.assertLen(tensor_insts.instructions, 3)
+
+  def test_no_fusion_when_invalid_transformation_pair(self):
+    tensor_insts = self._create_test_insts([
+        self._get_test_instruction(_QTransf.ADD_DEQUANTIZE),
+        self._get_test_instruction(_QTransf.ADD_QUANTIZE),
+    ])
+    self.ins_gen._eliminate_requantization_for_nonconstrained_provider(
+        tensor_insts
+    )
+    self.assertLen(tensor_insts.instructions, 2)
+
+  def test_no_fusion_when_consumers_mismatch(self):
+    tensor_insts = self._create_test_insts([
+        self._get_test_instruction(_QTransf.QUANTIZE_TENSOR, consumers=[0]),
+        self._get_test_instruction(_QTransf.ADD_QUANTIZE, consumers=[1]),
+    ])
+    self.ins_gen._eliminate_requantization_for_nonconstrained_provider(
+        tensor_insts
+    )
+    self.assertLen(tensor_insts.instructions, 2)
+
+  def test_no_fusion_when_no_producer(self):
+    producer = -1
+    tensor_insts = self._create_test_insts([
+        self._get_test_instruction(_QTransf.QUANTIZE_TENSOR, producer),
+        self._get_test_instruction(_QTransf.ADD_QUANTIZE, producer),
+    ])
+    self.ins_gen._eliminate_requantization_for_nonconstrained_provider(
+        tensor_insts
+    )
+    self.assertLen(tensor_insts.instructions, 2)
+
+  def test_no_fusion_when_quant_params_are_incompatible(self):
+    params_8_bits = qtyping.UniformQuantParams(
+        8, None, np.array([1]), np.array([0])
+    )
+    params_16_bits = qtyping.UniformQuantParams(
+        16, None, np.array([1]), np.array([0])
+    )
+    tensor_insts = self._create_test_insts([
+        self._get_test_instruction(
+            _QTransf.QUANTIZE_TENSOR, qparams=params_8_bits
+        ),
+        self._get_test_instruction(
+            _QTransf.ADD_QUANTIZE, qparams=params_16_bits
+        ),
+    ])
+    self.ins_gen._eliminate_requantization_for_nonconstrained_provider(
+        tensor_insts
+    )
+    self.assertLen(tensor_insts.instructions, 2)
+
+  def test_no_fusion_when_producer_constrained(self):
+    # Reshape op (op index 2) has same as input scale constraint.
+    tensor_insts = self._create_test_insts([
+        self._get_test_instruction(_QTransf.QUANTIZE_TENSOR, producer=2),
+        self._get_test_instruction(_QTransf.ADD_QUANTIZE, producer=2),
+    ])
+    self.ins_gen._eliminate_requantization_for_nonconstrained_provider(
+        tensor_insts
+    )
+    self.assertLen(tensor_insts.instructions, 2)
+
+  def test_fusion_succeeds(self):
+    producer = 0
+    consumers = [1]
+    params_0 = qtyping.UniformQuantParams(
+        num_bits=8,
+        quantized_dimension=None,
+        scale=np.array([1]),
+        zero_point=np.array([0]),
+    )
+    params_1 = qtyping.UniformQuantParams(
+        num_bits=8,
+        quantized_dimension=None,
+        scale=np.array([2]),
+        zero_point=np.array([1]),
+    )
+    inst_0 = self._get_test_instruction(
+        _QTransf.QUANTIZE_TENSOR, producer, consumers, params_0
+    )
+    inst_1 = self._get_test_instruction(
+        _QTransf.ADD_QUANTIZE, producer, consumers, params_1
+    )
+    tensor_insts = self._create_test_insts([inst_0, inst_1])
+    self.ins_gen._eliminate_requantization_for_nonconstrained_provider(
+        tensor_insts
+    )
+
+    self.assertLen(tensor_insts.instructions, 1)
+    result_inst = tensor_insts.instructions[0]
+    self.assertEqual(result_inst.transformation, _QTransf.QUANTIZE_TENSOR)
+
+    result_params = result_inst.parameters
+    # Explicitly narrow the type for pytype.
+    if not isinstance(result_params, qtyping.UniformQuantParams):
+      self.fail("Fused instruction parameters are not UniformQuantParams")
+
+    self.assertEqual(result_params.scale, params_1.scale)
+    self.assertEqual(result_params.zero_point, params_1.zero_point)
 
 
 if __name__ == "__main__":

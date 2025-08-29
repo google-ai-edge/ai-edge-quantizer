@@ -23,10 +23,13 @@ from collections.abc import Iterator
 import dataclasses
 from typing import Optional
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.algorithms.utils import common_utils
+from ai_edge_quantizer.utils import constrained_ops_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
+_OpQuantConstraint = common_utils.OpQuantConstraint
 _QuantTransformation = qtyping.QuantTransformation
 
 
@@ -165,6 +168,16 @@ class TransformationInstructionsGenerator:
     else:
       self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
       self._create_tensor_name_to_graph_info_map()
+    self._same_as_input_scale_ops = (
+        constrained_ops_utils.get_constrained_op_list(
+            _OpQuantConstraint.SAME_AS_INPUT_SCALE
+        )
+    )
+    self._same_as_output_scale_ops = (
+        constrained_ops_utils.get_constrained_op_list(
+            _OpQuantConstraint.SAME_AS_OUTPUT_SCALE
+        )
+    )
 
   @dataclasses.dataclass(frozen=True)
   class TensorGraphInfo:
@@ -506,6 +519,89 @@ class TransformationInstructionsGenerator:
       ):
         instructions.pop(i)
 
+  def _is_valid_quantize_requantize_pair(
+      self,
+      instr_0: qtyping.TransformationInst,
+      instr_1: qtyping.TransformationInst,
+  ) -> bool:
+    """Checks if the two instructions form a valid quantize and requantize pair."""
+    return (
+        instr_0.transformation == _QuantTransformation.QUANTIZE_TENSOR
+        and instr_1.transformation == _QuantTransformation.ADD_QUANTIZE
+        and instr_0.consumers == instr_1.consumers
+    )
+
+  def _is_op_constrained(
+      self, subgraph_id: int, op_index: int
+  ) -> bool:
+    """Checks if the op has same as input or output scale constraints."""
+    op_name = tfl_flatbuffer_utils.get_op_name_by_index(
+        self.flatbuffer_model, subgraph_id, op_index
+    )
+    return (
+        op_name in self._same_as_input_scale_ops
+        or op_name in self._same_as_output_scale_ops
+    )
+
+  def _are_quant_params_compatible(
+      self,
+      params_0: qtyping.UniformQuantParams,
+      params_1: qtyping.UniformQuantParams,
+  ) -> bool:
+    """Checks if quant params are the same except for the scale and zero point."""
+    ignore_set = {"scale", "zero_point"}
+    for field_info in dataclasses.fields(qtyping.UniformQuantParams):
+      field_name = field_info.name
+      if field_name in ignore_set:
+        continue
+      if getattr(params_0, field_name) != getattr(params_1, field_name):
+        return False
+    return True
+
+  def _eliminate_requantization_for_nonconstrained_provider(
+      self, tensor_trans_insts: qtyping.TensorTransformationInsts
+  ) -> None:
+    """Removes requantization for tensors with a non-constrained provider.
+
+    Fuses [QUANTIZE_TENSOR, ADD_QUANTIZE] instructions when a tensor has a
+    provider op without same as input/ouput scale constrains. Quant params from
+    the second instruction are copied to the first one and ADD_QUANTIZE is
+    removed.
+
+    Args:
+      tensor_trans_insts: Transformation instructions for a tensor.
+    """
+    instructions = tensor_trans_insts.instructions
+    if instructions is None or len(instructions) != 2:
+      return
+
+    instr_0, instr_1 = instructions
+    params_0 = instr_0.parameters
+    params_1 = instr_1.parameters
+    producer_op_index = instr_0.producer
+    if (
+        not isinstance(params_0, qtyping.UniformQuantParams)
+        or not isinstance(params_1, qtyping.UniformQuantParams)
+        or not self._is_valid_quantize_requantize_pair(instr_0, instr_1)
+        or not self._are_quant_params_compatible(params_0, params_1)
+        # To avoid fusion when subgraph inputs connected to the main subgraph
+        # (e.g. while_body), we skip all tensors with no producer.
+        or producer_op_index == -1
+        # Can't apply fusion to tensors with a constrained producer since that
+        # will break the constraint.
+        or self._is_op_constrained(
+            tensor_trans_insts.subgraph_id, producer_op_index
+        )
+    ):
+      return
+
+    # Fuse the quantize and requantize.
+    instr_0.parameters = dataclasses.replace(
+        params_0, scale=params_1.scale, zero_point=params_1.zero_point
+    )
+    # Remove the requantize instruction.
+    instructions.pop(1)
+
   def _quant_params_to_transformation_insts(
       self,
       param: qtyping.TensorTransformationParams,
@@ -577,6 +673,12 @@ class TransformationInstructionsGenerator:
     # Check the generated transformation instructions are valid, the function
     # will raise an error if the instructions are not valid.
     self._check_tensor_transformation_instructions_valid(tensor_trans_insts)
+
+    # Remove unnecessary [QUANTIZE_TENSOR, ADD_QUANTIZE] pairs for tensors with
+    # providers without same as input/output scale constraints.
+    self._eliminate_requantization_for_nonconstrained_provider(
+        tensor_trans_insts
+    )
 
     return tensor_trans_insts
 

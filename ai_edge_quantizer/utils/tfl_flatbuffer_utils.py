@@ -342,3 +342,12 @@ def get_op_side_effect_subgraphs(
     return [opts.decompositionSubgraphIndex]
   # Can add other nested ops here (control flow ops, etc).
   return []
+
+
+def get_op_name_by_index(
+    flatbuffer_model: Any, subgraph_id: int, op_index: int
+) -> str:
+  """Get the op name from the flatbuffer model."""
+  op = flatbuffer_model.subgraphs[subgraph_id].operators[op_index]
+  builtin_code = flatbuffer_model.operatorCodes[op.opcodeIndex].builtinCode
+  return TFL_OP_CODE_TO_NAME[builtin_code]
