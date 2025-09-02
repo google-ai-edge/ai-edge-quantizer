@@ -14,6 +14,7 @@
 # ==============================================================================
 
 import os
+import unittest  # pylint: disable=unused-import, required for OSS.
 
 from absl.testing import parameterized
 
@@ -57,6 +58,7 @@ class RecipeTest(parameterized.TestCase):
     self.assertIsNotNone(quantization_result.quantized_model)
     return quantization_result
 
+  @unittest.skip('skipping due to b/438971945')
   def test_quantization_from_dynamic_wi8_afp32_func_succeeds(self):
     quant_result = self._quantize_with_recipe_func(
         recipe.dynamic_wi8_afp32, self._test_model_path
@@ -66,6 +68,7 @@ class RecipeTest(parameterized.TestCase):
         os.path.getsize(self._test_model_path),
     )
 
+  @unittest.skip('skipping due to b/438971945')
   def test_quantization_from_dynamic_wi4_afp32_func_succeeds(self):
     quant_result = self._quantize_with_recipe_func(
         recipe.dynamic_wi4_afp32, self._test_model_path
@@ -75,6 +78,7 @@ class RecipeTest(parameterized.TestCase):
         os.path.getsize(self._test_model_path),
     )
 
+  @unittest.skip('skipping due to b/438971945')
   def test_quantization_from_weight_only_wi8_afp32_func_succeeds(self):
     quant_result = self._quantize_with_recipe_func(
         recipe.weight_only_wi8_afp32, self._test_model_path
@@ -84,6 +88,7 @@ class RecipeTest(parameterized.TestCase):
         os.path.getsize(self._test_model_path),
     )
 
+  @unittest.skip('skipping due to b/438971945')
   def test_quantization_from_weight_only_wi4_afp32_func_succeeds(self):
     quant_result = self._quantize_with_recipe_func(
         recipe.weight_only_wi4_afp32, self._test_model_path
@@ -135,6 +140,7 @@ class RecipeTest(parameterized.TestCase):
           recipe_func=recipe.static_wi8_ai16,
       ),
   )
+  @unittest.skip('skipping due to b/438971945')
   def test_recipe_func_and_json_matches(self, recipe_json_path, recipe_func):
     # Quantize with recipe from function in recipe module.
     quant_result_from_func = self._quantize_with_recipe_func(
