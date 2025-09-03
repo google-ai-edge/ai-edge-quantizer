@@ -70,7 +70,7 @@ setuptools.setup(
     install_requires=[
         "immutabledict",
         "numpy",
-        "ai-edge-tensorflow==2.21.0.dev20250818",
-        "ai-edge-litert==1.4.*",
+        "tf-nightly",
+        "ai-edge-litert-nightly",
     ],
 )
