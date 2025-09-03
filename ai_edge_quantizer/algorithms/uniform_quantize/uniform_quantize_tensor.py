@@ -143,6 +143,11 @@ def _get_tensor_shape_for_blockwise(
   new_shape = []
   for index, val in enumerate(tensor_shape):
     if index == quantized_dim:
+      if val % block_size != 0:
+        raise ValueError(
+            f"Quantized dimension {val} in tensor shape {tensor_shape} is not"
+            f" divisible by block size {block_size}."
+        )
       new_shape.append(int(val / block_size))
       new_shape.append(block_size)
     else:
