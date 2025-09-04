@@ -259,6 +259,60 @@ def _get_single_tensor_params(
   )
 
 
+def _materialize_tensors_with_quantized_data_update(
+    op_tensor_params: list[qtyping.TensorTransformationParams],
+    tensors: Sequence[Any],
+    quant_params: Optional[qtyping.UniformQuantParams],
+    is_inbounding_tensor: bool,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+) -> None:
+  """Materialize a list of tensors with `quantized_data` updated when needed.
+
+  Args:
+    op_tensor_params: Tensor transformation parameters for the op. Will be
+      modified to include new tensor parameters.
+    tensors: Tensors to be materialized.
+    quant_params: The quantization parameters to be used for materialization.
+    is_inbounding_tensor: Whether the tensor is an inbounding tensor for the op.
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    get_tensor_quant_params_fn: Function to get quantization parameters for the
+      tensor.
+  """
+  if quant_params is not None and quant_params.quantized_data is not None:
+    quant_params = dataclasses.replace(quant_params, quantized_data=None)
+
+  for tensor in tensors:
+    tensor_data = tfl_flatbuffer_utils.get_tensor_data(
+        tensor, graph_info.buffers
+    )
+    if quant_params is None or tensor_data is None:
+      tensor_quant_params = quant_params
+    else:
+      # Constant tensors require updating `quantized_data`.
+      quantized_data = uniform_quantize_tensor.uniform_quantize(
+          tensor_data, quant_params
+      )
+      tensor_quant_params = dataclasses.replace(
+          quant_params,
+          quantized_data=quantized_data,
+      )
+    _materialize_op_tensors(
+        op_tensor_params,
+        [tensor],
+        is_inbounding_tensor=is_inbounding_tensor,
+        op_info=op_info,
+        graph_info=graph_info,
+        tensor_name_to_qsv=tensor_name_to_qsv,
+        get_tensor_quant_params_fn=get_tensor_quant_params_fn,
+        quant_params=tensor_quant_params,
+    )
+
+
 def _materialize_standard_op_with_same_as_input_scale(
     input_tensors: Sequence[Any],
     output_tensors: Sequence[Any],
@@ -293,45 +347,24 @@ def _materialize_standard_op_with_same_as_input_scale(
       get_tensor_quant_params_fn=get_tensor_quant_params_fn,
   )
   op_tensor_params.append(input_tensor_params)
-  # Use input quantization params for all output tensors but without
-  # quantized_data in case the input is a constant tensor.
-  input_quant_params = dataclasses.replace(
-      input_tensor_params.consumers[0].parameters,
-      quantized_data=None,
-  )
+  # Use input quantization params for all output tensors.
+  input_quant_params = input_tensor_params.consumers[0].parameters
   if not isinstance(input_quant_params, qtyping.UniformQuantParams):
     raise ValueError(
         "_materialize_standard_op_with_same_as_input_scale only supports"
         f" UniformQuantParams. For tensor {input_tensor_params.tensor_name},"
         f" got {type(input_quant_params)}"
     )
-  # Materialize each of the output tensors separately in case there are
-  # constants among them, requiring updating `quantized_data` first.
-  for output_tensor in output_tensors:
-    output_tensor_data = tfl_flatbuffer_utils.get_tensor_data(
-        output_tensor, graph_info.buffers
-    )
-    # Quantize constant inputs' data with the output quantization params.
-    if output_tensor_data is None:
-      quant_params = input_quant_params
-    else:
-      quantized_data = uniform_quantize_tensor.uniform_quantize(
-          output_tensor_data, input_quant_params
-      )
-      quant_params = dataclasses.replace(
-          input_quant_params,
-          quantized_data=quantized_data,
-      )
-    _materialize_op_tensors(
-        op_tensor_params,
-        [output_tensor],
-        is_inbounding_tensor=False,
-        op_info=op_info,
-        graph_info=graph_info,
-        tensor_name_to_qsv=tensor_name_to_qsv,
-        get_tensor_quant_params_fn=get_tensor_quant_params_fn,
-        quant_params=quant_params,
-    )
+  _materialize_tensors_with_quantized_data_update(
+      op_tensor_params,
+      output_tensors,
+      input_quant_params,
+      is_inbounding_tensor=False,
+      op_info=op_info,
+      graph_info=graph_info,
+      tensor_name_to_qsv=tensor_name_to_qsv,
+      get_tensor_quant_params_fn=get_tensor_quant_params_fn,
+  )
 
   # Change output qsv to be the same as input qsv. This is safe since TFL
   # subgraph is acyclic.
@@ -379,19 +412,26 @@ def _materialize_standard_op_with_same_as_output_scale(
   )
   # Use output quantization params for all input tensors.
   if output_tensor_params.producer is None:
-    quant_params = None
+    output_quant_params = None
   else:
-    quant_params = output_tensor_params.producer.parameters
-  _materialize_op_tensors(
+    output_quant_params = output_tensor_params.producer.parameters
+    if not isinstance(output_quant_params, qtyping.UniformQuantParams):
+      raise ValueError(
+          "_materialize_standard_op_with_same_as_output_scale only supports"
+          f" UniformQuantParams. For tensor {output_tensor_params.tensor_name},"
+          f" got {type(output_quant_params)}"
+      )
+  _materialize_tensors_with_quantized_data_update(
       op_tensor_params,
       input_tensors,
+      output_quant_params,
       is_inbounding_tensor=True,
       op_info=op_info,
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
       get_tensor_quant_params_fn=get_tensor_quant_params_fn,
-      quant_params=quant_params,
   )
+
   op_tensor_params.append(output_tensor_params)
 
   return op_tensor_params
