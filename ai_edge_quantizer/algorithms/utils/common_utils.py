@@ -41,6 +41,7 @@ _DRQ_OR_WEIGHT_ONLY_OPS = frozenset([
 
 _SUPPORTED_SUBCHANNEL_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
+    _TFLOpName.EMBEDDING_LOOKUP,
 ])
 
 
