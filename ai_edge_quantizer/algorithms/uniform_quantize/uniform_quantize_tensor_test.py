@@ -15,8 +15,11 @@
 
 """Tests for tensor_utils."""
 
+import dataclasses
+
 from absl.testing import parameterized
 import numpy as np
+
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
@@ -276,7 +279,10 @@ class TensorUtilsTest(parameterized.TestCase):
       )
 
   @parameterized.parameters(
-      (8, 8, True, True), (8, 4, False, True), (16, 8, True, False)
+      (8, 8, True, True),
+      (8, 4, False, True),
+      (16, 8, True, False),
+      (16, 8, True, True),
   )
   def test_quantize_bias_tensor(
       self,
@@ -334,6 +340,26 @@ class TensorUtilsTest(parameterized.TestCase):
     self.assertSequenceAlmostEqual(
         list(dequantized_bias.flatten()), list(bias_tensor_data), places=5
     )
+
+    if activation_num_bits == 16:
+      # Check if it is safe to cast int64 bias to int32. We save the int32
+      # quantized bias as int64 if the input tensor is quantized to 16 bits.
+      # This is to assume the matmul is using int64 accumulator (safe from
+      # overflow). For accelerators with int32 accumulator, it is safe to cast
+      # int64 back to int32.
+      quantized_bias = bias_quant_config.quantized_data
+      self.assertIsNotNone(quantized_bias)
+      self.assertEqual(quantized_bias.dtype, np.int64)
+      self.assertSequenceEqual(
+          list(quantized_bias.flatten()),
+          list(quantized_bias.astype(np.int32).flatten()),
+      )
+
+      bias_quant_config = dataclasses.replace(
+          bias_quant_config,
+          num_bits=32,
+      )
+
     expected_quantized_data = uniform_quantize_tensor.uniform_quantize(
         bias_tensor_data, bias_quant_config
     )
@@ -341,6 +367,30 @@ class TensorUtilsTest(parameterized.TestCase):
         list(expected_quantized_data.flatten()),
         list(bias_quant_config.quantized_data.flatten()),  # pytype: disable=attribute-error
     )
+
+  def test_quantize_bias_tensor_raises_error_for_large_quantization_error(self):
+    input_quant_config = qtyping.UniformQuantParams(
+        scale=np.array([0.1]),
+        zero_point=np.array([10]),
+        num_bits=8,
+        symmetric=False,
+        quantized_dimension=None,
+    )
+    weight_quant_config = qtyping.UniformQuantParams(
+        scale=np.array([0.1]),
+        zero_point=np.array([-1]),
+        num_bits=8,
+        symmetric=True,
+        quantized_dimension=None,
+    )
+    # This will result in quantized bias of 3e9, which is larger than int32 max.
+    bias_tensor_data = np.array([3e7])
+    with self.assertRaises(ValueError):
+      uniform_quantize_tensor.symmetric_quantize_bias_tensor(
+          bias_tensor_data,
+          input_quant_config,
+          weight_quant_config,
+      )
 
   @parameterized.parameters((8, True), (16, False))
   def test_tensor_zp_scale_from_min_max(self, num_bits, symmetric):
