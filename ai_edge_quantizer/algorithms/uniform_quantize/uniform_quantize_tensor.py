@@ -305,6 +305,7 @@ def symmetric_quantize_bias_tensor(
     bias_content: np.ndarray,
     input_tensor_quant_params: qtyping.UniformQuantParams,
     weight_tensor_quant_params: qtyping.UniformQuantParams,
+    check_error: bool = True,
 ) -> qtyping.UniformQuantParams:
   """Quantize bias tensor (symmetrically, i.e., zero_point = 0).
 
@@ -316,6 +317,11 @@ def symmetric_quantize_bias_tensor(
     bias_content: The bias content.
     input_tensor_quant_params: The quantization parameters of input tensor.
     weight_tensor_quant_params: The quantization parameters of weight tensor.
+    check_error: Whether to check if the error of bias quantization. This is
+      important since bias quantization paramters are fixed (i.e., bias_scale =
+      input_scale * weight_scale). We assume the quantization error should be
+      smaller than the quantization scale (i.e., covers the range), and raise
+      error if not to avoid unexpected numerical issues.
 
   Returns:
     The quantized bias tensor.
@@ -330,7 +336,8 @@ def symmetric_quantize_bias_tensor(
 
   # symmetric
   bias_zp = np.zeros_like(effective_output_scale, dtype=np.int32)
-  bias_number_bits = 64 if input_tensor_quant_params.num_bits == 16 else 32
+  # Fixed to 32 bits since most of the accelerators use int32 accumulator.
+  bias_number_bits = 32
   symmetric = True
   quantized_dimension = None if len(effective_output_scale) == 1 else 0
   bias_quant_params = qtyping.UniformQuantParams(
@@ -342,6 +349,21 @@ def symmetric_quantize_bias_tensor(
   )
 
   quantized_vars = uniform_quantize(bias_content, bias_quant_params)
+  if check_error:
+    dequantized_bias = uniform_dequantize(quantized_vars, bias_quant_params)
+    quantization_error = np.abs(dequantized_bias - bias_content)
+    if np.any(quantization_error > effective_output_scale):
+      raise ValueError(
+          "Quantization error is too large for bias tensor quantization."
+      )
+
+  # Save the int32 quantized bias as int64 if the input tensor is quantized to
+  # 16 bits. This is to assume the matmul is using int64 accumulator (safe from
+  # overflow). For accelerators with int32 accumulator, it is safe to cast int64
+  # back to int32.
+  if input_tensor_quant_params.num_bits == 16:
+    quantized_vars = quantized_vars.astype(np.int64)
+    bias_number_bits = 64
 
   # UniformQuantParams is frozen dataclass, need to recreate.
   return qtyping.UniformQuantParams(

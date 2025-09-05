@@ -309,13 +309,28 @@ def _materialize_bias_for_conv_ops(
           bias_tensor,
           graph_info.buffers,
       )
-      bias_quant_params = (
-          uniform_quantize_tensor.symmetric_quantize_bias_tensor(
-              bias_content,
-              op_tensor_params[op_input_index].consumers[0].parameters,
-              op_tensor_params[op_weight_index].consumers[0].parameters,
-          )
+      input_consumer_params = (
+          op_tensor_params[op_input_index].consumers[0].parameters
       )
+      weight_consumer_params = (
+          op_tensor_params[op_weight_index].consumers[0].parameters
+      )
+      try:
+        # Bias quantization is using fixed quantization scale:
+        # input_scale * weight_scale. To avoid hidden numerics error, we check
+        # the quantization error in bias quantization.
+        bias_quant_params = (
+            uniform_quantize_tensor.symmetric_quantize_bias_tensor(
+                bias_content,
+                input_consumer_params,
+                weight_consumer_params,
+            )
+        )
+      except ValueError as e:
+        raise ValueError(
+            f"Failed to quantize bias tensor for op {op_info.op_name} with op"
+            f" id {op_info.subgraph_op_index}."
+        ) from e
     # We only quantize bias under SRQ. Setting is_constant=True for SRQ only
     # to avoid quantize bias for DRQ and weight-only cases.
     is_constant = (
