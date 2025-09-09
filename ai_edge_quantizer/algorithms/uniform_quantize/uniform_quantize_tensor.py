@@ -305,6 +305,7 @@ def symmetric_quantize_bias_tensor(
     bias_content: np.ndarray,
     input_tensor_quant_params: qtyping.UniformQuantParams,
     weight_tensor_quant_params: qtyping.UniformQuantParams,
+    check_error: bool = True,
 ) -> qtyping.UniformQuantParams:
   """Quantize bias tensor (symmetrically, i.e., zero_point = 0).
 
@@ -316,6 +317,12 @@ def symmetric_quantize_bias_tensor(
     bias_content: The bias content.
     input_tensor_quant_params: The quantization parameters of input tensor.
     weight_tensor_quant_params: The quantization parameters of weight tensor.
+    check_error: Whether to check if the quantization error (the difference
+      between the original and dequantized bias) is larger than the quantization
+      scale. This check is important because bias quantization parameters are
+      fixed (bias_scale = input_scale * weight_scale), which can lead to large
+      quantization errors. Raising an error when the quantization error is
+      larger than the scale helps to identify unexpected numerical issues.
 
   Returns:
     The quantized bias tensor.
@@ -343,6 +350,14 @@ def symmetric_quantize_bias_tensor(
   )
 
   quantized_vars = uniform_quantize(bias_content, bias_quant_params)
+  if check_error:
+    dequantized_bias = uniform_dequantize(quantized_vars, bias_quant_params)
+    quantization_error = np.abs(dequantized_bias - bias_content)
+    if np.any(quantization_error > effective_output_scale):
+      raise ValueError(
+          "Quantization error is too large for bias tensor quantization."
+      )
+
   # Save the int32 quantized bias as int64 if the input tensor is quantized to
   # 16 bits. This is to assume the matmul is using int64 accumulator (safe from
   # overflow). For accelerators with int32 accumulator, it is safe to cast int64

@@ -352,7 +352,7 @@ class TensorUtilsTest(parameterized.TestCase):
       self.assertEqual(quantized_bias.dtype, np.int64)
       self.assertSequenceEqual(
           list(quantized_bias.flatten()),
-          list(quantized_bias.astype(np.int32).flatten()),  # pytype: disable=attribute-error
+          list(quantized_bias.astype(np.int32).flatten()),
       )
 
       bias_quant_config = dataclasses.replace(
@@ -367,6 +367,30 @@ class TensorUtilsTest(parameterized.TestCase):
         list(expected_quantized_data.flatten()),
         list(bias_quant_config.quantized_data.flatten()),  # pytype: disable=attribute-error
     )
+
+  def test_quantize_bias_tensor_raises_error_for_large_quantization_error(self):
+    input_quant_config = qtyping.UniformQuantParams(
+        scale=np.array([0.1]),
+        zero_point=np.array([10]),
+        num_bits=8,
+        symmetric=False,
+        quantized_dimension=None,
+    )
+    weight_quant_config = qtyping.UniformQuantParams(
+        scale=np.array([0.1]),
+        zero_point=np.array([-1]),
+        num_bits=8,
+        symmetric=True,
+        quantized_dimension=None,
+    )
+    # This will result in quantized bias of 3e9, which is larger than int32 max.
+    bias_tensor_data = np.array([3e7])
+    with self.assertRaises(ValueError):
+      uniform_quantize_tensor.symmetric_quantize_bias_tensor(
+          bias_tensor_data,
+          input_quant_config,
+          weight_quant_config,
+      )
 
   @parameterized.parameters((8, True), (16, False))
   def test_tensor_zp_scale_from_min_max(self, num_bits, symmetric):
