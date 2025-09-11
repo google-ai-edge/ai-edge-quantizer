@@ -77,6 +77,7 @@ class TFLOperationName(str, enum.Enum):
   HARD_SWISH = 'HARD_SWISH'
   MAXIMUM = 'MAXIMUM'
   PADV2 = 'PADV2'
+  REDUCE_MIN = 'REDUCE_MIN'
 
 
 class QuantizeMode(enum.Enum):

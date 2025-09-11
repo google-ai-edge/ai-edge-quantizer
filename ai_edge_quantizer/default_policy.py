@@ -196,7 +196,8 @@ DEFAULT_JSON_POLICY = """
       "SQRT",
       "GATHER",
       "MAXIMUM",
-      "PADV2"
+      "PADV2",
+      "REDUCE_MIN"
     ],
     "static_wi8_ai8": [
       "ADD",
@@ -242,7 +243,8 @@ DEFAULT_JSON_POLICY = """
       "GATHER",
       "HARD_SWISH",
       "MAXIMUM",
-      "PADV2"
+      "PADV2",
+      "REDUCE_MIN"
     ],
     "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
     "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
