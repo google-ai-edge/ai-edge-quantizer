@@ -278,6 +278,30 @@ class TensorUtilsTest(parameterized.TestCase):
           ),
       )
 
+  def test_uniform_dequantize_blockwise(self):
+    quantized_tensor = np.array([[-8, -5, -4, 7], [-4, 7, -8, -5]])
+    expected_output_tensor = np.array([
+        [-10.1333336, -6.3333335, -5.0666668, 8.8666669],
+        [-5.0666668, 8.8666669, -10.1333336, -6.3333335],
+    ])
+    quant_params = qtyping.UniformQuantParams(
+        # b/443830202:
+        quantized_dimension=0,
+        num_bits=4,
+        scale=np.array([[[1.2666667, 1.2666667], [1.2666667, 1.2666667]]]),
+        zero_point=np.array([[0]]),
+        symmetric=True,
+        block_size=2,
+    )
+
+    dequantized_tensor = uniform_quantize_tensor.uniform_dequantize(
+        np.array(quantized_tensor), quant_params
+    )
+
+    self.assertSequenceAlmostEqual(
+        expected_output_tensor.flatten(), dequantized_tensor.flatten(), places=4
+    )
+
   @parameterized.parameters(
       (8, 8, True, True),
       (8, 4, False, True),

@@ -170,7 +170,7 @@ class QuantizeTensorTest(parameterized.TestCase):
     # Check if the scale and zero point tensors are inserted correctly.
     self.assertEqual(quant_param.details.scales, 9)
     # So far we don't have zero point in blockwise quantization.
-    self.assertEqual(quant_param.details.zeroPoints, 0)
+    self.assertEqual(quant_param.details.zeroPoints, -1)
 
   def test_int4_constant_packed_correctly(self):
     subgraph = self._model.subgraphs[0]
