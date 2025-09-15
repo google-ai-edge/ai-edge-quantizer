@@ -154,9 +154,11 @@ def _perform_blockwise_quantization(
       transformation_input.buffers,
   )
   blockwise_details.scales = scale_tensor_id
+  blockwise_details.zeroPoints = -1
   blockwise_details.blockSize = transformation_input.quant_params.block_size
   # TODO: b/404909258 - Add optional zero point to blockwise quantization.
   flatbuffer_quantization.details = blockwise_details
+  flatbuffer_quantization.quantizedDimension = 0
   return flatbuffer_quantization
 
 

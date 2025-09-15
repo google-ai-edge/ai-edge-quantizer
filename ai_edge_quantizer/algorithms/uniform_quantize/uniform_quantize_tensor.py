@@ -119,6 +119,7 @@ def fix_quantization_params_rank(
       symmetric=quantization_params.symmetric,
       quantized_dimension=quantization_params.quantized_dimension,
       quantized_data=quantization_params.quantized_data,
+      block_size=quantization_params.block_size,
   )
 
 
@@ -204,13 +205,16 @@ def _broadcast_scale_zp_for_blockwise(
       ),
       tensor_content.shape,
   )
-  expanded_zp = np.reshape(
-      np.broadcast_to(
-          np.expand_dims(quant_params.zero_point, quantized_dim + 1),
-          expanded_tensor_shape,
-      ),
-      tensor_content.shape,
-  )
+  if quant_params.zero_point is None or quant_params.zero_point.size == 0:
+    expanded_zp = np.zeros_like(tensor_content, dtype=np.int32)
+  else:
+    expanded_zp = np.reshape(
+        np.broadcast_to(
+            np.expand_dims(quant_params.zero_point, quantized_dim + 1),
+            expanded_tensor_shape,
+        ),
+        tensor_content.shape,
+    )
   return qtyping.UniformQuantParams(
       scale=expanded_scale,
       zero_point=expanded_zp,
@@ -290,6 +294,26 @@ def uniform_dequantize(
   Returns:
     The dequantized tensor.
   """
+  if quantization_params.block_size != 0:
+    # b/443830202: The quantized dimension is currently increased by 1 because
+    # AEQ expects 1 and XNNPack expects 0.
+    quantization_params = dataclasses.replace(
+        quantization_params,
+        quantized_dimension=quantization_params.quantized_dimension + 1,
+    )
+    scale_shape = list(tensor_data.shape)
+    scale_shape[quantization_params.quantized_dimension] = (
+        scale_shape[quantization_params.quantized_dimension]
+        // quantization_params.block_size
+    )
+    quantization_params = dataclasses.replace(
+        quantization_params,
+        scale=quantization_params.scale.reshape(scale_shape),
+    )
+    quantization_params = _broadcast_scale_zp_for_blockwise(
+        tensor_data, quantization_params
+    )
+
   # quant params in flatbuffer is flattened, expand the rank to be the same
   # as the tensor rank to avoid ambiguous broadcasting.
   quantization_params = fix_quantization_params_rank(
