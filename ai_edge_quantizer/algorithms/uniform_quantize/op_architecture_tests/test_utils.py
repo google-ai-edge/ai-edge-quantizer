@@ -539,7 +539,7 @@ class BaseQuantizeTest(parameterized.TestCase):
       )
     # Test ignored outputs.
     for i in outputs_to_ignore:
-      quant_params_index = op_quant_config.num_inputs + i
+      quant_params_index = len(op_info.op.inputs) + i
       tensor_name = self._get_ignore_tensor_name(
           i, is_op_with_weight=is_op_with_weight, is_inbounding_tensor=False
       )

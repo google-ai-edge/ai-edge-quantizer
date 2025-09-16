@@ -184,3 +184,4 @@ The table below outlines the allowed configurations for available recipes.
 |HARD_SWISH       |     |     |    |     |<div align="center"> &check; </div>|    |    |    |
 |MAXIMUM          |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |REDUCE_MIN       |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|EQUAL            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
