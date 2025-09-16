@@ -210,3 +210,69 @@ def raise_deprecated_error(_: TransformationInput):
       'This transformation is deprecated. Please contact AI Edge Quantizer team'
       ' if you see this error.'
   )
+
+
+def pack_data(bitwidth: int, flattened_data: np.ndarray) -> np.ndarray:
+  """Pack the data to the corresponding bit width.
+
+  Currently only support 4 bits. If no packing is needed, the original data is
+  returned.
+
+  Args:
+    bitwidth: Bit width from NonLinearQuantParams.
+    flattened_data: The data to be packed.
+
+  Returns:
+    Packed data.
+  """
+  if bitwidth == 4:
+    even_data = flattened_data[::2] & 0x0F
+    odd_data = np.left_shift(flattened_data[1::2], 4).astype(np.uint8)
+    if odd_data.shape[0] == even_data.shape[0] - 1:
+      odd_data = np.pad(odd_data, (0, 1), constant_values=0)
+    return np.bitwise_or(even_data, odd_data)
+  else:
+    return flattened_data
+
+
+def get_producer_schema_op_id(
+    transformation: TransformationInput,
+) -> int:
+  """Checks if the tensor's producer matches the given op.
+
+  Args:
+    transformation: The transformation input to check the producer of.
+
+  Returns:
+    The schema op id of the producer op. E.g.
+    schema_py_generated.BuiltinOperator.FULLY_CONNECTED.
+  """
+  if transformation.producer == -1:
+    return False
+  else:
+    return (
+        transformation.op_codes[
+            transformation.subgraph.operators[
+                transformation.producer
+            ].opcodeIndex
+        ].builtinCode
+    )
+
+
+def get_schema_op_id(
+    transformation: TransformationInput, op_id: int
+) -> bool:
+  """Returns the schema op id of the given op.
+
+  Args:
+    transformation: The transformation input to check the consumers of.
+    op_id: The op id in the list of operators to check for.
+
+  Returns:
+    The schema op id of the given op.
+  """
+  return (
+      transformation.op_codes[
+          transformation.subgraph.operators[op_id].opcodeIndex
+      ].builtinCode
+  )
