@@ -185,3 +185,4 @@ The table below outlines the allowed configurations for available recipes.
 |MAXIMUM          |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |REDUCE_MIN       |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |EQUAL            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|NOT_EQUAL        |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
