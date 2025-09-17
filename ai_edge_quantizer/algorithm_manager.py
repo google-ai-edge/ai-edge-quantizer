@@ -25,8 +25,10 @@ from ai_edge_quantizer.algorithms.nonlinear_quantize import float_casting
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import dequantized_weight_recovery
 from ai_edge_quantizer.algorithms.uniform_quantize import hadamard_rotation
+from ai_edge_quantizer.algorithms.uniform_quantize import mse
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import octav
+
 
 # TODO: b/399775701 - Clean up this file.
 
@@ -60,6 +62,7 @@ class AlgorithmName(str, enum.Enum):
   DEQUANTIZED_WEIGHT_RECOVERY = dequantized_weight_recovery.ALGORITHM_KEY
   OCTAV = octav.ALGORITHM_KEY
   HADAMARD_ROTATION = hadamard_rotation.ALGORITHM_KEY
+  MSE = mse.ALGORITHM_KEY
 
 
 ### MIN/MAX_UNIFORM_QUANT ###
@@ -319,4 +322,37 @@ for (
       naive_min_max_quantize.init_qsvs,
       calibration_func=naive_min_max_quantize.min_max_calibrate,
       materialize_func=materialize_func,
+  )
+
+
+# Register the MSE algorithm.
+register_op_quant_config_validation_func(
+    AlgorithmName.MSE,
+    common_quantize.check_op_quantization_config,
+)
+
+# Register a config check policy for the MSE algorithm.
+register_config_check_policy_func(
+    AlgorithmName.MSE,
+    default_policy.DEFAULT_CONFIG_CHECK_POLICY,
+)
+
+# Register specialized MSE materialize functions.
+_MSE_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
+    _TFLOpName.FULLY_CONNECTED: common_quantize.materialize_fc_conv,
+    _TFLOpName.EMBEDDING_LOOKUP: common_quantize.materialize_embedding_lookup,
+})
+for (
+    op_name,
+    materialize_func,
+) in _MSE_OP_NAME_MATERIALIZE_FUNC_DICT.items():
+  register_quantized_op(
+      AlgorithmName.MSE,
+      op_name,
+      naive_min_max_quantize.init_qsvs,
+      calibration_func=naive_min_max_quantize.min_max_calibrate,
+      materialize_func=functools.partial(
+          materialize_func,
+          mse.get_tensor_quant_params,
+      ),
   )
