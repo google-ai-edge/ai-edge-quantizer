@@ -133,6 +133,9 @@ class QuantTransformation(enum.Enum):
   DUPLICATE_TENSOR = 6
   # Insert the aeq.hadamard_rotation op.
   INSERT_HADAMARD_ROTATION = 7
+  # Insert decomposed Hadamard rotation ops. This expresses the Hadamard
+  # rotation as matrix multiplication with Hadamard matrices.
+  INSERT_DECOMPOSED_HADAMARD_ROTATION = 8
 
 
 @dataclasses.dataclass(frozen=True)
@@ -305,6 +308,7 @@ class TensorQuantizationConfig:
       quantization.
     dtype: The data type of the tensor.
     block_size: The block size for blockwise quantization, ignored otherwise.
+    algorithm_key: The algorithm key to use for quantization.
   """
 
   num_bits: int

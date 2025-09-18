@@ -68,29 +68,6 @@ def nonlinear_quant_params_to_tflite_type(
     raise ValueError(f"Unsupported nonlinear params: {bitwidth}")
 
 
-def _pack_data(bitwidth: int, flattened_data: np.ndarray) -> np.ndarray:
-  """Pack the data to the corresponding bit width.
-
-  Currently only support 4 bits. If no packing is needed, the original data is
-  returned.
-
-  Args:
-    bitwidth: Bit width from NonLinearQuantParams.
-    flattened_data: The data to be packed.
-
-  Returns:
-    Packed data.
-  """
-  if bitwidth == 4:
-    even_data = flattened_data[::2] & 0x0F
-    odd_data = np.left_shift(flattened_data[1::2], 4).astype(np.uint8)
-    if odd_data.shape[0] == even_data.shape[0] - 1:
-      odd_data = np.pad(odd_data, (0, 1), constant_values=0)
-    return np.bitwise_or(even_data, odd_data)
-  else:
-    return flattened_data
-
-
 def _perform_channelwise_quantization(
     transformation_input: transformation_utils.TransformationInput,
 ) -> schema_py_generated.QuantizationParametersT():
@@ -180,14 +157,17 @@ def quantize_tensor(
   # is not provided.
   if tensor.buffer:
     if transformation_input.quant_params.quantized_data is not None:
-      transformation_input.buffers[tensor.buffer].data = _pack_data(
-          transformation_input.quant_params.num_bits,
-          np.frombuffer(
-              cast(
-                  np.ndarray, transformation_input.quant_params.quantized_data
-              ).tobytes(),
-              dtype=np.uint8,
-          ).flatten(),
+      transformation_input.buffers[tensor.buffer].data = (
+          transformation_utils.pack_data(
+              transformation_input.quant_params.num_bits,
+              np.frombuffer(
+                  cast(
+                      np.ndarray,
+                      transformation_input.quant_params.quantized_data,
+                  ).tobytes(),
+                  dtype=np.uint8,
+              ).flatten(),
+          )
       )
 
   if isinstance(transformation_input.quant_params, qtyping.UniformQuantParams):
