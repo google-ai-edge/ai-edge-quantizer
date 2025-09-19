@@ -203,6 +203,28 @@ class TensorUtilsTest(parameterized.TestCase):
           ),
       )
 
+  def test_uniform_quantize_quant_dim_not_divisible_by_block_size_raise(self):
+    tensor = np.random.rand(34, 2)
+    error_message = (
+        "Quantized dimension 34 in tensor shape (34, 2) is not divisible by"
+        " block size 32."
+    )
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda err: error_message in str(err)
+    ):
+      uniform_quantize_tensor.uniform_quantize(
+          np.array(tensor),
+          qtyping.UniformQuantParams(
+              quantized_dimension=0,
+              block_size=32,
+              num_bits=4,
+              scale=np.array([1.2666667]),
+              zero_point=np.array([-6]),
+              symmetric=True,
+          ),
+          is_blockwise=True,
+      )
+
   @parameterized.parameters(
       (
           8,
