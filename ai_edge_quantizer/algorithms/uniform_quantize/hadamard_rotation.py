@@ -127,23 +127,9 @@ def get_tensor_quant_params(
         "Hadamard rotation is only supported for tensors with rank >= 2."
     )
 
-  if tensor_quant_config.granularity != qtyping.QuantGranularity.CHANNELWISE:
-    raise ValueError(
-        "Hadamard rotation is not supported for"
-        f" {tensor_quant_config.granularity} granularity."
-    )
-
-  quantized_dim = common_utils.get_weight_quantized_dim(
-      op_info, tensor_content, tensor_quant_config.granularity
-  )
-  if quantized_dim != 0:
-    raise ValueError(
-        f"Unsupported quantized dimension: {quantized_dim}. Only 0 is"
-        " supported."
-    )
-
   # Reduction axis is the last non-quantized dimension. Since we only support
-  # quantized_dim of 0, the reduction axis is the last axis.
+  # quantized_dim of 0 (or 1 for blockwise), the reduction axis is the last
+  # axis.
   reduce_axis = tensor_content.ndim - 1
 
   # Rotate the tensor with a Hadamard matrix.

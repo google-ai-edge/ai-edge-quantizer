@@ -46,13 +46,13 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
     )
     self._tensor_name_to_qsv = None
     self._subgraph = self._test_model.subgraphs[0]
-    fc_subgraph_op_index = 3
-    self._fc_op = self._subgraph.operators[fc_subgraph_op_index]
+    self._fc_subgraph_op_index = 3
+    self._fc_op = self._subgraph.operators[self._fc_subgraph_op_index]
     self._fc_buffer_id = self._subgraph.tensors[self._fc_op.inputs[1]].buffer
     self._op_info = qtyping.OpInfo(
         op=self._fc_op,
         op_name=_TFLOpName.FULLY_CONNECTED,
-        subgraph_op_index=fc_subgraph_op_index,
+        subgraph_op_index=self._fc_subgraph_op_index,
         op_quant_config=qtyping.OpQuantizationConfig(
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=8,
@@ -97,6 +97,87 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
           output.producer.transformations,
           [qtyping.QuantTransformation.NO_QUANTIZE],
       )
+
+  def test_fully_connected_tensorwise_supported(self):
+    self._op_info = qtyping.OpInfo(
+        op=self._fc_op,
+        op_name=_TFLOpName.FULLY_CONNECTED,
+        subgraph_op_index=self._fc_subgraph_op_index,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=8,
+                symmetric=True,
+                granularity=qtyping.QuantGranularity.TENSORWISE,
+            ),
+        ),
+    )
+    params = hadamard_rotation.materialize_fully_connected(
+        self._op_info, self._graph_info, self._tensor_name_to_qsv
+    )
+    self.assertLen(params, 4)
+    fc_input = params[0]
+    self.assertIsNotNone(fc_input)
+    self.assertIsNotNone(fc_input.consumers)
+    self.assertIsNotNone(fc_input.consumers[0].parameters)
+    self.assertIsInstance(
+        fc_input.consumers[0].parameters, qtyping.UniformQuantParams
+    )
+    if isinstance(
+        fc_input.consumers[0].parameters, qtyping.UniformQuantParams
+    ):
+      self.assertIsNone(fc_input.consumers[0].parameters.quantized_dimension)
+    weight = params[1]
+    self.assertIsNotNone(weight)
+    self.assertIsNotNone(weight.consumers)
+    self.assertIsNotNone(weight.consumers[0].parameters)
+    self.assertIsInstance(
+        weight.consumers[0].parameters, qtyping.UniformQuantParams
+    )
+    if isinstance(
+        weight.consumers[0].parameters, qtyping.UniformQuantParams
+    ):
+      self.assertIsNone(weight.consumers[0].parameters.quantized_dimension)
+
+  def test_fully_connected_blockwise_supported(self):
+    self._op_info = qtyping.OpInfo(
+        op=self._fc_op,
+        op_name=_TFLOpName.FULLY_CONNECTED,
+        subgraph_op_index=self._fc_subgraph_op_index,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=8,
+                symmetric=True,
+                granularity=qtyping.QuantGranularity.BLOCKWISE,
+                block_size=32,
+            ),
+        ),
+    )
+    params = hadamard_rotation.materialize_fully_connected(
+        self._op_info, self._graph_info, self._tensor_name_to_qsv
+    )
+    self.assertLen(params, 4)
+    fc_input = params[0]
+    self.assertIsNotNone(fc_input)
+    self.assertIsNotNone(fc_input.consumers)
+    self.assertIsNotNone(fc_input.consumers[0].parameters)
+    self.assertIsInstance(
+        fc_input.consumers[0].parameters, qtyping.UniformQuantParams
+    )
+    if isinstance(
+        fc_input.consumers[0].parameters, qtyping.UniformQuantParams
+    ):
+      self.assertEqual(fc_input.consumers[0].parameters.quantized_dimension, 1)
+    weight = params[1]
+    self.assertIsNotNone(weight)
+    self.assertIsNotNone(weight.consumers)
+    self.assertIsNotNone(weight.consumers[0].parameters)
+    self.assertIsInstance(
+        weight.consumers[0].parameters, qtyping.UniformQuantParams
+    )
+    if isinstance(
+        weight.consumers[0].parameters, qtyping.UniformQuantParams
+    ):
+      self.assertEqual(weight.consumers[0].parameters.quantized_dimension, 1)
 
   def test_get_tensor_quant_params_basic(self):
     input_tensor = self._subgraph.tensors[self._fc_op.inputs[1]]
