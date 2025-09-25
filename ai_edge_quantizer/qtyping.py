@@ -80,6 +80,7 @@ class TFLOperationName(str, enum.Enum):
   REDUCE_MIN = 'REDUCE_MIN'
   EQUAL = 'EQUAL'
   NOT_EQUAL = 'NOT_EQUAL'
+  MIRROR_PAD = 'MIRROR_PAD'
 
 
 class QuantizeMode(enum.Enum):
