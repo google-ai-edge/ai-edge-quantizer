@@ -49,6 +49,8 @@ class FullyConnectedTest(test_utils.BaseOpTestCase):
           (_AlgorithmName.DEQUANTIZED_WEIGHT_RECOVERY, 1e-5, 1e-5),
           (_AlgorithmName.MIN_MAX_UNIFORM_QUANT, 1e-2, 1e-1),
           (_AlgorithmName.OCTAV, 1e-3, 1e-1),
+          # Only check size reduction for MSE.
+          (_AlgorithmName.MSE, 10, 10),
       ],
       # (model_name, granularity)
       model_and_granularity=[
@@ -97,6 +99,7 @@ class FullyConnectedTest(test_utils.BaseOpTestCase):
           (_AlgorithmName.DEQUANTIZED_WEIGHT_RECOVERY, 1e-5, 1e-2),
           (_AlgorithmName.MIN_MAX_UNIFORM_QUANT, 1e-2, 1e-1),
           (_AlgorithmName.OCTAV, 1e-3, 1e-1),
+          (_AlgorithmName.MSE, 10, 10),
       ],
       # (model_name, granularity)
       model_and_granularity=[
@@ -146,6 +149,8 @@ class FullyConnectedTest(test_utils.BaseOpTestCase):
           (_AlgorithmName.DEQUANTIZED_WEIGHT_RECOVERY, 1e-5, 1e-1),
           (_AlgorithmName.MIN_MAX_UNIFORM_QUANT, 1e-2, 1e-1),
           (_AlgorithmName.OCTAV, 1e-3, 1e-1),
+          # Only check size reduction for MSE.
+          (_AlgorithmName.MSE, 10, 10),
       ],
       # (model_name, granularity)
       model_and_granularity=[
@@ -199,6 +204,8 @@ class FullyConnectedTest(test_utils.BaseOpTestCase):
           (_AlgorithmName.DEQUANTIZED_WEIGHT_RECOVERY, 1e-5, 1e-1),
           (_AlgorithmName.MIN_MAX_UNIFORM_QUANT, 1e-2, 1e-1),
           (_AlgorithmName.OCTAV, 1e-3, 1e-1),
+          # Only check size reduction for MSE.
+          (_AlgorithmName.MSE, 10, 10),
       ],
       # (model_name, granularity)
       model_and_granularity=[

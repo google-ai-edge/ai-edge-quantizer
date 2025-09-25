@@ -67,17 +67,24 @@ class EmbeddingLookupTest(test_utils.BaseOpTestCase):
     # Check model size.
     self.assertLess(len(quant_result.quantized_model), expected_model_size)
 
-    # TODO: b/364405203 - Enable after 0 signature works.
-    # comparison_result = self._quantizer.validate(
-    #     error_metrics='mse',
-    #     signature_test_data=_get_test_data(),
-    #     signature_key='main',
-    # )
-    # self._check_comparion_result(
-    #     comparion_result,
-    #     weight_tolerance=1e-2,
-    #     output_tolerance=1e-4,
-    # )
+  @parameterized.product(
+      weight_bit_width=[4, 8],
+      quantization_method=['add_weight_only_config', 'add_dynamic_config'],
+  )
+  def test_embedding_lookup_model_mse_quantization(
+      self, weight_bit_width, quantization_method
+  ):
+    config_setter = getattr(self._quantizer, quantization_method)
+    config_setter(
+        regex='.*',
+        operation_name=_OpName.EMBEDDING_LOOKUP,
+        num_bits=weight_bit_width,
+        algorithm_key=quantizer.AlgorithmName.MSE,
+    )
+    self.assertFalse(self._quantizer.need_calibration)
+    quant_result = self._quantizer.quantize()
+    # Only check model size for now.
+    self.assertLess(len(quant_result.quantized_model), 1700)
 
   def test_embedding_lookup_model_fp16_weight_only(self):
     self._quantizer.update_quantization_recipe(
