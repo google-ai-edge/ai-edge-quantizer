@@ -199,7 +199,8 @@ DEFAULT_JSON_POLICY = """
       "PADV2",
       "REDUCE_MIN",
       "EQUAL",
-      "NOT_EQUAL"
+      "NOT_EQUAL",
+      "MIRROR_PAD"
     ],
     "static_wi8_ai8": [
       "ADD",
@@ -248,7 +249,8 @@ DEFAULT_JSON_POLICY = """
       "PADV2",
       "REDUCE_MIN",
       "EQUAL",
-      "NOT_EQUAL"
+      "NOT_EQUAL",
+      "MIRROR_PAD"
     ],
     "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],
     "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "EMBEDDING_LOOKUP"],

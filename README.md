@@ -172,6 +172,7 @@ The table below outlines the allowed configurations for available recipes.
 |SUM              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |PAD              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |PADV2            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+|MIRROR_PAD       |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |SQUARED_DIFFERENCE |     |     |     |     |<div align="center"> &check; </div>|    |    |    |
 |MAX_POOL_2D      |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |RESIZE_BILINEAR  |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
