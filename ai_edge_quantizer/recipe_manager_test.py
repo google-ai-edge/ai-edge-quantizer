@@ -315,11 +315,12 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         _QuantGranularity.CHANNELWISE,
     )
 
-  def test_add_weight_only_config(self):
+  @parameterized.parameters(4, 8)
+  def test_add_weight_only_config_int(self, num_bits):
     self._recipe_manager.add_weight_only_config(
         regex='.*/Dense/.*',
         operation_name=_TFLOpName.FULLY_CONNECTED,
-        num_bits=4,
+        num_bits=num_bits,
     )
     alg_key, op_config = self._recipe_manager.get_quantization_configs(
         _TFLOpName.FULLY_CONNECTED, 'model/Dense/op'
@@ -328,6 +329,72 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self.assertEqual(op_config.compute_precision, _ComputePrecision.FLOAT)
     self.assertTrue(op_config.explicit_dequantize)
     self.assertIsNone(op_config.activation_tensor_config)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
+    self.assertEqual(weight_tensor_config.num_bits, num_bits)
+    self.assertTrue(weight_tensor_config.symmetric)
+    self.assertEqual(
+        weight_tensor_config.granularity,
+        _QuantGranularity.CHANNELWISE,
+    )
+    self.assertEqual(weight_tensor_config.dtype, _TensorDataType.INT)
+
+  def test_add_weight_only_config_fp16(self):
+    self._recipe_manager.add_weight_only_config(
+        regex='.*/Dense2/.*',
+        operation_name=_TFLOpName.FULLY_CONNECTED,
+        num_bits=16,
+        algorithm_key=_AlgorithmName.FLOAT_CASTING,
+    )
+    alg_key, op_config = self._recipe_manager.get_quantization_configs(
+        _TFLOpName.FULLY_CONNECTED, 'model/Dense2/op'
+    )
+    self.assertEqual(alg_key, _AlgorithmName.FLOAT_CASTING)
+    self.assertEqual(op_config.compute_precision, _ComputePrecision.FLOAT)
+    self.assertTrue(op_config.explicit_dequantize)
+    self.assertIsNone(op_config.activation_tensor_config)
+    weight_tensor_config = op_config.weight_tensor_config
+    self.assertIsNotNone(weight_tensor_config)
+    self.assertEqual(weight_tensor_config.num_bits, 16)
+    self.assertTrue(weight_tensor_config.symmetric)
+    self.assertEqual(
+        weight_tensor_config.granularity,
+        _QuantGranularity.CHANNELWISE,
+    )
+    self.assertEqual(weight_tensor_config.dtype, _TensorDataType.FLOAT)
+
+  def test_add_weight_only_config_fp8_raise_error(self):
+    error_message = (
+        'float casting quantization config requires number of bits to be set'
+        ' as 16'
+    )
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda err: error_message in str(err)
+    ):
+      self._recipe_manager.add_weight_only_config(
+          regex='.*/Dense2/.*',
+          operation_name=_TFLOpName.FULLY_CONNECTED,
+          num_bits=8,
+          algorithm_key=_AlgorithmName.FLOAT_CASTING,
+      )
+
+  def test_add_static_config(self):
+    self._recipe_manager.add_static_config(
+        regex='.*/Dense/.*',
+        operation_name=_TFLOpName.FULLY_CONNECTED,
+        activation_num_bits=8,
+        weight_num_bits=4,
+    )
+    alg_key, op_config = self._recipe_manager.get_quantization_configs(
+        _TFLOpName.FULLY_CONNECTED, 'model/Dense/op'
+    )
+    self.assertEqual(alg_key, _AlgorithmName.MIN_MAX_UNIFORM_QUANT)
+    self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
+    self.assertFalse(op_config.explicit_dequantize)
+    activation_tensor_config = op_config.activation_tensor_config
+    self.assertIsNotNone(activation_tensor_config)
+    self.assertEqual(activation_tensor_config.num_bits, 8)
+    self.assertFalse(activation_tensor_config.symmetric)
     weight_tensor_config = op_config.weight_tensor_config
     self.assertIsNotNone(weight_tensor_config)
     self.assertEqual(weight_tensor_config.num_bits, 4)

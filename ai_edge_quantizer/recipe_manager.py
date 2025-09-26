@@ -82,7 +82,6 @@ class RecipeManager:
         str, list[OpQuantizationRecipe]
     ] = collections.OrderedDict()
 
-  # TODO: b/335254997 - Check if an op quantization config is supported.
   def add_quantization_config(
       self,
       regex: str,
@@ -272,7 +271,8 @@ class RecipeManager:
     """
     weight_config = qtyping.TensorQuantizationConfig(
         num_bits=num_bits,
-        symmetric=True,  # LiteRT kernels only support symmetric quantized weights.
+        symmetric=True,  # LiteRT kernels only support symmetric quantized
+        # weights.
         granularity=granularity,
     )
     self.add_quantization_config(
@@ -316,10 +316,18 @@ class RecipeManager:
       granularity: Granularity of quantization.
       algorithm_key: Algorithm key to be applied.
     """
+    # Default to integer quantization but allow float quantization for
+    # FLOAT_CASTING algorithm. This is to support weight-only quantization with
+    # fp16 weights.
+    weight_dtype = qtyping.TensorDataType.INT
+    if algorithm_key == AlgorithmName.FLOAT_CASTING:
+      weight_dtype = qtyping.TensorDataType.FLOAT
+
     weight_config = qtyping.TensorQuantizationConfig(
         num_bits=num_bits,
         symmetric=True,  # TFL kernels only support symmetric quantized weights.
         granularity=granularity,
+        dtype=weight_dtype,
     )
     self.add_quantization_config(
         regex,
@@ -365,7 +373,8 @@ class RecipeManager:
       raise ValueError(
           'Activation quantization is only supported for 16 or 8 bits.'
       )
-    # INT16 is symmetric and INT8 is asymmetric due to LiteRT kernel limitations.
+    # INT16 is symmetric and INT8 is asymmetric due to LiteRT kernel
+    # limitations.
     activation_symmetric = activation_num_bits == 16
     activation_config = qtyping.TensorQuantizationConfig(
         num_bits=activation_num_bits, symmetric=activation_symmetric
