@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Hadamard rotation pattern transformation."""
+"""Hadamard rotation decomposed pattern transformation."""
 
 from flatbuffers import flexbuffers
 import numpy as np
@@ -87,18 +87,48 @@ def _update_fully_connected_consumers(
   return updated
 
 
-def insert_hadamard_rotation(
-    transformation_input: transformation_utils.TransformationInput,
-) -> qtyping.TransformationInfo:
-  """Inserts a custom aeq.hadamard_rotation op on this tensor.
-
-  This function works for float32 tensors only.
+def _make_hadamard_matrix(size: int):
+  """Generates a Hadamard matrix of the given size.
 
   Args:
-    transformation_input: The transformation input to insert the custom op on.
+    size: The size of the Hadamard matrix. Must be a power of 2. This represents
+      a single dimension. E.g. if size is 4, then the Hadamard matrix is a 4x4
+      matrix.
 
   Returns:
-    The transformation info of the inserted custom op.
+    The Hadamard matrix.
+
+  Raises:
+    ValueError: If the size is not a power of 2.
+  """
+  if size <= 0 or (size & (size - 1)) != 0:
+    raise ValueError('Hadamard matrix size must be a power of 2. ')
+  h = h2 = np.array([[1, 1], [1, -1]])
+  current_size = 2
+  while current_size < size:
+    h = np.kron(h, h2)
+    current_size *= 2
+  return h / np.sqrt(size)
+
+
+def insert_decomposed_hadamard_rotation(
+    transformation_input: transformation_utils.TransformationInput,
+) -> qtyping.TransformationInfo:
+  """Inserts a decomposed pattern of Hadamard rotation on this tensor.
+
+  This function works for float32 tensors only. Instead of inserting a single
+  custom op (aeq.hadamard_rotation), this inserts the mathematical equivalent
+  expressed in built-in TFLite ops. The mathematical equivalent is:
+    x' = reshape(x, (-1, hadamard_size))
+    x' = x' @ H(hadamard_size)
+    x' = reshape(x, x.shape)
+  where H(n) is a Hadamard matrix of size n.
+
+  Args:
+    transformation_input: The transformation input to insert the ops on.
+
+  Returns:
+    The transformation info of the inserted ops.
 
   Raises:
     ValueError: If the transformation input is not a uniform quantization
@@ -126,38 +156,111 @@ def insert_hadamard_rotation(
         f' {tensor.type} tensor.'
     )
 
-  # Create new custom op with the current tensor as input and a new activation
-  # tensor as output.
-  custom_op_code_idx = transformation_utils.add_op_code(
-      schema_py_generated.BuiltinOperator.CUSTOM,
+  # Insert x' = tfl.reshape to reshape x to (-1, hadamard_size)
+  hadamard_size = transformation_input.quant_params.hadamard.hadamard_size
+  tensor_size = np.prod(tensor.shape)
+  num_hadamard_blocks = tensor_size // hadamard_size
+  prerotate_shape = [num_hadamard_blocks, hadamard_size]
+  prerotate_shape_tensor_id = transformation_utils.add_new_constant_tensor(
+      tensor.name + b'_prerotate_shape',
+      np.array(prerotate_shape, dtype=np.int32),
+      schema_py_generated.TensorType.INT32,
+      transformation_input.subgraph,
+      transformation_input.buffers,
+  )
+  prerotate_reshape_output_tensor_id = (
+      transformation_utils.add_new_activation_tensor(
+          tensor.name + b'_prerotate_reshaped',
+          prerotate_shape,
+          schema_py_generated.TensorType.FLOAT32,
+          transformation_input.subgraph,
+      )
+  )
+
+  prerotate_reshape_op_code_idx = transformation_utils.add_op_code(
+      schema_py_generated.BuiltinOperator.RESHAPE,
       transformation_input.op_codes,
-      'aeq.hadamard_rotation',
+      'RESHAPE',
   )
-  custom_op = schema_py_generated.OperatorT()
-  custom_op.opcodeIndex = custom_op_code_idx
-  custom_op.inputs = [transformation_input.tensor_id]
-  custom_op.customOptions = _to_flexbuffer(
-      transformation_input.quant_params.hadamard.hadamard_size,
-      transformation_input.quant_params.hadamard.random_binary_vector.tolist(),
+  prerorate_reshape_op = schema_py_generated.OperatorT()
+  prerorate_reshape_op.opcodeIndex = prerotate_reshape_op_code_idx
+  prerorate_reshape_op.inputs = [
+      transformation_input.tensor_id,
+      prerotate_shape_tensor_id,
+  ]
+  prerorate_reshape_op.outputs = [prerotate_reshape_output_tensor_id]
+
+  # Generate hadamard_matrix(hadamard_size).
+  # We could quantize this to INT4 for better memory efficiency, but for large
+  # models the memory overhead is not significant, and floating point
+  # computation does seem to result in better accuracy.
+  hadamard_matrix = _make_hadamard_matrix(hadamard_size)
+  hadamard_matrix_tensor_id = transformation_utils.add_new_constant_tensor(
+      tensor.name + b'_hadamard_matrix',
+      hadamard_matrix.astype(np.float32),
+      schema_py_generated.TensorType.FLOAT32,
+      transformation_input.subgraph,
+      transformation_input.buffers,
   )
-  new_tensor_id = transformation_utils.add_new_activation_tensor(
+
+  # Insert x' = tfl.fully_connected(x', hadamard_matrix)
+  fc_output_tensor_id = transformation_utils.add_new_activation_tensor(
       tensor.name + b'_rotated',
-      tensor.shapeSignature
-      if tensor.shapeSignature is not None
-      else tensor.shape,
+      prerotate_shape,
       schema_py_generated.TensorType.FLOAT32,
       transformation_input.subgraph,
   )
-  custom_op.outputs = [new_tensor_id]
+
+  fc_op_code_idx = transformation_utils.add_op_code(
+      schema_py_generated.BuiltinOperator.FULLY_CONNECTED,
+      transformation_input.op_codes,
+      'FULLY_CONNECTED',
+  )
+  fc_op = schema_py_generated.OperatorT()
+  fc_op.opcodeIndex = fc_op_code_idx
+  fc_op.inputs = [prerotate_reshape_output_tensor_id, hadamard_matrix_tensor_id]
+  fc_op.outputs = [fc_output_tensor_id]
+
+  # Insert x' = tfl.reshape(x', x.shape)
+  post_reshape_op_code_idx = transformation_utils.add_op_code(
+      schema_py_generated.BuiltinOperator.RESHAPE,
+      transformation_input.op_codes,
+      'RESHAPE',
+  )
+  post_reshape_op = schema_py_generated.OperatorT()
+  post_reshape_op.opcodeIndex = post_reshape_op_code_idx
+  post_reshape_shape_tensor_id = transformation_utils.add_new_constant_tensor(
+      tensor.name + b'_postrotate_shape',
+      np.array(tensor.shape, dtype=np.int32),
+      schema_py_generated.TensorType.INT32,
+      transformation_input.subgraph,
+      transformation_input.buffers,
+  )
+
+  post_reshape_output_tensor_id = (
+      transformation_utils.add_new_activation_tensor(
+          tensor.name + b'_postrotate_reshaped',
+          tensor.shape,
+          schema_py_generated.TensorType.FLOAT32,
+          transformation_input.subgraph,
+      )
+  )
+  post_reshape_op.inputs = [
+      fc_output_tensor_id,
+      post_reshape_shape_tensor_id,
+  ]
+  post_reshape_op.outputs = [post_reshape_output_tensor_id]
 
   # Update the users of this tensor to use the new tensor.
   if (
       transformation_utils.get_producer_schema_op_id(transformation_input)
       == schema_py_generated.BuiltinOperator.EMBEDDING_LOOKUP
   ):
-    _update_embedding_lookup_consumers(transformation_input, new_tensor_id)
+    _update_embedding_lookup_consumers(
+        transformation_input, post_reshape_output_tensor_id
+    )
   elif not _update_fully_connected_consumers(
-      transformation_input, new_tensor_id
+      transformation_input, post_reshape_output_tensor_id
   ):
     raise ValueError(
         'The Hadamard rotation op supports embedding lookup and fully connected'
@@ -168,7 +271,7 @@ def insert_hadamard_rotation(
   # new tensor.
   for i, output in enumerate(transformation_input.subgraph.outputs):
     if output == transformation_input.tensor_id:
-      transformation_input.subgraph.outputs[i] = new_tensor_id
+      transformation_input.subgraph.outputs[i] = post_reshape_output_tensor_id
 
   # Find the actual insertion point. The insertion point should be after the
   # producer op and before the first consumer op. The max() operation ensures
@@ -176,11 +279,13 @@ def insert_hadamard_rotation(
   first_consumer_id = min(transformation_input.consumers)
   op_id = max(transformation_input.producer + 1, first_consumer_id)
 
-  # Insert the custom op.
-  transformation_input.subgraph.operators.insert(op_id, custom_op)
+  # Insert the new ops in the correct order.
+  transformation_input.subgraph.operators.insert(op_id, prerorate_reshape_op)
+  transformation_input.subgraph.operators.insert(op_id + 1, fc_op)
+  transformation_input.subgraph.operators.insert(op_id + 2, post_reshape_op)
 
   return qtyping.TransformationInfo(
       op_id=op_id,
-      num_ops_added=1,
-      output_tensor_id=new_tensor_id,
+      num_ops_added=3,
+      output_tensor_id=post_reshape_output_tensor_id,
   )

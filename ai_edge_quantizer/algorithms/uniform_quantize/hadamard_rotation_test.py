@@ -63,7 +63,7 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
     )
 
   def test_materialize_fully_connected_basic(self):
-    params = hadamard_rotation.materialize_fully_connected(
+    params = hadamard_rotation.materialize_fully_connected_custom_op(
         self._op_info, self._graph_info, self._tensor_name_to_qsv
     )
     fc_input = params[0]
@@ -111,7 +111,7 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
             ),
         ),
     )
-    params = hadamard_rotation.materialize_fully_connected(
+    params = hadamard_rotation.materialize_fully_connected_custom_op(
         self._op_info, self._graph_info, self._tensor_name_to_qsv
     )
     self.assertLen(params, 4)
@@ -152,7 +152,7 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
             ),
         ),
     )
-    params = hadamard_rotation.materialize_fully_connected(
+    params = hadamard_rotation.materialize_fully_connected_custom_op(
         self._op_info, self._graph_info, self._tensor_name_to_qsv
     )
     self.assertLen(params, 4)
@@ -178,6 +178,34 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
         weight.consumers[0].parameters, qtyping.UniformQuantParams
     ):
       self.assertEqual(weight.consumers[0].parameters.quantized_dimension, 1)
+
+  def test_materialize_fully_connected_decomposed(self):
+    params = hadamard_rotation.materialize_fully_connected_decomposed(
+        self._op_info, self._graph_info, self._tensor_name_to_qsv
+    )
+    fc_input = params[0]
+    weight = params[1]
+    bias = params[2]
+    output = params[3]
+
+    self.assertLen(params, 4)
+    self.assertEqual(
+        fc_input.consumers[0].transformations,
+        [qtyping.QuantTransformation.INSERT_DECOMPOSED_HADAMARD_ROTATION],
+    )
+    self.assertEqual(
+        weight.consumers[0].transformations,
+        [qtyping.QuantTransformation.QUANTIZE_TENSOR],
+    )
+    self.assertEqual(
+        bias.consumers[0].transformations,
+        [qtyping.QuantTransformation.NO_QUANTIZE],
+    )
+    if output.producer is not None:
+      self.assertEqual(
+          output.producer.transformations,
+          [qtyping.QuantTransformation.NO_QUANTIZE],
+      )
 
   def test_get_tensor_quant_params_basic(self):
     input_tensor = self._subgraph.tensors[self._fc_op.inputs[1]]
@@ -344,7 +372,7 @@ class HadamardRotationEmbeddingLookupTest(parameterized.TestCase):
             ),
         ),
     )
-    params = hadamard_rotation.materialize_embedding_lookup(
+    params = hadamard_rotation.materialize_embedding_lookup_custom_op(
         op_info, self._graph_info, self._tensor_name_to_qsv
     )
     self.assertLen(params, 3)
@@ -369,6 +397,43 @@ class HadamardRotationEmbeddingLookupTest(parameterized.TestCase):
       self.assertEqual(
           output.producer.transformations,
           [qtyping.QuantTransformation.INSERT_HADAMARD_ROTATION],
+      )
+
+  def test_materialize_embedding_lookup_decomposed(self):
+    subgraph = self._test_model.subgraphs[0]
+    embedding_subgraph_op_index = 0
+    embedding_op = subgraph.operators[embedding_subgraph_op_index]
+    op_info = qtyping.OpInfo(
+        op=embedding_op,
+        op_name=_TFLOpName.EMBEDDING_LOOKUP,
+        subgraph_op_index=embedding_subgraph_op_index,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=8,
+                symmetric=True,
+                granularity=qtyping.QuantGranularity.CHANNELWISE,
+            ),
+        ),
+    )
+    params = hadamard_rotation.materialize_embedding_lookup_decomposed(
+        op_info, self._graph_info, self._tensor_name_to_qsv
+    )
+    self.assertLen(params, 3)
+    lookup = params[0]
+    value = params[1]
+    output = params[2]
+    self.assertEqual(
+        lookup.consumers[0].transformations,
+        [qtyping.QuantTransformation.NO_QUANTIZE],
+    )
+    self.assertEqual(
+        value.consumers[0].transformations,
+        [qtyping.QuantTransformation.QUANTIZE_TENSOR],
+    )
+    if output.producer is not None:
+      self.assertEqual(
+          output.producer.transformations,
+          [qtyping.QuantTransformation.INSERT_DECOMPOSED_HADAMARD_ROTATION],
       )
 
 

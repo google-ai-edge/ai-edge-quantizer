@@ -23,16 +23,17 @@ from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 
-ALGORITHM_KEY = "HADAMARD_ROTATION"
+CUSTOM_OP_ALGORITHM_KEY = "HADAMARD_ROTATION"
+DECOMPOSED_ALGORITHM_KEY = "DECOMPOSED_HADAMARD_ROTATION"
 
 
 def _make_hadamard_matrix(size: int) -> np.ndarray:
   """Generates a Hadamard matrix of the given size.
 
   Args:
-    size: The size of the Hadamard matrix. Must be a power of 2. This
-      represents a single dimension. E.g. if size is 4, then the Hadamard matrix
-      is a 4x4 matrix.
+    size: The size of the Hadamard matrix. Must be a power of 2. This represents
+      a single dimension. E.g. if size is 4, then the Hadamard matrix is a 4x4
+      matrix.
 
   Returns:
     The Hadamard matrix.
@@ -157,9 +158,10 @@ def get_tensor_quant_params(
   )
 
 
-def materialize_fully_connected(
+def _materialize_fully_connected(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
+    is_decomposed: bool = False,
     tensor_name_to_qsv: Optional[dict[str, Any]] = None,  # pylint: disable=unused-argument
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize the fully_connected op.
@@ -167,12 +169,20 @@ def materialize_fully_connected(
   Args:
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
+    is_decomposed: Whether to use decomposed Hadamard rotation ops or a custom
+      op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
 
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
     weights, bias).
   """
+  if op_info.op_quant_config.weight_tensor_config is None:
+    raise ValueError(
+        "Weight tensor quantization config is not provided for Hadamard"
+        " Rotation quantization."
+    )
+
   op_tensor_params = []
 
   # Materialize weight.
@@ -209,7 +219,9 @@ def materialize_fully_connected(
       op_info.op.inputs[input_tensor_index]
   ]
   transformations = [
-      qtyping.QuantTransformation.INSERT_HADAMARD_ROTATION,
+      qtyping.QuantTransformation.INSERT_DECOMPOSED_HADAMARD_ROTATION
+      if is_decomposed
+      else qtyping.QuantTransformation.INSERT_HADAMARD_ROTATION,
   ]
   op2tensor_params = qtyping.OpToTensorParams(
       subgraph_op_id=op_info.subgraph_op_index,
@@ -258,9 +270,36 @@ def materialize_fully_connected(
   return op_tensor_params
 
 
-def materialize_embedding_lookup(
+def materialize_fully_connected_custom_op(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: Optional[dict[str, Any]] = None,  # pylint: disable=unused-argument
+) -> list[qtyping.TensorTransformationParams]:
+  return _materialize_fully_connected(
+      op_info,
+      graph_info,
+      is_decomposed=False,
+      tensor_name_to_qsv=tensor_name_to_qsv,
+  )
+
+
+def materialize_fully_connected_decomposed(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: Optional[dict[str, Any]] = None,  # pylint: disable=unused-argument
+) -> list[qtyping.TensorTransformationParams]:
+  return _materialize_fully_connected(
+      op_info,
+      graph_info,
+      is_decomposed=True,
+      tensor_name_to_qsv=tensor_name_to_qsv,
+  )
+
+
+def _materialize_embedding_lookup(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    is_decomposed: bool = False,
     tensor_name_to_qsv: Optional[dict[str, Any]] = None,  # pylint: disable=unused-argument
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize the embedding_lookup op.
@@ -268,6 +307,8 @@ def materialize_embedding_lookup(
   Args:
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
+    is_decomposed: Whether to use decomposed Hadamard rotation ops or a custom
+      op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
 
   Returns:
@@ -329,7 +370,9 @@ def materialize_embedding_lookup(
       op_info.op.outputs[output_tensor_index]
   ]
   transformations = [
-      qtyping.QuantTransformation.INSERT_HADAMARD_ROTATION,
+      qtyping.QuantTransformation.INSERT_DECOMPOSED_HADAMARD_ROTATION
+      if is_decomposed
+      else qtyping.QuantTransformation.INSERT_HADAMARD_ROTATION,
   ]
   op2tensor_params = qtyping.OpToTensorParams(
       subgraph_op_id=op_info.subgraph_op_index,
@@ -343,3 +386,29 @@ def materialize_embedding_lookup(
   op_tensor_params.append(output_transformation_params)
 
   return op_tensor_params
+
+
+def materialize_embedding_lookup_custom_op(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: Optional[dict[str, Any]] = None,  # pylint: disable=unused-argument
+) -> list[qtyping.TensorTransformationParams]:
+  return _materialize_embedding_lookup(
+      op_info,
+      graph_info,
+      is_decomposed=False,
+      tensor_name_to_qsv=tensor_name_to_qsv,
+  )
+
+
+def materialize_embedding_lookup_decomposed(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: Optional[dict[str, Any]] = None,  # pylint: disable=unused-argument
+) -> list[qtyping.TensorTransformationParams]:
+  return _materialize_embedding_lookup(
+      op_info,
+      graph_info,
+      is_decomposed=True,
+      tensor_name_to_qsv=tensor_name_to_qsv,
+  )

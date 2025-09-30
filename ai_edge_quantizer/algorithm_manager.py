@@ -61,7 +61,8 @@ class AlgorithmName(str, enum.Enum):
   FLOAT_CASTING = float_casting.ALGORITHM_KEY
   DEQUANTIZED_WEIGHT_RECOVERY = dequantized_weight_recovery.ALGORITHM_KEY
   OCTAV = octav.ALGORITHM_KEY
-  HADAMARD_ROTATION = hadamard_rotation.ALGORITHM_KEY
+  HADAMARD_ROTATION = hadamard_rotation.CUSTOM_OP_ALGORITHM_KEY
+  DECOMPOSED_HADAMARD_ROTATION = hadamard_rotation.DECOMPOSED_ALGORITHM_KEY
   MSE = mse.ALGORITHM_KEY
 
 
@@ -311,8 +312,12 @@ register_config_check_policy_func(
 
 # Register specialized hadamard rotation materialize functions.
 _HADAMARD_ROTATION_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
-    _TFLOpName.FULLY_CONNECTED: hadamard_rotation.materialize_fully_connected,
-    _TFLOpName.EMBEDDING_LOOKUP: hadamard_rotation.materialize_embedding_lookup,
+    _TFLOpName.FULLY_CONNECTED: (
+        hadamard_rotation.materialize_fully_connected_custom_op
+    ),
+    _TFLOpName.EMBEDDING_LOOKUP: (
+        hadamard_rotation.materialize_embedding_lookup_custom_op
+    ),
 })
 for (
     op_name,
@@ -320,6 +325,36 @@ for (
 ) in _HADAMARD_ROTATION_OP_NAME_MATERIALIZE_FUNC_DICT.items():
   register_quantized_op(
       AlgorithmName.HADAMARD_ROTATION,
+      op_name,
+      naive_min_max_quantize.init_qsvs,
+      calibration_func=naive_min_max_quantize.min_max_calibrate,
+      materialize_func=materialize_func,
+  )
+
+register_op_quant_config_validation_func(
+    AlgorithmName.DECOMPOSED_HADAMARD_ROTATION,
+    common_quantize.check_op_quantization_config,
+)
+
+register_config_check_policy_func(
+    AlgorithmName.DECOMPOSED_HADAMARD_ROTATION,
+    default_policy.DEFAULT_CONFIG_CHECK_POLICY,
+)
+
+_DECOMPOSED_HADAMARD_ROTATION_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
+    _TFLOpName.FULLY_CONNECTED: (
+        hadamard_rotation.materialize_fully_connected_decomposed
+    ),
+    _TFLOpName.EMBEDDING_LOOKUP: (
+        hadamard_rotation.materialize_embedding_lookup_decomposed
+    ),
+})
+for (
+    op_name,
+    materialize_func,
+) in _DECOMPOSED_HADAMARD_ROTATION_OP_NAME_MATERIALIZE_FUNC_DICT.items():
+  register_quantized_op(
+      AlgorithmName.DECOMPOSED_HADAMARD_ROTATION,
       op_name,
       naive_min_max_quantize.init_qsvs,
       calibration_func=naive_min_max_quantize.min_max_calibrate,
