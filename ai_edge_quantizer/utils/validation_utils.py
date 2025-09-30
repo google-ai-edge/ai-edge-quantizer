@@ -38,6 +38,8 @@ def get_validation_func(
     return mean_squared_difference
   elif func_name == "median_diff_ratio":
     return median_diff_ratio
+  elif func_name == "cosine_similarity":
+    return cosine_similarity
   else:
     raise ValueError(f"Validation function {func_name} not supported")
 
@@ -97,6 +99,33 @@ def median_diff_ratio(
   demoninator = abs(data2) + tolerance_threshold
   median_ratio = np.median(diff / demoninator)
   return median_ratio
+
+
+def cosine_similarity(
+    data1: np._typing.ArrayLike, data2: np._typing.ArrayLike
+) -> float:
+  """Calculates the cosine similarity between data1 & data2.
+
+  ref: https://en.wikipedia.org/wiki/Cosine_similarity
+
+  Args:
+    data1: input data to be used for comparison
+    data2: input data to be used for comparison, data1 & 2 must be of the same
+      shape
+
+  Returns:
+    a float value representing the cosine similarity between data1 & 2
+
+  Raises:
+    Value error if the two inputs don't have the same number of elements
+  """
+  data1, data2 = _preprocess_same_size_arrays(data1, data2)
+  # special handling for tensor of size 0
+  if data1.size == 0:
+    return float(0)
+  return float(
+      np.dot(data1, data2) / (np.linalg.norm(data1) * np.linalg.norm(data2))
+  )
 
 
 def _preprocess_same_size_arrays(

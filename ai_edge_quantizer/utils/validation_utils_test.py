@@ -82,6 +82,30 @@ class ValidationUtilTest(googletest.TestCase):
     result = validation_utils.median_diff_ratio(data1, data2)
     self.assertEqual(result, 0)
 
+  def test_cosine_similarity(self):
+    data1 = [1, 2, 3]
+    data2 = [1, 2, 3]
+    result = validation_utils.cosine_similarity(data1, data2)
+    self.assertAlmostEqual(result, 1.0, 6)
+
+  def test_cosine_similarity_perpendicular(self):
+    data1 = [1, 0, 0]
+    data2 = [0, 1, 0]
+    result = validation_utils.cosine_similarity(data1, data2)
+    self.assertAlmostEqual(result, 0.0, 6)
+
+  def test_cosine_similarity_multidim(self):
+    data1 = [[1, 2], [4, 5]]
+    data2 = [[1, 3], [2, 2]]
+    result = validation_utils.cosine_similarity(data1, data2)
+    self.assertAlmostEqual(result, 0.86881, 6)
+
+  def test_cosine_similarity_0d(self):
+    data1 = []
+    data2 = []
+    result = validation_utils.cosine_similarity(data1, data2)
+    self.assertEqual(result, 0)
+
 
 if __name__ == "__main__":
   googletest.main()
