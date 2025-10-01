@@ -131,6 +131,7 @@ MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT = {
     _TFLOpName.REDUCE_MIN: common_quantize.materialize_reduce_min,
     _TFLOpName.EQUAL: common_quantize.materialize_equal,
     _TFLOpName.NOT_EQUAL: common_quantize.materialize_not_equal,
+    _TFLOpName.MIRROR_PAD: common_quantize.materialize_mirror_pad,
 }
 for op_name, materialize_func in MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT.items():
   register_quantized_op(
@@ -284,6 +285,7 @@ _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
     _TFLOpName.REDUCE_MIN: common_quantize.materialize_reduce_min,
     _TFLOpName.EQUAL: common_quantize.materialize_equal,
     _TFLOpName.NOT_EQUAL: common_quantize.materialize_not_equal,
+    _TFLOpName.MIRROR_PAD: common_quantize.materialize_mirror_pad,
 })
 
 for op_name, materialize_func in _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT.items():

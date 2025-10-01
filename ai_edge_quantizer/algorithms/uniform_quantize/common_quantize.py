@@ -748,6 +748,34 @@ def materialize_padv2(
   )
 
 
+def materialize_mirror_pad(
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.mirror_pad.
+
+  Args:
+    get_tensor_quant_params_fn: Function to get quantization parameters for the
+      tensor.
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_name_to_qsv: A map of tensor name to quantization parameters.
+
+  Returns:
+    A list of `qtyping.TensorTransformationParams` for the tensors in the op.
+  """
+  return common_utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      get_tensor_quant_params_fn,
+      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
+      inputs_to_ignore=[1],  # Paddings tensor does not need to be quantized.
+  )
+
+
 def materialize_squared_difference(
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
     op_info: qtyping.OpInfo,
