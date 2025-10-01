@@ -63,7 +63,7 @@ DEFAULT_JSON_POLICY = """
         "symmetric": [true],
         "granularity": ["BLOCKWISE"],
         "dtype": "INT",
-        "block_size": [32, 64, 96, 128, 256]
+        "block_size": [32, 64, 128, 256]
       },
       "explicit_dequantize": false,
       "compute_precision": "INTEGER"
