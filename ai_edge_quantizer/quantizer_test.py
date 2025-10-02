@@ -51,6 +51,30 @@ def _get_calibration_data(num_samples: int = 16):
   return calibration_data
 
 
+def _is_all_signature_defs_inputs_float(model_content: bytes):
+  tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(model_content)
+  for signature_key in tfl_interpreter.get_signature_list():
+    input_details = tfl_interpreter.get_signature_runner(
+        signature_key
+    ).get_input_details()
+    for tensor_details in input_details.values():
+      if tensor_details['dtype'] != np.float32:
+        return False
+  return True
+
+
+def _is_all_signature_defs_outputs_float(model_content: bytes):
+  tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(model_content)
+  for signature_key in tfl_interpreter.get_signature_list():
+    output_details = tfl_interpreter.get_signature_runner(
+        signature_key
+    ).get_output_details()
+    for tensor_details in output_details.values():
+      if tensor_details['dtype'] != np.float32:
+        return False
+  return True
+
+
 class QuantizerTest(parameterized.TestCase):
 
   def setUp(self):
@@ -547,21 +571,21 @@ class QuantizerToyGemma2Test(parameterized.TestCase):
         'signature_1': [{
             'cache_0': _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
             'cache_1': _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
-            'positions': _RNG.integers(low=0, high=10, size=(1, 100)).astype(
-                np.int32
+            'positions': (
+                _RNG.integers(low=0, high=10, size=(1, 100)).astype(np.int32)
             ),
-            'tokens': _RNG.integers(low=0, high=10, size=(1, 100)).astype(
-                np.int32
+            'tokens': (
+                _RNG.integers(low=0, high=10, size=(1, 100)).astype(np.int32)
             ),
         }],
         'signature_2': [{
             'cache_0': _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
             'cache_1': _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
-            'positions': _RNG.integers(low=0, high=10, size=(1, 100)).astype(
-                np.int32
+            'positions': (
+                _RNG.integers(low=0, high=10, size=(1, 100)).astype(np.int32)
             ),
-            'tokens': _RNG.integers(low=0, high=10, size=(1, 100)).astype(
-                np.int32
+            'tokens': (
+                _RNG.integers(low=0, high=10, size=(1, 100)).astype(np.int32)
             ),
         }],
     }
@@ -578,8 +602,8 @@ class QuantizerToyGemma2Test(parameterized.TestCase):
     )
 
     self._quantizer.update_quantization_recipe(
-        regex='StatefulPartitionedCall',
-        operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
+        regex='.*',
+        operation_name=qtyping.TFLOperationName.OUTPUT,
         algorithm_key=_AlgorithmName.NO_QUANTIZE,
     )
 
@@ -590,6 +614,90 @@ class QuantizerToyGemma2Test(parameterized.TestCase):
     self.assertIsNotNone(calib_result)
     self._quantizer.quantize(calib_result)
     self.assertIsNotNone(self._quantizer._result.quantized_model)
+
+  def test_toy_gemma2_update_signature_defs_succeeds(self):
+
+    self.assertTrue(
+        _is_all_signature_defs_outputs_float(
+            open(self._test_model_path, 'rb').read()
+        )
+    )
+    calib_result = self._quantizer.calibrate(
+        self._toy_gemma2_calibration_dataset
+    )
+    self.assertIsNotNone(calib_result)
+    self._quantizer.quantize(calib_result)
+    self.assertIsNotNone(self._quantizer._result.quantized_model)
+    self.assertTrue(
+        _is_all_signature_defs_outputs_float(
+            self._quantizer._result.quantized_model
+        )
+    )
+
+
+class QuantizerFullyConnectedTest(parameterized.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    self._tmp_save_path = self.create_tempdir().full_path
+    self._test_model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH,
+        'tests/models/single_fc.tflite',
+    )
+
+    self._test_recipe_path = os.path.join(
+        TEST_DATA_PREFIX_PATH,
+        'recipes/default_a8w8_recipe.json',
+    )
+    with open(self._test_recipe_path) as json_file:
+      self._test_recipe = json.load(json_file)
+
+    self._quantizer = quantizer.Quantizer(
+        self._test_model_path, self._test_recipe_path
+    )
+
+    self._quantizer.update_quantization_recipe(
+        regex='.*',
+        operation_name=qtyping.TFLOperationName.INPUT,
+        algorithm_key=_AlgorithmName.NO_QUANTIZE,
+    )
+    self._quantizer.update_quantization_recipe(
+        regex='.*',
+        operation_name=qtyping.TFLOperationName.OUTPUT,
+        algorithm_key=_AlgorithmName.NO_QUANTIZE,
+    )
+
+  def test_fully_connected_quantization_succeeds(self):
+    calib_result = self._quantizer.calibrate(
+        tfl_interpreter_utils.create_random_normal_input_data(
+            self._test_model_path, num_samples=4
+        )
+    )
+    self.assertIsNotNone(calib_result)
+    self._quantizer.quantize(calib_result)
+    self.assertIsNotNone(self._quantizer._result.quantized_model)
+
+  def test_fully_connected_quantization_update_signature_defs_succeeds(self):
+
+    model_content = open(self._test_model_path, 'rb').read()
+    self.assertTrue(_is_all_signature_defs_inputs_float(model_content))
+    self.assertTrue(_is_all_signature_defs_outputs_float(model_content))
+
+    calib_result = self._quantizer.calibrate(
+        tfl_interpreter_utils.create_random_normal_input_data(
+            self._test_model_path, num_samples=4
+        )
+    )
+    self.assertIsNotNone(calib_result)
+    quant_result = self._quantizer.quantize(calib_result)
+    self.assertIsNotNone(quant_result.quantized_model)
+
+    self.assertTrue(
+        _is_all_signature_defs_inputs_float(quant_result.quantized_model)
+    )
+    self.assertTrue(
+        _is_all_signature_defs_outputs_float(quant_result.quantized_model)
+    )
 
 
 if __name__ == '__main__':

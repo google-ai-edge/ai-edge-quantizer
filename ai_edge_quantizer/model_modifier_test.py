@@ -125,6 +125,86 @@ class ModelModifierTest(parameterized.TestCase):
     loosen_mem_use_factor = 4.5
     self.assertLess(mem_peak / len(self._model_content), loosen_mem_use_factor)
 
+  def test_has_dequant_before_output_true(self):
+    instructions = {
+        'tensor1': qtyping.TensorTransformationInsts(
+            'tensor1',
+            0,
+            instructions=[
+                qtyping.TransformationInst(
+                    transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
+                    tensor_id=0,
+                    producer=0,
+                    consumers=[-1],
+                )
+            ],
+        )
+    }
+    self.assertTrue(
+        self._model_modifier._has_dequant_before_output(instructions)
+    )
+
+  def test_has_dequant_before_output_false(self):
+    instructions = {
+        'tensor1': qtyping.TensorTransformationInsts(
+            'tensor1',
+            0,
+            instructions=[
+                qtyping.TransformationInst(
+                    transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
+                    tensor_id=0,
+                    producer=0,
+                    consumers=[1],
+                )
+            ],
+        )
+    }
+    self.assertFalse(
+        self._model_modifier._has_dequant_before_output(instructions)
+    )
+
+  def test_pad_bytearray(self):
+    arr = bytearray(b'\x01\x02\x03')
+    self._model_modifier._pad_bytearray(arr)
+    self.assertLen(arr, 16)
+    self.assertEqual(arr, b'\x01\x02\x03' + b'\0' * 13)
+
+    arr = bytearray(b'\x01' * 16)
+    self._model_modifier._pad_bytearray(arr)
+    self.assertLen(arr, 16)
+
+    arr = bytearray(b'\x01' * 17)
+    self._model_modifier._pad_bytearray(arr)
+    self.assertLen(arr, 32)
+
+
+class ModelModifierTestWithSignature(parameterized.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    self._model_path = os.path.join(
+        TEST_DATA_PREFIX_PATH,
+        'tests/models/single_fc.tflite',
+    )
+    self._model_content: bytes = tfl_flatbuffer_utils.get_model_content(
+        self._model_path
+    )
+    self._model_modifier = model_modifier.ModelModifier(self._model_content)
+
+  def test_update_signature_defs_for_dequant_output_succeeds(self):
+    # This is a simplified test that only checks if the function runs without
+    # crashing and returns a model. A more thorough test with a model
+    # with a known signature was added in `quantizer_test`.
+    model_bytearray = flatbuffer_utils.read_model_from_bytearray(
+        self._model_content
+    )
+    updated_model = (
+        self._model_modifier._update_signature_defs_for_dequant_output(
+            model_bytearray, bytearray(self._model_content)
+        )
+    )
+    self.assertIsNotNone(updated_model)
+
 
 if __name__ == '__main__':
   googletest.main()

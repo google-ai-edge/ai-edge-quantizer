@@ -17,6 +17,7 @@
 
 from collections.abc import Sequence
 import copy
+import logging
 
 import numpy as np
 
@@ -24,8 +25,13 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import transformation_instruction_generator
 from ai_edge_quantizer import transformation_performer
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
+from ai_edge_litert import interpreter as tfl  # pylint: disable=g-direct-tensorflow-import
 from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
+
+
+_DEQUANT_SUFFIX = "_dequant"
 
 
 class ModelModifier:
@@ -105,10 +111,94 @@ class ModelModifier:
     )
     constant_buffer_size = self._process_constant_map(quantized_model)
     # we leave 256MB for the model architecture.
-    if constant_buffer_size > 2**31 - 2**28:
-      return self._serialize_large_model(quantized_model)
-    else:
-      return self._serialize_small_model(quantized_model)
+    serialize_fun = (
+        self._serialize_large_model
+        if constant_buffer_size > 2**31 - 2**28
+        else self._serialize_small_model
+    )
+    serialized_quantized_model = serialize_fun(quantized_model)
+
+    # Update signature defs if dequant is inserted before output.
+    if self._has_dequant_before_output(instructions):
+      quantized_model = self._update_signature_defs_for_dequant_output(
+          quantized_model, serialized_quantized_model
+      )
+      serialized_quantized_model = serialize_fun(quantized_model)
+
+    return serialized_quantized_model
+
+  def _update_signature_defs_for_dequant_output(
+      self, model: schema_py_generated.ModelT, serialized_model: bytearray
+  ):
+    """Updates the signature definitions in the model.
+
+    This function is called when a dequantize operation is inserted before
+    an output tensor. It updates the tensor index in the signature
+    definitions to point to the newly inserted dequantize output tensor.
+
+    Args:
+      model: The TFlite ModelT object.
+      serialized_model: The serialized bytearray of the TFlite model.
+
+    Returns:
+      The updated TFlite ModelT object.
+    """
+    interpreter = tfl.Interpreter(model_content=bytes(serialized_model))
+
+    for signature_def in model.signatureDefs:
+      signature_key = signature_def.signatureKey.decode("utf-8")
+      logging.info("Signature = %s", signature_key)
+      subgraph_idx = tfl_interpreter_utils.get_signature_main_subgraph_index(
+          interpreter, signature_key
+      )
+      output_details = interpreter.get_signature_runner(
+          signature_key
+      ).get_output_details()
+      subgraph = model.subgraphs[subgraph_idx]
+      graph_info = qtyping.GraphInfo(subgraph.tensors, model.buffers)
+
+      for output in subgraph.outputs:
+        tensor_name = tfl_flatbuffer_utils.get_tensor_name(
+            graph_info.subgraph_tensors[output]
+        )
+        logging.info("\tOutput tensor = `%s`", tensor_name)
+
+        for signature_name, tensor_details in output_details.items():
+          if tensor_details["name"] + _DEQUANT_SUFFIX == tensor_name:
+            logging.info(
+                "\t\tfound tensor mapping: `%s`->`%s` for signature name: `%s`",
+                tensor_details["name"],
+                tensor_name,
+                signature_name,
+            )
+            for signature_item in signature_def.outputs:
+              if signature_item.name.decode("utf-8") == signature_name:
+                signature_item.tensorIndex = output
+                logging.info(
+                    "\t\t\tswapped tensor index: %s->%s",
+                    tensor_details["index"],
+                    output,
+                )
+                break
+            break
+
+    return model
+
+  def _has_dequant_before_output(
+      self, instructions: dict[str, qtyping.TensorTransformationInsts]
+  ) -> bool:
+    """Check if the model has dequant insert to output."""
+    for tensor_name, tensor_trans_insts in instructions.items():
+      for instr in tensor_trans_insts.instructions:
+        if (
+            qtyping.QuantTransformation.ADD_DEQUANTIZE == instr.transformation
+            and instr.consumers == [-1]
+        ):
+          logging.info(
+              "Found dequant insert to output for tensor: %s", tensor_name
+          )
+          return True
+    return False
 
   def _process_constant_map(
       self, quantized_model: schema_py_generated.ModelT
@@ -142,7 +232,7 @@ class ModelModifier:
     remainder = len(bytearr) % 16
     if remainder != 0:
       padding_size = 16 - remainder
-      bytearr.extend(b'\0' * padding_size)
+      bytearr.extend(b"\0" * padding_size)
 
   # TODO: b/333797307 - support > 2GB output model
   def _serialize_large_model(
