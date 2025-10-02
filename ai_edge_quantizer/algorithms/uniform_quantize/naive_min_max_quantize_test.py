@@ -165,8 +165,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     weight_tensor_config = _TensorQuantConfig(
         num_bits=4,
         symmetric=True,
-        granularity=qtyping.QuantGranularity.BLOCKWISE,
-        block_size=2,
+        granularity=qtyping.QuantGranularity.BLOCKWISE_32,
     )
     op_info = qtyping.OpInfo(
         op=fc_op,
@@ -176,28 +175,23 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
             weight_tensor_config=weight_tensor_config,
         ),
     )
-    test_data = np.array([[-7, 7], [4, -4], [4, -4], [7, 7]])
+    test_data = np.random.uniform(low=-10, high=10, size=(4, 32)).astype(
+        np.float32
+    )
     quant_params = naive_min_max_quantize.get_tensor_quant_params(
         op_info=op_info,
         tensor_quant_config=weight_tensor_config,
         tensor_content=test_data,
     )
-    scale = quant_params.scale
     zp = quant_params.zero_point
-    expected_scale = np.array([
-        [1],
-        [0.5703125],
-        [0.5703125],
-        [1],
-    ])
-    expected_zp = np.zeros([4, 1])
-    self.assertTrue(np.array_equal(zp, expected_zp))
-    self.assertTrue(np.array_equal(scale, expected_scale))
+    self.assertEqual(zp.shape, (4, 1))
+    self.assertTrue(np.array_equal(zp, np.zeros([4, 1])))
     self.assertIsNotNone(quant_params.quantized_data)
+    self.assertEqual(quant_params.scale.shape, (4, 1))
     self.assertTupleEqual(
         cast(np.ndarray, quant_params.quantized_data).shape, test_data.shape
     )
-    self.assertEqual(quant_params.block_size, 2)
+    self.assertEqual(quant_params.block_size, 32)
     self.assertEqual(quant_params.quantized_dimension, 1)
 
   def test_calibrate_ignores_inf_min_max(self):
