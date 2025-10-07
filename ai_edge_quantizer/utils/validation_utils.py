@@ -102,7 +102,8 @@ def median_diff_ratio(
 
 
 def cosine_similarity(
-    data1: np._typing.ArrayLike, data2: np._typing.ArrayLike
+    data1: np._typing.ArrayLike,
+    data2: np._typing.ArrayLike,
 ) -> float:
   """Calculates the cosine similarity between data1 & data2.
 
@@ -123,9 +124,14 @@ def cosine_similarity(
   # special handling for tensor of size 0
   if data1.size == 0:
     return float(0)
-  return float(
-      np.dot(data1, data2) / (np.linalg.norm(data1) * np.linalg.norm(data2))
-  )
+  norm_data1 = np.linalg.norm(data1)
+  norm_data2 = np.linalg.norm(data2)
+  # special handling for tensor of length 0
+  if norm_data1 == 0 and norm_data2 == 0:
+    return 1.0
+  if norm_data1 == 0 or norm_data2 == 0:
+    return 0.0
+  return np.dot(data1, data2) / (norm_data1 * norm_data2)
 
 
 def _preprocess_same_size_arrays(
