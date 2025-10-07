@@ -1,4 +1,4 @@
 immutabledict
 numpy
-tf-nightly>=2.18.0.dev20250925
+tf-nightly>=2.21.0.dev20251006
 ai-edge-litert-nightly

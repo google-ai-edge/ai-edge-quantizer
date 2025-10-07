@@ -219,6 +219,7 @@ class UniformQuantParams:
         scale=quant_params['scales'],
         zero_point=quant_params['zero_points'],
         symmetric=symmetric,
+        block_size=quant_params['block_size'],
     )
 
   def __eq__(self, other):

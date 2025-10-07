@@ -131,9 +131,14 @@ def _perform_blockwise_quantization(
       transformation_input.buffers,
   )
   blockwise_details.scales = scale_tensor_id
-  blockwise_details.blockSize = transformation_input.quant_params.block_size
+  # Blockwise quantization does not support zero point yet, so this points to
+  # a -1 buffer index.
   # TODO: b/404909258 - Add optional zero point to blockwise quantization.
+  blockwise_details.zeroPoints = -1
+  blockwise_details.blockSize = transformation_input.quant_params.block_size
   flatbuffer_quantization.details = blockwise_details
+  # TODO: b/443830202 - Hardcoding to 0 for now.
+  flatbuffer_quantization.quantizedDimension = 0
   return flatbuffer_quantization
 
 
