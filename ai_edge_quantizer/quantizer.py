@@ -126,12 +126,16 @@ class Quantizer:
     float_model: TFLite model file path or bytearray.
     quantization_recipe: Quantization recipe .json filepath or in loaded json
       format.
+    previous_quantized_model: Optional previously quantized TFLite model file
+      path or bytearray. This is useful for validating a quantized model
+      without quantizing it again.
   """
 
   def __init__(
       self,
       float_model: Union[str, bytearray],
       quantization_recipe: Optional[Union[str, _QuantRecipe]] = None,
+      previous_quantized_model: Optional[Union[str, bytearray]] = None,
   ):
     """Initializes the quantizer.
 
@@ -139,6 +143,9 @@ class Quantizer:
       float_model: Path to the float tflite model.
       quantization_recipe: Quantization recipe in .json filepath or loaded json
         format.
+      previous_quantized_model: Path to an optional previously quantized tflite
+        model. This is useful for validating a quantized model without
+        quantizing it again.
     """
     # Use `float model` as bytes for memory efficiency.
     self.float_model: bytes = (
@@ -146,6 +153,14 @@ class Quantizer:
         if isinstance(float_model, str)
         else float_model
     )
+    if previous_quantized_model is not None:
+      self.previous_quantized_model: bytes = (
+          tfl_flatbuffer_utils.get_model_content(previous_quantized_model)
+          if isinstance(previous_quantized_model, str)
+          else previous_quantized_model
+      )
+    else:
+      self.previous_quantized_model = None
 
     self._recipe_manager: recipe_manager.RecipeManager = (
         recipe_manager.RecipeManager()
@@ -153,6 +168,7 @@ class Quantizer:
     if quantization_recipe is not None:
       self.load_quantization_recipe(quantization_recipe)
     self._result: QuantizationResult = QuantizationResult([{}], None)
+    self._quantize_called = False
 
   def load_quantization_recipe(self, recipe: Union[str, _QuantRecipe]) -> None:
     """Loads a quantization recipe.
@@ -399,7 +415,7 @@ class Quantizer:
     Raises:
       RuntimeError: If quantization recipe is empty.
     """
-
+    self._quantize_called = True
     if calibration_result is not None:
       self._ensure_model_qsv_sufficient(calibration_result)
 
@@ -445,9 +461,16 @@ class Quantizer:
       test_data = tfl_interpreter_utils.create_random_normal_input_data(
           self.float_model, num_samples=1
       )
+    if self._quantize_called:
+      quantized_model = self._result.quantized_model
+    else:
+      quantized_model = self.previous_quantized_model
+
+    if quantized_model is None:
+      raise ValueError('No quantized model available to validate.')
     return model_validator.compare_model(
         self.float_model,
-        self._result.quantized_model,
+        quantized_model,
         test_data,
         error_metrics,
         validation_utils.get_validation_func(error_metrics),

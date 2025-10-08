@@ -337,6 +337,21 @@ class QuantizerTest(parameterized.TestCase):
         'sequential/dense_1/MatMul', validation_result.intermediate_tensors
     )
 
+  def test_validate_with_quantized_model_arg_succeeds(self):
+    self._quantizer.quantize()
+    quantized_model = self._quantizer._result.quantized_model
+    self.assertIsNotNone(quantized_model)
+
+    new_quantizer = quantizer.Quantizer(
+        self._test_model_path, previous_quantized_model=quantized_model
+    )
+    validation_result = new_quantizer.validate()
+    validation_result = validation_result.get_signature_comparison_result()
+    self.assertIsNotNone(validation_result)
+    self.assertIn(
+        'sequential/dense_1/MatMul', validation_result.intermediate_tensors
+    )
+
   def test_load_custom_policies_succeeds(self):
 
     test_op_config = qtyping.OpQuantizationConfig(
