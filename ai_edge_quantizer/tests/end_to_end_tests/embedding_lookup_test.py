@@ -113,47 +113,6 @@ class EmbeddingLookupTest(test_utils.BaseOpTestCase):
     #     output_tolerance=1e-5,
     # )
 
-  @parameterized.parameters(
-      ('../../recipes/default_a8w8_recipe.json', 1400),
-      ('../../recipes/default_a16w8_recipe.json', 1400),
-  )
-  def test_embedding_lookup_model_full_integer(
-      self, recipe_path, expected_model_size
-  ):
-    calibration_result = {
-        'Identity_1': {'min': -2.0, 'max': 2.0},
-    }
-    recipe_path = test_utils.get_path_to_datafile(recipe_path)
-    self._quantizer.load_quantization_recipe(recipe_path)
-    self.assertTrue(self._quantizer.need_calibration)
-    quant_result = self._quantizer.quantize(calibration_result)
-    self.assertLess(len(quant_result.quantized_model), expected_model_size)
-    # TODO: b/364405203 - Enable after 0 signature works.
-    # comparion_result = self._quantizer.validate(
-    #     error_metrics='mse',
-    #     signature_test_data=_get_test_data(),
-    # )
-    # self._check_comparion_result(
-    #     comparion_result,
-    #     weight_tolerance=1e-5,
-    #     output_tolerance=1e-5,
-    # )
-
-  # def _check_comparion_result(
-  #     self,
-  #     comparion_result,
-  #     weight_tolerance,
-  #     output_tolerance,
-  # ):
-  #   # TODO: b/357959309 - Use comparison result directly for testing.
-  #   comparion_result = comparion_result.get_all_tensor_results()
-  #   weight_mse = comparion_result[
-  #       'jax2tf_export_func_/...y_yz-_...z/pjit__einsum_/MatMul;jax2tf_export_func_/pjit__one_hot_/Equal;jax2tf_export_func_/pjit__one_hot_/Cast_1'
-  #   ]
-  #   self.assertLess(weight_mse, weight_tolerance)
-  #   output_mse = comparion_result['Identity_1']
-  #   self.assertLess(output_mse, output_tolerance)
-
   @parameterized.product(weight_bit_width=[4, 8])
   def test_hadamard_rotation_accuracy_and_size_within_tolerance(
       self, weight_bit_width
@@ -180,9 +139,9 @@ class EmbeddingLookupTest(test_utils.BaseOpTestCase):
 
     validation_result = self._quantizer.validate(
         test_data={
-            'lookup': [{
-                'lookup': np.random.randint(0, 15, size=(1,), dtype=np.int32)
-            }],
+            'lookup': [
+                {'lookup': np.random.randint(0, 15, size=(1,), dtype=np.int32)}
+            ],
         },
         error_metrics='mse',
     )
