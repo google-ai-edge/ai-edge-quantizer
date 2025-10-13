@@ -81,6 +81,7 @@ class TFLOperationName(str, enum.Enum):
   EQUAL = 'EQUAL'
   NOT_EQUAL = 'NOT_EQUAL'
   MIRROR_PAD = 'MIRROR_PAD'
+  SPACE_TO_DEPTH = 'SPACE_TO_DEPTH'
 
 
 class QuantizeMode(enum.Enum):

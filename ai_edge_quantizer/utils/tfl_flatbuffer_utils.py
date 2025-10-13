@@ -75,6 +75,7 @@ TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
     _TFLOpName.EQUAL: schema.BuiltinOperator.EQUAL,
     _TFLOpName.NOT_EQUAL: schema.BuiltinOperator.NOT_EQUAL,
     _TFLOpName.MIRROR_PAD: schema.BuiltinOperator.MIRROR_PAD,
+    _TFLOpName.SPACE_TO_DEPTH: schema.BuiltinOperator.SPACE_TO_DEPTH,
 })
 
 TFL_OP_CODE_TO_NAME = immutabledict.immutabledict(
