@@ -106,6 +106,34 @@ class ValidationUtilTest(googletest.TestCase):
     result = validation_utils.cosine_similarity(data1, data2)
     self.assertEqual(result, 0)
 
+  def test_kl_divergence(self):
+    data1 = [0.5, 0.5]
+    data2 = [0.1, 0.9]
+    result = validation_utils.kl_divergence(data1, data2)
+    self.assertAlmostEqual(result, 0.36808, 4)
+
+  def test_kl_divergence_zero_in_q(self):
+    data1 = [0, 1]
+    data2 = [1, 0]
+    result = validation_utils.kl_divergence(data1, data2)
+    self.assertAlmostEqual(result, 20.7232658, 4)
+
+  def test_kl_divergence_negative_values(self):
+    data1 = [-1, 1]
+    data2 = [1, -1]
+    result = validation_utils.kl_divergence(data1, data2)
+    self.assertAlmostEqual(result, 20.7232658, 4)
+
+  def test_kl_divergence_0d(self):
+    data1 = []
+    data2 = []
+    result = validation_utils.kl_divergence(data1, data2)
+    self.assertEqual(result, 0)
+
+  def test_get_validation_func_kl_divergence(self):
+    func = validation_utils.get_validation_func("kl_divergence")
+    self.assertEqual(func, validation_utils.kl_divergence)
+
 
 if __name__ == "__main__":
   googletest.main()

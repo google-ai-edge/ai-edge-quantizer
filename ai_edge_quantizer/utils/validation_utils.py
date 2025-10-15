@@ -40,6 +40,8 @@ def get_validation_func(
     return median_diff_ratio
   elif func_name == "cosine_similarity":
     return cosine_similarity
+  elif func_name == "kl_divergence":
+    return kl_divergence
   else:
     raise ValueError(f"Validation function {func_name} not supported")
 
@@ -132,6 +134,43 @@ def cosine_similarity(
   if norm_data1 == 0 or norm_data2 == 0:
     return 0.0
   return np.dot(data1, data2) / (norm_data1 * norm_data2)
+
+
+def kl_divergence(
+    data1: np._typing.ArrayLike,
+    data2: np._typing.ArrayLike,
+    epsilon: float = 1e-9,
+) -> float:
+  """Calculates the KL divergence between data1 & data2.
+
+  KL(data2 || data1) = sum(data2 * log(data2 / data1)).
+  data2 is treated as the true distribution P, and data1 as the
+  approximated distribution Q.
+  Non-positive values in data1 and data2 are clipped to 0 before
+  KL divergence calculation. Epsilon is added to avoid log(0) and
+  division by zero.
+
+  Args:
+    data1: input data to be used for comparison (distribution Q)
+    data2: input data to be used for comparison (distribution P),
+      data1 & 2 must be of the same shape
+    epsilon: small value to avoid log(0) and division by zero.
+
+  Returns:
+    A float value representing the KL divergence between data1 & 2.
+
+  Raises:
+    Value error if the two inputs don't have the same number of elements.
+  """
+  data1, data2 = _preprocess_same_size_arrays(data1, data2)
+  # special handling for tensor of size 0
+  if data1.size == 0:
+    return float(0)
+
+  p = np.maximum(0, data2)
+  q = np.maximum(0, data1)
+
+  return float(np.sum(p * np.log((p + epsilon) / (q + epsilon))))
 
 
 def _preprocess_same_size_arrays(
