@@ -220,6 +220,14 @@ def insert_decomposed_hadamard_rotation(
   fc_op.opcodeIndex = fc_op_code_idx
   fc_op.inputs = [prerotate_reshape_output_tensor_id, hadamard_matrix_tensor_id]
   fc_op.outputs = [fc_output_tensor_id]
+  fc_options = schema_py_generated.FullyConnectedOptionsT()
+  fc_options.fusedActivationFunction = (
+      schema_py_generated.ActivationFunctionType.NONE
+  )
+  fc_op.builtinOptionsType = (
+      schema_py_generated.BuiltinOptions.FullyConnectedOptions
+  )
+  fc_op.builtinOptions = fc_options
 
   # Insert x' = tfl.reshape(x', x.shape)
   post_reshape_op_code_idx = transformation_utils.add_op_code(
