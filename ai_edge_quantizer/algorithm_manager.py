@@ -382,6 +382,9 @@ register_config_check_policy_func(
 _MSE_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
     _TFLOpName.FULLY_CONNECTED: common_quantize.materialize_fc_conv,
     _TFLOpName.EMBEDDING_LOOKUP: common_quantize.materialize_embedding_lookup,
+    _TFLOpName.CONV_2D: common_quantize.materialize_fc_conv,
+    _TFLOpName.DEPTHWISE_CONV_2D: common_quantize.materialize_fc_conv,
+    _TFLOpName.CONV_2D_TRANSPOSE: common_quantize.materialize_conv2d_transpose,
 })
 for (
     op_name,
