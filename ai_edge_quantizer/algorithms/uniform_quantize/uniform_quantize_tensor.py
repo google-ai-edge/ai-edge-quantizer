@@ -29,6 +29,11 @@ class IntType:
   signed: bool
 
 
+def is_blockwise(granularity: qtyping.QuantGranularity) -> bool:
+  """Checks if the quantization granularity is blockwise."""
+  return "BLOCKWISE" in str(granularity)
+
+
 def get_quantized_range(qtype: IntType) -> tuple[float, float]:
   """Calculates range of the quantized type."""
   if qtype.signed:
@@ -38,6 +43,22 @@ def get_quantized_range(qtype: IntType) -> tuple[float, float]:
     qmax = (2**qtype.num_bits) - 1
     qmin = 0
   return float(qmin), float(qmax)
+
+
+def extract_block_size_from_granularity(
+    granularity: qtyping.QuantGranularity,
+) -> int:
+  """Get the block size for blockwise quantization."""
+  if granularity == qtyping.QuantGranularity.BLOCKWISE_32:
+    return 32
+  elif granularity == qtyping.QuantGranularity.BLOCKWISE_64:
+    return 64
+  elif granularity == qtyping.QuantGranularity.BLOCKWISE_128:
+    return 128
+  elif granularity == qtyping.QuantGranularity.BLOCKWISE_256:
+    return 256
+  else:
+    return 0
 
 
 def _round_and_clip(
@@ -157,14 +178,16 @@ def _get_tensor_shape_for_blockwise(
 
 
 def reshape_data_for_blockwise(
-    tensor_data: np.ndarray, op_name: qtyping.TFLOperationName, block_size: int
+    tensor_data: np.ndarray,
+    op_name: qtyping.TFLOperationName,
+    granularity: qtyping.QuantGranularity,
 ) -> tuple[np.ndarray, int]:
   """Reshapes data for blockwise quantization.
 
   Args:
     tensor_data: The original tensor data.
     op_name: The name of the TFL op.
-    block_size: The size of the block.
+    granularity: The quantization granularity for the tensor.
 
   Returns:
     A tuple containing the reshaped tensor data and the new reduce dimension.
@@ -172,11 +195,11 @@ def reshape_data_for_blockwise(
   quantized_dim = tfl_flatbuffer_utils.TFL_OP_TO_BLOCKWISE_WEIGHT_QUANTIZED_DIM[
       op_name
   ]
+  block_size = extract_block_size_from_granularity(granularity)
   new_shape = _get_tensor_shape_for_blockwise(
       tensor_data.shape, quantized_dim, block_size
   )
-  reshaped_data = tensor_data.reshape(new_shape)
-  return reshaped_data, quantized_dim + 1
+  return tensor_data.reshape(new_shape), quantized_dim + 1
 
 
 def _broadcast_scale_zp_for_blockwise(
@@ -233,21 +256,21 @@ def _broadcast_scale_zp_for_blockwise(
 def uniform_quantize(
     tensor_data: np.ndarray,
     quantization_params: qtyping.UniformQuantParams,
-    is_blockwise: bool = False,
+    is_blockwise_quant: bool = False,
 ):
   """Uniform quantize a tensor.
 
   Args:
     tensor_data: The tensor to be quantized.
     quantization_params: The quantization parameters.
-    is_blockwise: Whether the tensor is blockwise quantized.
+    is_blockwise_quant: Whether the tensor is blockwise quantized.
 
   Returns:
     The quantized tensor.
   """
   # The reshaping for blockwise quantization is unique hence we do this here
   # to avoid unexpected broadcast behavior downstream.
-  if is_blockwise:
+  if is_blockwise_quant:
     quantization_params = _broadcast_scale_zp_for_blockwise(
         tensor_data, quantization_params
     )
@@ -435,6 +458,7 @@ def tensor_zp_scale_from_min_max(
   Returns:
     The zero point and scale of the tensor.
   """
+
   # TODO: b/332574603 - support unsigned data type.
   qtype = IntType(
       num_bits,
@@ -445,7 +469,7 @@ def tensor_zp_scale_from_min_max(
   pos_clipping_values = None if clipping_values is None else clipping_values
   neg_clipping_values = None if clipping_values is None else -clipping_values
 
-  if granularity == qtyping.QuantGranularity.BLOCKWISE:
+  if is_blockwise(granularity):
     # Blockwise quantization uses float16 scale,
     # with 7 bit mantissa, so the maximum scale value is 65280 and maximum
     # representable range is [-65280 * (2 ** num_bits),
@@ -493,7 +517,7 @@ def tensor_zp_scale_from_min_max(
     zp = qmin - bound_min / scale
     zp = np.rint(zp)
 
-  if granularity == qtyping.QuantGranularity.BLOCKWISE:
+  if is_blockwise(granularity):
     # Round the scale values to 7 bit mantissa.
     scale = (
         scale.astype(ml_dtypes.bfloat16).astype(np.float16).astype(np.float32)
