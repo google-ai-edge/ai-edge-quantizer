@@ -112,7 +112,11 @@ class TensorDataType(str, enum.Enum):
 class QuantGranularity(str, enum.Enum):
   TENSORWISE = 'TENSORWISE'
   CHANNELWISE = 'CHANNELWISE'
-  BLOCKWISE = 'BLOCKWISE'
+  # Blockwise quantization with various block sizes.
+  BLOCKWISE_32 = 'BLOCKWISE_32'
+  BLOCKWISE_64 = 'BLOCKWISE_64'
+  BLOCKWISE_128 = 'BLOCKWISE_128'
+  BLOCKWISE_256 = 'BLOCKWISE_256'
 
 
 class QuantTransformation(enum.Enum):
@@ -310,7 +314,6 @@ class TensorQuantizationConfig:
     granularity: Whether to perform per-tensor, per-channel or per-block
       quantization.
     dtype: The data type of the tensor.
-    block_size: The block size for blockwise quantization, ignored otherwise.
     algorithm_key: The algorithm key to use for quantization.
   """
 
@@ -318,7 +321,6 @@ class TensorQuantizationConfig:
   symmetric: bool = True
   granularity: QuantGranularity = QuantGranularity.TENSORWISE
   dtype: TensorDataType = TensorDataType.INT
-  block_size: int = 0
 
   def to_dict(self) -> dict[str, Any]:
     """Converts ActivationQuantizationConfig to dict."""
@@ -336,7 +338,26 @@ class TensorQuantizationConfig:
   def from_dict(cls, params: dict[str, Any]) -> 'TensorQuantizationConfig':
     """Converts a given dict to TensorQuantizationConfig."""
     params_copy = copy.deepcopy(params)
+    # Process block_size config from legacy recipe.
+    params_copy = _process_block_size(params_copy)
     return cls(**params_copy)
+
+
+def _process_block_size(params: dict[str, Any]) -> dict[str, Any]:
+  """Processes block size in the params."""
+  block_size = params.pop('block_size', 0)
+  if block_size > 0:
+    if block_size == 32:
+      params['granularity'] = QuantGranularity.BLOCKWISE_32
+    elif block_size == 64:
+      params['granularity'] = QuantGranularity.BLOCKWISE_64
+    elif block_size == 128:
+      params['granularity'] = QuantGranularity.BLOCKWISE_128
+    elif block_size == 256:
+      params['granularity'] = QuantGranularity.BLOCKWISE_256
+    else:
+      raise ValueError(f'Unsupported block size: {block_size}')
+  return params
 
 
 @dataclasses.dataclass(frozen=True)
