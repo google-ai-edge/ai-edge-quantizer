@@ -381,10 +381,13 @@ def symmetric_quantize_bias_tensor(
   quantized_vars = uniform_quantize(bias_content, bias_quant_params)
   if check_error:
     dequantized_bias = uniform_dequantize(quantized_vars, bias_quant_params)
-    quantization_error = np.abs(dequantized_bias - bias_content)
-    if np.any(quantization_error > effective_output_scale):
+    max_quant_error = np.max(np.abs(dequantized_bias - bias_content))
+    error_tolerance = np.maximum(1e-6, np.max(effective_output_scale))
+    if max_quant_error > error_tolerance:
       raise ValueError(
-          "Quantization error is too large for bias tensor quantization."
+          "Quantization error is too large for bias tensor quantization. Max"
+          f" quantization error is {max_quant_error}, which exceed"
+          f" the threshold {error_tolerance}"
       )
 
   # Save the int32 quantized bias as int64 if the input tensor is quantized to

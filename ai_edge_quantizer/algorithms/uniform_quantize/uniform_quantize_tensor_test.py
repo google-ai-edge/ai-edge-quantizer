@@ -431,7 +431,10 @@ class TensorUtilsTest(parameterized.TestCase):
     )
     # This will result in quantized bias of 3e9, which is larger than int32 max.
     bias_tensor_data = np.array([3e7])
-    with self.assertRaises(ValueError):
+    with self.assertRaisesRegex(
+        ValueError,
+        "Quantization error is too large for bias tensor quantization.",
+    ):
       uniform_quantize_tensor.symmetric_quantize_bias_tensor(
           bias_tensor_data,
           input_quant_config,
