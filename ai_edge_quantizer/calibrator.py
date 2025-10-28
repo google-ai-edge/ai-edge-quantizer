@@ -310,3 +310,10 @@ class Calibrator:
         for tensor_name, qsv in op_qsvs.items():
           if tensor_name not in self._model_qsvs:
             self._model_qsvs[tensor_name] = qsv
+          elif repr(self._model_qsvs[tensor_name]) != repr(qsv):
+            raise ValueError(
+                f'QSV for tensor {tensor_name} has been already initialized and'
+                ' the new QSV is different from the existing one.\n'
+                f'Existing QSV: {self._model_qsvs[tensor_name]}\n'
+                f'New QSV: {qsv}'
+            )
