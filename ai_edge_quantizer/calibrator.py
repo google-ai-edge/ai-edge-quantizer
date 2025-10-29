@@ -98,9 +98,7 @@ class Calibrator:
       qsv_update_func: The function to update the QSVs.
     """
     op_codes = self._flatbuffer_model.operatorCodes
-    if not self._model_qsvs:
-      self._initialize_model_qsvs(model_recipe_manager)
-    else:
+    if self._model_qsvs:
       logging.warning(
           "Calibrator contains non-empty model qsvs, and the current"
           " calibration process will start on top of this state (i.e., update"
@@ -263,50 +261,3 @@ class Calibrator:
         output_tensor = subgraph_tensors[output_tensor_idx]
         scope += tfl_flatbuffer_utils.get_tensor_name(output_tensor)
     return scope
-
-  # TODO: b/354224138 - Remove code duplication between calibrate and
-  # _initialize_model_qsvs.
-  def _initialize_model_qsvs(
-      self, model_recipe_manager: recipe_manager.RecipeManager
-  ) -> None:
-    """Initialize the model qsvs.
-
-    Args:
-      model_recipe_manager: A RecipeManager object that contains the
-        quantization recipe.
-    """
-    op_codes = self._flatbuffer_model.operatorCodes
-    for subgraph in self._flatbuffer_model.subgraphs:
-      graph_info = qtyping.GraphInfo(
-          subgraph.tensors, self._flatbuffer_model.buffers
-      )
-      for subgraph_op_id, op in enumerate(subgraph.operators):
-        op_code = op_codes[op.opcodeIndex].builtinCode
-        if op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME:
-          continue
-        op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
-        # Step1: query the quantization_recipe to get op quantization
-        # settings.
-        op_scope = self._get_op_scope(op, subgraph.tensors)
-        algorithm_name, op_quant_config = (
-            model_recipe_manager.get_quantization_configs(op_key, op_scope)
-        )
-        if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
-          continue
-        # Step2: query algorithm_manager to get/call the related qsv init
-        # function.
-        qsv_init_func = algorithm_manager.get_init_qsv_func(
-            algorithm_name, op_key
-        )
-        op_info = qtyping.OpInfo(op, op_key, subgraph_op_id, op_quant_config)
-        # Ignore the input tensors where any dimension of the shape is 0.
-        inputs_to_ignore = [
-            opr_idx
-            for opr_idx, tensor_idx in enumerate(op.inputs)
-            if not np.all(graph_info.subgraph_tensors[tensor_idx].shape)
-        ]
-        op_qsvs = qsv_init_func(op_info, graph_info, inputs_to_ignore)
-        # Step3: initialize tensor qsvs.
-        for tensor_name, qsv in op_qsvs.items():
-          if tensor_name not in self._model_qsvs:
-            self._model_qsvs[tensor_name] = qsv
