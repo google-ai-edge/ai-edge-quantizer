@@ -51,9 +51,8 @@ def check_subchannel_config(
   """Checks the op quantization config for subchannel quantization."""
   if (
       op_quant_config.weight_tensor_config is not None
-      and uniform_quantize_tensor.is_blockwise(
-          op_quant_config.weight_tensor_config.granularity
-      )
+      and op_quant_config.weight_tensor_config.granularity
+      == qtyping.QuantGranularity.BLOCKWISE
   ):
     if op_name not in _SUPPORTED_SUBCHANNEL_OPS:
       raise ValueError(f"Unsupported op for blockwise quantization: {op_name}.")
@@ -66,6 +65,10 @@ def check_subchannel_config(
       raise ValueError(
           "Blockwise quantization does not support for asymmetric weight"
           " quantization."
+      )
+    if op_quant_config.weight_tensor_config.block_size <= 0:
+      raise ValueError(
+          "Blockwise quantization must have a non-zero block size."
       )
 
 
@@ -990,7 +993,7 @@ def get_weight_quantized_dim(
       quantized_dim = tfl_flatbuffer_utils.TFL_OP_TO_WEIGHT_QUANTIZED_DIM.get(
           op_info.op_name, None
       )
-  elif uniform_quantize_tensor.is_blockwise(granularity):
+  elif granularity == qtyping.QuantGranularity.BLOCKWISE:
     quantized_dim = (
         tfl_flatbuffer_utils.TFL_OP_TO_BLOCKWISE_WEIGHT_QUANTIZED_DIM[
             op_info.op_name

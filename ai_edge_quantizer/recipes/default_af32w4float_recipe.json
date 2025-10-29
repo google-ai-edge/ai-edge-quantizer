@@ -8,7 +8,8 @@
         "num_bits": 4,
         "symmetric": false,
         "granularity": "CHANNELWISE",
-        "dtype": "INT"
+        "dtype": "INT",
+        "block_size": 0
       },
       "compute_precision": "FLOAT",
       "explicit_dequantize": true,

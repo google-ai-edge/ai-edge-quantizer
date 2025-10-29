@@ -61,8 +61,9 @@ DEFAULT_JSON_POLICY = """
       "weight_tensor_config": {
         "num_bits": 4,
         "symmetric": [true],
-        "granularity": ["BLOCKWISE_32", "BLOCKWISE_64", "BLOCKWISE_128", "BLOCKWISE_256"],
-        "dtype": "INT"
+        "granularity": ["BLOCKWISE"],
+        "dtype": "INT",
+        "block_size": [32, 64, 96, 128, 256]
       },
       "explicit_dequantize": false,
       "compute_precision": "INTEGER"
@@ -319,9 +320,16 @@ def _unroll_json_config(
           "granularity": granularity,
           "dtype": json_config["weight_tensor_config"]["dtype"],
       }
-      weight_configs.append(
-          qtyping.TensorQuantizationConfig.from_dict(tensor_config)
-      )
+      if "block_size" in json_config["weight_tensor_config"]:
+        for block_size in json_config["weight_tensor_config"]["block_size"]:
+          tensor_config["block_size"] = block_size
+          weight_configs.append(
+              qtyping.TensorQuantizationConfig.from_dict(tensor_config)
+          )
+      else:
+        weight_configs.append(
+            qtyping.TensorQuantizationConfig.from_dict(tensor_config)
+        )
 
       if activation_configs:
         for activation_config in activation_configs:
