@@ -1165,36 +1165,39 @@ def init_tensor_min_max(
     A dictionary containing the min/max values for the tensor, or an empty
     dictionary if the tensor data is None.
   """
-  weight_tensor_config = op_info.op_quant_config.weight_tensor_config
-  if tensor_data is None or weight_tensor_config is None:
+  if tensor_data is None:
     return {}
   else:
-    # Get reduce dimension for min/max calculation based on quantization
-    # granularity.
-    granularity = weight_tensor_config.granularity
-    if granularity == qtyping.QuantGranularity.TENSORWISE:
-      reduce_dims = None
-      keep_dims = True
-    elif granularity == qtyping.QuantGranularity.CHANNELWISE:
+    weight_tensor_config = op_info.op_quant_config.weight_tensor_config
+    quantized_dim = None
+    if weight_tensor_config is not None and (
+        weight_tensor_config.granularity == qtyping.QuantGranularity.CHANNELWISE
+    ):
       quantized_dim = common_utils.get_weight_quantized_dim(
           op_info, tensor_data, weight_tensor_config.granularity
       )
-      reduce_dims = common_utils.get_reduce_dims(
-          quantized_dim, tensor_data.shape
-      )
-      keep_dims = True
-    elif uniform_quantize_tensor.is_blockwise(granularity):
-      tensor_data, reduce_dims = (
+    if (
+        weight_tensor_config is not None
+        and weight_tensor_config.granularity
+        == qtyping.QuantGranularity.BLOCKWISE
+    ):
+      reshaped_data, reduce_dims = (
           uniform_quantize_tensor.reshape_data_for_blockwise(
               tensor_data,
               op_info.op_name,
-              granularity,
+              weight_tensor_config.block_size,
           )
       )
-      keep_dims = False
+      return {
+          "min": np.min(reshaped_data, axis=reduce_dims, keepdims=False),
+          "max": np.max(reshaped_data, axis=reduce_dims, keepdims=False),
+      }
+
     else:
-      raise ValueError(f"Unsupported granularity: {granularity}")
-    return {
-        "min": np.min(tensor_data, axis=reduce_dims, keepdims=keep_dims),
-        "max": np.max(tensor_data, axis=reduce_dims, keepdims=keep_dims),
-    }
+      reduce_dims = common_utils.get_reduce_dims(
+          quantized_dim, tensor_data.shape
+      )
+      return {
+          "min": np.min(tensor_data, axis=reduce_dims, keepdims=True),
+          "max": np.max(tensor_data, axis=reduce_dims, keepdims=True),
+      }

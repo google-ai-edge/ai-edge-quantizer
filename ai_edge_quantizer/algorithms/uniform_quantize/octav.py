@@ -131,12 +131,12 @@ def get_tensor_quant_params(
   quantized_dim = common_utils.get_weight_quantized_dim(
       op_info, tensor_content, tensor_quant_config.granularity
   )
-  if uniform_quantize_tensor.is_blockwise(tensor_quant_config.granularity):
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
     reshaped_data, reduce_dims = (
         uniform_quantize_tensor.reshape_data_for_blockwise(
             tensor_content,
             op_info.op_name,
-            tensor_quant_config.granularity,
+            tensor_quant_config.block_size,
         )
     )
   else:
@@ -154,7 +154,7 @@ def get_tensor_quant_params(
   # We created a new dimension in order to reduce properly for blockwise
   # quantization, so we need to reshape the clipping constants back to the
   # min/max shape for the next step.
-  if uniform_quantize_tensor.is_blockwise(tensor_quant_config.granularity):
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
     clipping_constants = clipping_constants.reshape(tensor_min_max["min"].shape)
 
   zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
@@ -172,17 +172,13 @@ def get_tensor_quant_params(
       num_bits=tensor_quant_config.num_bits,
       symmetric=tensor_quant_config.symmetric,
       quantized_dimension=quantized_dim,
-      block_size=uniform_quantize_tensor.extract_block_size_from_granularity(
-          tensor_quant_config.granularity
-      ),
+      block_size=tensor_quant_config.block_size,
   )
 
   quantized_vars = uniform_quantize_tensor.uniform_quantize(
       tensor_content,
       quant_params,
-      is_blockwise_quant=uniform_quantize_tensor.is_blockwise(
-          tensor_quant_config.granularity
-      ),
+      tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE,
   )
 
   return dataclasses.replace(quant_params, quantized_data=quantized_vars)

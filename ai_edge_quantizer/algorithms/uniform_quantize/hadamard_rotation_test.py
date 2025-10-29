@@ -147,7 +147,8 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
             weight_tensor_config=_TensorQuantConfig(
                 num_bits=8,
                 symmetric=True,
-                granularity=qtyping.QuantGranularity.BLOCKWISE_32,
+                granularity=qtyping.QuantGranularity.BLOCKWISE,
+                block_size=32,
             ),
         ),
     )

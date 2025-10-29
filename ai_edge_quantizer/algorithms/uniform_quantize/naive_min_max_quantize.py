@@ -15,7 +15,6 @@
 
 """Performs naive min/max uniform quantization."""
 
-import dataclasses
 from typing import Any, Optional
 import numpy as np
 from ai_edge_quantizer import qtyping
@@ -92,9 +91,7 @@ def get_tensor_quant_params(
       num_bits=tensor_quant_config.num_bits,
       symmetric=tensor_quant_config.symmetric,
       quantized_dimension=quantized_dim,
-      block_size=uniform_quantize_tensor.extract_block_size_from_granularity(
-          tensor_quant_config.granularity
-      ),
+      block_size=tensor_quant_config.block_size,
   )
   if tensor_content is None:
     return quant_params
@@ -102,10 +99,18 @@ def get_tensor_quant_params(
   quantized_vars = uniform_quantize_tensor.uniform_quantize(
       tensor_content,
       quant_params,
-      uniform_quantize_tensor.is_blockwise(tensor_quant_config.granularity),
+      tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE,
   )
   # Update with quantized values.
-  return dataclasses.replace(quant_params, quantized_data=quantized_vars)
+  return qtyping.UniformQuantParams(
+      scale=scale,
+      zero_point=zp,
+      num_bits=tensor_quant_config.num_bits,
+      symmetric=tensor_quant_config.symmetric,
+      quantized_dimension=quantized_dim,
+      quantized_data=quantized_vars,
+      block_size=tensor_quant_config.block_size,
+  )
 
 
 # TODO: b/333731147 - Use named tuple to store min/max.

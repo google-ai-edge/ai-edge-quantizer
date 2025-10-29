@@ -196,7 +196,8 @@ class OctavQuantizeTest(parameterized.TestCase):
     tensor_config = qtyping.TensorQuantizationConfig(
         num_bits=4,
         symmetric=True,
-        granularity=qtyping.QuantGranularity.BLOCKWISE_32,
+        granularity=qtyping.QuantGranularity.BLOCKWISE,
+        block_size=32,
     )
     fc_op_info = qtyping.OpInfo(
         op=self._fc_op,

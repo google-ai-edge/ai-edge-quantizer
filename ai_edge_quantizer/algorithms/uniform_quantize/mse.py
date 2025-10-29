@@ -55,7 +55,7 @@ def get_tensor_quant_params(
     ValueError: `tensor_qsv` must contain min/max values, or `tensor_content`
       must be provided so that they can be inferred.
   """
-  if uniform_quantize_tensor.is_blockwise(tensor_quant_config.granularity):
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
     raise ValueError(
         "Blockwise quantization is not supported for MSE quantization."
     )
@@ -113,15 +113,13 @@ def get_tensor_quant_params(
       num_bits=tensor_quant_config.num_bits,
       symmetric=tensor_quant_config.symmetric,
       quantized_dimension=quantized_dim,
-      block_size=uniform_quantize_tensor.extract_block_size_from_granularity(
-          tensor_quant_config.granularity
-      ),
+      block_size=tensor_quant_config.block_size,
   )
 
   quantized_vars = uniform_quantize_tensor.uniform_quantize(
       tensor_content,
       quant_params,
-      uniform_quantize_tensor.is_blockwise(tensor_quant_config.granularity),
+      tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE,
   )
 
   return dataclasses.replace(quant_params, quantized_data=quantized_vars)

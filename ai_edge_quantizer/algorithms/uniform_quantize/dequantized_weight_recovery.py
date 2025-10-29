@@ -158,7 +158,7 @@ def get_tensor_quant_params(
         op_info, tensor_quant_config, tensor_content, tensor_qsv
     )
 
-  if uniform_quantize_tensor.is_blockwise(tensor_quant_config.granularity):
+  if tensor_quant_config.granularity == qtyping.QuantGranularity.BLOCKWISE:
     raise ValueError(
         "Blockwise quantization is not supported for dequantized weight"
         " recovery."
