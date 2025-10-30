@@ -309,6 +309,44 @@ class QuantizerTest(parameterized.TestCase):
       saved_recipe = json.load(json_file)
     self.assertEqual(saved_recipe, self._test_recipe)
 
+  def test_saved_legacy_recipe_lacks_block_size(self):
+    model_name = 'test_model'
+    legacy_recipe_path = os.path.join(
+        TEST_DATA_PREFIX_PATH,
+        'recipes/dynamic_legacy_wi8_afp32_recipe.json',
+    )
+    self._quantizer.load_quantization_recipe(legacy_recipe_path)
+    result = self._quantizer.quantize()
+    result.save(self._tmp_save_path, model_name)
+    saved_recipe_path = os.path.join(
+        self._tmp_save_path, model_name + '_recipe.json'
+    )
+    with open(saved_recipe_path) as json_file:
+      saved_recipe = json.load(json_file)
+    with open(legacy_recipe_path) as json_file:
+      legacy_recipe = json.load(json_file)
+
+    self.assertNotEqual(saved_recipe, legacy_recipe)
+
+    # Verify that the default test recipe contains 'block_size'.
+    has_block_size = False
+    for config in legacy_recipe:
+      op_config = config.get('op_config')
+      if op_config:
+        weight_config = op_config.get('weight_tensor_config')
+        if weight_config and 'block_size' in weight_config:
+          has_block_size = True
+          break
+    self.assertTrue(has_block_size)
+
+    # Verify that the saved recipe does not have 'block_size'.
+    for config in saved_recipe:
+      op_config = config.get('op_config')
+      if op_config:
+        weight_config = op_config.get('weight_tensor_config')
+        if weight_config:
+          self.assertNotIn('block_size', weight_config)
+
   def test_save_no_quantize_raise_error(self):
     error_message = 'No quantized model to save.'
     with self.assertRaisesWithPredicateMatch(
@@ -535,14 +573,12 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
                     'symmetric': False,
                     'granularity': 'TENSORWISE',
                     'dtype': 'INT',
-                    'block_size': 0,
                 },
                 'weight_tensor_config': {
                     'num_bits': 8,
                     'symmetric': True,
                     'granularity': 'CHANNELWISE',
                     'dtype': 'INT',
-                    'block_size': 0,
                 },
                 'compute_precision': 'INTEGER',
                 'explicit_dequantize': False,

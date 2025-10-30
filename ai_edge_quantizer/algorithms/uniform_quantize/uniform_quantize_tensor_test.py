@@ -222,7 +222,7 @@ class TensorUtilsTest(parameterized.TestCase):
               zero_point=np.array([-6]),
               symmetric=True,
           ),
-          is_blockwise=True,
+          is_blockwise_quant=True,
       )
 
   @parameterized.parameters(

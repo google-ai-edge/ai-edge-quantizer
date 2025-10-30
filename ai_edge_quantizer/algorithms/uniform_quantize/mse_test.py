@@ -84,7 +84,7 @@ class MseQuantizeTest(parameterized.TestCase):
           tensor_quant_config=qtyping.TensorQuantizationConfig(
               num_bits=4,
               symmetric=True,
-              granularity=qtyping.QuantGranularity.BLOCKWISE,
+              granularity=qtyping.QuantGranularity.BLOCKWISE_32,
           ),
           tensor_content=test_data,
       )
