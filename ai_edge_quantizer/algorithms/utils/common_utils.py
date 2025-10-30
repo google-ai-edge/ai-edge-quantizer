@@ -369,11 +369,23 @@ def _materialize_standard_op_with_same_as_input_scale(
 
   # Change output qsv to be the same as input qsv. This is safe since TFL
   # subgraph is acyclic.
-  input_tensor_qsv = tensor_name_to_qsv[input_tensor_params.tensor_name]
-  for output_tensor in output_tensors:
-    tensor_name_to_qsv[tfl_flatbuffer_utils.get_tensor_name(output_tensor)] = (
-        input_tensor_qsv
+  input_tensor_qsv = tensor_name_to_qsv.get(
+      input_tensor_params.tensor_name, None
+  )
+  # Here we assume that if the only input to an op that needs to match input to
+  # output is a constant tensor without qsv, then this is really a converter
+  # failure and should be fixed there.
+  if input_tensor_qsv is None:
+    raise ValueError(
+        "Input tensor qsv is None for tensor"
+        f" {input_tensor_params.tensor_name}. This is likely a converter"
+        " failure."
     )
+  if input_tensor_qsv is not None:
+    for output_tensor in output_tensors:
+      tensor_name_to_qsv[
+          tfl_flatbuffer_utils.get_tensor_name(output_tensor)
+      ] = input_tensor_qsv
 
   return op_tensor_params
 
