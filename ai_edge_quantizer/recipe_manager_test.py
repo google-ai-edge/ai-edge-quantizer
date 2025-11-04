@@ -569,14 +569,12 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'symmetric': False,
                     'granularity': _QuantGranularity.TENSORWISE,
                     'dtype': 'INT',
-                    'block_size': 0,
                 },
                 'weight_tensor_config': {
                     'num_bits': 8,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
                     'dtype': 'INT',
-                    'block_size': 0,
                 },
                 # WEIGHT_ONLY.
                 'compute_precision': _ComputePrecision.INTEGER,
@@ -595,7 +593,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'num_bits': 8,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
-                    'block_size': 0,
                 },
                 # WEIGHT_ONLY.
                 'compute_precision': _ComputePrecision.FLOAT,
@@ -614,7 +611,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'num_bits': 4,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
-                    'block_size': 0,
                 },
                 # WEIGHT_ONLY.
                 'compute_precision': _ComputePrecision.FLOAT,
@@ -633,7 +629,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'num_bits': 6,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
-                    'block_size': 0,
                 },
                 # WEIGHT_ONLY.
                 'compute_precision': _ComputePrecision.FLOAT,
@@ -652,7 +647,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'num_bits': 3,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
-                    'block_size': 0,
                 },
                 # WEIGHT_ONLY.
                 'compute_precision': _ComputePrecision.FLOAT,

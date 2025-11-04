@@ -8,15 +8,13 @@
         "num_bits": 16,
         "symmetric": true,
         "granularity": "TENSORWISE",
-        "dtype": "INT",
-        "block_size": 0
+        "dtype": "INT"
       },
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
         "granularity": "CHANNELWISE",
-        "dtype": "INT",
-        "block_size": 0
+        "dtype": "INT"
       },
       "compute_precision": "INTEGER",
       "explicit_dequantize": false,
