@@ -465,7 +465,7 @@ def tensor_zp_scale_from_min_max(
       signed=True,
   )
   qmin, qmax = get_quantized_range(qtype)
-  min_bound = 1e-4  # 1e-6 precision for int8 and 1e-8 for int16.
+  min_bound = 1e-9  # Avoid zero scale.
   pos_clipping_values = None if clipping_values is None else clipping_values
   neg_clipping_values = None if clipping_values is None else -clipping_values
 
