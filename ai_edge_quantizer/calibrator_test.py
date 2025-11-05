@@ -103,58 +103,6 @@ class CalibratorTest(googletest.TestCase):
     model_tensor_qsvs = self._calibrator.get_model_qsvs()
     self.assertEmpty(model_tensor_qsvs)
 
-  def test_calibrator_initialize_qsv(self):
-    _add_default_int8xint8_integer_recipe(self._recipe_manager)
-    # Overwrite the single op to fc
-    self._recipe_manager.add_quantization_config(
-        regex=".*Stateful.*",
-        operation_name=qtyping.TFLOperationName.FULLY_CONNECTED,
-        algorithm_key=_AlgorithmName.MIN_MAX_UNIFORM_QUANT,
-        op_config=qtyping.OpQuantizationConfig(
-            weight_tensor_config=_TENSOR_QUANT_CONFIG(
-                num_bits=4,
-                granularity=qtyping.QuantGranularity.CHANNELWISE,
-            ),
-            compute_precision=_ComputePrecision.INTEGER,
-        ),
-    )
-    self._calibrator._initialize_model_qsvs(self._recipe_manager)
-    model_tensor_qsvs = self._calibrator.get_model_qsvs()
-
-    self.assertLen(model_tensor_qsvs, 4)
-    self.assertIn("serving_default_input_1:0", model_tensor_qsvs)  # input
-    input_qsv = model_tensor_qsvs["serving_default_input_1:0"]
-    self.assertEmpty(input_qsv)
-
-    self.assertIn("sequential/dense/MatMul", model_tensor_qsvs)  # weight
-    weight_tensor_qsv = model_tensor_qsvs["sequential/dense/MatMul"]
-    mins_maxs_shape = (16, 1)
-    self.assertTupleEqual(weight_tensor_qsv["min"].shape, mins_maxs_shape)
-    self.assertAlmostEqual(weight_tensor_qsv["min"][0][0], -0.40436327)
-    self.assertTupleEqual(weight_tensor_qsv["max"].shape, mins_maxs_shape)
-    self.assertAlmostEqual(weight_tensor_qsv["max"][0][0], 0.46138108)
-
-    self.assertIn(
-        "sequential/dense/BiasAdd/ReadVariableOp", model_tensor_qsvs
-    )  # bias
-    bias_tensor_qsv = model_tensor_qsvs[
-        "sequential/dense/BiasAdd/ReadVariableOp"
-    ]
-    mins_maxs_shape = (16,)
-    self.assertTupleEqual(bias_tensor_qsv["min"].shape, mins_maxs_shape)
-    self.assertAlmostEqual(bias_tensor_qsv["min"][0], -0.26978338)
-    self.assertTupleEqual(bias_tensor_qsv["max"].shape, mins_maxs_shape)
-    # Here bias min/max will be the same as each element is a scalar
-    # Bias will be quantized with input_scale * weight_scale.
-    self.assertSequenceEqual(
-        list(bias_tensor_qsv["max"].flatten()),
-        list(bias_tensor_qsv["min"].flatten()),
-    )
-
-    self.assertIn("StatefulPartitionedCall:0", model_tensor_qsvs)  # output
-    output_qsv = model_tensor_qsvs["StatefulPartitionedCall:0"]
-    self.assertEmpty(output_qsv)
-
   def test_calibrate_single_fc_success(self):
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
     self._calibrator.calibrate(
@@ -162,7 +110,7 @@ class CalibratorTest(googletest.TestCase):
     )
     model_tensor_qsvs = self._calibrator.get_model_qsvs()
 
-    self.assertLen(model_tensor_qsvs, 4)
+    self.assertLen(model_tensor_qsvs, 2)
     self.assertIn("serving_default_input_1:0", model_tensor_qsvs)  # input
     input_qsv = model_tensor_qsvs["serving_default_input_1:0"]
     self.assertSequenceAlmostEqual(
@@ -171,19 +119,6 @@ class CalibratorTest(googletest.TestCase):
     self.assertSequenceAlmostEqual(
         input_qsv["max"].flatten(), [TEST_MAX_VAL], delta=1e-5
     )
-
-    self.assertIn("sequential/dense/MatMul", model_tensor_qsvs)  # weight
-    weight_qsv = model_tensor_qsvs["sequential/dense/MatMul"]
-    self.assertSequenceAlmostEqual(weight_qsv["min"].flatten(), [-0.49114203])
-    self.assertSequenceAlmostEqual(weight_qsv["max"].flatten(), [0.4903704])
-
-    self.assertIn(
-        "sequential/dense/BiasAdd/ReadVariableOp", model_tensor_qsvs
-    )  # bias
-    bias_qsv = model_tensor_qsvs["sequential/dense/BiasAdd/ReadVariableOp"]
-    self.assertSequenceAlmostEqual(bias_qsv["min"].flatten(), [-0.38401994])
-    self.assertSequenceAlmostEqual(bias_qsv["max"].flatten(), [0.31727126])
-
     self.assertIn("StatefulPartitionedCall:0", model_tensor_qsvs)  # output
     output_qsv = model_tensor_qsvs["StatefulPartitionedCall:0"]
     # Relu, only check the min
@@ -302,7 +237,7 @@ class CalibratorToyGemma2Test(googletest.TestCase):
         self._toy_gemma2_calibration_dataset,
         model_recipe_manager=recipe_mngr,
     )
-    self.assertLen(calib.get_model_qsvs(), 290)
+    self.assertLen(calib.get_model_qsvs(), 202)
 
 
 if __name__ == "__main__":

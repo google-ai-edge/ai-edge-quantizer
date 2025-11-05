@@ -212,7 +212,7 @@ class QuantizerTest(parameterized.TestCase):
     # Calibrate with empty state.
     calib_data = _get_calibration_data()
     calibration_result = self._quantizer.calibrate(calib_data)
-    self.assertLen(calibration_result, 13)
+    self.assertLen(calibration_result, 7)
 
   @parameterized.parameters(
       'recipes/default_a8w8_recipe.json',
@@ -227,7 +227,7 @@ class QuantizerTest(parameterized.TestCase):
     updated_calibration_result = self._quantizer.calibrate(
         calib_data, previous_calibration_result=calibration_result
     )
-    self.assertLen(updated_calibration_result, 13)
+    self.assertLen(updated_calibration_result, 7)
     self.assertNotEqual(
         calibration_result['StatefulPartitionedCall:0'],
         updated_calibration_result['StatefulPartitionedCall:0'],
@@ -599,8 +599,7 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
 
     # Quantize and expect an error about missing signature in calibration data.
     error_message = (
-        'Missing QSVs (min/max) for tensor multiply_x:0 in Signature'
-        " 'multiply'."
+        'MUL(index: 0) not found in tensor_name_to_qsv'
     )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)

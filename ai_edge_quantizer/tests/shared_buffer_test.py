@@ -14,13 +14,17 @@
 # ==============================================================================
 
 from collections.abc import Sequence
+
 from absl.testing import parameterized
+
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import model_validator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
+from ai_edge_litert import schema_py_generated as schema_fb  # pylint: disable=g-direct-tensorflow-import
+
 
 _ComputePrecision = qtyping.ComputePrecision
 _OpName = qtyping.TFLOperationName
@@ -44,24 +48,34 @@ class SharedBufferTest(parameterized.TestCase):
     self.sig1_output_tensor_name = 'PartitionedCall:0'
     self.sig2_output_tensor_name = 'PartitionedCall_1:0'
 
-  def _get_fc_recipe_entry(self, regex: str, num_bits: int):
+  def _get_fc_recipe_entry(
+      self, regex: str, num_bits: int, granularity: str, srq: bool = False
+  ):
+    op_config = {
+        'weight_tensor_config': {
+            'num_bits': num_bits,
+            'symmetric': True,
+            'granularity': granularity,
+            'dtype': 'INT',
+            'block_size': 0,
+        },
+        'compute_precision': 'INTEGER',
+        'explicit_dequantize': False,
+        'skip_checks': False,
+        'min_weight_elements': 0,
+    }
+    if srq:
+      op_config['activation_tensor_config'] = {
+          'num_bits': 8,
+          'symmetric': False,
+          'granularity': 'TENSORWISE',
+          'dtype': 'INT',
+      }
     return {
         'regex': regex,
         'operation': 'FULLY_CONNECTED',
         'algorithm_key': 'min_max_uniform_quantize',
-        'op_config': {
-            'weight_tensor_config': {
-                'num_bits': num_bits,
-                'symmetric': True,
-                'granularity': 'CHANNELWISE',
-                'dtype': 'INT',
-                'block_size': 0,
-            },
-            'compute_precision': 'INTEGER',
-            'explicit_dequantize': False,
-            'skip_checks': False,
-            'min_weight_elements': 0,
-        },
+        'op_config': op_config,
     }
 
   def _check_comparison_result(
@@ -112,11 +126,27 @@ class SharedBufferTest(parameterized.TestCase):
     # Use same quantization params for FCs within each signature to ensure we
     # don't get a tensor sharing error.
     if sig1_num_bits is not None:
-      recipe.append(self._get_fc_recipe_entry(sig1_fc1_regex, sig1_num_bits))
-      recipe.append(self._get_fc_recipe_entry(sig1_fc2_regex, sig1_num_bits))
+      recipe.append(
+          self._get_fc_recipe_entry(
+              sig1_fc1_regex, sig1_num_bits, 'CHANNELWISE'
+          )
+      )
+      recipe.append(
+          self._get_fc_recipe_entry(
+              sig1_fc2_regex, sig1_num_bits, 'CHANNELWISE'
+          )
+      )
     if sig2_num_bits is not None:
-      recipe.append(self._get_fc_recipe_entry(sig2_fc1_regex, sig2_num_bits))
-      recipe.append(self._get_fc_recipe_entry(sig2_fc2_regex, sig2_num_bits))
+      recipe.append(
+          self._get_fc_recipe_entry(
+              sig2_fc1_regex, sig2_num_bits, 'CHANNELWISE'
+          )
+      )
+      recipe.append(
+          self._get_fc_recipe_entry(
+              sig2_fc2_regex, sig2_num_bits, 'CHANNELWISE'
+          )
+      )
     qt.load_quantization_recipe(recipe)
     quantized_model = qt.quantize().quantized_model
     self.assertIsNotNone(quantized_model)
@@ -139,40 +169,173 @@ class SharedBufferTest(parameterized.TestCase):
           testcase_name='fc1_quant_fc2_no_quant',
           fc1_num_bits=8,
           fc2_num_bits=None,
-          output_tolerance=1e-3,
+          fc1_granularity='CHANNELWISE',
+          fc2_granularity='CHANNELWISE',
+          fc1_srq=False,
+          fc2_srq=False,
+          output_tolerance=0.0015,
       ),
       dict(
           testcase_name='fc1_no_quant_fc2_quant',
           fc1_num_bits=None,
           fc2_num_bits=8,
-          output_tolerance=1e-2,
+          fc1_granularity='CHANNELWISE',
+          fc2_granularity='CHANNELWISE',
+          fc1_srq=False,
+          fc2_srq=False,
+          output_tolerance=0.0015,
       ),
       dict(
           testcase_name='fc1_quant_fc2_quant_different_params',
           fc1_num_bits=8,
           fc2_num_bits=4,
+          fc1_granularity='CHANNELWISE',
+          fc2_granularity='CHANNELWISE',
+          fc1_srq=False,
+          fc2_srq=False,
           output_tolerance=0.25,
+      ),
+      dict(
+          testcase_name='fc1_tensorwise_fc2_channelwise',
+          fc1_num_bits=8,
+          fc2_num_bits=8,
+          fc1_granularity='TENSORWISE',
+          fc2_granularity='CHANNELWISE',
+          fc1_srq=False,
+          fc2_srq=False,
+          output_tolerance=0.25,
+      ),
+      dict(
+          testcase_name='fc1_channelwise_fc2_tensorwise',
+          fc1_num_bits=8,
+          fc2_num_bits=8,
+          fc1_granularity='CHANNELWISE',
+          fc2_granularity='TENSORWISE',
+          fc1_srq=False,
+          fc2_srq=False,
+          output_tolerance=0.25,
+      ),
+      dict(
+          testcase_name='fc1_tensorwise_fc2_tensorwise_different_bits',
+          fc1_num_bits=8,
+          fc2_num_bits=4,
+          fc1_granularity='TENSORWISE',
+          fc2_granularity='TENSORWISE',
+          fc1_srq=False,
+          fc2_srq=False,
+          output_tolerance=0.30,
+      ),
+      dict(
+          testcase_name='fc1_srq_fc2_drq',
+          fc1_num_bits=8,
+          fc2_num_bits=8,
+          fc1_granularity='CHANNELWISE',
+          fc2_granularity='CHANNELWISE',
+          fc1_srq=True,
+          fc2_srq=False,
+          output_tolerance=0.60,
+      ),
+      dict(
+          testcase_name='fc1_drq_fc2_srq',
+          fc1_num_bits=8,
+          fc2_num_bits=8,
+          fc1_granularity='CHANNELWISE',
+          fc2_granularity='CHANNELWISE',
+          fc1_srq=False,
+          fc2_srq=True,
+          output_tolerance=0.60,
+      ),
+      dict(
+          testcase_name='fc1_srq_fc2_srq',
+          fc1_num_bits=8,
+          fc2_num_bits=8,
+          fc1_granularity='CHANNELWISE',
+          fc2_granularity='TENSORWISE',
+          fc1_srq=True,
+          fc2_srq=True,
+          output_tolerance=0.60,
       ),
   )
   def test_quantization_succeeds_for_a_constant_tensor_with_different_quantization_params(
-      self, fc1_num_bits, fc2_num_bits, output_tolerance
+      self,
+      fc1_num_bits,
+      fc2_num_bits,
+      output_tolerance,
+      fc1_granularity,
+      fc2_granularity,
+      fc1_srq,
+      fc2_srq,
   ):
     # This test checks a constant tensor `arith.constant` shared by FCs in the
     # first signature.
     qt = quantizer.Quantizer(self.float_model_path)
 
-    sig1_fc1_regex = 'BatchMatMulV3;'
-    sig1_fc2_regex = 'PartitionedCall:0;'
+    sig1_fc1_regex = 'BatchMatMulV3'
+    sig1_fc2_regex = 'PartitionedCall:0'
 
     recipe = []
     if fc1_num_bits is not None:
-      recipe.append(self._get_fc_recipe_entry(sig1_fc1_regex, fc1_num_bits))
+      recipe.append(
+          self._get_fc_recipe_entry(
+              sig1_fc1_regex, fc1_num_bits, fc1_granularity, srq=fc1_srq
+          )
+      )
     if fc2_num_bits is not None:
-      recipe.append(self._get_fc_recipe_entry(sig1_fc2_regex, fc2_num_bits))
+      recipe.append(
+          self._get_fc_recipe_entry(
+              sig1_fc2_regex, fc2_num_bits, fc2_granularity, srq=fc2_srq
+          )
+      )
     qt.load_quantization_recipe(recipe)
 
-    quantized_model = qt.quantize().quantized_model
+    calibration_result = None
+    if qt.need_calibration:
+      calib_data = tfl_interpreter_utils.create_random_normal_input_data(
+          self.float_model_path, num_samples=5
+      )
+      calibration_result = qt.calibrate(calib_data)
+    quantized_model = qt.quantize(
+        calibration_result=calibration_result
+    ).quantized_model
     self.assertIsNotNone(quantized_model)
+
+    model = schema_fb.Model.GetRootAsModel(quantized_model, 0)
+    subgraph = model.Subgraphs(0)
+    fc_ops = []
+    for i in range(subgraph.OperatorsLength()):
+      op = subgraph.Operators(i)
+      op_code = model.OperatorCodes(op.OpcodeIndex())
+      if op_code.BuiltinCode() == schema_fb.BuiltinOperator.FULLY_CONNECTED:
+        fc_ops.append(op)
+
+    sig1_fc1_op, sig1_fc2_op = None, None
+    for op in fc_ops:
+      output_tensor = subgraph.Tensors(op.Outputs(0))
+      if output_tensor.Name() == b'PartitionedCall:0':
+        sig1_fc2_op = op
+      elif output_tensor.Name() == b'BatchMatMulV3':
+        sig1_fc1_op = op
+
+    self.assertIsNotNone(sig1_fc1_op)
+    self.assertIsNotNone(sig1_fc2_op)
+
+    if fc1_num_bits is not None:
+      fc1_weight = subgraph.Tensors(sig1_fc1_op.Inputs(1))
+      self.assertIsNotNone(fc1_weight.Quantization())
+      self.assertIsNotNone(fc1_weight.Quantization().ScaleAsNumpy())
+      if fc1_granularity == 'TENSORWISE':
+        self.assertEqual(fc1_weight.Quantization().ScaleAsNumpy().size, 1)
+      elif fc1_granularity == 'CHANNELWISE':
+        self.assertEqual(fc1_weight.Quantization().ScaleAsNumpy().size, 4)
+
+    if fc2_num_bits is not None:
+      fc2_weight = subgraph.Tensors(sig1_fc2_op.Inputs(1))
+      self.assertIsNotNone(fc2_weight.Quantization())
+      self.assertIsNotNone(fc2_weight.Quantization().ScaleAsNumpy())
+      if fc2_granularity == 'TENSORWISE':
+        self.assertEqual(fc2_weight.Quantization().ScaleAsNumpy().size, 1)
+      elif fc2_granularity == 'CHANNELWISE':
+        self.assertEqual(fc2_weight.Quantization().ScaleAsNumpy().size, 4)
 
     test_data = tfl_interpreter_utils.create_random_normal_input_data(
         quantized_model, num_samples=4

@@ -366,11 +366,28 @@ def _materialize_standard_op_with_same_as_input_scale(
 
   # Change output qsv to be the same as input qsv. This is safe since TFL
   # subgraph is acyclic.
-  input_tensor_qsv = tensor_name_to_qsv[input_tensor_params.tensor_name]
-  for output_tensor in output_tensors:
-    tensor_name_to_qsv[tfl_flatbuffer_utils.get_tensor_name(output_tensor)] = (
-        input_tensor_qsv
+  input_tensor_qsv = tensor_name_to_qsv.get(
+      input_tensor_params.tensor_name, None
+  )
+  if input_tensor_qsv is None:
+    input_tensor_data = tfl_flatbuffer_utils.get_tensor_data(
+        input_tensors[0], graph_info.buffers
     )
+    # If the input tensor is a constant tensor without qsv, compute qsv from
+    # its quant params.
+    if input_tensor_data is None:
+      # If the only input to an op that needs to match input to
+      # output has no qsv and is not a constant tensor, then this is an error.
+      raise ValueError(
+          "Input tensor qsv is None for tensor"
+          f" {input_tensor_params.tensor_name}."
+      )
+    min_val, max_val = _get_min_max_from_quant_params(input_quant_params)
+    input_tensor_qsv = {"min": min_val, "max": max_val}
+  for output_tensor in output_tensors:
+    tensor_name_to_qsv[
+        tfl_flatbuffer_utils.get_tensor_name(output_tensor)
+    ] = input_tensor_qsv
 
   return op_tensor_params
 
@@ -694,6 +711,26 @@ def _add_non_match_tensors_to_ignored_lists(
   return inputs_to_ignore, outputs_to_ignore
 
 
+def _get_min_max_from_quant_params(
+    quant_params: qtyping.UniformQuantParams,
+) -> tuple[np.ndarray, np.ndarray]:
+  """Recalculate min/max from tensor quantization params."""
+  q_min, q_max = uniform_quantize_tensor.get_quantized_range(
+      _IntType(quant_params.num_bits, True)
+  )
+  float_min = uniform_quantize_tensor.uniform_dequantize(
+      np.array(q_min), quant_params
+  )
+  float_max = uniform_quantize_tensor.uniform_dequantize(
+      np.array(q_max), quant_params
+  )
+  # We use qmax values to compute scale for symmetric quantization (see
+  # uniform_quantize_tensor.tensor_zp_scale_from_min_max).
+  if quant_params.symmetric:
+    float_min = -float_max
+  return float_min, float_max
+
+
 def materialize_standard_op(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
@@ -860,8 +897,6 @@ def materialize_op_with_output_activation_constraint(
     output_tensor_params.producer = op_tensor_params
     # Update the tensor_name_to_qsv map using the output activation constraints.
     min_val, max_val = _get_min_max_from_quant_params(
-        activation_num_bits,
-        activation_tensor_config.symmetric,
         fixed_quant_params,
     )
     tensor_name_to_qsv[output_tensor_params.tensor_name]["min"] = min_val
@@ -1024,23 +1059,4 @@ def get_bmm_weight_quantized_dim(
   return rank - 1
 
 
-def _get_min_max_from_quant_params(
-    num_bits: int,
-    symmetric: bool,
-    tensor_params: qtyping.UniformQuantParams,
-) -> tuple[float, float]:
-  """Recalculate min/max from tensor quantization params."""
-  q_min, q_max = uniform_quantize_tensor.get_quantized_range(
-      _IntType(num_bits, True)
-  )
-  float_min = uniform_quantize_tensor.uniform_dequantize(
-      np.array(q_min), tensor_params
-  )
-  float_max = uniform_quantize_tensor.uniform_dequantize(
-      np.array(q_max), tensor_params
-  )
-  # We use qmax values to compute scale for symmetric quantization (see
-  # uniform_quantize_tensor.tensor_zp_scale_from_min_max).
-  if symmetric:
-    float_min = -float_max
-  return (float_min, float_max)
+
