@@ -32,7 +32,7 @@ def get_validation_func(
     a validation function
 
   Raises:
-    Value error if the function name is not supported
+    ValueError: if the function name is not supported
   """
   if func_name == "mse":
     return mean_squared_difference
@@ -42,6 +42,8 @@ def get_validation_func(
     return cosine_similarity
   elif func_name == "kl_divergence":
     return kl_divergence
+  elif func_name == "snr":
+    return signal_to_noise_ratio
   else:
     raise ValueError(f"Validation function {func_name} not supported")
 
@@ -62,7 +64,7 @@ def mean_squared_difference(
     a float value representing the MSD between data1 & 2
 
   Raises:
-    Value error if the two inputs don't have the same number of elements
+    ValueError: if the two inputs don't have the same number of elements
   """
   data1, data2 = _preprocess_same_size_arrays(data1, data2)
   # special handling for tensor of size 0
@@ -91,7 +93,7 @@ def median_diff_ratio(
     a float value representing the median diff ratio between data1 & 2
 
   Raises:
-    Value error if the two inputs don't have the same number of elements
+    ValueError: if the two inputs don't have the same number of elements
   """
   data1, data2 = _preprocess_same_size_arrays(data1, data2)
   # special handling for tensor of size 0
@@ -120,7 +122,7 @@ def cosine_similarity(
     a float value representing the cosine similarity between data1 & 2
 
   Raises:
-    Value error if the two inputs don't have the same number of elements
+    ValueError: if the two inputs don't have the same number of elements
   """
   data1, data2 = _preprocess_same_size_arrays(data1, data2)
   # special handling for tensor of size 0
@@ -152,15 +154,15 @@ def kl_divergence(
 
   Args:
     data1: input data to be used for comparison (distribution Q)
-    data2: input data to be used for comparison (distribution P),
-      data1 & 2 must be of the same shape
+    data2: input data to be used for comparison (distribution P), data1 & 2 must
+      be of the same shape
     epsilon: small value to avoid log(0) and division by zero.
 
   Returns:
     A float value representing the KL divergence between data1 & 2.
 
   Raises:
-    Value error if the two inputs don't have the same number of elements.
+    ValueError: if the two inputs don't have the same number of elements.
   """
   data1, data2 = _preprocess_same_size_arrays(data1, data2)
   # special handling for tensor of size 0
@@ -171,6 +173,40 @@ def kl_divergence(
   q = np.maximum(0, data1)
 
   return float(np.sum(p * np.log((p + epsilon) / (q + epsilon))))
+
+
+def signal_to_noise_ratio(
+    noisy_signal: np._typing.ArrayLike,
+    signal: np._typing.ArrayLike,
+    epsilon: float = 1e-9,
+) -> float:
+  """Calculates the signal to noise ratio between noisy_signal & signal.
+
+  SNR = P_signal / P_noise, where signal is treated as the clean signal and
+  noisy_signal-signal is treated as the noise samples.
+  P_signal = mean(signal^2)
+  P_noise = mean((noisy_signal-signal)^2) = mse(noisy_signal, signal)
+
+  Args:
+    noisy_signal: Input data to be used for comparison (e.g. noisy signal).
+    signal: Input data to be used for comparison (e.g. clean signal),
+      noisy_signal & signal must be of the same shape.
+    epsilon: Small value to avoid division by zero.
+
+  Returns:
+    A float value representing the SNR between noisy_signal & signal.
+
+  Raises:
+    ValueError: If the two inputs don't have the same number of elements.
+  """
+  noisy_signal, signal = _preprocess_same_size_arrays(noisy_signal, signal)
+  if signal.size == 0:
+    return float(0)
+
+  mse = mean_squared_difference(noisy_signal, signal)
+  signal_power = float(np.square(signal).mean())
+  snr = signal_power / (mse + epsilon)
+  return snr
 
 
 def _preprocess_same_size_arrays(
@@ -187,7 +223,7 @@ def _preprocess_same_size_arrays(
     a tuple of the preprocessed data1 & 2
 
   Raises:
-    Value error if the two inputs don't have the same number of elements
+    ValueError: if the two inputs don't have the same number of elements
   """
   data1 = np.array(data1, dtype=np.float32).flatten()
   data2 = np.array(data2, dtype=np.float32).flatten()

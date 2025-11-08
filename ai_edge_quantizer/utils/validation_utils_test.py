@@ -134,6 +134,34 @@ class ValidationUtilTest(googletest.TestCase):
     func = validation_utils.get_validation_func("kl_divergence")
     self.assertEqual(func, validation_utils.kl_divergence)
 
+  def test_signal_to_noise_ratio_0d(self):
+    data1 = []
+    data2 = []
+    result = validation_utils.signal_to_noise_ratio(data1, data2)
+    self.assertEqual(result, 0)
+
+  def test_signal_to_noise_ratio_identical(self):
+    data1 = [1, 2, 3]
+    data2 = [1, 2, 3]
+    result = validation_utils.signal_to_noise_ratio(data1, data2)
+    self.assertGreater(result, 1e8)  # mse=0, so snr should be large
+
+  def test_signal_to_noise_ratio_with_noise(self):
+    data1 = [2, 3, 4]
+    data2 = [1, 2, 3]
+    result = validation_utils.signal_to_noise_ratio(data1, data2)
+    self.assertAlmostEqual(result, 14 / 3, places=5)
+
+  def test_signal_to_noise_ratio_simple(self):
+    data1 = [1, 1]
+    data2 = [1, 0]
+    result = validation_utils.signal_to_noise_ratio(data1, data2)
+    self.assertAlmostEqual(result, 1.0, places=5)
+
+  def test_get_validation_func_snr(self):
+    func = validation_utils.get_validation_func("snr")
+    self.assertEqual(func, validation_utils.signal_to_noise_ratio)
+
 
 if __name__ == "__main__":
   googletest.main()
