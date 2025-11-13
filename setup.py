@@ -30,7 +30,7 @@ DOCLINES = __doc__.split("\n")
 name = "ai-edge-quantizer"
 # The next version of ai-edge-quantizer.
 # The minor version code should be bumped after every release.
-version = "0.4.0"
+version = "0.5.0"
 if nightly_release_date := os.environ.get("NIGHTLY_RELEASE_DATE"):
   name += "-nightly"
   version += ".dev" + nightly_release_date
