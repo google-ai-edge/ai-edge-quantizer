@@ -94,6 +94,40 @@ class FullyConnectedTest(test_utils.BaseOpTestCase):
     )
 
   @parameterized.product(
+      algorithms=[
+          _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+          _AlgorithmName.OCTAV,
+      ],
+      granularity=[
+          qtyping.QuantGranularity.BLOCKWISE_32,
+          qtyping.QuantGranularity.BLOCKWISE_64,
+          qtyping.QuantGranularity.BLOCKWISE_128,
+      ],
+  )
+  def test_int4_blockwise_weight_only_quantization_raise_error(
+      self, algorithms, granularity
+  ):
+    algorithm_key = algorithms
+    model = 'tensor_i4rangedvalues_fc.tflite'
+    model_path = os.path.join(_TEST_MODEL_FOLDER, model)
+    op_config = _OpQuantConfig(
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=4,
+            symmetric=True,
+            granularity=granularity,
+        ),
+        compute_precision=_ComputePrecision.FLOAT,
+        explicit_dequantize=True,
+    )
+
+    # Blockwise quantization is not supported for weight-only quantization.
+    error_msg = 'Unsupported op'
+    with self.assertRaisesRegex(ValueError, error_msg):
+      self.quantize_and_validate(
+          model_path, algorithm_key, self._op_name, op_config
+      )
+
+  @parameterized.product(
       # (algorithm_name, weight_tolerance, output_tolerance)
       algorithm_and_tolerances=[
           (_AlgorithmName.DEQUANTIZED_WEIGHT_RECOVERY, 1e-5, 1e-2),
@@ -133,6 +167,46 @@ class FullyConnectedTest(test_utils.BaseOpTestCase):
     expected_model_size_reduction = (
         80 if op_config.weight_tensor_config.num_bits == 4 else 65
     )
+    self.assert_quantization_accuracy_and_size(
+        algorithm_key,
+        model_path,
+        self._op_name,
+        op_config,
+        expected_model_size_reduction,
+        weight_tolerance,
+        output_tolerance,
+    )
+
+  @parameterized.product(
+      algorithms=[
+          _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+          _AlgorithmName.OCTAV,
+      ],
+      granularity=[
+          qtyping.QuantGranularity.BLOCKWISE_32,
+          qtyping.QuantGranularity.BLOCKWISE_64,
+          qtyping.QuantGranularity.BLOCKWISE_128,
+      ],
+  )
+  def test_int4_blockwise_dynamic_quantization_accuracy_and_size_within_tolerance(
+      self, algorithms, granularity
+  ):
+    algorithm_key = algorithms
+    weight_tolerance = 1e-2
+    output_tolerance = 1e-1
+    model = 'tensor_i4rangedvalues_fc.tflite'
+    model_path = os.path.join(_TEST_MODEL_FOLDER, model)
+    op_config = _OpQuantConfig(
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=4,
+            symmetric=True,
+            granularity=granularity,
+        ),
+        compute_precision=_ComputePrecision.INTEGER,
+        explicit_dequantize=False,
+    )
+
+    expected_model_size_reduction = 65
     self.assert_quantization_accuracy_and_size(
         algorithm_key,
         model_path,
@@ -252,6 +326,46 @@ class FullyConnectedTest(test_utils.BaseOpTestCase):
         weight_tolerance,
         output_tolerance,
     )
+
+  @parameterized.product(
+      algorithms=[
+          _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+          _AlgorithmName.OCTAV,
+      ],
+      granularity=[
+          qtyping.QuantGranularity.BLOCKWISE_32,
+          qtyping.QuantGranularity.BLOCKWISE_64,
+          qtyping.QuantGranularity.BLOCKWISE_128,
+      ],
+      activation_bit_width=[8, 16],
+  )
+  def test_int4_blockwise_static_quantization_raise_error(
+      self, algorithms, granularity, activation_bit_width
+  ):
+    algorithm_key = algorithms
+    model = 'tensor_i4rangedvalues_fc.tflite'
+    model_path = os.path.join(_TEST_MODEL_FOLDER, model)
+    op_config = _OpQuantConfig(
+        activation_tensor_config=_TensorQuantConfig(
+            num_bits=activation_bit_width,
+            symmetric=True,
+            granularity=qtyping.QuantGranularity.TENSORWISE,
+        ),
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=4,
+            symmetric=True,
+            granularity=granularity,
+        ),
+        compute_precision=_ComputePrecision.INTEGER,
+        explicit_dequantize=False,
+    )
+
+    # Blockwise quantization is not supported for static quantization.
+    error_msg = 'Unsupported op'
+    with self.assertRaisesRegex(ValueError, error_msg):
+      self.quantize_and_validate(
+          model_path, algorithm_key, self._op_name, op_config
+      )
 
   @parameterized.product(
       weight_bit_width=[4, 8],
