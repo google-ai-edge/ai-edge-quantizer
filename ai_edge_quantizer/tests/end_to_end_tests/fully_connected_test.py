@@ -253,13 +253,19 @@ class FullyConnectedTest(test_utils.BaseOpTestCase):
         output_tolerance,
     )
 
-  @parameterized.product(weight_bit_width=[4, 8])
+  @parameterized.product(
+      weight_bit_width=[4, 8],
+      algorithm=[
+          _AlgorithmName.HADAMARD_ROTATION,
+          _AlgorithmName.DECOMPOSED_HADAMARD_ROTATION,
+      ],
+  )
   def test_hadamard_rotation_accuracy_and_size_within_tolerance(
-      self, weight_bit_width
+      self, weight_bit_width, algorithm
   ):
-    algorithm_key = _AlgorithmName.HADAMARD_ROTATION
-    # Soft skip weight errors because they're rotated hence not expected to
-    # match.
+    algorithm_key = algorithm
+    # TODO(b/417309114): Soft skip weight errors because they're rotated hence
+    # not expected to match.
     weight_tolerance = 1
     output_tolerance = 2e-2
     model_path = test_utils.get_path_to_datafile(
