@@ -241,19 +241,6 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
               compute_precision=_ComputePrecision.INTEGER,  # DRQ.
           ),
       )
-    # Add unregistered algorithm
-    with self.assertRaisesWithPredicateMatch(
-        ValueError, lambda err: error_message in str(err)
-    ):
-      self._recipe_manager.add_quantization_config(
-          regex='.*/Dense/.*',
-          operation_name=_TFLOpName.FULLY_CONNECTED,
-          algorithm_key='AWQ',
-          op_config=qtyping.OpQuantizationConfig(
-              weight_tensor_config=_TensorQuantConfig(num_bits=8),
-              compute_precision=_ComputePrecision.INTEGER,  # DRQ.
-          ),
-      )
 
   def test_add_unsupported_num_bits_raise_error(self):
     test_op_name = _TFLOpName.FULLY_CONNECTED
@@ -292,6 +279,31 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     self.assertEqual(weight_tensor_config.num_bits, 17)
     # DRQ check.
     self.assertEqual(op_config.compute_precision, _ComputePrecision.INTEGER)
+
+  def test_add_unsupported_algorithm_key_raise_error(self):
+    error_message = 'Unsupported algorithm key'
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda err: error_message in str(err)
+    ):
+      self._recipe_manager.add_quantization_config(
+          regex='.*/Dense/.*',
+          operation_name=_TFLOpName.FULLY_CONNECTED,
+          algorithm_key='decomposed_hadamard',
+          op_config=qtyping.OpQuantizationConfig(
+              weight_tensor_config=_TensorQuantConfig(num_bits=8),
+          ),
+      )
+    with self.assertRaisesWithPredicateMatch(
+        ValueError, lambda err: error_message in str(err)
+    ):
+      self._recipe_manager.add_quantization_config(
+          regex='.*/Dense/.*',
+          operation_name=_TFLOpName.ALL_SUPPORTED,
+          algorithm_key='decomposed_hadamard',
+          op_config=qtyping.OpQuantizationConfig(
+              weight_tensor_config=_TensorQuantConfig(num_bits=8),
+          ),
+      )
 
   def test_add_dynamic_config(self):
     self._recipe_manager.add_dynamic_config(
