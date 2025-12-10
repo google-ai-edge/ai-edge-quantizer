@@ -118,7 +118,8 @@ class ComparisonResult:
     for name in utils.get_input_tensor_names(
         self._reference_model, signature_key
     ):
-      input_tensor_results[name] = result.pop(name)
+      if name in result:
+        input_tensor_results[name] = result.pop(name)
 
     output_tensor_results = {}
     for name in utils.get_output_tensor_names(
@@ -136,7 +137,8 @@ class ComparisonResult:
         self._reference_model,
         subgraph_index,
     ):
-      constant_tensor_results[name] = result.pop(name)
+      if name in result:
+        constant_tensor_results[name] = result.pop(name)
 
     self._comparison_results[signature_key] = SingleSignatureComparisonResult(
         error_metric=error_metric,
@@ -214,6 +216,7 @@ def _setup_validation_interpreter(
     signature_key: Optional[str],
     use_xnnpack: bool,
     num_threads: int,
+    preserve_all_tensors: bool = True,
 ) -> tuple[Any, int, dict[str, Any]]:
   """Setup the interpreter for validation given a signature key.
 
@@ -224,13 +227,17 @@ def _setup_validation_interpreter(
       model only has one signature, this can be set to None.
     use_xnnpack: Whether to use xnnpack for the interpreter.
     num_threads: The number of threads to use for the interpreter.
+    preserve_all_tensors: Whether to preserve all tensors.
 
   Returns:
     A tuple of interpreter, subgraph_index and tensor_name_to_details.
   """
 
   interpreter = utils.create_tfl_interpreter(
-      tflite_model=model, use_xnnpack=use_xnnpack, num_threads=num_threads
+      tflite_model=model,
+      use_xnnpack=use_xnnpack,
+      num_threads=num_threads,
+      preserve_all_tensors=preserve_all_tensors,
   )
   utils.invoke_interpreter_signature(
       interpreter, signature_input, signature_key
@@ -255,6 +262,7 @@ def compare_model(
     compare_fn: Callable[[Any, Any], float],
     use_xnnpack: bool = True,
     num_threads: int = 16,
+    validate_output_tensors_only: bool = False,
 ) -> ComparisonResult:
   """Compares model tensors over a model signature using the compare_fn.
 
@@ -275,10 +283,13 @@ def compare_model(
       single float value.
     use_xnnpack: Whether to use xnnpack for the interpreter.
     num_threads: The number of threads to use for the interpreter.
+    validate_output_tensors_only: If True, only compare output tensors.
+      Otherwise, compare all tensors.
 
   Returns:
     A ComparisonResult object.
   """
+  preserve_all_tensors = not validate_output_tensors_only
   model_comparion_result = ComparisonResult(reference_model, target_model)
   for signature_key, signature_inputs in test_data.items():
     comparison_results = {}
@@ -291,6 +302,7 @@ def compare_model(
               signature_key,
               use_xnnpack,
               num_threads,
+              preserve_all_tensors=preserve_all_tensors,
           )
       )
       targ_interpreter, targ_subgraph_index, targ_tensor_name_to_details = (
@@ -300,10 +312,18 @@ def compare_model(
               signature_key,
               use_xnnpack,
               num_threads,
+              preserve_all_tensors=preserve_all_tensors,
           )
       )
-      # Compare the cached tensor values.
-      for tensor_name, detail in ref_tensor_name_to_details.items():
+      # Compare the cached tensor value
+      tensor_names_to_compare = (
+          utils.get_output_tensor_names(reference_model, signature_key)
+          if validate_output_tensors_only
+          else list(ref_tensor_name_to_details.keys())
+      )
+
+      for tensor_name in tensor_names_to_compare:
+        detail = ref_tensor_name_to_details[tensor_name]
         if detail['dtype'] == np.object_:
           continue
         # Ignore tensors where any dimension of the shape is 0.

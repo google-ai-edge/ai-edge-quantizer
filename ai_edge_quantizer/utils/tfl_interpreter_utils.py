@@ -35,6 +35,7 @@ def create_tfl_interpreter(
     allocate_tensors: bool = True,
     use_xnnpack: bool = True,
     num_threads: int = 16,
+    preserve_all_tensors: bool = True,
 ) -> tfl.Interpreter:
   """Creates a TFLite interpreter from a model file.
 
@@ -43,6 +44,8 @@ def create_tfl_interpreter(
     allocate_tensors: Whether to allocate tensors.
     use_xnnpack: Whether to use the XNNPACK delegate for the interpreter.
     num_threads: The number of threads to use for the interpreter.
+    preserve_all_tensors: Whether to preserve all tensors. If False, only input
+      and output tensors are preserved.
 
   Returns:
     A TFLite interpreter.
@@ -59,7 +62,7 @@ def create_tfl_interpreter(
       model_content=bytes(tflite_model),
       num_threads=num_threads,
       experimental_op_resolver_type=op_resolver,
-      experimental_preserve_all_tensors=True,
+      experimental_preserve_all_tensors=preserve_all_tensors,
   )
   if allocate_tensors:
     tflite_interpreter.allocate_tensors()

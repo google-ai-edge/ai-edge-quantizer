@@ -434,6 +434,7 @@ class Quantizer:
       error_metrics: str = 'mse',
       use_xnnpack: bool = True,
       num_threads: int = 16,
+      validate_output_tensors_only: bool = False,
   ) -> model_validator.ComparisonResult:
     """Numerical validation of the quantized model for a model signature.
 
@@ -452,6 +453,8 @@ class Quantizer:
       error_metrics: Error metrics to be used for comparison.
       use_xnnpack: Whether to use the xnnpack library for validation.
       num_threads: Number of threads to use for validation.
+      validate_output_tensors_only: If True, only compare output tensors.
+        Otherwise, compare all tensors.
 
     Returns:
       The comparison result.
@@ -476,6 +479,7 @@ class Quantizer:
         validation_utils.get_validation_func(error_metrics),
         use_xnnpack=use_xnnpack,
         num_threads=num_threads,
+        validate_output_tensors_only=validate_output_tensors_only,
     )
 
   def _get_quantization_params(

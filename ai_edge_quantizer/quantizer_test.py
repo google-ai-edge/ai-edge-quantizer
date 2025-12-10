@@ -375,6 +375,19 @@ class QuantizerTest(parameterized.TestCase):
         'sequential/dense_1/MatMul', validation_result.intermediate_tensors
     )
 
+  def test_validate_output_tensors_only_succeeds(self):
+    self._quantizer.quantize()
+    validation_result = self._quantizer.validate(
+        validate_output_tensors_only=True
+    )
+    validation_result = validation_result.get_signature_comparison_result()
+    self.assertIsNotNone(validation_result)
+    self.assertEmpty(validation_result.input_tensors)
+    self.assertEmpty(validation_result.constant_tensors)
+    self.assertEmpty(validation_result.intermediate_tensors)
+    self.assertNotEmpty(validation_result.output_tensors)
+    self.assertIn('StatefulPartitionedCall:0', validation_result.output_tensors)
+
   def test_validate_with_quantized_model_arg_succeeds(self):
     self._quantizer.quantize()
     quantized_model = self._quantizer._result.quantized_model

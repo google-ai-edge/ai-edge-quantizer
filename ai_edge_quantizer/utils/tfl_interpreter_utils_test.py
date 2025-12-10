@@ -90,6 +90,16 @@ class TflUtilsSingleSignatureModelTest(googletest.TestCase):
     ]
     self.assertEqual(tuple(average_pool_res.shape), (1, 14, 14, 8))
 
+  def test_get_tensor_name_to_content_map_fails_no_preserve_all_tensors(self):
+    tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
+        self._test_model_path, preserve_all_tensors=False
+    )
+    tfl_interpreter_utils.invoke_interpreter_once(
+        tfl_interpreter, [self._input_data]
+    )
+    with self.assertRaisesRegex(ValueError, "Tensor data is null."):
+      tfl_interpreter_utils.get_tensor_name_to_content_map(tfl_interpreter)
+
   def test_is_tensor_quantized(self):
     tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
         self._test_model_path
