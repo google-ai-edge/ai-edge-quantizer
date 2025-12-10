@@ -22,7 +22,7 @@
     "algorithm_key": "DECOMPOSED_HADAMARD_ROTATION",
     "op_config": {
       "weight_tensor_config": {
-        "num_bits": 8,
+        "num_bits": 4,
         "symmetric": true,
         "granularity": "CHANNELWISE",
         "dtype": "INT"
