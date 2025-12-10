@@ -1135,16 +1135,11 @@ class ParamsGeneratorAlreadyQuantizedModelTest(googletest.TestCase):
     )
     _ = params_generator.ParamsGenerator(test_model_path)
 
-  def test_check_is_float_model_raises_error_when_model_is_quantized(self):
+  def test_check_is_quantized_model_succeeds_when_model_is_quantized(self):
     test_model_path = os.path.join(
         TEST_DATA_PREFIX_PATH, 'tests/models/mnist_quantized.tflite'
     )
-    with self.assertRaisesRegex(
-        ValueError,
-        'The input model for quantization parameters generation is not a float'
-        ' model.',
-    ):
-      _ = params_generator.ParamsGenerator(test_model_path)
+    _ = params_generator.ParamsGenerator(test_model_path)
 
 
 if __name__ == '__main__':

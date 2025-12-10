@@ -184,15 +184,11 @@ class CalibratorAlreadyQuantizedModelTest(googletest.TestCase):
     )
     _ = calibrator.Calibrator(test_model_path)
 
-  def test_check_is_float_model_raises_error_when_model_is_quantized(self):
+  def test_check_is_quantized_model_succeeds_when_model_is_quantized(self):
     test_model_path = os.path.join(
         TEST_DATA_PREFIX_PATH, "tests/models/mnist_quantized.tflite"
     )
-    with self.assertRaisesRegex(
-        ValueError,
-        "The input model for calibration is not a float model.",
-    ):
-      _ = calibrator.Calibrator(test_model_path)
+    _ = calibrator.Calibrator(test_model_path)
 
 
 class CalibratorToyGemma2Test(googletest.TestCase):

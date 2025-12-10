@@ -35,12 +35,12 @@ class ParamsGenerator:
   def __init__(self, float_tflite: Union[str, bytes]):
     self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
 
-    if not tfl_flatbuffer_utils.is_float_model(self.flatbuffer_model):
-      raise ValueError(
-          'The input model for quantization parameters generation is not a'
-          ' float model. Please check the model (e.g., if it is already'
-          ' quantized).'
-      )
+    # if not tfl_flatbuffer_utils.is_float_model(self.flatbuffer_model):
+    #   raise ValueError(
+    #       'The input model for quantization parameters generation is not a'
+    #       ' float model. Please check the model (e.g., if it is already'
+    #       ' quantized).'
+    #   )
     self._check_tensor_names_are_unique()
     self.buffer_to_tensors: dict[int, list[Any]] = (
         tfl_flatbuffer_utils.buffer_to_tensors(self.flatbuffer_model)
@@ -409,7 +409,11 @@ class ParamsGenerator:
     buffers_to_duplicate = []
     tensor_names_to_duplicate = []
     for buffer_idx, tensors in self.buffer_to_tensors.items():
-      if not tensors:
+      # TODO: b/458797890 - Investigate if skipping buffer_idx == 0 is a
+      # correct fix, or if it just covers up a deeper issue. This is only
+      # required when statically quantizing models that have already been
+      # quantized dynamically.
+      if not tensors or buffer_idx == 0:
         continue
       # Check if any of the tensors needs to be duplicated.
       for tensor in tensors:

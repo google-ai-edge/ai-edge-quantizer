@@ -54,6 +54,15 @@ def check_horizontal_optimization(
   Returns:
     True if the two transformations can be merged, False otherwise
   """
+  if (
+      isinstance(param1.parameters, qtyping.UniformQuantParams)
+      and param1.parameters.hadamard is not None
+  ):
+    if (
+        isinstance(param2.parameters, qtyping.UniformQuantParams)
+        and param2.parameters.hadamard is not None
+    ):
+      return True
   return (
       param1.parameters == param2.parameters
       and len(param1.transformations) > index

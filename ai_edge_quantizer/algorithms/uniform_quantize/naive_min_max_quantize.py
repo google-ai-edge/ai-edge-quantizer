@@ -108,6 +108,13 @@ def get_tensor_quant_params(
   return dataclasses.replace(quant_params, quantized_data=quantized_vars)
 
 
+def check_if_quantized(tensor: Any) -> bool:
+  """Checks if the tensor is quantized."""
+  return (
+      tensor.quantization is not None and tensor.quantization.scale is not None
+  )
+
+
 # TODO: b/333731147 - Use named tuple to store min/max.
 def init_qsvs(
     op_info: qtyping.OpInfo,
@@ -129,6 +136,13 @@ def init_qsvs(
   op_qsvs = {}
 
   inputs_to_ignore = inputs_to_ignore or []
+  quantized_inputs_to_ignore = [
+      opr_idx
+      for opr_idx, tensor_idx in enumerate(op_info.op.inputs)
+      if check_if_quantized(graph_info.subgraph_tensors[tensor_idx])
+  ]
+  inputs_to_ignore.extend(quantized_inputs_to_ignore)
+
   outputs_to_ignore = outputs_to_ignore or []
   for opr_idx, tensor_idx in enumerate(op_info.op.inputs):
     if tensor_idx != -1 and opr_idx not in inputs_to_ignore:
@@ -207,6 +221,12 @@ def min_max_calibrate(
     }
 
   inputs_to_ignore = inputs_to_ignore or []
+  quantized_inputs_to_ignore = [
+      opr_idx
+      for opr_idx, tensor_idx in enumerate(tfl_op.inputs)
+      if check_if_quantized(graph_info.subgraph_tensors[tensor_idx])
+  ]
+  inputs_to_ignore.extend(quantized_inputs_to_ignore)
   outputs_to_ignore = outputs_to_ignore or []
   for i, tensor_idx in enumerate(tfl_op.inputs):
     if tensor_idx != -1 and i not in inputs_to_ignore:

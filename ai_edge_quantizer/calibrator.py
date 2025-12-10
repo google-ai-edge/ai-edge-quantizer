@@ -46,11 +46,6 @@ class Calibrator:
   ):
     self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
 
-    if not tfl_flatbuffer_utils.is_float_model(self._flatbuffer_model):
-      raise ValueError(
-          "The input model for calibration is not a float model. Please check"
-          " the model (e.g., if it is already quantized)."
-      )
     self._tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
         float_tflite, use_xnnpack=True, num_threads=num_threads
     )

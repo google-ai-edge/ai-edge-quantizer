@@ -431,6 +431,33 @@ class QuantizerTest(parameterized.TestCase):
         op_config=test_op_config,
     )
 
+  def test_two_pass_quantization_with_conv_and_fc_succeeds(self):
+    float_model_path = self._test_model_path
+
+    drq_recipe_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, 'recipes/dynamic_wi8_afp32_hadamard_recipe.json'
+    )
+    drq_quantizer = quantizer.Quantizer(float_model_path)
+    drq_quantizer.load_quantization_recipe(drq_recipe_path)
+    drq_result = drq_quantizer.quantize()
+    drq_model_path = os.path.join(self._tmp_save_path, 'drq_model.tflite')
+    drq_result.export_model(drq_model_path)
+
+    srq_recipe_path = os.path.join(
+        TEST_DATA_PREFIX_PATH, 'recipes/default_a8w8_recipe.json'
+    )
+    srq_quantizer = quantizer.Quantizer(drq_model_path)
+    srq_quantizer.load_quantization_recipe(srq_recipe_path)
+    representative_dataset = (
+        tfl_interpreter_utils.create_random_normal_input_data(
+            drq_model_path, num_samples=1
+        )
+    )
+    calibration_result = srq_quantizer.calibrate(representative_dataset)
+    srq_result = srq_quantizer.quantize(calibration_result)
+    srq_model_path = os.path.join(self._tmp_save_path, 'srq_model.tflite')
+    srq_result.export_model(srq_model_path)
+
 
 class QuantizerBytearrayInputs(googletest.TestCase):
 

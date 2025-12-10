@@ -36,6 +36,13 @@ _OpQuantConstraint = common_utils.OpQuantConstraint
 _ComputePrecision = qtyping.ComputePrecision
 
 
+def check_if_quantized(tensor: Any) -> bool:
+  """Checks if the tensor is quantized."""
+  return (
+      tensor.quantization is not None and tensor.quantization.scale is not None
+  )
+
+
 def check_op_quantization_config(
     op_name: _TFLOpName,
     op_quant_config: qtyping.OpQuantizationConfig,
@@ -271,7 +278,7 @@ def materialize_average_pool_2d(
   )
 
 
-def _materialize_bias_for_conv_ops(
+def _materialize_bias_for_fc_conv_ops(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     op_tensor_params: list[qtyping.TensorTransformationParams],
@@ -290,14 +297,16 @@ def _materialize_bias_for_conv_ops(
     op_weight_index: Index for the weight tensor in the op.
     op_bias_index: Index for the bias tensor in the op.
   """
-  _, _, bias_tensor, _ = tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
-      op_info.op,
-      graph_info.subgraph_tensors,
-      op_input_index,
-      op_weight_index,
-      op_bias_index,
+  _, weight_tensor, bias_tensor, _ = (
+      tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
+          op_info.op,
+          graph_info.subgraph_tensors,
+          op_input_index,
+          op_weight_index,
+          op_bias_index,
+      )
   )
-  if bias_tensor is not None:
+  if bias_tensor is not None and not check_if_quantized(bias_tensor):
     bias_quant_params = None
     # Fused bias needs to be quantized for SRQ.
     # Check if SRQ.
@@ -315,6 +324,19 @@ def _materialize_bias_for_conv_ops(
       weight_consumer_params = (
           op_tensor_params[op_weight_index].consumers[0].parameters
       )
+      if weight_consumer_params is None and check_if_quantized(weight_tensor):
+        quant_params = weight_tensor.quantization
+        if op_info.op_quant_config.weight_tensor_config is None:
+          raise ValueError(
+              "weight_tensor_config cannot be None when weight tensor is"
+              " quantized."
+          )
+        weight_consumer_params = qtyping.UniformQuantParams(
+            num_bits=op_info.op_quant_config.weight_tensor_config.num_bits,
+            scale=quant_params.scale,
+            zero_point=quant_params.zeroPoint,
+            quantized_dimension=quant_params.quantizedDimension,
+        )
       try:
         # Bias quantization is using fixed quantization scale:
         # input_scale * weight_scale. To avoid hidden numerics error, we check
@@ -495,7 +517,13 @@ def materialize_fc_conv(
     weights, bias).
   """
   ignored_inputs = [bias_index]  # Bias tensor is quantized separately.
-  if _are_weights_too_small(op_info, graph_info, weight_index):
+  should_ignore_weight = False
+  if graph_info:
+    w_tensor = graph_info.subgraph_tensors[op_info.op.inputs[weight_index]]
+    should_ignore_weight = check_if_quantized(w_tensor)
+  if should_ignore_weight or _are_weights_too_small(
+      op_info, graph_info, weight_index
+  ):
     ignored_inputs.append(weight_index)
 
   op_tensor_params = common_utils.materialize_standard_op(
@@ -506,7 +534,7 @@ def materialize_fc_conv(
       inputs_to_ignore=ignored_inputs,
   )
 
-  _materialize_bias_for_conv_ops(
+  _materialize_bias_for_fc_conv_ops(
       op_info,
       graph_info,
       op_tensor_params,
@@ -561,7 +589,7 @@ def materialize_conv2d_transpose(
         "Materialize standard op should return at least two tensors for"
         " conv2d_transpose."
     )
-  _materialize_bias_for_conv_ops(
+  _materialize_bias_for_fc_conv_ops(
       op_info,
       graph_info,
       op_tensor_params,

@@ -60,22 +60,22 @@ def get_constrained_op_list(
   def are_weights_too_small_wrapper(*_args, **_kwargs) -> bool:
     return False
 
-  # Dummy implementation of the `_materialize_bias_for_conv_ops` function to
+  # Dummy implementation of the `_materialize_bias_for_fc_conv_ops` function to
   # support `materialize_standard_op_wrapper` above.
-  def materialize_bias_for_conv_ops_wrapper(*_args, **_kwargs):
+  def materialize_bias_for_fc_conv_ops_wrapper(*_args, **_kwargs):
     return
 
   # Do monkey patch to intercept the `materialize_standard_op` function to
   # support `materialize_standard_op_wrapper` above.
   original_materialize_standard_op = common_utils.materialize_standard_op
   original_are_weights_too_small = common_quantize._are_weights_too_small  # pylint: disable=protected-access
-  original_materialize_bias_for_conv_ops = (
-      common_quantize._materialize_bias_for_conv_ops  # pylint: disable=protected-access
+  original_materialize_bias_for_fc_conv_ops = (
+      common_quantize._materialize_bias_for_fc_conv_ops  # pylint: disable=protected-access
   )
   common_utils.materialize_standard_op = materialize_standard_op_wrapper
   common_quantize._are_weights_too_small = are_weights_too_small_wrapper  # pylint: disable=protected-access
-  common_quantize._materialize_bias_for_conv_ops = (  # pylint: disable=protected-access
-      materialize_bias_for_conv_ops_wrapper
+  common_quantize._materialize_bias_for_fc_conv_ops = (  # pylint: disable=protected-access
+      materialize_bias_for_fc_conv_ops_wrapper
   )
   minmax_func_dict = algorithm_manager.MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT
 
@@ -105,7 +105,7 @@ def get_constrained_op_list(
   # Restore the original functions.
   common_utils.materialize_standard_op = original_materialize_standard_op
   common_quantize._are_weights_too_small = original_are_weights_too_small  # pylint: disable=protected-access
-  common_quantize._materialize_bias_for_conv_ops = (  # pylint: disable=protected-access
-      original_materialize_bias_for_conv_ops
+  common_quantize._materialize_bias_for_fc_conv_ops = (  # pylint: disable=protected-access
+      original_materialize_bias_for_fc_conv_ops
   )
   return constrained_ops
