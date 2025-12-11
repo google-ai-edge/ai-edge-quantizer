@@ -33,7 +33,7 @@ from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
-from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
+import os # tensorflow.python.platform.gfile  # pylint: disable=g-direct-tensorflow-import
 
 
 # Expose algorithm names to users.
@@ -74,15 +74,15 @@ class QuantizationResult:
     Raises:
       RuntimeError: If no quantized model is available.
     """
-    if not gfile.Exists(save_folder):
-      gfile.MakeDirs(save_folder)
+    if not os.path.exists(save_folder):
+      os.makedirs(save_folder)
 
     model_save_path = os.path.join(save_folder, f'{model_name}.tflite')
     self.export_model(model_save_path, overwrite)
 
     recipe_save_path = os.path.join(save_folder, model_name + '_recipe.json')
     recipe = json.dumps(self.recipe)
-    with gfile.GFile(recipe_save_path, 'w') as output_file_handle:
+    with open(recipe_save_path, 'w') as output_file_handle:
       output_file_handle.write(recipe)
 
   def export_model(self, filepath: str, overwrite: bool = False) -> None:
@@ -102,7 +102,7 @@ class QuantizationResult:
       raise RuntimeError(
           'No quantized model to save. Make sure .quantize() is called.'
       )
-    if gfile.Exists(filepath):
+    if os.path.exists(filepath):
       if overwrite:
         logging.warning(
             'The model %s already exists in the folder. Overwriting the model'
@@ -115,7 +115,7 @@ class QuantizationResult:
             ' consider change the model name or specify overwrite=True to'
             ' overwrite the model if needed.'
         )
-    with gfile.GFile(filepath, 'wb') as output_file_handle:
+    with open(filepath, 'wb') as output_file_handle:
       output_file_handle.write(self.quantized_model)
 
 
@@ -179,7 +179,7 @@ class Quantizer:
       recipe: Quantization recipe in json format.
     """
     if isinstance(recipe, str):
-      with gfile.Open(recipe) as json_file:
+      with open(recipe) as json_file:
         recipe = json.load(json_file)
     self._recipe_manager.load_quantization_recipe(recipe)
 
@@ -191,7 +191,7 @@ class Quantizer:
     Args:
       filename: Config policy filename.
     """
-    with gfile.Open(filename, 'r') as f:
+    with open(filename, 'r') as f:
       policy = default_policy.update_default_config_policy(f.read())
 
     # Register the policy for MIN_MAX_UNIFORM_QUANT algorithm.

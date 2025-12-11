@@ -23,7 +23,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
-from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
+import os # tensorflow.python.platform.gfile  # pylint: disable=g-direct-tensorflow-import
 
 _OpExecutionMode = qtyping.OpExecutionMode
 _OpName = qtyping.TFLOperationName
@@ -102,7 +102,7 @@ class SubTest(parameterized.TestCase):
     )
     quant_result = self._quantizer.quantize(calibration_result)
     # Check model size.
-    with gfile.GFile(self.float_model_path, 'rb') as f:
+    with open(self.float_model_path, 'rb') as f:
       float_model_bytearray = bytearray(f.read())
     self.assertLess(
         len(quant_result.quantized_model), len(float_model_bytearray)

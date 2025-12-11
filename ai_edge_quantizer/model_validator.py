@@ -25,7 +25,7 @@ from typing import Any, Optional, Union
 import numpy as np
 
 from ai_edge_quantizer.utils import tfl_interpreter_utils as utils
-from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
+import os # tensorflow.python.platform.gfile  # pylint: disable=g-direct-tensorflow-import
 
 
 _DEFAULT_SIGNATURE_KEY = utils.DEFAULT_SIGNATURE_KEY
@@ -194,7 +194,7 @@ class ComparisonResult:
     result_save_path = os.path.join(
         save_folder, model_name + '_comparison_result.json'
     )
-    with gfile.GFile(result_save_path, 'w') as output_file_handle:
+    with open(result_save_path, 'w') as output_file_handle:
       output_file_handle.write(json.dumps(result))
 
     # TODO: b/365578554 - Remove after ME is updated to use the new json format.
@@ -206,7 +206,7 @@ class ComparisonResult:
     json_save_path = os.path.join(
         save_folder, model_name + '_comparison_result_me_input.json'
     )
-    with gfile.GFile(json_save_path, 'w') as output_file_handle:
+    with open(json_save_path, 'w') as output_file_handle:
       output_file_handle.write(json_object)
 
 
