@@ -108,6 +108,11 @@ class RecipeManager:
         configuration will be used.
       algorithm_key: Algorithm key to be applied.
     """
+    try:
+      algorithm_manager.AlgorithmName(algorithm_key)
+    except ValueError as e:
+      raise ValueError(f'Unsupported algorithm key: {algorithm_key}.') from e
+
     if op_config is None:
       op_config = _OpQuantizationConfig()
 
