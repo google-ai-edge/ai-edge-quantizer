@@ -188,3 +188,4 @@ The table below outlines the allowed configurations for available recipes.
 |EQUAL            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |NOT_EQUAL        |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
 |SPACE_TO_DEPTH   |     |     |     |     |<div align="center"> &check; </div>|    |    |    |
+|RELU             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |

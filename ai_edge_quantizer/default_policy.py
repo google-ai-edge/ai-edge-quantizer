@@ -198,7 +198,8 @@ DEFAULT_JSON_POLICY = """
       "REDUCE_MIN",
       "EQUAL",
       "NOT_EQUAL",
-      "MIRROR_PAD"
+      "MIRROR_PAD",
+      "RELU"
     ],
     "static_wi8_ai8": [
       "ADD",
@@ -248,7 +249,8 @@ DEFAULT_JSON_POLICY = """
       "EQUAL",
       "NOT_EQUAL",
       "MIRROR_PAD",
-      "SPACE_TO_DEPTH"
+      "SPACE_TO_DEPTH",
+      "RELU"
     ],
     "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT"],
     "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT"],

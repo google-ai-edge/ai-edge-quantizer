@@ -38,7 +38,7 @@ class ConstrainedOpsUtilsTest(parameterized.TestCase):
       dict(
           testcase_name="no_constrain",
           constraint=_OpQuantConstraint.NO_CONSTRAIN,
-          expected_num_ops=24,
+          expected_num_ops=25,
       ),
   )
   def test_get_constrained_op_list(self, constraint, expected_num_ops):
