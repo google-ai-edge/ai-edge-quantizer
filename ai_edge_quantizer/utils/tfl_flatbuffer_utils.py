@@ -20,10 +20,10 @@ from typing import Any, Optional, Union
 import immutabledict
 import numpy as np
 
+from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import qtyping
 from ai_edge_litert import schema_py_generated as schema  # pylint:disable=g-direct-tensorflow-import
-from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
-from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
+import os # tensorflow.python.platform.gfile  # pylint: disable=g-direct-tensorflow-import
 
 _TFLOpName = qtyping.TFLOperationName
 
@@ -107,7 +107,7 @@ TENSOR_TYPE_TO_CODE = immutabledict.immutabledict(
     (reversed(item) for item in TENSOR_CODE_TO_TYPE.items())
 )
 
-# Expose functions in tensorflow.lite.tools.flatbuffer_utils
+# Expose functions in litert.python.tools.flatbuffer_utils
 write_model = flatbuffer_utils.write_model
 
 
@@ -142,7 +142,7 @@ def get_model_content(tflite_path: str) -> bytes:
   Returns:
     The model bytes.
   """
-  with gfile.Open(tflite_path, "rb") as tflite_file:
+  with open(tflite_path, "rb") as tflite_file:
     return tflite_file.read()
 
 
@@ -155,7 +155,7 @@ def get_model_buffer(tflite_path: str) -> bytearray:
   Returns:
     model_buffer: the model buffer.
   """
-  with gfile.Open(tflite_path, "rb") as tflite_file:
+  with open(tflite_path, "rb") as tflite_file:
     return bytearray(tflite_file.read())
 
 
@@ -208,7 +208,7 @@ def parse_fc_bmm_conv_tensors(
   return input_tensor, weight_tensor, bias_tensor, output_tensor
 
 
-# flatbuffer_model has Any type since tensorflow.lite.tools.flatbuffer_utils
+# flatbuffer_model has Any type since litert.python.tools.flatbuffer_utils
 # is not type annotated.
 def buffer_to_tensors(flatbuffer_model: Any) -> dict[int, list[Any]]:
   """Returns a map from buffer id to tensors that use it."""

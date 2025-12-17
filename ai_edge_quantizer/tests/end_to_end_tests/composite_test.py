@@ -22,12 +22,12 @@ from absl.testing import parameterized
 import numpy as np
 
 from tensorflow.python.platform import googletest
+from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_litert import schema_py_generated as schema  # pylint:disable=g-direct-tensorflow-import
-from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
 
 _RNG = np.random.default_rng(42)
 

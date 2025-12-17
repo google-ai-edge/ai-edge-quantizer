@@ -1,4 +1,5 @@
+absl-py
 immutabledict
 numpy
-tf-nightly>=2.21.0.dev20251006
+ml_dtypes
 ai-edge-litert-nightly

@@ -19,9 +19,9 @@ import collections
 import copy
 import json
 from typing import Any, Union
+from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import qtyping
 from ai_edge_litert import schema_py_generated as schema  # pylint:disable=g-direct-tensorflow-import
-from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
 
 _TFLOpName = qtyping.TFLOperationName
 _OpQuantizationConfig = qtyping.OpQuantizationConfig

@@ -15,7 +15,6 @@
 
 from absl.testing import parameterized
 import numpy as np
-import tensorflow as tf
 
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import quantizer
@@ -132,7 +131,7 @@ class CalibrationQsvAlignmentUtilsTest(parameterized.TestCase):
   def test_calibration_utils_init_fails(self):
     model_path = "non_existent_model.tflite"
     with self.assertRaisesWithPredicateMatch(
-        tf.errors.NotFoundError, lambda err: f"{model_path}" in str(err)
+        Exception, lambda err: f"{model_path}" in str(err)
     ):
       calibration_utils.CalibrationQsvAlignmentUtils(model_path)
 

@@ -75,7 +75,7 @@ function test_unittest {
 
   pushd "${SCRIPT_DIR}" > /dev/null
 
-  ${PYTHON_BIN} -m pip install -r requirements.txt
+  ${PYTHON_BIN} -m pip install -r dev_requirements.txt
   ${PYTHON_BIN} -m unittest discover --pattern *_test.py
 
   popd > /dev/null

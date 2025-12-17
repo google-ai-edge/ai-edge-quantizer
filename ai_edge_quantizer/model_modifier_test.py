@@ -19,13 +19,13 @@ import os
 import tracemalloc
 from tensorflow.python.platform import googletest
 from absl.testing import parameterized
+from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import model_modifier
 from ai_edge_quantizer import params_generator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
-from tensorflow.lite.tools import flatbuffer_utils  # pylint: disable=g-direct-tensorflow-import
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('.')
 

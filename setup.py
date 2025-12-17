@@ -68,9 +68,10 @@ setuptools.setup(
     ),
     python_requires=">=3.9",
     install_requires=[
+        "absl-py",
         "immutabledict",
         "numpy",
-        "tf-nightly",
+        "ml_dtypes",
         "ai-edge-litert-nightly",
     ],
 )

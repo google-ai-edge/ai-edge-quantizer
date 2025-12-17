@@ -23,7 +23,7 @@ import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from ai_edge_litert import interpreter as tfl  # pylint: disable=g-direct-tensorflow-import
-from tensorflow.python.platform import gfile  # pylint: disable=g-direct-tensorflow-import
+import os # tensorflow.python.platform.gfile  # pylint: disable=g-direct-tensorflow-import
 
 DEFAULT_SIGNATURE_KEY = "serving_default"
 
@@ -51,7 +51,7 @@ def create_tfl_interpreter(
     A TFLite interpreter.
   """
   if isinstance(tflite_model, str):
-    with gfile.GFile(tflite_model, "rb") as f:
+    with open(tflite_model, "rb") as f:
       tflite_model = f.read()
 
   if use_xnnpack:
