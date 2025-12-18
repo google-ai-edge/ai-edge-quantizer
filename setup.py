@@ -72,6 +72,6 @@ setuptools.setup(
         "immutabledict",
         "numpy",
         "ml_dtypes",
-        "ai-edge-litert",
+        "ai-edge-litert-nightly",
     ],
 )
