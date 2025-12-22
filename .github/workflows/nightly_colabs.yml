@@ -28,8 +28,8 @@ jobs:
 
       - name: Run Colab notebook
         run: |
-          papermill colabs/getting_started.ipynb /tmp/out -k python3 -p visualize_model 0
           papermill colabs/torch_convert_and_quantize.ipynb /tmp/out -k python3 -p visualize_model 0
+          papermill colabs/getting_started.ipynb /tmp/out -k python3 -p visualize_model 0
           papermill colabs/selective_quantization_isnet.ipynb /tmp/out -k python3 -p visualize_model 0
 
 
