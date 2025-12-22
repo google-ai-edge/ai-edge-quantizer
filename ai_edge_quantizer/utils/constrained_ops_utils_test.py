@@ -28,7 +28,7 @@ class ConstrainedOpsUtilsTest(parameterized.TestCase):
       dict(
           testcase_name="same_as_input_scale",
           constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
-          expected_num_ops=17,
+          expected_num_ops=18,
       ),
       dict(
           testcase_name="same_as_output_scale",

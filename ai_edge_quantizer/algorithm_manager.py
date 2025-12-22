@@ -118,6 +118,9 @@ MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT = {
     ),
     _TFLOpName.MAX_POOL_2D: common_quantize.materialize_max_pool_2d,
     _TFLOpName.RESIZE_BILINEAR: common_quantize.materialize_resize_bilinear,
+    _TFLOpName.RESIZE_NEAREST_NEIGHBOR: (
+        common_quantize.materialize_resize_nearest_neighbor
+    ),
     _TFLOpName.GATHER_ND: common_quantize.materialize_gather_nd,
     _TFLOpName.PACK: common_quantize.materialize_pack,
     _TFLOpName.UNPACK: common_quantize.materialize_unpack,
@@ -274,6 +277,9 @@ _OCTAV_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
     ),
     _TFLOpName.MAX_POOL_2D: common_quantize.materialize_max_pool_2d,
     _TFLOpName.RESIZE_BILINEAR: common_quantize.materialize_resize_bilinear,
+    _TFLOpName.RESIZE_NEAREST_NEIGHBOR: (
+        common_quantize.materialize_resize_nearest_neighbor
+    ),
     _TFLOpName.GATHER_ND: common_quantize.materialize_gather_nd,
     _TFLOpName.PACK: common_quantize.materialize_pack,
     _TFLOpName.UNPACK: common_quantize.materialize_unpack,

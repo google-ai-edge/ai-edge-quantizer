@@ -879,6 +879,23 @@ def materialize_resize_bilinear(
   )
 
 
+def materialize_resize_nearest_neighbor(
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> list[qtyping.TensorTransformationParams]:
+  """Materialize tensors in tfl.resize_nearest_neighbor."""
+  return common_utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      get_tensor_quant_params_fn,
+      constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
+      inputs_to_ignore=[1],  # Resize size does not need to be quantized.
+  )
+
+
 def materialize_gather_nd(
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
     op_info: qtyping.OpInfo,
