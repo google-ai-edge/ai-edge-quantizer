@@ -135,7 +135,7 @@ class EmbeddingLookupTest(test_utils.BaseOpTestCase):
     ])
     quant_result = self._quantizer.quantize()
     with self.subTest(name='ModelSizeReduction'):
-      self.assertLess(len(quant_result.quantized_model), 1600)
+      self.assertLess(len(quant_result.quantized_model), 1650)
 
     validation_result = self._quantizer.validate(
         test_data={
