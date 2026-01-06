@@ -414,7 +414,10 @@ class TensorUtilsTest(parameterized.TestCase):
         list(bias_quant_config.quantized_data.flatten()),  # pytype: disable=attribute-error
     )
 
-  def test_quantize_bias_tensor_raises_error_for_large_quantization_error(self):
+  @parameterized.parameters(True, False)
+  def test_quantize_bias_tensor_raises_error_for_large_quantization_error(
+      self, check_error
+  ):
     input_quant_config = qtyping.UniformQuantParams(
         scale=np.array([0.1]),
         zero_point=np.array([10]),
@@ -431,14 +434,26 @@ class TensorUtilsTest(parameterized.TestCase):
     )
     # This will result in quantized bias of 3e9, which is larger than int32 max.
     bias_tensor_data = np.array([3e7])
-    with self.assertRaisesRegex(
-        ValueError,
-        "Quantization error is too large for bias tensor quantization.",
-    ):
-      uniform_quantize_tensor.symmetric_quantize_bias_tensor(
-          bias_tensor_data,
-          input_quant_config,
-          weight_quant_config,
+
+    if check_error:
+      with self.assertRaisesRegex(
+          ValueError,
+          "Quantization error is too large for bias tensor quantization.",
+      ):
+        uniform_quantize_tensor.symmetric_quantize_bias_tensor(
+            bias_tensor_data,
+            input_quant_config,
+            weight_quant_config,
+            check_error
+        )
+    else:
+      self.assertIsNotNone(
+          uniform_quantize_tensor.symmetric_quantize_bias_tensor(
+              bias_tensor_data,
+              input_quant_config,
+              weight_quant_config,
+              check_error,
+          )
       )
 
   @parameterized.parameters((8, True), (16, False))
