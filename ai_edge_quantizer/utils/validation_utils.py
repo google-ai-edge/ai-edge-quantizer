@@ -66,6 +66,22 @@ def mean_squared_difference(
   Raises:
     ValueError: if the two inputs don't have the same number of elements
   """
+  if np.any(np.isnan(data1)):
+    print(data1)
+    print("data1 is nan")
+  if np.any(np.isnan(data2)):
+    print("data2 is nan")
+  if np.any(np.isinf(data1)):
+    print("data1 is inf")
+  if np.any(np.isinf(data2)):
+    print("data2 is inf")
+  if (
+      np.any(np.isnan(data1))
+      or np.any(np.isnan(data2))
+      or np.any(np.isinf(data1))
+      or np.any(np.isinf(data2))
+  ):
+    return float(1234567890)
   data1, data2 = _preprocess_same_size_arrays(data1, data2)
   # special handling for tensor of size 0
   if data1.size == 0:
@@ -95,6 +111,22 @@ def median_diff_ratio(
   Raises:
     ValueError: if the two inputs don't have the same number of elements
   """
+  if np.any(np.isnan(data1)):
+    print(data1)
+    print("data1 is nan")
+  if np.any(np.isnan(data2)):
+    print("data2 is nan")
+  if np.any(np.isinf(data1)):
+    print("data1 is inf")
+  if np.any(np.isinf(data2)):
+    print("data2 is inf")
+  if (
+      np.any(np.isnan(data1))
+      or np.any(np.isnan(data2))
+      or np.any(np.isinf(data1))
+      or np.any(np.isinf(data2))
+  ):
+    return float(1234567890)
   data1, data2 = _preprocess_same_size_arrays(data1, data2)
   # special handling for tensor of size 0
   if data1.size == 0:
