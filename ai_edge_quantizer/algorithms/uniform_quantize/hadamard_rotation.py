@@ -87,7 +87,7 @@ def _rotate_with_diagonal_hadamard(
   hadamard = _make_hadamard_matrix(hadamard_size)
   reshaped_tensor = tensor_content.reshape(
       diagonal_size * output_size, hadamard_size)
-  w_rotated = np.matmul(hadamard, reshaped_tensor.mT).mT
+  w_rotated = np.matmul(reshaped_tensor, hadamard)
   return w_rotated.reshape(tensor_content.shape), hadamard_size, random_vector
 
 
