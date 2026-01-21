@@ -346,7 +346,6 @@ def _materialize_bias_for_fc_conv_ops(
                 bias_content,
                 input_consumer_params,
                 weight_consumer_params,
-                not op_info.op_quant_config.skip_checks,
             )
         )
       except ValueError as e:

@@ -357,7 +357,8 @@ def symmetric_quantize_bias_tensor(
     bias_content: np.ndarray,
     input_tensor_quant_params: qtyping.UniformQuantParams,
     weight_tensor_quant_params: qtyping.UniformQuantParams,
-    check_error: bool = True,
+    # TODO: b/477623376 - Have a debugging mode to check bias.
+    check_error: bool = False,
 ) -> qtyping.UniformQuantParams:
   """Quantize bias tensor (symmetrically, i.e., zero_point = 0).
 
