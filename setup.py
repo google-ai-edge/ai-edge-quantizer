@@ -51,10 +51,10 @@ setuptools.setup(
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -66,7 +66,7 @@ setuptools.setup(
     packages=setuptools.find_packages(
         include=["ai_edge_quantizer*"],
     ),
-    python_requires=">=3.9",
+    python_requires=">=3.10",
     install_requires=[
         "absl-py",
         "immutabledict",
