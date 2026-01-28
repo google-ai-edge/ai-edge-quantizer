@@ -65,6 +65,10 @@ class AlgorithmName(str, enum.Enum):
   DECOMPOSED_HADAMARD_ROTATION = hadamard_rotation.DECOMPOSED_ALGORITHM_KEY
   MSE = mse.ALGORITHM_KEY
 
+  @classmethod
+  def list(cls) -> list[str]:
+    return list(map(lambda c: c.value, cls))
+
 
 ### MIN/MAX_UNIFORM_QUANT ###
 
