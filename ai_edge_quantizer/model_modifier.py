@@ -25,6 +25,7 @@ from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import transformation_instruction_generator
 from ai_edge_quantizer import transformation_performer
+from ai_edge_quantizer.utils import progress_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_litert import interpreter as tfl  # pylint: disable=g-direct-tensorflow-import
@@ -250,37 +251,46 @@ class ModelModifier:
     # buffer offsets.
 
     # remove all the constant from the model.
-    for buffer in quantized_model.buffers:
-      if buffer.data is not None:
-        buffer.data = None
-        buffer.offset = 1
-        buffer.size = 1
-    dummy_bytearray = bytearray(
-        flatbuffer_utils.convert_object_to_bytearray(quantized_model)
-    )
-    # calculate the correct buffer size and offset
-    self._pad_bytearray(dummy_bytearray)
-    for buffer_idx, buffer in enumerate(quantized_model.buffers):
-      buffer_data = self._constant_map[buffer_idx]
-      if buffer_data is None:
-        continue
-      buffer.offset = len(dummy_bytearray)
-      buffer.size = len(buffer_data)
-      dummy_bytearray += buffer_data
+    total_buffers = 3*len(quantized_model.buffers)
+    with progress_utils.ProgressBar(
+        total_steps=total_buffers,
+        description="Serializing Large Model:",
+        disable=total_buffers < 1000,
+    ) as progress_bar:
+      for buffer in quantized_model.buffers:
+        progress_bar.update_single_step()
+        if buffer.data is not None:
+          buffer.data = None
+          buffer.offset = 1
+          buffer.size = 1
+      dummy_bytearray = bytearray(
+          flatbuffer_utils.convert_object_to_bytearray(quantized_model)
+      )
+      # calculate the correct buffer size and offset
       self._pad_bytearray(dummy_bytearray)
-    del dummy_bytearray
+      for buffer_idx, buffer in enumerate(quantized_model.buffers):
+        progress_bar.update_single_step()
+        buffer_data = self._constant_map[buffer_idx]
+        if buffer_data is None:
+          continue
+        buffer.offset = len(dummy_bytearray)
+        buffer.size = len(buffer_data)
+        dummy_bytearray += buffer_data
+        self._pad_bytearray(dummy_bytearray)
+      del dummy_bytearray
 
-    # build new tflite file with correct buffer offset
-    model_bytearray = bytearray(
-        flatbuffer_utils.convert_object_to_bytearray(quantized_model)
-    )
-    self._pad_bytearray(model_bytearray)
-    for buffer_idx, _ in enumerate(quantized_model.buffers):
-      buffer_data = self._constant_map[buffer_idx]
-      if buffer_data is None:
-        continue
-      model_bytearray += buffer_data
+      # build new tflite file with correct buffer offset
+      model_bytearray = bytearray(
+          flatbuffer_utils.convert_object_to_bytearray(quantized_model)
+      )
       self._pad_bytearray(model_bytearray)
+      for buffer_idx, _ in enumerate(quantized_model.buffers):
+        progress_bar.update_single_step()
+        buffer_data = self._constant_map[buffer_idx]
+        if buffer_data is None:
+          continue
+        model_bytearray += buffer_data
+        self._pad_bytearray(model_bytearray)
     return model_bytearray
 
   def _serialize_small_model(
@@ -294,6 +304,7 @@ class ModelModifier:
     Returns:
       a byte buffer that represents the serialized tflite model
     """
+    print("Serializing model.......")
     model_bytearray = flatbuffer_utils.convert_object_to_bytearray(
         quantized_model
     )

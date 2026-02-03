@@ -25,6 +25,7 @@ from typing import Optional
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import constrained_ops_utils
+from ai_edge_quantizer.utils import progress_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
@@ -231,12 +232,20 @@ class TransformationInstructionsGenerator:
   def _create_tensor_name_to_graph_info_map(self):
     """Create a mapping between tensor name and tensor info."""
     self._tensor_name_to_graph_info = {}
-    # TODO: b/333607428 - support graph input & output
-    for subgraph_id, subgraph in enumerate(self.flatbuffer_model.subgraphs):
-      for tensor_name, tensor_info in self._tensor_info_generator(
-          subgraph_id, subgraph
-      ):
-        self._tensor_name_to_graph_info[tensor_name] = tensor_info
+    total_tensors = sum(
+        len(subgraph.tensors) for subgraph in self.flatbuffer_model.subgraphs
+    )
+    with progress_utils.ProgressBar(
+        total_tensors, "Generating Tensor name mapping:",
+        disable=total_tensors < 1000,
+    ) as progress_bar:
+      # TODO: b/333607428 - support graph input & output
+      for subgraph_id, subgraph in enumerate(self.flatbuffer_model.subgraphs):
+        for tensor_name, tensor_info in self._tensor_info_generator(
+            subgraph_id, subgraph
+        ):
+          progress_bar.update_single_step()
+          self._tensor_name_to_graph_info[tensor_name] = tensor_info
 
   def _group_consumer_transformations(
       self, param: qtyping.TensorTransformationParams
