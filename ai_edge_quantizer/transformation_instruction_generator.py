@@ -25,6 +25,7 @@ from typing import Optional
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import constrained_ops_utils
+from ai_edge_quantizer.utils import progress_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
@@ -228,15 +229,25 @@ class TransformationInstructionsGenerator:
       tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
       yield tensor_name, tensor_info
 
-  def _create_tensor_name_to_graph_info_map(self):
+  def _create_tensor_name_to_graph_info_map(
+      self, enable_progress_bar: bool | None = None
+  ):
     """Create a mapping between tensor name and tensor info."""
     self._tensor_name_to_graph_info = {}
-    # TODO: b/333607428 - support graph input & output
-    for subgraph_id, subgraph in enumerate(self.flatbuffer_model.subgraphs):
-      for tensor_name, tensor_info in self._tensor_info_generator(
-          subgraph_id, subgraph
-      ):
-        self._tensor_name_to_graph_info[tensor_name] = tensor_info
+    total_tensors = sum(
+        len(subgraph.tensors) for subgraph in self.flatbuffer_model.subgraphs
+    )
+    with progress_utils.ProgressBar(
+        total_tensors, "Generating Tensor name mapping:",
+        enable=enable_progress_bar,
+    ) as progress_bar:
+      # TODO: b/333607428 - support graph input & output
+      for subgraph_id, subgraph in enumerate(self.flatbuffer_model.subgraphs):
+        for tensor_name, tensor_info in self._tensor_info_generator(
+            subgraph_id, subgraph
+        ):
+          progress_bar.update_single_step()
+          self._tensor_name_to_graph_info[tensor_name] = tensor_info
 
   def _group_consumer_transformations(
       self, param: qtyping.TensorTransformationParams
@@ -826,6 +837,7 @@ class TransformationInstructionsGenerator:
       self,
       params: dict[str, qtyping.TensorTransformationParams],
       flatbuffer_model: Optional[schema_py_generated.ModelT] = None,
+      enable_progress_bar: bool | None = None,
   ) -> dict[str, qtyping.TensorTransformationInsts]:
     """Converts quantization params to transformation instructions.
 
@@ -834,6 +846,8 @@ class TransformationInstructionsGenerator:
         type is designed to be the same as the output of
         generate_quantization_parameters.
       flatbuffer_model: the flatbuffer model to be quantized.
+      enable_progress_bar: Whether to enable the progress bar. By default, it is
+        disabled for smaller models and enabled for larger models.
 
     Returns:
       a dictionary with tensor name as key and transformation instructions as
@@ -841,7 +855,7 @@ class TransformationInstructionsGenerator:
     """
     if flatbuffer_model is not None:
       self.flatbuffer_model = flatbuffer_model
-      self._create_tensor_name_to_graph_info_map()
+      self._create_tensor_name_to_graph_info_map(enable_progress_bar)
 
     insts = {}
     for tensor_name in params:
