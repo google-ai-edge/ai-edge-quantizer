@@ -25,6 +25,7 @@ from ai_edge_quantizer import default_policy as policy
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.algorithms.utils import common_utils
+from ai_edge_quantizer.utils import progress_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 _QuantTrans = qtyping.QuantTransformation
@@ -51,10 +52,26 @@ class ParamsGenerator:
     self.model_quant_results: dict[str, qtyping.TensorTransformationParams] = {}
     self._tensor_quant_params_cache = common_utils.TensorQuantParamsCache()
 
+  def _get_total_operations(self) -> int:
+    """Returns the total number of operations.
+
+    This is the total number of operations to process in order to generate
+    quantization parameters.
+    """
+    total_ops = sum(
+        len(subgraph.operators)
+        + len(
+            tfl_flatbuffer_utils.get_subgraph_input_output_operators(subgraph)
+        )
+        for subgraph in self.float_model.subgraphs
+    )
+    return total_ops
+
   def generate_quantization_parameters(
       self,
       model_recipe_manager: recipe_manager.RecipeManager,
       model_qsvs: Optional[dict[str, qtyping.QSV]] = None,
+      enable_progress_bar: bool | None = None,
   ) -> dict[str, qtyping.TensorTransformationParams]:
     """Generate the quantization parameters for the model.
 
@@ -62,6 +79,8 @@ class ParamsGenerator:
       model_recipe_manager: The recipe manager for the model.
       model_qsvs: Quantization statistics values (QSVs) for the model. This is
         obtained through calibration process.
+      enable_progress_bar: Whether to enable the progress bar. By default, it is
+        disabled for smaller models and enabled for larger models.
 
     Returns:
       model_quant_results: The quantization parameters for tensors in the model.
@@ -81,66 +100,79 @@ class ParamsGenerator:
 
     skip_subgraphs = set()
     op_codes = self.float_model.operatorCodes
-    for sg_ind, subgraph in enumerate(self.float_model.subgraphs):
 
-      graph_info = qtyping.GraphInfo(subgraph.tensors, self.float_model.buffers)
-      # Add input/output operators to the subgraph.
-      subgraph_operators = subgraph.operators + (
-          tfl_flatbuffer_utils.get_subgraph_input_output_operators(subgraph)
-      )
-      for subgraph_op_id, op in enumerate(subgraph_operators):
-        # Get the op key.
-        if isinstance(op, qtyping.IOOperator):
-          op_key = op.op_key
-          subgraph_op_id = -1  # Virtual op, no real id.
-        else:
-          op_code = op_codes[op.opcodeIndex].builtinCode
-          # Do not quantize unknown ops.
-          if op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME:
+    total_ops = self._get_total_operations()
+    with progress_utils.ProgressBar(
+        total_ops,
+        'Generating Quantization Parameters:',
+        enable=enable_progress_bar,
+        # Progress bar will be skipped for smaller models.
+    ) as progress_bar:
+      for sg_ind, subgraph in enumerate(self.float_model.subgraphs):
+
+        graph_info = qtyping.GraphInfo(
+            subgraph.tensors, self.float_model.buffers
+        )
+        # Add input/output operators to the subgraph.
+        subgraph_operators = subgraph.operators + (
+            tfl_flatbuffer_utils.get_subgraph_input_output_operators(subgraph)
+        )
+        for subgraph_op_id, op in enumerate(subgraph_operators):
+          progress_bar.update_single_step()
+          # Get the op key.
+          if isinstance(op, qtyping.IOOperator):
+            op_key = op.op_key
+            subgraph_op_id = -1  # Virtual op, no real id.
+          else:
+            op_code = op_codes[op.opcodeIndex].builtinCode
+            # Do not quantize unknown ops.
+            if op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME:
+              op_quant_results = self._get_params_for_no_quant_op(
+                  subgraph_op_id, op, subgraph.tensors
+              )
+              self._update_model_quant_results(op_quant_results)
+              continue
+            op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
+
+            # Step1: query the quantization_recipe to get op config.
+          op_scope = tfl_flatbuffer_utils.get_op_scope(op, subgraph.tensors)
+          algorithm_name, op_quant_config = (
+              model_recipe_manager.get_quantization_configs(op_key, op_scope)
+          )
+
+          if sg_ind in skip_subgraphs or policy.is_non_quantizable_composite_op(
+              op
+          ):
+            algorithm_name = algorithm_manager.AlgorithmName.NO_QUANTIZE
+
+          if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
+            side_effect_subgraphs = (
+                tfl_flatbuffer_utils.get_op_side_effect_subgraphs(op)
+            )
+            skip_subgraphs.update(side_effect_subgraphs)
+
             op_quant_results = self._get_params_for_no_quant_op(
                 subgraph_op_id, op, subgraph.tensors
             )
-            self._update_model_quant_results(op_quant_results)
-            continue
-          op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
 
-        # Step1: query the quantization_recipe to get op config.
-        op_scope = tfl_flatbuffer_utils.get_op_scope(op, subgraph.tensors)
-        algorithm_name, op_quant_config = (
-            model_recipe_manager.get_quantization_configs(op_key, op_scope)
-        )
-
-        if sg_ind in skip_subgraphs or policy.is_non_quantizable_composite_op(
-            op
-        ):
-          algorithm_name = algorithm_manager.AlgorithmName.NO_QUANTIZE
-
-        if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
-          side_effect_subgraphs = (
-              tfl_flatbuffer_utils.get_op_side_effect_subgraphs(op)
-          )
-          skip_subgraphs.update(side_effect_subgraphs)
-
-          op_quant_results = self._get_params_for_no_quant_op(
-              subgraph_op_id, op, subgraph.tensors
-          )
-
-        else:
-          op_info = qtyping.OpInfo(op, op_key, subgraph_op_id, op_quant_config)
-          # Step2: query algorithm_manager to get/call the related function.
-          materialize_func = algorithm_manager.get_quantization_func(
-              algorithm_name,
-              op_key,
-              qtyping.QuantizeMode.MATERIALIZE,
-          )
-          op_quant_results = materialize_func(
-              op_info=op_info,
-              graph_info=graph_info,
-              tensor_name_to_qsv=model_qsvs,
-              tensor_quant_params_cache=self._tensor_quant_params_cache,
-          )
-        # Step3: update the results.
-        self._update_model_quant_results(op_quant_results)
+          else:
+            op_info = qtyping.OpInfo(
+                op, op_key, subgraph_op_id, op_quant_config
+            )
+            # Step2: query algorithm_manager to get/call the related function.
+            materialize_func = algorithm_manager.get_quantization_func(
+                algorithm_name,
+                op_key,
+                qtyping.QuantizeMode.MATERIALIZE,
+            )
+            op_quant_results = materialize_func(
+                op_info=op_info,
+                graph_info=graph_info,
+                tensor_name_to_qsv=model_qsvs,
+                tensor_quant_params_cache=self._tensor_quant_params_cache,
+            )
+          # Step3: update the results.
+          self._update_model_quant_results(op_quant_results)
     self._post_process_results()
     return self.model_quant_results
 
