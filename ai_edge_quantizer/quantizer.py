@@ -35,7 +35,7 @@ from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
 import os # tensorflow.python.platform.gfile  # pylint: disable=g-direct-tensorflow-import
 
-
+Path = str | os.PathLike
 # Expose algorithm names to users.
 AlgorithmName = algorithm_manager.AlgorithmName
 
@@ -61,7 +61,7 @@ class QuantizationResult:
   quantized_model: Optional[bytearray]
 
   def save(
-      self, save_folder: str, model_name: str, overwrite: bool = False
+      self, save_folder: Path, model_name: str, overwrite: bool = False
   ) -> None:
     """Saves the quantized model and the quantization recipe.
 
@@ -85,7 +85,7 @@ class QuantizationResult:
     with open(recipe_save_path, 'w') as output_file_handle:
       output_file_handle.write(recipe)
 
-  def export_model(self, filepath: str, overwrite: bool = False) -> None:
+  def export_model(self, filepath: Path, overwrite: bool = False) -> None:
     """Exports the quantized model to a .tflite flatbuffer.
 
     Args:
@@ -133,14 +133,14 @@ class Quantizer:
 
   def __init__(
       self,
-      float_model: Union[str, bytearray],
-      quantization_recipe: Optional[Union[str, _QuantRecipe]] = None,
-      previous_quantized_model: Optional[Union[str, bytearray]] = None,
+      float_model: Union[Path, bytearray],
+      quantization_recipe: Optional[Union[Path, _QuantRecipe]] = None,
+      previous_quantized_model: Optional[Union[Path, bytearray]] = None,
   ):
     """Initializes the quantizer.
 
     Args:
-      float_model: Path to the float tflite model.
+      float_model: Path to the float tflite model or model content in bytearray.
       quantization_recipe: Quantization recipe in .json filepath or loaded json
         format.
       previous_quantized_model: Path to an optional previously quantized tflite
@@ -150,13 +150,13 @@ class Quantizer:
     # Use `float model` as bytes for memory efficiency.
     self.float_model: bytes = (
         tfl_flatbuffer_utils.get_model_content(float_model)
-        if isinstance(float_model, str)
+        if isinstance(float_model, (str, os.PathLike))
         else float_model
     )
     if previous_quantized_model is not None:
       self.previous_quantized_model: bytes = (
           tfl_flatbuffer_utils.get_model_content(previous_quantized_model)
-          if isinstance(previous_quantized_model, str)
+          if isinstance(previous_quantized_model, (str, os.PathLike))
           else previous_quantized_model
       )
     else:
@@ -170,7 +170,7 @@ class Quantizer:
     self._result: QuantizationResult = QuantizationResult([{}], None)
     self._quantize_called = False
 
-  def load_quantization_recipe(self, recipe: Union[str, _QuantRecipe]) -> None:
+  def load_quantization_recipe(self, recipe: Union[Path, _QuantRecipe]) -> None:
     """Loads a quantization recipe.
 
     The existing recipe will be overwritten.
@@ -178,12 +178,12 @@ class Quantizer:
     Args:
       recipe: Quantization recipe in json format.
     """
-    if isinstance(recipe, str):
+    if isinstance(recipe, (str, os.PathLike)):
       with open(recipe) as json_file:
         recipe = json.load(json_file)
     self._recipe_manager.load_quantization_recipe(recipe)
 
-  def load_config_policy(self, filename: str) -> None:
+  def load_config_policy(self, filename: Path) -> None:
     """Loads a JSON policy.
 
     The existing policy will be overwritten.

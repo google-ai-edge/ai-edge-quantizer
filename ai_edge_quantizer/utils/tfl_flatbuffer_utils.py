@@ -15,6 +15,7 @@
 
 """flatbuffer utils for the Quantizer."""
 
+import os
 from typing import Any, Optional, Union
 
 import immutabledict
@@ -26,6 +27,8 @@ from ai_edge_litert import schema_py_generated as schema  # pylint:disable=g-dir
 import os # tensorflow.python.platform.gfile  # pylint: disable=g-direct-tensorflow-import
 
 _TFLOpName = qtyping.TFLOperationName
+
+Path = Union[str, os.PathLike]
 
 TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
     _TFLOpName.FULLY_CONNECTED: schema.BuiltinOperator.FULLY_CONNECTED,
@@ -114,7 +117,7 @@ TENSOR_TYPE_TO_CODE = immutabledict.immutabledict(
 write_model = flatbuffer_utils.write_model
 
 
-def read_model(tflite_model: Union[str, bytearray]) -> Any:
+def read_model(tflite_model: Union[Path, bytearray]) -> Any:
   """Read and convert the TFLite model into a flatbuffer object.
 
   Args:
@@ -126,7 +129,7 @@ def read_model(tflite_model: Union[str, bytearray]) -> Any:
   Returns:
     flatbuffer_model: the flatbuffer_model.
   """
-  if isinstance(tflite_model, str):
+  if isinstance(tflite_model, (str, os.PathLike)):
     return flatbuffer_utils.read_model(tflite_model)
   elif isinstance(tflite_model, bytes) or isinstance(tflite_model, bytearray):
     return flatbuffer_utils.read_model_from_bytearray(tflite_model)
@@ -136,7 +139,7 @@ def read_model(tflite_model: Union[str, bytearray]) -> Any:
     )
 
 
-def get_model_content(tflite_path: str) -> bytes:
+def get_model_content(tflite_path: Path) -> bytes:
   """Get the model content (bytes) from the path.
 
   Args:
@@ -149,7 +152,7 @@ def get_model_content(tflite_path: str) -> bytes:
     return tflite_file.read()
 
 
-def get_model_buffer(tflite_path: str) -> bytearray:
+def get_model_buffer(tflite_path: Path) -> bytearray:
   """Get the model buffer from the path.
 
   Args:
