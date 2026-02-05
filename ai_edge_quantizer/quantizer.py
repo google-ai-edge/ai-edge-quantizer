@@ -30,6 +30,7 @@ from ai_edge_quantizer import model_validator
 from ai_edge_quantizer import params_generator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
+from ai_edge_quantizer.utils import progress_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
@@ -421,11 +422,14 @@ class Quantizer:
 
     if not self.get_quantization_recipe():
       raise RuntimeError('Can not quantize without a quantization recipe.')
+    progress_report = progress_utils.ProgressReport()
+    progress_report.capture_progess_start()
     quant_params = self._get_quantization_params(calibration_result)
     quantized_model = self._get_quantized_model(quant_params)
     self._result = QuantizationResult(
         self.get_quantization_recipe(), quantized_model
     )
+    progress_report.generate_progress_report(self.float_model, quantized_model)
     return self._result
 
   def validate(

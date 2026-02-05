@@ -29,6 +29,7 @@ from ai_edge_quantizer.transformations import insert_hadamard_rotation
 from ai_edge_quantizer.transformations import quant_insert
 from ai_edge_quantizer.transformations import quantize_tensor
 from ai_edge_quantizer.transformations import transformation_utils
+from ai_edge_quantizer.utils import progress_utils
 from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
@@ -326,7 +327,13 @@ class TransformationPerformer:
     self._create_op_id_map(tflite_model)
     if tensor_processing_order is None:
       tensor_processing_order = transformation_instructions.keys()
-    for tensor_name in tensor_processing_order:
-      self._apply_transformations(
-          transformation_instructions[tensor_name], tflite_model
-      )
+    with progress_utils.ProgressBar(
+        total_steps=len(tensor_processing_order),
+        description="Applying Transformations to tensors:",
+        disable=len(tensor_processing_order) < 1000,
+    ) as progress_bar:
+      for tensor_name in tensor_processing_order:
+        progress_bar.update_single_step()
+        self._apply_transformations(
+            transformation_instructions[tensor_name], tflite_model
+        )
