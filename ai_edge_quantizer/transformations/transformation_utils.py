@@ -140,6 +140,7 @@ def add_new_constant_tensor(
     buffers: list[schema_py_generated.BufferT],
     tensor_shape: Optional[list[int]] = None,
     force_duplicate_buffer: bool = False,
+    quantization: schema_py_generated.QuantizationParametersT | None = None,
 ) -> int:
   """Add a new constant tensor to the model.
 
@@ -153,6 +154,8 @@ def add_new_constant_tensor(
       data will be used.
     force_duplicate_buffer: Whether to add a new buffer even if the same buffer
       already exists.
+    quantization: Optional `QuantizationParametersT` describing the quantization
+      of this tensor.
 
   Returns:
     The index of the new tensor in the subgraph.
@@ -166,6 +169,7 @@ def add_new_constant_tensor(
   new_tensor.buffer = new_buffer_id
   new_tensor.type = tensor_type
   new_tensor.name = tensor_name
+  new_tensor.quantization = quantization
   new_tensor_id = len(subgraph.tensors)
   subgraph.tensors.append(new_tensor)
   return new_tensor_id
@@ -176,6 +180,7 @@ def add_new_activation_tensor(
     shape: list[int],
     tensor_type: schema_py_generated.TensorType,
     subgraph: schema_py_generated.SubGraphT,
+    quantization: schema_py_generated.QuantizationParametersT | None = None,
 ) -> int:
   """Add a new activation tensor to the model.
 
@@ -184,6 +189,8 @@ def add_new_activation_tensor(
     shape: The shape of the new tensor.
     tensor_type: The type of the new tensor.
     subgraph: The subgraph where the new tensor is added.
+    quantization: Optional `QuantizationParametersT` describing the quantization
+      of this tensor.
 
   Returns:
     The index of the new tensor in the subgraph.
@@ -199,6 +206,7 @@ def add_new_activation_tensor(
     new_tensor.shape = shape
   new_tensor.type = tensor_type
   new_tensor.name = tensor_name
+  new_tensor.quantization = quantization
   new_tensor.buffer = 0
   new_tensor_id = len(subgraph.tensors)
   subgraph.tensors.append(new_tensor)
@@ -226,8 +234,9 @@ def pack_data(bitwidth: int, flattened_data: np.ndarray) -> np.ndarray:
     Packed data.
   """
   if bitwidth == 4:
-    even_data = flattened_data[::2] & 0x0F
-    odd_data = np.left_shift(flattened_data[1::2], 4).astype(np.uint8)
+    flattened_data = np.bitwise_and(flattened_data.astype(np.uint8), 0x0F)
+    even_data = flattened_data[::2]
+    odd_data = np.left_shift(flattened_data[1::2], 4)
     if odd_data.shape[0] == even_data.shape[0] - 1:
       odd_data = np.pad(odd_data, (0, 1), constant_values=0)
     return np.bitwise_or(even_data, odd_data)

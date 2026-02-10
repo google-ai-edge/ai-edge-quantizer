@@ -88,7 +88,7 @@ def _update_fully_connected_consumers(
 
 
 def _make_hadamard_matrix(size: int):
-  """Generates a Hadamard matrix of the given size.
+  """Generates an unnormalized integer Hadamard matrix of the given size.
 
   Args:
     size: The size of the Hadamard matrix. Must be a power of 2. This represents
@@ -103,12 +103,12 @@ def _make_hadamard_matrix(size: int):
   """
   if size <= 0 or (size & (size - 1)) != 0:
     raise ValueError('Hadamard matrix size must be a power of 2. ')
-  h = h2 = np.array([[1, 1], [1, -1]])
+  h = h2 = np.array([[1, 1], [1, -1]], dtype=np.int8)
   current_size = 2
   while current_size < size:
     h = np.kron(h, h2)
     current_size *= 2
-  return h / np.sqrt(size)
+  return h
 
 
 def insert_decomposed_hadamard_rotation(
@@ -191,16 +191,23 @@ def insert_decomposed_hadamard_rotation(
   prerorate_reshape_op.outputs = [prerotate_reshape_output_tensor_id]
 
   # Generate hadamard_matrix(hadamard_size).
-  # We could quantize this to INT4 for better memory efficiency, but for large
-  # models the memory overhead is not significant, and floating point
+  # We quantize the Hadamard matrix to INT4 for better memory efficiency, but
+  # for large models the memory overhead is not significant, and floating point
   # computation does seem to result in better accuracy.
   hadamard_matrix = _make_hadamard_matrix(hadamard_size)
   hadamard_matrix_tensor_id = transformation_utils.add_new_constant_tensor(
-      tensor.name + b'_hadamard_matrix',
-      hadamard_matrix.astype(np.float32),
-      schema_py_generated.TensorType.FLOAT32,
-      transformation_input.subgraph,
-      transformation_input.buffers,
+      tensor_name=tensor.name + b'_hadamard_matrix',
+      data=transformation_utils.pack_data(
+          bitwidth=4, flattened_data=hadamard_matrix.flatten()
+      ),
+      tensor_type=schema_py_generated.TensorType.INT4,
+      subgraph=transformation_input.subgraph,
+      buffers=transformation_input.buffers,
+      tensor_shape=hadamard_matrix.shape,
+      quantization=schema_py_generated.QuantizationParametersT(
+          scale=np.array([1.0 / np.sqrt(hadamard_size)], dtype=np.float32),
+          zeroPoint=[0],
+      ),
   )
 
   # Insert x' = tfl.fully_connected(x', hadamard_matrix)
