@@ -18,6 +18,7 @@
 from flatbuffers import flexbuffers
 import numpy as np
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.algorithms.uniform_quantize import hadamard_matrices
 from ai_edge_quantizer.transformations import transformation_utils
 from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
@@ -85,30 +86,6 @@ def _update_fully_connected_consumers(
       transformation.subgraph.operators[consumer].inputs[0] = new_tensor_id
       updated = True
   return updated
-
-
-def _make_hadamard_matrix(size: int):
-  """Generates an unnormalized integer Hadamard matrix of the given size.
-
-  Args:
-    size: The size of the Hadamard matrix. Must be a power of 2. This represents
-      a single dimension. E.g. if size is 4, then the Hadamard matrix is a 4x4
-      matrix.
-
-  Returns:
-    The Hadamard matrix.
-
-  Raises:
-    ValueError: If the size is not a power of 2.
-  """
-  if size <= 0 or (size & (size - 1)) != 0:
-    raise ValueError('Hadamard matrix size must be a power of 2. ')
-  h = h2 = np.array([[1, 1], [1, -1]], dtype=np.int8)
-  current_size = 2
-  while current_size < size:
-    h = np.kron(h, h2)
-    current_size *= 2
-  return h
 
 
 def insert_decomposed_hadamard_rotation(
@@ -194,7 +171,9 @@ def insert_decomposed_hadamard_rotation(
   # We quantize the Hadamard matrix to INT4 for better memory efficiency, but
   # for large models the memory overhead is not significant, and floating point
   # computation does seem to result in better accuracy.
-  hadamard_matrix = _make_hadamard_matrix(hadamard_size)
+  hadamard_matrix = hadamard_matrices.make_hadamard_matrix(
+      hadamard_size, normalize=False, dtype=np.int8
+  )
   hadamard_matrix_tensor_id = transformation_utils.add_new_constant_tensor(
       tensor_name=tensor.name + b'_hadamard_matrix',
       data=transformation_utils.pack_data(
