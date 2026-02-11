@@ -317,12 +317,15 @@ class TensorQuantizationConfig:
       quantization.
     dtype: The data type of the tensor.
     algorithm_key: The algorithm key to use for quantization.
+    max_hadamard_size: The maximum size of the Hadamard matrix to use for
+      Hadamard rotation.
   """
 
   num_bits: int
   symmetric: bool = True
   granularity: QuantGranularity = QuantGranularity.TENSORWISE
   dtype: TensorDataType = TensorDataType.INT
+  max_hadamard_size: int = 0
 
   def to_dict(self) -> dict[str, Any]:
     """Converts ActivationQuantizationConfig to dict."""

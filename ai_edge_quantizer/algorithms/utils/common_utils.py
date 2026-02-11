@@ -94,21 +94,36 @@ def check_if_valid_op_config(
         f"No policy was specified for op: {op_name} with config:"
         f" {op_quant_config}."
     )
-  # The config_check_policy contains all possible valid configs, except for
-  # variations in the min_weight_elements field (it's set to 0 for all of them).
-  # min_weight_elements has to be ignored during policy check here because it
-  # can be any non-negative integer, which means we can't list all possible
-  # values in the policy.
-  elif (
-      dataclasses.replace(op_quant_config, min_weight_elements=0)
-      not in config_check_policy[op_name]
-  ):
-    error_msg = (
-        f"Quantization config for op: {op_name} with config:"
-        f" {op_quant_config} was not found in the policy."
-    )
   else:
-    check_passed = True
+    # min_weight_elements and max_hadamard_size have to be ignored during
+    # policy check here because they can be any non-negative integer, which
+    # means we can't list all possible values in the policy.
+    op_quant_config_to_check = dataclasses.replace(
+        op_quant_config, min_weight_elements=0
+    )
+    if op_quant_config_to_check.weight_tensor_config is not None:
+      op_quant_config_to_check = dataclasses.replace(
+          op_quant_config_to_check,
+          weight_tensor_config=dataclasses.replace(
+              op_quant_config_to_check.weight_tensor_config, max_hadamard_size=0
+          ),
+      )
+    if op_quant_config_to_check.activation_tensor_config is not None:
+      op_quant_config_to_check = dataclasses.replace(
+          op_quant_config_to_check,
+          activation_tensor_config=dataclasses.replace(
+              op_quant_config_to_check.activation_tensor_config,
+              max_hadamard_size=0,
+          ),
+      )
+
+    if op_quant_config_to_check not in config_check_policy[op_name]:
+      error_msg = (
+          f"Quantization config for op: {op_name} with config:"
+          f" {op_quant_config!r} was not found in the policy."
+      )
+    else:
+      check_passed = True
 
   if not check_passed:
     raise ValueError(
