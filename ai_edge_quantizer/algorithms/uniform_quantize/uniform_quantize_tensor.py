@@ -493,8 +493,14 @@ def tensor_zp_scale_from_min_max(
         else np.maximum(neg_clipping_values, float16_min)
     )
 
+  # Include 0 to the range to support zero-padding(bound_min <= 0 <= bound_max).
+  # See: https://arxiv.org/pdf/1712.05877.pdf
+  # This also ensures that tensor with 0 variation (i.e., min_value ==
+  # max_value) can be quantized correctly.
+  bound_max = np.maximum(max_value, np.zeros_like(max_value))
+  bound_min = np.minimum(min_value, np.zeros_like(min_value))
   if symmetric:
-    bound = np.maximum(np.abs(min_value), np.abs(max_value))
+    bound = np.maximum(np.abs(bound_max), np.abs(bound_min))
     bound = np.maximum(bound, min_bound)
     if clipping_values is not None:
       bound = np.clip(bound, neg_clipping_values, pos_clipping_values)
@@ -506,11 +512,6 @@ def tensor_zp_scale_from_min_max(
       scale = bound / qmax
       zp = np.zeros_like(scale, dtype=np.int32)
   else:
-    # Include 0 to the range to support zero-padding.
-    # See: https://arxiv.org/pdf/1712.05877.pdf
-    # This ensures bound_min <= 0 <= bound_max.
-    bound_max = np.maximum(max_value, np.zeros_like(max_value))
-    bound_min = np.minimum(min_value, np.zeros_like(min_value))
     bound = np.maximum(bound_max - bound_min, min_bound)
     if clipping_values is not None:
       bound = np.clip(bound, -clipping_values, clipping_values)

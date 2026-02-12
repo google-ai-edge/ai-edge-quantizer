@@ -17,10 +17,10 @@
 
 import dataclasses
 
-from absl.testing import parameterized
 import numpy as np
 
 from tensorflow.python.platform import googletest
+from absl.testing import parameterized
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 
@@ -481,6 +481,67 @@ class TensorUtilsTest(parameterized.TestCase):
     else:
       # Range has to be extended to include zero.
       self.assertEqual(calculated_min, 0)
+
+  @parameterized.product(
+      val=[5.0, 0.0, -5.0],
+      num_bits=[8, 16],
+      symmetric=[True, False],
+      granularity=[
+          qtyping.QuantGranularity.TENSORWISE,
+          qtyping.QuantGranularity.CHANNELWISE,
+      ],
+  )
+  def test_tensor_zp_scale_from_min_max_same_min_max(
+      self, val, num_bits, symmetric, granularity
+  ):
+    if granularity == qtyping.QuantGranularity.TENSORWISE:
+      min_val = np.array([[val]], dtype=np.float32)
+      max_val = np.array([[val]], dtype=np.float32)
+      expected_shape = (1, 1)
+    else:  # CHANNELWISE
+      min_val = np.array([val, val], dtype=np.float32)
+      max_val = np.array([val, val], dtype=np.float32)
+      expected_shape = (2,)
+
+    zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
+        min_val,
+        max_val,
+        num_bits,
+        symmetric,
+        granularity,
+    )
+    self.assertEqual(zp.shape, scale.shape)
+    self.assertEqual(zp.shape, expected_shape)
+
+    max_q = 2**num_bits / 2 - 1
+    calculated_max = scale * (max_q - zp)
+    min_q = -(2**num_bits) / 2
+    # Narrow range for symmetric quantization with num_bits >= 8.
+    if symmetric and num_bits >= 8:
+      min_q += 1
+    calculated_min = scale * (min_q - zp)
+
+    min_bound = 1e-4  # 1e-6 precision for int8 and 1e-8 for int16.
+    if symmetric:
+      bound = np.maximum(np.abs(val), min_bound)
+      for i in range(calculated_max.size):
+        self.assertAlmostEqual(calculated_max.flatten()[i], bound, delta=1e-3)
+        self.assertAlmostEqual(calculated_min.flatten()[i], -bound, delta=1e-3)
+    else:
+      if val == 0.0:
+        for i in range(calculated_max.size):
+          self.assertAlmostEqual(
+              calculated_max.flatten()[i], min_bound, delta=1e-9
+          )
+          self.assertAlmostEqual(calculated_min.flatten()[i], 0.0, delta=1e-9)
+      else:
+        for i in range(calculated_max.size):
+          self.assertAlmostEqual(
+              calculated_max.flatten()[i], np.maximum(val, 0), delta=1e-3
+          )
+          self.assertAlmostEqual(
+              calculated_min.flatten()[i], np.minimum(val, 0), delta=1e-3
+          )
 
   @parameterized.parameters(
       # number of bits, is_symmetric, max bound of the quantized range.
