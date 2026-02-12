@@ -54,12 +54,14 @@ def _make_hadamard_matrix(size: int) -> np.ndarray:
 def _rotate_with_diagonal_hadamard(
     tensor_content: np.ndarray,
     axis: int,
+    max_size: int = 0,
 ):
   """Quantizes the given float array using the diagonal Hadamard algorithm.
 
   Args:
     tensor_content: The float array to quantize.
     axis: The axis of the tensor to rotate.
+    max_size: The maximum size of the Hadamard matrix.
 
   Returns:
     A tuple containing the quantized array and the recovered array.
@@ -77,7 +79,9 @@ def _rotate_with_diagonal_hadamard(
   # Use the largest power of 2 that is a factor of the dimension and then
   # tile this Hadamard matrix along the diagonal. 2**30 is just a large power
   # of 2 to calculate this factor.
-  hadamard_size = np.gcd(tensor_content.shape[axis], 2 ** 30)
+  hadamard_size = np.gcd(tensor_content.shape[axis], 2**30)
+  if max_size > 0:
+    hadamard_size = min(hadamard_size, max_size)
   diagonal_size = tensor_content.shape[axis] // hadamard_size
   # Output size is the product of all dimensions except the one being rotated.
   output_size = np.prod(np.delete(tensor_content.shape, axis))
@@ -135,7 +139,9 @@ def get_tensor_quant_params(
 
   # Rotate the tensor with a Hadamard matrix.
   w_rotated, hadamard_size, random_vector = _rotate_with_diagonal_hadamard(
-      tensor_content, axis=reduce_axis
+      tensor_content,
+      axis=reduce_axis,
+      max_size=tensor_quant_config.max_hadamard_size,
   )
 
   # Get the quantized values of the rotated tensor.

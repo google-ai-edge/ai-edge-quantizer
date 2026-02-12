@@ -7,14 +7,16 @@
       "activation_tensor_config": {
         "num_bits": 8,
         "symmetric": false,
-        "channel_wise": false,
-        "dtype": "INT"
+        "granularity": "TENSORWISE",
+        "dtype": "INT",
+        "max_hadamard_size": 0
       },
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": true,
-        "dtype": "INT"
+        "granularity": "CHANNELWISE",
+        "dtype": "INT",
+        "max_hadamard_size": 0
       },
       "compute_precision": "INTEGER",
       "explicit_dequantize": false,
@@ -30,7 +32,7 @@
       "weight_tensor_config": {
         "num_bits": 4,
         "symmetric": true,
-        "channel_wise": true,
+        "granularity": "CHANNELWISE",
         "dtype": "INT"
       },
       "compute_precision": "FLOAT",

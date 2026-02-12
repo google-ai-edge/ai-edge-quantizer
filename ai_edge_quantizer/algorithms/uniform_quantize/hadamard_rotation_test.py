@@ -15,6 +15,7 @@
 
 """Test Hadamard rotation materialization."""
 
+import dataclasses
 import os
 
 from absl.testing import parameterized
@@ -226,6 +227,36 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
     self.assertIsNotNone(qparams.hadamard)
     if qparams.hadamard is not None:
       self.assertEqual(qparams.hadamard.hadamard_size, 32)
+
+  def test_get_tensor_quant_params_max_size(self):
+    input_tensor = self._subgraph.tensors[self._fc_op.inputs[1]]
+    buffer = self._graph_info.buffers[self._fc_buffer_id]
+    np_buffer = np.frombuffer(buffer.data, dtype=np.float32).reshape(
+        input_tensor.shape
+    )
+    # The original dimension is 32. The largest power of 2 factor is 32.
+    # If we set max_hadamard_size to 16, then it should be 16.
+    new_op_quant_config = dataclasses.replace(
+        self._op_info.op_quant_config,
+        weight_tensor_config=qtyping.TensorQuantizationConfig(
+            num_bits=8,
+            symmetric=True,
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
+            max_hadamard_size=16,
+        ),
+    )
+    self._op_info = dataclasses.replace(
+        self._op_info, op_quant_config=new_op_quant_config
+    )
+    qparams = hadamard_rotation.get_tensor_quant_params(
+        self._op_info,
+        self._op_info.op_quant_config.weight_tensor_config,
+        np_buffer,
+        self._tensor_name_to_qsv,
+    )
+    self.assertIsNotNone(qparams.hadamard)
+    if qparams.hadamard is not None:
+      self.assertEqual(qparams.hadamard.hadamard_size, 16)
 
   def test_get_tensor_quant_params_golden_1(self):
     test_data = np.ones((6, 6))

@@ -581,12 +581,14 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'symmetric': False,
                     'granularity': _QuantGranularity.TENSORWISE,
                     'dtype': 'INT',
+                    'max_hadamard_size': 0,
                 },
                 'weight_tensor_config': {
                     'num_bits': 8,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
                     'dtype': 'INT',
+                    'max_hadamard_size': 0,
                 },
                 # WEIGHT_ONLY.
                 'compute_precision': _ComputePrecision.INTEGER,
@@ -605,6 +607,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'num_bits': 8,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
+                    'max_hadamard_size': 0,
                 },
                 # WEIGHT_ONLY.
                 'compute_precision': _ComputePrecision.FLOAT,
@@ -623,6 +626,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'num_bits': 4,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
+                    'max_hadamard_size': 0,
                 },
                 # WEIGHT_ONLY.
                 'compute_precision': _ComputePrecision.FLOAT,
@@ -641,6 +645,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'num_bits': 6,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
+                    'max_hadamard_size': 0,
                 },
                 # WEIGHT_ONLY.
                 'compute_precision': _ComputePrecision.FLOAT,
@@ -659,6 +664,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
                     'num_bits': 3,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
+                    'max_hadamard_size': 0,
                 },
                 # WEIGHT_ONLY.
                 'compute_precision': _ComputePrecision.FLOAT,
@@ -923,6 +929,26 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
         ),
     )
     self.assertTrue(self._recipe_manager.need_calibration())
+
+  def test_get_hadamard_with_max_size(self):
+    self._recipe_manager.add_quantization_config(
+        regex='.*/Dense/.*',
+        operation_name=_TFLOpName.FULLY_CONNECTED,
+        algorithm_key=_AlgorithmName.HADAMARD_ROTATION,
+        op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=8, max_hadamard_size=1024
+            ),
+            compute_precision=_ComputePrecision.INTEGER,
+        ),
+    )
+    alg_key, op_config = self._recipe_manager.get_quantization_configs(
+        _TFLOpName.FULLY_CONNECTED, 'model/Dense/op'
+    )
+    self.assertEqual(alg_key, _AlgorithmName.HADAMARD_ROTATION)
+    weight_tensor_config = op_config.weight_tensor_config
+    assert weight_tensor_config is not None
+    self.assertEqual(weight_tensor_config.max_hadamard_size, 1024)
 
 
 if __name__ == '__main__':

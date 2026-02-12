@@ -224,6 +224,19 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         _TFLOpName.CONV_2D, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
     )
 
+  def test_check_config_with_non_default_max_hadamard_size_succeeds(self):
+    op_quant_config = _OpQuantConfig(
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=8,
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
+            max_hadamard_size=1024,
+        ),
+        compute_precision=_ComputePrecision.INTEGER,  # DRQ.
+    )
+    common_utils.check_if_valid_op_config(
+        _TFLOpName.FULLY_CONNECTED, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
+    )
+
   @parameterized.product(
       op_name=(_TFLOpName.FULLY_CONNECTED, _TFLOpName.CONV_2D),
       act_num_bits=(8, 16),
