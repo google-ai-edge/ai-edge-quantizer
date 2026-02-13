@@ -18,6 +18,7 @@
 from collections.abc import Sequence
 import copy
 from typing import Any, Optional, Union
+import warnings
 
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import default_policy as policy
@@ -35,12 +36,13 @@ class ParamsGenerator:
   def __init__(self, float_tflite: Union[str, bytes]):
     self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
 
-    # if not tfl_flatbuffer_utils.is_float_model(self.flatbuffer_model):
-    #   raise ValueError(
-    #       'The input model for quantization parameters generation is not a'
-    #       ' float model. Please check the model (e.g., if it is already'
-    #       ' quantized).'
-    #   )
+    if not tfl_flatbuffer_utils.is_float_model(self.flatbuffer_model):
+      warnings.warn(
+          'Input model is already partially quantized. Proceeding with'
+          ' re-quantization; existing quantized tensors will remain unchanged'
+          ' regardless of the selected recipe.'
+      )
+
     self._check_tensor_names_are_unique()
     self.buffer_to_tensors: dict[int, list[Any]] = (
         tfl_flatbuffer_utils.buffer_to_tensors(self.flatbuffer_model)
