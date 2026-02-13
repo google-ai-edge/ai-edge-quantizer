@@ -23,6 +23,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
+from tensorflow.lite.tools import flatbuffer_utils
 
 _ComputePrecision = qtyping.ComputePrecision
 _OpName = qtyping.TFLOperationName
@@ -61,6 +62,26 @@ class MNISTTest(parameterized.TestCase):
         'models/conv_fc_mnist.tflite'
     )
     self._quantizer = quantizer.Quantizer(self.float_model_path)
+
+  def _assert_all_tensors_integer(self, quantized_model):
+    """Asserts that all tensors in the given model are integers."""
+    quantized_model = flatbuffer_utils.read_model_from_bytearray(
+        quantized_model
+    )
+    for graph in quantized_model.subgraphs:
+      for op in graph.operators:
+        if op.inputs is None:
+          break
+        for input_idx in op.inputs:
+          tensor = graph.tensors[input_idx]
+          tensor_type = flatbuffer_utils.type_to_name(tensor.type)
+          op_name = flatbuffer_utils.opcode_to_name(
+              quantized_model, op.opcodeIndex
+          )
+          if 'QUANTIZE' in op_name:
+            continue  # Skip quantize ops as they may have float inputs.
+
+          self.assertFalse(tensor_type.startswith('FLOAT'))
 
   @parameterized.product(
       test_case=[
@@ -183,7 +204,7 @@ class MNISTTest(parameterized.TestCase):
       '../recipes/default_a8w8_recipe.json',
       '../recipes/default_a16w8_recipe.json',
   )
-  def test_mnist_toy_model_full_intege(self, recipe_path):
+  def test_mnist_toy_model_full_integer(self, recipe_path):
     recipe_path = test_utils.get_path_to_datafile(recipe_path)
     self._quantizer.load_quantization_recipe(recipe_path)
     self.assertTrue(self._quantizer.need_calibration)
@@ -225,6 +246,23 @@ class MNISTTest(parameterized.TestCase):
     # check final output.
     output_mse = comparison_result['StatefulPartitionedCall:0']
     self.assertLess(output_mse, output_tolerance)
+
+  @parameterized.parameters(
+      '../recipes/default_a8w8_recipe.json',
+      '../recipes/default_a16w8_recipe.json',
+  )
+  def test_mnist_toy_model_full_integer_requantize_success(self, recipe_path):
+    partly_quantized_model_path = test_utils.get_path_to_datafile(
+        '../tests/models/partly_quantized_mnist.tflite'
+    )
+    recipe_path = test_utils.get_path_to_datafile(recipe_path)
+    qt = quantizer.Quantizer(partly_quantized_model_path, recipe_path)
+    self.assertTrue(qt.need_calibration)
+    calibration_result = qt.calibrate(_get_calibration_data())
+    quant_result = qt.quantize(calibration_result)
+
+    # Check if the output model has `integer-only` tensors.
+    self._assert_all_tensors_integer(quant_result.quantized_model)
 
 
 if __name__ == '__main__':
