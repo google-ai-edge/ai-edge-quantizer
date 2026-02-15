@@ -105,6 +105,10 @@ class ParamsGenerator:
           op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
 
         # Step1: query the quantization_recipe to get op config.
+        # if op_key == qtyping.TFLOperationName.OUTPUT:
+        #   print(f'=====> op_key: {op_key}, op: {op}')
+        #   import pdb; pdb.set_trace()
+
         op_scope = self._get_op_scope(op, subgraph.tensors)
         algorithm_name, op_quant_config = (
             model_recipe_manager.get_quantization_configs(op_key, op_scope)
@@ -114,6 +118,12 @@ class ParamsGenerator:
             op
         ):
           algorithm_name = algorithm_manager.AlgorithmName.NO_QUANTIZE
+
+        if op_key == qtyping.TFLOperationName.OUTPUT:
+          print(
+              f'=====> op_key: {op_key}, op_scope: {op_scope}, op_quant_config:'
+              f' {op_quant_config}'
+          )
 
         if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
           side_effect_subgraphs = (
@@ -219,7 +229,15 @@ class ParamsGenerator:
     """
     scope = ''
     # Op scope is determined by output tensors.
-    for output_tensor_idx in op.outputs:
+    tensors_to_inspect = op.outputs
+    if (
+        isinstance(op, qtyping.IOOperator)
+        and op.op_key == qtyping.TFLOperationName.OUTPUT
+    ):
+      tensors_to_inspect = op.inputs
+      print(f'=====> OUTPUT op inputs to be scoped: {op.inputs}')
+
+    for output_tensor_idx in tensors_to_inspect:
       if output_tensor_idx != -1:
         scope += tfl_flatbuffer_utils.get_tensor_name(
             subgraph_tensors[output_tensor_idx]
