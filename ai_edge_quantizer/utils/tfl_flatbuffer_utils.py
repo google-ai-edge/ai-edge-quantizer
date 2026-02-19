@@ -15,6 +15,7 @@
 
 """flatbuffer utils for the Quantizer."""
 
+import logging
 import os
 from typing import Any, Optional, Union
 
@@ -364,3 +365,37 @@ def get_op_name_by_index(
   op = flatbuffer_model.subgraphs[subgraph_id].operators[op_index]
   builtin_code = flatbuffer_model.operatorCodes[op.opcodeIndex].builtinCode
   return TFL_OP_CODE_TO_NAME[builtin_code]
+
+
+def get_op_scope(
+    op: Any, subgraph_tensors: list[Any], max_length: int = 10000
+) -> str:
+  """Get the op scope.
+
+  Op scope is defined by the output tensor names (following the Model
+  Explorer).
+
+  Args:
+    op: The op that needs to be parsed.
+    subgraph_tensors: Tensors in the subgraph.
+    max_length: The maximum length of the scope string. If the scope string is
+      longer than this length, it will be truncated to this length to avoid
+      overwhelming regex matching engine.
+
+  Returns:
+    Scope for the op.
+  """
+  scope = ""
+  # Op scope is determined by output tensors.
+  for output_tensor_idx in op.outputs:
+    if output_tensor_idx != -1:
+      scope += get_tensor_name(subgraph_tensors[output_tensor_idx])
+      scope += ";"  # Split names.
+  if len(scope) > max_length:
+    logging.warning(
+        "Op scope is too long, truncating to %d characters. Truncated scope:"
+        " %s",
+        max_length,
+        scope,
+    )
+  return scope[:max_length]

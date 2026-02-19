@@ -152,7 +152,7 @@ class Calibrator:
               op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
             # Step2.1: query the quantization_recipe to get op quantization
             # settings.
-            op_scope = self._get_op_scope(op, subgraph.tensors)
+            op_scope = tfl_flatbuffer_utils.get_op_scope(op, subgraph.tensors)
             algorithm_name, _ = model_recipe_manager.get_quantization_configs(
                 op_key, op_scope
             )
@@ -237,22 +237,3 @@ class Calibrator:
         self._model_qsvs[tensor_name] = updated_qsv
       updated_tensor_names.add(tensor_name)
     return updated_tensor_names
-
-  def _get_op_scope(self, op, subgraph_tensors) -> str:
-    """Get the scope of the op.
-
-    The scope is the name of the output tensor of the op.
-
-    Args:
-      op: The op to get the scope.
-      subgraph_tensors: The tensors in the subgraph.
-
-    Returns:
-      The scope of the op.
-    """
-    scope = ""
-    for output_tensor_idx in op.outputs:
-      if output_tensor_idx != -1:
-        output_tensor = subgraph_tensors[output_tensor_idx]
-        scope += tfl_flatbuffer_utils.get_tensor_name(output_tensor)
-    return scope

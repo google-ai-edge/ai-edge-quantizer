@@ -105,7 +105,7 @@ class ParamsGenerator:
           op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
 
         # Step1: query the quantization_recipe to get op config.
-        op_scope = self._get_op_scope(op, subgraph.tensors)
+        op_scope = tfl_flatbuffer_utils.get_op_scope(op, subgraph.tensors)
         algorithm_name, op_quant_config = (
             model_recipe_manager.get_quantization_configs(op_key, op_scope)
         )
@@ -203,29 +203,6 @@ class ParamsGenerator:
           else:
             tensor_params.consumers += copy.deepcopy(op_tensor_result.consumers)
         self.model_quant_results[tensor_name] = tensor_params
-
-  def _get_op_scope(self, op: Any, subgraph_tensors: list[Any]) -> str:
-    """Get the op scope.
-
-    Op scope is defined by the output tensor names (following the Model
-    Explorer).
-
-    Args:
-      op: The op that needs to be parsed.
-      subgraph_tensors: Tensors in the subgraph.
-
-    Returns:
-      Scope for the op.
-    """
-    scope = ''
-    # Op scope is determined by output tensors.
-    for output_tensor_idx in op.outputs:
-      if output_tensor_idx != -1:
-        scope += tfl_flatbuffer_utils.get_tensor_name(
-            subgraph_tensors[output_tensor_idx]
-        )
-        scope += ';'  # Split names.
-    return scope
 
   def _get_params_for_no_quant_op(
       self,
