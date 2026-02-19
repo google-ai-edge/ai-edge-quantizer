@@ -329,7 +329,7 @@ def _create_random_normal(
     rng: np.random.Generator,
     shape: tuple[int, ...],
     dtype: np.dtype,
-) -> dict[str, Any]:
+) -> np.ndarray:
   """Creates a random normal dataset sample for given input details."""
   return rng.normal(size=shape).astype(dtype)
 
@@ -340,7 +340,7 @@ def _create_random_uniform(
     dtype: np.dtype,
     min_value: float = 0.0,
     max_value: float = 1.0,
-) -> dict[str, Any]:
+) -> np.ndarray:
   """Creates a random uniform dataset sample for given input details."""
   return rng.uniform(min_value, max_value, size=shape).astype(dtype)
 
@@ -349,18 +349,26 @@ def _create_random_integers(
     rng: np.random.Generator,
     shape: tuple[int, ...],
     dtype: np.dtype,
-    min_value: int = 0,
-    max_value: int = 1024,
-) -> dict[str, Any]:
+    min_value: Optional[int] = None,
+    max_value: Optional[int] = None,
+) -> np.ndarray:
   """Creates a random integer dataset sample for given input details."""
-  return rng.integers(min_value, max_value, size=shape, dtype=dtype)
+  if min_value is None:
+    min_value = np.iinfo(dtype).min
+  endpoint = False
+  if max_value is None:
+    max_value = np.iinfo(dtype).max
+    endpoint = True
+  return rng.integers(
+      min_value, max_value, size=shape, dtype=dtype, endpoint=endpoint
+  )
 
 
 def _create_random_bool(
     rng: np.random.Generator,
     shape: tuple[int, ...],
     dtype: np.dtype,
-) -> dict[str, Any]:
+) -> np.ndarray:
   """Creates a random bool dataset sample for given input details."""
   return rng.choice([True, False], size=shape, replace=True).astype(dtype)
 
@@ -390,7 +398,7 @@ def create_random_dataset(
     for arg_name, input_tensor in input_details.items():
       dtype = input_tensor["dtype"]
       shape = input_tensor["shape"]
-      if dtype in (np.int32, np.int64):
+      if np.issubdtype(dtype, np.integer):
         if min_max_range is None:
           new_data = _create_random_integers(rng, shape, dtype)
         else:

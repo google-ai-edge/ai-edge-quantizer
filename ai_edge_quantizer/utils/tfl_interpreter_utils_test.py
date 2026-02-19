@@ -354,6 +354,48 @@ class TflUtilsIntegerInputModelTest(googletest.TestCase):
     self.assertEqual(test_data["signature_1"][0]["positions"].dtype, np.int32)
     self.assertEqual(test_data["signature_1"][0]["tokens"].dtype, np.int32)
 
+  def test_create_random_integers_defaults(self):
+    rng = np.random.default_rng(0)
+
+    # Test int8 defaults
+    dtype = np.dtype(np.int8)
+    data = tfl_interpreter_utils._create_random_integers(rng, (1000,), dtype)
+    self.assertEqual(data.dtype, dtype)
+    self.assertGreaterEqual(data.min(), np.iinfo(dtype).min)
+    self.assertLessEqual(data.max(), np.iinfo(dtype).max)
+    # Check if we cover a reasonable range (probability check)
+    self.assertGreater(data.max(), 0)
+    self.assertLess(data.min(), 0)
+
+    # Test int16 defaults
+    dtype = np.dtype(np.int16)
+    data = tfl_interpreter_utils._create_random_integers(rng, (1000,), dtype)
+    self.assertEqual(data.dtype, dtype)
+    self.assertGreaterEqual(data.min(), np.iinfo(dtype).min)
+    self.assertLessEqual(data.max(), np.iinfo(dtype).max)
+
+    # Test int32 defaults
+    dtype = np.dtype(np.int32)
+    data = tfl_interpreter_utils._create_random_integers(rng, (1000,), dtype)
+    self.assertEqual(data.dtype, dtype)
+    self.assertGreaterEqual(data.min(), np.iinfo(dtype).min)
+    self.assertLessEqual(data.max(), np.iinfo(dtype).max)
+
+    # Test int64 defaults
+    dtype = np.dtype(np.int64)
+    data = tfl_interpreter_utils._create_random_integers(rng, (1000,), dtype)
+    self.assertEqual(data.dtype, dtype)
+    self.assertGreaterEqual(data.min(), np.iinfo(dtype).min)
+    self.assertLessEqual(data.max(), np.iinfo(dtype).max)
+
+    # Test explicit min_max_range
+    dtype = np.dtype(np.int32)
+    data = tfl_interpreter_utils._create_random_integers(
+        rng, (1000,), dtype, min_value=-10, max_value=10
+    )
+    self.assertGreaterEqual(data.min(), -10)
+    self.assertLess(data.max(), 10)
+
 
 if __name__ == "__main__":
   googletest.main()
