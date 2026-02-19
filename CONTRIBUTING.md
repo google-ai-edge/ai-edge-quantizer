@@ -3,23 +3,17 @@
 Every contributor to this repository should develop in a fork.
 
 ```bash
-# Install uv (see https://docs.astral.sh/uv/getting-started/installation/)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
 cd ai-edge-quantizer
-uv sync
+python -m venv --prompt ai-edge-quantizer venv
+source venv/bin/activate
+
+pip install -r dev-requirements.txt
 ```
 
 ## Running Tests
 
-Individual test:
 ```bash
-uv run ai_edge_quantizer/quantizer_test.py
-```
-
-All tests:
-```bash
-uv run test
+python -m unittest discover --pattern *_test.py
 ```
 
 ## Code Formatting
@@ -34,13 +28,15 @@ bash ./format.sh
 ## Build PyPi Package at Local
 
 ```bash
-uv build
+pip install wheel
+python setup.py bdist_wheel
 ```
 
-It will build a PyPi package under the `dist` folder, which you could install at local using command:
+It will build a PyPi package `ai_edge_quantizer-0.0.1-py3-none-any.whl` unde
+the `dist` folder, which you could install at local using command:
 
 ```bash
-uv pip install dist/ai_edge_quantizer-*.whl
+pip install dist/ai_edge_quantizer-0.0.1-py3-none-any.whl
 ```
 
 
