@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-edge-quantizer"
+version = "0.5.0"
+description = "A quantizer for advanced developers to quantize converted AI Edge models."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = ["On-Device ML", "AI", "Google", "TFLite", "Quantization", "LLMs", "GenAI"]
+dependencies = [
+    "absl-py",
+    "immutabledict",
+    "numpy",
+    "ml_dtypes",
+    "ai-edge-litert-nightly",
+]
+
+[project.urls]
+Homepage = "https://github.com/google-ai-edge/ai-edge-quantizer"
+
+[dependency-groups]
+dev = [
+    "build",
+    "colorama",
+    "isort",
+    "parameterized",
+    "pyink",
+    "pytest",
+    "pytest-xdist",
+    "tf-nightly",
+]
+
+[tool.setuptools.packages.find]
+include = ["ai_edge_quantizer*"]
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib -n auto --dist loadfile"
