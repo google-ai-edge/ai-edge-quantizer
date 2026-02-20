@@ -16,7 +16,7 @@
 from absl.testing import parameterized
 import numpy as np
 
-from tensorflow.python.platform import googletest
+import absl.testing.absltest as absltest
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import calibration_utils
 from ai_edge_quantizer.utils import test_utils
@@ -244,4 +244,4 @@ class CalibrationQsvAlignmentUtilsTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()

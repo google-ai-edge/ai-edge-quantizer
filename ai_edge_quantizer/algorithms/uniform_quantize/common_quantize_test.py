@@ -13,12 +13,12 @@
 # limitations under the License.
 # ==============================================================================
 
-import os
+import pathlib
 
+from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
 
-from tensorflow.python.platform import googletest
 from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
@@ -36,8 +36,8 @@ class CommonQuantizeTest(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     np.random.seed(666)
-    self._test_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, "conv_fc_mnist.tflite"
+    self._test_model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH) / "conv_fc_mnist.tflite"
     )
     self._test_model = tfl_flatbuffer_utils.read_model(self._test_model_path)
     # The test model has one subgraph for now.
@@ -98,4 +98,4 @@ class CommonQuantizeTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()

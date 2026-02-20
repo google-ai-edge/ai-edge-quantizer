@@ -13,8 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 
-from tensorflow.python.platform import googletest
 from absl.testing import parameterized
+import absl.testing.absltest as absltest
 from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import constrained_ops_utils
 
@@ -47,4 +47,4 @@ class ConstrainedOpsUtilsTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()

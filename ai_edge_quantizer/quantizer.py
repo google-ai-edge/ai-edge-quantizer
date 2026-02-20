@@ -19,7 +19,7 @@ from collections.abc import Iterable
 import dataclasses
 import json
 import logging
-import os
+import pathlib
 from typing import Any, Optional, Union
 
 from ai_edge_quantizer import algorithm_manager
@@ -35,7 +35,7 @@ from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
 import os
 
-Path = str | os.PathLike
+Path = str | pathlib.Path
 # Expose algorithm names to users.
 AlgorithmName = algorithm_manager.AlgorithmName
 
@@ -77,10 +77,14 @@ class QuantizationResult:
     if not os.path.exists(save_folder):
       os.makedirs(save_folder)
 
-    model_save_path = os.path.join(save_folder, f'{model_name}.tflite')
+    model_save_path = str(
+        pathlib.Path(save_folder) / f'{model_name}.tflite'
+    )
     self.export_model(model_save_path, overwrite)
 
-    recipe_save_path = os.path.join(save_folder, model_name + '_recipe.json')
+    recipe_save_path = str(
+        pathlib.Path(save_folder) / (model_name + '_recipe.json')
+    )
     recipe = json.dumps(self.recipe)
     with open(recipe_save_path, 'w') as output_file_handle:
       output_file_handle.write(recipe)
@@ -150,13 +154,13 @@ class Quantizer:
     # Use `float model` as bytes for memory efficiency.
     self.float_model: bytes = (
         tfl_flatbuffer_utils.get_model_content(float_model)
-        if isinstance(float_model, (str, os.PathLike))
+        if isinstance(float_model, (str, pathlib.Path))
         else float_model
     )
     if previous_quantized_model is not None:
       self.previous_quantized_model: bytes = (
           tfl_flatbuffer_utils.get_model_content(previous_quantized_model)
-          if isinstance(previous_quantized_model, (str, os.PathLike))
+          if isinstance(previous_quantized_model, (str, pathlib.Path))
           else previous_quantized_model
       )
     else:
@@ -178,7 +182,7 @@ class Quantizer:
     Args:
       recipe: Quantization recipe in json format.
     """
-    if isinstance(recipe, (str, os.PathLike)):
+    if isinstance(recipe, (str, pathlib.Path)):
       with open(recipe) as json_file:
         recipe = json.load(json_file)
     self._recipe_manager.load_quantization_recipe(recipe)
@@ -192,7 +196,10 @@ class Quantizer:
       filename: Config policy filename.
     """
     with open(filename, 'r') as f:
-      policy = default_policy.update_default_config_policy(f.read())
+      content = f.read()
+      if isinstance(content, bytes):
+        content = content.decode('utf-8')
+      policy = default_policy.update_default_config_policy(content)
 
     # Register the policy for MIN_MAX_UNIFORM_QUANT algorithm.
     algorithm_manager.register_config_check_policy_func(

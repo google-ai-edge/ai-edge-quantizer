@@ -15,10 +15,10 @@
 
 import os
 
+from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
 
-from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
@@ -205,4 +205,4 @@ class DepthwiseConv2dTest(op_test_utils.BaseQuantizeTest):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()
