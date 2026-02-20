@@ -18,6 +18,7 @@ import os
 
 from absl.testing import parameterized
 import numpy as np
+import os
 
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping

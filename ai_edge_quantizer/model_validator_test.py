@@ -17,6 +17,7 @@ import json
 import os
 from absl import flags
 import numpy as np
+import os
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import model_validator
 from ai_edge_quantizer.utils import test_utils

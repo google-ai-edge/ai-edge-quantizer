@@ -25,7 +25,7 @@ from typing import Any, Optional, Union
 import numpy as np
 
 from ai_edge_quantizer.utils import tfl_interpreter_utils as utils
-import os # tensorflow.python.platform.gfile  # pylint: disable=g-direct-tensorflow-import
+import os
 
 
 _DEFAULT_SIGNATURE_KEY = utils.DEFAULT_SIGNATURE_KEY

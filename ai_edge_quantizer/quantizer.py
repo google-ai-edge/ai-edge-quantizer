@@ -33,7 +33,7 @@ from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
-import os # tensorflow.python.platform.gfile  # pylint: disable=g-direct-tensorflow-import
+import os
 
 Path = str | os.PathLike
 # Expose algorithm names to users.

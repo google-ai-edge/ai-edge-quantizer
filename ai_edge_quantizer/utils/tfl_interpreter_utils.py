@@ -23,7 +23,7 @@ import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from ai_edge_litert import interpreter as tfl  # pylint: disable=g-direct-tensorflow-import
-import os # tensorflow.python.platform.gfile  # pylint: disable=g-direct-tensorflow-import
+import os
 
 DEFAULT_SIGNATURE_KEY = "serving_default"
 

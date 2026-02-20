@@ -16,10 +16,10 @@
 """E2E tests for the quantizer for model with add."""
 
 import json
-import pathlib
 
 from absl.testing import parameterized
 import numpy as np
+import os
 
 from tensorflow.python.platform import googletest
 from ai_edge_litert.tools import flatbuffer_utils
@@ -91,7 +91,8 @@ class CompositeTest(parameterized.TestCase):
     qt = quantizer.Quantizer(model)
 
     recipe_path = test_utils.get_path_to_datafile(recipe_path)
-    recipe_json = json.load(pathlib.Path(recipe_path).open('r'))
+    with open(recipe_path, 'r') as f:
+      recipe_json = json.load(f)
     qt.load_quantization_recipe(recipe_json)
 
     f_model = tfl_flatbuffer_utils.read_model(model)
@@ -120,7 +121,8 @@ class CompositeTest(parameterized.TestCase):
     qt = quantizer.Quantizer(model)
 
     recipe_path = test_utils.get_path_to_datafile(recipe_path)
-    recipe_json = json.load(pathlib.Path(recipe_path).open('r'))
+    with open(recipe_path, 'r') as f:
+      recipe_json = json.load(f)
     qt.load_quantization_recipe(recipe_json)
     self.assertTrue(qt.need_calibration)
 
