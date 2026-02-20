@@ -15,10 +15,10 @@
 
 """Tests for model_modifier."""
 
-import os
+import pathlib
 import tracemalloc
-from tensorflow.python.platform import googletest
 from absl.testing import parameterized
+import absl.testing.absltest as absltest
 from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import model_modifier
 from ai_edge_quantizer import params_generator
@@ -34,8 +34,8 @@ class ModelModifierTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
-    self._model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/conv_fc_mnist.tflite'
+    self._model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/conv_fc_mnist.tflite'
     )
 
     self._model_content: bytes = tfl_flatbuffer_utils.get_model_content(
@@ -182,9 +182,8 @@ class ModelModifierTestWithSignature(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
-    self._model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'tests/models/single_fc.tflite',
+    self._model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/single_fc.tflite',
     )
     self._model_content: bytes = tfl_flatbuffer_utils.get_model_content(
         self._model_path
@@ -207,4 +206,4 @@ class ModelModifierTestWithSignature(parameterized.TestCase):
 
 
 if __name__ == '__main__':
-  googletest.main()
+  absltest.main()

@@ -16,12 +16,12 @@
 """Tests for transformation_performer."""
 
 import copy
-import os
+import pathlib
 
 import numpy as np
 
-from tensorflow.python.platform import googletest
 from absl.testing import parameterized
+import absl.testing.absltest as absltest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import transformation_performer
 from ai_edge_quantizer.utils import test_utils
@@ -41,7 +41,10 @@ class TransformationPerformerTest(parameterized.TestCase):
         transformation_performer.TransformationPerformer()
     )
     self._test_model = tfl_flatbuffer_utils.read_model(
-        os.path.join(TEST_DATA_PREFIX_PATH, "tests/models/conv_fc_mnist.tflite")
+        str(
+            pathlib.Path(TEST_DATA_PREFIX_PATH)
+            / "tests/models/conv_fc_mnist.tflite"
+        )
     )
 
   def test_apply_single_insert_dequant(self):
@@ -115,8 +118,9 @@ class TransformationPerformerTest(parameterized.TestCase):
   def test_update_op_id_map_not_changing_value_single_op_model(self):
     """test for _update_op_id_map."""
     model = tfl_flatbuffer_utils.read_model(
-        os.path.join(
-            TEST_DATA_PREFIX_PATH, "tests/models/single_fc_bias.tflite"
+        str(
+            pathlib.Path(TEST_DATA_PREFIX_PATH)
+            / "tests/models/single_fc_bias.tflite"
         )
     )
     self._transformation_performer._create_op_id_map(model)
@@ -452,8 +456,9 @@ class TransformationPerformerTest(parameterized.TestCase):
   def test_op_insertion_at_input_and_output(self):
     """test for _update_op_id_map."""
     model = tfl_flatbuffer_utils.read_model(
-        os.path.join(
-            TEST_DATA_PREFIX_PATH, "tests/models/single_fc_bias.tflite"
+        str(
+            pathlib.Path(TEST_DATA_PREFIX_PATH)
+            / "tests/models/single_fc_bias.tflite"
         )
     )
     self._transformation_performer._create_op_id_map(model)
@@ -513,4 +518,4 @@ class TransformationPerformerTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()

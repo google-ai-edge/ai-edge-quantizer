@@ -14,13 +14,14 @@
 # ==============================================================================
 
 from collections.abc import Generator
-import os
+import pathlib
 from typing import Any
 
 from absl.testing import parameterized
+import absl.testing.absltest as absltest
 import numpy as np
 
-from tensorflow.python.platform import googletest
+
 from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import params_generator
 from ai_edge_quantizer import qtyping
@@ -83,8 +84,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
-    self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/conv_fc_mnist.tflite'
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/conv_fc_mnist.tflite'
     )
     self._recipe_manager = recipe_manager.RecipeManager()
     self._params_generator = params_generator.ParamsGenerator(
@@ -439,8 +440,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
   def test_generate_config_int8xint8_single_fc(
       self, act_symmetric, channelwise_weight
   ):
-    single_fc_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/single_fc.tflite'
+    single_fc_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/single_fc.tflite'
     )
     self._recipe_manager.add_quantization_config(
         regex='.*',
@@ -557,8 +558,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
   def test_generate_params_buffer_sharing_graphs_succeeds(
       self, the_other_fc_difference
   ):
-    model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/weight_sharing_fcs.tflite'
+    model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/weight_sharing_fcs.tflite'
     )
     self._recipe_manager.add_quantization_config(
         regex='.*',
@@ -607,8 +608,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
       fc_2_num_bits,
       expected_tensor_with_buffer_duplication,
   ):
-    model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/weight_sharing_fcs.tflite'
+    model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/weight_sharing_fcs.tflite'
     )
     # Setup the quantization config for the first FC.
     self._recipe_manager.add_quantization_config(
@@ -702,9 +703,9 @@ class ParamsGeneratorTest(parameterized.TestCase):
       fc1_num_bits,
       fc2_num_bits,
   ):
-    model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'tests/models/constant_tensor_and_buffer_only_sharing_weight_fcs.tflite',
+    model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/constant_tensor_and_buffer_only_sharing_weight_fcs.tflite',
     )
     sig1_fc1_regex = 'BatchMatMulV3;'
     sig1_fc2_regex = 'PartitionedCall:0;'
@@ -759,9 +760,9 @@ class ParamsGeneratorTest(parameterized.TestCase):
   def test_generate_params_returns_valid_results_when_multiple_tensor_duplication_for_one_buffer(
       self,
   ):
-    model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'tests/models/constant_tensor_and_buffer_only_sharing_weight_fcs.tflite',
+    model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/constant_tensor_and_buffer_only_sharing_weight_fcs.tflite',
     )
     sig1_fc1_regex = 'BatchMatMulV3;'
     sig1_fc2_regex = 'PartitionedCall:0;'
@@ -999,8 +1000,9 @@ class ParamsGeneratorTest(parameterized.TestCase):
     )
 
   def test_model_with_duplicated_tensor_names_fails(self):
-    model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/duplicated_tensor_names.tflite'
+    model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/duplicated_tensor_names.tflite'
     )
     error_message = 'Tensor name test_same_name is not unique in the model.'
     with self.assertRaisesWithPredicateMatch(
@@ -1009,8 +1011,9 @@ class ParamsGeneratorTest(parameterized.TestCase):
       params_generator.ParamsGenerator(model_path)
 
   def test_quantize_integer_input_output(self):
-    model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/single_transpose_int32.tflite'
+    model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/single_transpose_int32.tflite'
     )
     self._recipe_manager.add_quantization_config(
         regex='.*',
@@ -1127,20 +1130,20 @@ class ParamsGeneratorTest(parameterized.TestCase):
         )
 
 
-class ParamsGeneratorAlreadyQuantizedModelTest(googletest.TestCase):
+class ParamsGeneratorAlreadyQuantizedModelTest(absltest.TestCase):
 
   def test_check_is_float_model_succeeds_when_model_is_float(self):
-    test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/conv_fc_mnist.tflite'
+    test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/conv_fc_mnist.tflite'
     )
     _ = params_generator.ParamsGenerator(test_model_path)
 
   def test_check_is_quantized_model_succeeds_when_model_is_quantized(self):
-    test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/mnist_quantized.tflite'
+    test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/mnist_quantized.tflite'
     )
     _ = params_generator.ParamsGenerator(test_model_path)
 
 
 if __name__ == '__main__':
-  googletest.main()
+  absltest.main()
