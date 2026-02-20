@@ -16,7 +16,7 @@
 """Utils for tests."""
 
 import inspect as _inspect
-import os.path as _os_path
+import pathlib as _pathlib
 import sys as _sys
 from typing import Optional, Union
 
@@ -83,9 +83,8 @@ def get_path_to_datafile(path):
   Raises:
     IOError: If the path is not found, or the resource can't be opened.
   """
-  data_files_path = _os_path.dirname(_inspect.getfile(_sys._getframe(1)))  # pylint: disable=protected-access
-  path = _os_path.join(data_files_path, path)
-  path = _os_path.normpath(path)
+  data_files_path = _pathlib.Path(_inspect.getfile(_sys._getframe(1))).parent  # pylint: disable=protected-access
+  path = str((data_files_path / path).resolve())
   return path
 
 

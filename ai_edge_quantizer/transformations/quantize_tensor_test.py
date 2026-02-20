@@ -15,10 +15,10 @@
 
 """test for quantize tensor."""
 
-import os
+import pathlib
 import numpy as np
-from tensorflow.python.platform import googletest
 from absl.testing import parameterized
+import absl.testing.absltest as absltest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import quantize_tensor
 from ai_edge_quantizer.transformations import transformation_utils
@@ -33,8 +33,9 @@ class QuantizeTensorTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
-    self._orig_test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "tests/models/insert_dequant_test.tflite"
+    self._orig_test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / "tests/models/insert_dequant_test.tflite"
     )
     self._model = tfl_flatbuffer_utils.read_model(self._orig_test_model_path)
 
@@ -261,4 +262,4 @@ class QuantizeTensorTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()

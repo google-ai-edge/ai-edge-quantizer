@@ -13,13 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 
-import os
+import pathlib
 from typing import cast
 
+from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
 
-from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import octav
 from ai_edge_quantizer.utils import test_utils
@@ -32,9 +32,9 @@ class OctavQuantizeTest(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     np.random.seed(666)
-    self._test_model_path = os.path.join(
-        test_utils.get_path_to_datafile("../../tests/models"),
-        "conv_fc_mnist.tflite",
+    self._test_model_path = str(
+        pathlib.Path(test_utils.get_path_to_datafile("../../tests/models"))
+        / "conv_fc_mnist.tflite",
     )
     self._test_model = tfl_flatbuffer_utils.read_model(self._test_model_path)
     # The test model has one subgraph for now.
@@ -237,4 +237,4 @@ class OctavQuantizeTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()

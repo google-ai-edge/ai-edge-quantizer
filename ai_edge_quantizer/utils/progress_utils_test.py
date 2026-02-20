@@ -19,11 +19,11 @@ import time
 import tracemalloc
 from unittest import mock
 
-from tensorflow.python.platform import googletest
+import absl.testing.absltest as absltest
 from ai_edge_quantizer.utils import progress_utils
 
 
-class ProgressBarTest(googletest.TestCase):
+class ProgressBarTest(absltest.TestCase):
 
   @mock.patch('tqdm.tqdm')
   def test_progress_bar_update(self, mock_tqdm):
@@ -60,7 +60,7 @@ class ProgressBarTest(googletest.TestCase):
     mock_progress_bar_instance.close.assert_called_once()
 
 
-class ProgressReportTest(googletest.TestCase):
+class ProgressReportTest(absltest.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -102,4 +102,4 @@ class ProgressReportTest(googletest.TestCase):
 
 
 if __name__ == '__main__':
-  googletest.main()
+  absltest.main()

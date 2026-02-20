@@ -19,7 +19,7 @@ from collections.abc import Callable, Iterable
 import dataclasses
 import json
 import math
-import os
+import pathlib
 from typing import Any, Optional, Union
 
 import numpy as np
@@ -191,8 +191,8 @@ class ComparisonResult:
           'constant_tensors': comparison_result.constant_tensors,
           'intermediate_tensors': comparison_result.intermediate_tensors,
       }
-    result_save_path = os.path.join(
-        save_folder, model_name + '_comparison_result.json'
+    result_save_path = str(
+        pathlib.Path(save_folder) / (model_name + '_comparison_result.json')
     )
     with open(result_save_path, 'w') as output_file_handle:
       output_file_handle.write(json.dumps(result))
@@ -203,8 +203,9 @@ class ComparisonResult:
         self,
         threshold=color_threshold,
     )
-    json_save_path = os.path.join(
-        save_folder, model_name + '_comparison_result_me_input.json'
+    json_save_path = str(
+        pathlib.Path(save_folder)
+        / (model_name + '_comparison_result_me_input.json')
     )
     with open(json_save_path, 'w') as output_file_handle:
       output_file_handle.write(json_object)

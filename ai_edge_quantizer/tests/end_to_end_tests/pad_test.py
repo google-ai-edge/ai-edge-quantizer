@@ -18,8 +18,9 @@
 import os
 
 from absl.testing import parameterized
+import absl.testing.absltest as absltest
+import numpy as np
 
-from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
@@ -70,4 +71,4 @@ class PadTest(test_utils.BaseOpTestCase):
 
 
 if __name__ == '__main__':
-  googletest.main()
+  absltest.main()

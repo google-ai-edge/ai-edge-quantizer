@@ -15,11 +15,11 @@
 
 """Test for validation_utils."""
 import numpy as np
-from tensorflow.python.platform import googletest
+import absl.testing.absltest as absltest
 from ai_edge_quantizer.utils import validation_utils
 
 
-class ValidationUtilTest(googletest.TestCase):
+class ValidationUtilTest(absltest.TestCase):
 
   def test_preprocess_same_size_arrays_nan(self):
     data1 = [1, 2, np.nan]
@@ -164,4 +164,4 @@ class ValidationUtilTest(googletest.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()
