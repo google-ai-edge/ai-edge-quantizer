@@ -445,6 +445,17 @@ class QuantizerTest(parameterized.TestCase):
         op_config=test_op_config,
     )
 
+    # Restore default policy to avoid side effects on other tests.
+    try:
+      from ai_edge_quantizer import default_policy
+      from ai_edge_quantizer import algorithm_manager
+      algorithm_manager.register_config_check_policy_func(
+          algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+          default_policy.DEFAULT_CONFIG_CHECK_POLICY,
+      )
+    except ImportError:
+      pass # Should not happen in tests
+
   def test_two_pass_quantization_with_conv_and_fc_succeeds(self):
     float_model_path = self._test_model_path
 

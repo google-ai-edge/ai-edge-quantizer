@@ -122,17 +122,35 @@ class MulTest(parameterized.TestCase):
   )
   def test_mul2_fail(self, compute_precision):
     self._custom_setup('single_mul.tflite')
-    with self.assertRaisesRegex(ValueError, 'Unsupported op for .*: MUL'):
-      self._quantizer.update_quantization_recipe(
-          regex='.*',
-          operation_name='MUL',
-          op_config=_OpQuantConfig(
-              weight_tensor_config=_TensorQuantConfig(
-                  num_bits=8, symmetric=False
-              ),
-              compute_precision=compute_precision,
-          ),
-          algorithm_key='min_max_uniform_quantize',
+
+    # Load dummy policy to ensure MUL is unsupported.
+    import ai_edge_quantizer
+    package_root = os.path.dirname(ai_edge_quantizer.__file__)
+    dummy_policy_path = os.path.join(
+        package_root, 'policies', 'dummy_config_policy.json'
+    )
+    self._quantizer.load_config_policy(dummy_policy_path)
+
+    try:
+      with self.assertRaisesRegex(ValueError, 'Unsupported op for .*: MUL'):
+        self._quantizer.update_quantization_recipe(
+            regex='.*',
+            operation_name='MUL',
+            op_config=_OpQuantConfig(
+                weight_tensor_config=_TensorQuantConfig(
+                    num_bits=8, symmetric=False
+                ),
+                compute_precision=compute_precision,
+            ),
+            algorithm_key='min_max_uniform_quantize',
+        )
+    finally:
+      # Restore default policy using the python module directly.
+      from ai_edge_quantizer import default_policy
+      from ai_edge_quantizer import algorithm_manager
+      algorithm_manager.register_config_check_policy_func(
+          algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
+          default_policy.DEFAULT_CONFIG_CHECK_POLICY,
       )
 
   # TODO: b/345503484 - Check weight tensor type of the quantized model.

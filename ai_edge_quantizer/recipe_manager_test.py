@@ -15,9 +15,12 @@
 
 """Tests for recipe_manager.py."""
 
+import copy
+
 from absl.testing import parameterized
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import algorithm_manager
+from ai_edge_quantizer import algorithm_manager_api
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
 
@@ -81,6 +84,7 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
 
   def setUp(self):
     super().setUp()
+    self._setup_algorithm_manager()
     self._recipe_manager = recipe_manager.RecipeManager()
     self._testing_ops = [
         _TFLOpName.BATCH_MATMUL,
@@ -90,6 +94,52 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
     for op in self._testing_ops:
       _register_testing_op(_AlgorithmName.MIN_MAX_UNIFORM_QUANT, op)
       _register_testing_op('GPTQ', op)
+
+  def tearDown(self):
+    self._restore_algorithm_manager()
+    super().tearDown()
+
+  def _setup_algorithm_manager(self):
+    self._original_alg_manager_instance = algorithm_manager._alg_manager_instance
+    self._new_alg_manager_instance = algorithm_manager_api.AlgorithmManagerApi()
+
+    # Deep copy the state from original instance
+    self._new_alg_manager_instance._config_check_registry = (
+        self._original_alg_manager_instance._config_check_registry.copy()
+    )
+    self._new_alg_manager_instance._config_check_policy_registry = (
+        self._original_alg_manager_instance._config_check_policy_registry.copy()
+    )
+    self._new_alg_manager_instance._algorithm_registry = {}
+    for k, v in self._original_alg_manager_instance._algorithm_registry.items():
+        # v is QuantizationAlgorithmInfo
+        new_v = copy.copy(v)
+        new_v.quantized_ops = v.quantized_ops.copy()
+        self._new_alg_manager_instance._algorithm_registry[k] = new_v
+
+    algorithm_manager._alg_manager_instance = self._new_alg_manager_instance
+    self._original_funcs = {}
+    for func_name in [
+        'get_quantization_func',
+        'get_supported_ops',
+        'get_init_qsv_func',
+        'register_op_quant_config_validation_func',
+        'register_config_check_policy_func',
+        'register_quantized_op',
+        'is_op_registered',
+        'is_algorithm_registered',
+        'check_op_quantization_config',
+    ]:
+      self._original_funcs[func_name] = getattr(algorithm_manager, func_name)
+      if hasattr(self._new_alg_manager_instance, func_name):
+         setattr(algorithm_manager, func_name, getattr(self._new_alg_manager_instance, func_name))
+      elif func_name == 'register_config_check_policy_func':
+         setattr(algorithm_manager, func_name, self._new_alg_manager_instance.register_config_check_policy)
+
+  def _restore_algorithm_manager(self):
+    algorithm_manager._alg_manager_instance = self._original_alg_manager_instance
+    for func_name, func in self._original_funcs.items():
+      setattr(algorithm_manager, func_name, func)
 
   def test_add_get_quantization_config(self):
     # Int8 DRQ all ops under "Dense".
