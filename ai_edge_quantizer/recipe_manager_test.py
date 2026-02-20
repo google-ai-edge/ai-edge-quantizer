@@ -16,7 +16,8 @@
 """Tests for recipe_manager.py."""
 
 from absl.testing import parameterized
-from tensorflow.python.platform import googletest
+import absl.testing.absltest as absltest
+
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
@@ -76,7 +77,7 @@ def _register_testing_op(algorithm_key, tfl_op):
   )
 
 
-class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
+class ConfiguratorTest(parameterized.TestCase):
   """Test cases for the flax quantizer Configurator."""
 
   def setUp(self):
@@ -926,4 +927,4 @@ class ConfiguratorTest(parameterized.TestCase, googletest.TestCase):
 
 
 if __name__ == '__main__':
-  googletest.main()
+  absltest.main()

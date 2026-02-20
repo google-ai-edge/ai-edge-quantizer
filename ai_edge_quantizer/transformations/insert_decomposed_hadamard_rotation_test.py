@@ -15,9 +15,9 @@
 
 """Test insertion of the Decomposed Hadamard rotation ops."""
 
-import os
+import pathlib
 import numpy as np
-from tensorflow.python.platform import googletest
+import absl.testing.absltest as absltest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import insert_decomposed_hadamard_rotation
 from ai_edge_quantizer.transformations import transformation_utils
@@ -28,12 +28,12 @@ from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tenso
 _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('..')
 
 
-class InsertDecomposedHadamardRotationFullyConnectedTest(googletest.TestCase):
+class InsertDecomposedHadamardRotationFullyConnectedTest(absltest.TestCase):
 
   def setUp(self):
     super().setUp()
-    model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, 'tests/models/single_fc_bias.tflite'
+    model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH) / 'tests/models/single_fc_bias.tflite'
     )
     self.model = tfl_flatbuffer_utils.read_model(model_path)
     self.params = qtyping.UniformQuantParams(
@@ -175,12 +175,12 @@ class InsertDecomposedHadamardRotationFullyConnectedTest(googletest.TestCase):
     self.assertEqual(orig_fc_op.inputs[0], 9)
 
 
-class InsertDecomposedHadamardRotationEmbeddingLookupTest(googletest.TestCase):
+class InsertDecomposedHadamardRotationEmbeddingLookupTest(absltest.TestCase):
 
   def setUp(self):
     super().setUp()
-    model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, 'tests/models/embedding_lookup.tflite'
+    model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH) / 'tests/models/embedding_lookup.tflite'
     )
     self.model = tfl_flatbuffer_utils.read_model(model_path)
     self.params = qtyping.UniformQuantParams(
@@ -241,4 +241,4 @@ class InsertDecomposedHadamardRotationEmbeddingLookupTest(googletest.TestCase):
 
 
 if __name__ == '__main__':
-  googletest.main()
+  absltest.main()

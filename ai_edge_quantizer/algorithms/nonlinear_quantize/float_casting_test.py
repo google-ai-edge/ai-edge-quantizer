@@ -13,10 +13,10 @@
 # limitations under the License.
 # ==============================================================================
 
-import os
+import pathlib
+from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
-from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.nonlinear_quantize import float_casting
 from ai_edge_quantizer.utils import test_utils
@@ -34,8 +34,8 @@ class Fp16QuantizeTest(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     np.random.seed(666)
-    self._test_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, "conv_fc_mnist.tflite"
+    self._test_model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH) / "conv_fc_mnist.tflite"
     )
     self._test_model = tfl_flatbuffer_utils.read_model(self._test_model_path)
     # The test model has one subgraph for now.
@@ -366,8 +366,9 @@ class Fp16QuantizeTest(parameterized.TestCase):
 
   def test_conv2d_transpose_weight_only_succeeds(self):
     # Read from Model Explorer.
-    test_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, "single_conv2d_transpose_bias.tflite"
+    test_model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH)
+        / "single_conv2d_transpose_bias.tflite"
     )
 
     test_model = tfl_flatbuffer_utils.read_model(test_model_path)
@@ -459,8 +460,9 @@ class Fp16QuantizeTest(parameterized.TestCase):
 
   def test_depthwise_conv2d_weight_only_succeeds(self):
     # Read from Model Explorer.
-    test_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, "single_depthwise_conv2d_bias.tflite"
+    test_model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH)
+        / "single_depthwise_conv2d_bias.tflite"
     )
 
     test_model = tfl_flatbuffer_utils.read_model(test_model_path)
@@ -502,8 +504,8 @@ class Fp16QuantizeTest(parameterized.TestCase):
     )
 
   def test_embedding_lookup_weight_only_succeeds(self):
-    test_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, "embedding_lookup.tflite"
+    test_model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH) / "embedding_lookup.tflite"
     )
 
     test_model = tfl_flatbuffer_utils.read_model(test_model_path)
@@ -661,4 +663,4 @@ class Fp16QuantizeTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()
