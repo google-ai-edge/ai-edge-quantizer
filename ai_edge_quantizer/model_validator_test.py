@@ -18,7 +18,7 @@ import pathlib
 from absl import flags
 import numpy as np
 import os
-from tensorflow.python.platform import googletest
+import absl.testing.absltest as absltest
 from ai_edge_quantizer import model_validator
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
@@ -28,7 +28,7 @@ from ai_edge_quantizer.utils import validation_utils
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('.')
 
 
-class ComparisonResultTest(googletest.TestCase):
+class ComparisonResultTest(absltest.TestCase):
 
   def setUp(self):
     # TODO: b/358437395 - Remove this line once the bug is fixed.
@@ -177,7 +177,7 @@ class ComparisonResultTest(googletest.TestCase):
         self.assertNotIn('Add/y', signature_result['constant_tensors'])
 
 
-class ModelValidatorCompareTest(googletest.TestCase):
+class ModelValidatorCompareTest(absltest.TestCase):
 
   def setUp(self):
     # TODO: b/358437395 - Remove this line once the bug is fixed.
@@ -263,7 +263,7 @@ class ModelValidatorCompareTest(googletest.TestCase):
     self.assertContainsSubset('"thresholds": []', mv_json)
 
 
-class ModelValidatorMultiSignatureModelTest(googletest.TestCase):
+class ModelValidatorMultiSignatureModelTest(absltest.TestCase):
 
   def setUp(self):
     # TODO: b/358437395 - Remove this line once the bug is fixed.
@@ -354,4 +354,4 @@ class ModelValidatorMultiSignatureModelTest(googletest.TestCase):
 
 
 if __name__ == '__main__':
-  googletest.main()
+  absltest.main()

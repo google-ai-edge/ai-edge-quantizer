@@ -21,8 +21,8 @@ from typing import Optional
 
 import numpy as np
 
-from tensorflow.python.platform import googletest
 from absl.testing import parameterized
+import absl.testing.absltest as absltest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import transformation_instruction_generator as instruction_generator
 from ai_edge_quantizer.utils import test_utils
@@ -1512,4 +1512,4 @@ class EliminateUnnecessaryRequantizationTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()

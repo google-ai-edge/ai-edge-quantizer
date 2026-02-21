@@ -20,7 +20,7 @@ from absl.testing import parameterized
 import numpy as np
 import os
 
-from tensorflow.python.platform import googletest
+import absl.testing.absltest as absltest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
@@ -478,7 +478,7 @@ class QuantizerTest(parameterized.TestCase):
     srq_result.export_model(srq_model_path)
 
 
-class QuantizerBytearrayInputs(googletest.TestCase):
+class QuantizerBytearrayInputs(absltest.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -797,4 +797,4 @@ class QuantizerFullyConnectedTest(parameterized.TestCase):
 
 
 if __name__ == '__main__':
-  googletest.main()
+  absltest.main()

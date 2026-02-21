@@ -17,8 +17,9 @@ import pathlib
 import unittest  # pylint: disable=unused-import, required for OSS.
 
 from absl.testing import parameterized
+import absl.testing.absltest as absltest
 
-from tensorflow.python.platform import googletest
+
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer import recipe
 from ai_edge_quantizer.utils import test_utils
@@ -172,4 +173,4 @@ class RecipeTest(parameterized.TestCase):
 
 
 if __name__ == '__main__':
-  googletest.main()
+  absltest.main()

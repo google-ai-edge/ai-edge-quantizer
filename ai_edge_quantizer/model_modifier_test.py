@@ -17,8 +17,8 @@
 
 import pathlib
 import tracemalloc
-from tensorflow.python.platform import googletest
 from absl.testing import parameterized
+import absl.testing.absltest as absltest
 from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import model_modifier
 from ai_edge_quantizer import params_generator
@@ -206,4 +206,4 @@ class ModelModifierTestWithSignature(parameterized.TestCase):
 
 
 if __name__ == '__main__':
-  googletest.main()
+  absltest.main()

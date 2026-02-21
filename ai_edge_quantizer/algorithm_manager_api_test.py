@@ -15,8 +15,10 @@
 
 """Tests for algorithm_manager_api."""
 
+
+import absl.testing.absltest as absltest
 from absl.testing import parameterized
-from tensorflow.python.platform import googletest
+
 from ai_edge_quantizer import algorithm_manager_api
 from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
@@ -214,4 +216,4 @@ class AlgorithmManagerApiTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()

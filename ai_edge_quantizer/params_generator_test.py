@@ -18,9 +18,10 @@ import pathlib
 from typing import Any
 
 from absl.testing import parameterized
+import absl.testing.absltest as absltest
 import numpy as np
 
-from tensorflow.python.platform import googletest
+
 from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import params_generator
 from ai_edge_quantizer import qtyping
@@ -1129,7 +1130,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
         )
 
 
-class ParamsGeneratorAlreadyQuantizedModelTest(googletest.TestCase):
+class ParamsGeneratorAlreadyQuantizedModelTest(absltest.TestCase):
 
   def test_check_is_float_model_succeeds_when_model_is_float(self):
     test_model_path = str(
@@ -1145,4 +1146,4 @@ class ParamsGeneratorAlreadyQuantizedModelTest(googletest.TestCase):
 
 
 if __name__ == '__main__':
-  googletest.main()
+  absltest.main()

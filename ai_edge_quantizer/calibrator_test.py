@@ -21,7 +21,7 @@ from typing import Any
 
 import numpy as np
 
-from tensorflow.python.platform import googletest
+import absl.testing.absltest as absltest
 from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
@@ -74,7 +74,7 @@ def _add_default_int8xint8_integer_recipe(recipe_manager_object):
   )
 
 
-class CalibratorTest(googletest.TestCase):
+class CalibratorTest(absltest.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -178,7 +178,7 @@ class CalibratorTest(googletest.TestCase):
     self.assertNotEmpty(test_calibrator.get_model_qsvs())
 
 
-class CalibratorAlreadyQuantizedModelTest(googletest.TestCase):
+class CalibratorAlreadyQuantizedModelTest(absltest.TestCase):
 
   def test_check_is_float_model_succeeds_when_model_is_float(self):
     test_model_path = str(
@@ -193,7 +193,7 @@ class CalibratorAlreadyQuantizedModelTest(googletest.TestCase):
     _ = calibrator.Calibrator(test_model_path)
 
 
-class CalibratorToyGemma2Test(googletest.TestCase):
+class CalibratorToyGemma2Test(absltest.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -239,4 +239,4 @@ class CalibratorToyGemma2Test(googletest.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()
