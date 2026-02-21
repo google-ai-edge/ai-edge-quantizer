@@ -16,11 +16,11 @@
 import pathlib
 from typing import cast
 
+from absl.testing import absltest
 from absl.testing import parameterized
 import ml_dtypes
 import numpy as np
 
-from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.utils import test_utils
@@ -241,4 +241,4 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()

@@ -15,10 +15,10 @@
 
 import pathlib
 
+from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
 
-from tensorflow.python.platform import googletest
 from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
@@ -98,4 +98,4 @@ class CommonQuantizeTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-  googletest.main()
+  absltest.main()
