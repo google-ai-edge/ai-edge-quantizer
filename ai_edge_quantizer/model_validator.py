@@ -194,7 +194,7 @@ class ComparisonResult:
     result_save_path = os.path.join(
         save_folder, model_name + '_comparison_result.json'
     )
-    with open(result_save_path, 'w') as output_file_handle:
+    with gfile.GFile(result_save_path, 'w') as output_file_handle:
       output_file_handle.write(json.dumps(result))
 
     # TODO: b/365578554 - Remove after ME is updated to use the new json format.
@@ -206,7 +206,7 @@ class ComparisonResult:
     json_save_path = os.path.join(
         save_folder, model_name + '_comparison_result_me_input.json'
     )
-    with open(json_save_path, 'w') as output_file_handle:
+    with gfile.GFile(json_save_path, 'w') as output_file_handle:
       output_file_handle.write(json_object)
 
 

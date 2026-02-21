@@ -102,7 +102,7 @@ class SubTest(parameterized.TestCase):
     )
     quant_result = self._quantizer.quantize(calibration_result)
     # Check model size.
-    with open(self.float_model_path, 'rb') as f:
+    with gfile.GFile(self.float_model_path, 'rb') as f:
       float_model_bytearray = bytearray(f.read())
     self.assertLess(
         len(quant_result.quantized_model), len(float_model_bytearray)

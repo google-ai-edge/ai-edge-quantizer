@@ -82,7 +82,7 @@ class QuantizationResult:
 
     recipe_save_path = os.path.join(save_folder, model_name + '_recipe.json')
     recipe = json.dumps(self.recipe)
-    with open(recipe_save_path, 'w') as output_file_handle:
+    with gfile.GFile(recipe_save_path, 'w') as output_file_handle:
       output_file_handle.write(recipe)
 
   def export_model(self, filepath: Path, overwrite: bool = False) -> None:
@@ -115,7 +115,7 @@ class QuantizationResult:
             ' consider change the model name or specify overwrite=True to'
             ' overwrite the model if needed.'
         )
-    with open(filepath, 'wb') as output_file_handle:
+    with gfile.GFile(filepath, 'wb') as output_file_handle:
       output_file_handle.write(self.quantized_model)
 
 
