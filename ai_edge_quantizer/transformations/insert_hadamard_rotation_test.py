@@ -15,9 +15,9 @@
 
 """Test insertion of the Hadamard rotation custom op."""
 
-import os
+import pathlib
+import absl.testing.absltest as absltest
 import numpy as np
-from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import insert_hadamard_rotation
 from ai_edge_quantizer.transformations import transformation_utils
@@ -28,12 +28,12 @@ from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tenso
 _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('..')
 
 
-class InsertHadamardRotationFullyConnectedTest(googletest.TestCase):
+class InsertHadamardRotationFullyConnectedTest(absltest.TestCase):
 
   def setUp(self):
     super().setUp()
-    model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, 'tests/models/single_fc_bias.tflite'
+    model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH) / 'tests/models/single_fc_bias.tflite'
     )
     self.model = tfl_flatbuffer_utils.read_model(model_path)
     self.params = qtyping.UniformQuantParams(
@@ -141,12 +141,12 @@ class InsertHadamardRotationFullyConnectedTest(googletest.TestCase):
     self.assertEqual(subgraph.operators[1].inputs[0], 4)
 
 
-class InsertHadamardRotationEmbeddingLookupTest(googletest.TestCase):
+class InsertHadamardRotationEmbeddingLookupTest(absltest.TestCase):
 
   def setUp(self):
     super().setUp()
-    model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, 'tests/models/embedding_lookup.tflite'
+    model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH) / 'tests/models/embedding_lookup.tflite'
     )
     self.model = tfl_flatbuffer_utils.read_model(model_path)
     self.params = qtyping.UniformQuantParams(
@@ -197,4 +197,4 @@ class InsertHadamardRotationEmbeddingLookupTest(googletest.TestCase):
 
 
 if __name__ == '__main__':
-  googletest.main()
+  absltest.main()
