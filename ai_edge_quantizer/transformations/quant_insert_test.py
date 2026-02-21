@@ -15,7 +15,7 @@
 
 """Test for various transformations used by quantization toolkit."""
 
-import os
+import pathlib
 import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
@@ -32,8 +32,9 @@ class QuantInsertTest(googletest.TestCase):
 
   def setUp(self):
     super().setUp()
-    self._orig_test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "tests/models/insert_dequant_test.tflite"
+    self._orig_test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / "tests/models/insert_dequant_test.tflite"
     )
     self._model = tfl_flatbuffer_utils.read_model(self._orig_test_model_path)
 

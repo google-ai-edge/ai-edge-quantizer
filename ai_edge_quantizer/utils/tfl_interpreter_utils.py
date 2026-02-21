@@ -51,7 +51,7 @@ def create_tfl_interpreter(
     A TFLite interpreter.
   """
   if isinstance(tflite_model, str):
-    with gfile.GFile(tflite_model, "rb") as f:
+    with open(tflite_model, "rb") as f:
       tflite_model = f.read()
 
   if use_xnnpack:

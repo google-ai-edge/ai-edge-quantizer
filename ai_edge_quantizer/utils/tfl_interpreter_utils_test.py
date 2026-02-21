@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-import os
+import pathlib
 import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer.utils import test_utils
@@ -27,8 +27,8 @@ class TflUtilsSingleSignatureModelTest(googletest.TestCase):
   def setUp(self):
     super().setUp()
     np.random.seed(0)
-    self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "conv_fc_mnist.tflite"
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "conv_fc_mnist.tflite"
     )
     self._input_data = np.random.rand(1, 28, 28, 1).astype(np.float32)
 
@@ -147,8 +147,8 @@ class TflUtilsQuantizedModelTest(googletest.TestCase):
   def setUp(self):
     super().setUp()
     np.random.seed(0)
-    self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "conv_fc_mnist_srq_a8w8.tflite"
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "conv_fc_mnist_srq_a8w8.tflite"
     )
     self._signature_input_data = {
         "conv2d_input": np.random.rand(1, 28, 28, 1).astype(np.float32)
@@ -181,8 +181,8 @@ class TflUtilsMultiSignatureModelTest(googletest.TestCase):
   def setUp(self):
     super().setUp()
     np.random.seed(0)
-    self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "two_signatures.tflite"
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "two_signatures.tflite"
     )
     self._signature_input_data = {"x": np.array([2.0]).astype(np.float32)}
 
@@ -341,8 +341,9 @@ class TflUtilsIntegerInputModelTest(googletest.TestCase):
   def setUp(self):
     super().setUp()
     np.random.seed(0)
-    self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "toy_model_with_kv_cache_multi_signature.tflite"
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / "toy_model_with_kv_cache_multi_signature.tflite"
     )
 
   def test_random_integer_input_data(self):

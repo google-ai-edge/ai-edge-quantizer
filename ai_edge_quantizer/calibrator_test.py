@@ -16,7 +16,7 @@
 """Tests for calibrator."""
 
 from collections.abc import Generator
-import os
+import pathlib
 from typing import Any
 
 import numpy as np
@@ -79,8 +79,8 @@ class CalibratorTest(googletest.TestCase):
   def setUp(self):
     super().setUp()
     np.random.seed(0)
-    self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "tests/models/single_fc.tflite"
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models/single_fc.tflite"
     )
     self._calibrator = calibrator.Calibrator(self._test_model_path)
     self._recipe_manager = recipe_manager.RecipeManager()
@@ -150,8 +150,9 @@ class CalibratorTest(googletest.TestCase):
 
   def test_calibrate_unsupported_ops_success(self):
     # Many ops in the following model are not supported currently.
-    test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "tests/models/branching_conv_fc.tflite"
+    test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / "tests/models/branching_conv_fc.tflite"
     )
     test_calibrator = calibrator.Calibrator(test_model_path)
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
@@ -164,8 +165,9 @@ class CalibratorTest(googletest.TestCase):
     self.assertLen(test_calibrator.get_cached_output(), 10)
 
   def test_calibrate_reshape_with_empty_shape_success(self):
-    test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "tests/models/reshape_with_empty_shape.tflite"
+    test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / "tests/models/reshape_with_empty_shape.tflite"
     )
     test_calibrator = calibrator.Calibrator(test_model_path)
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
@@ -179,14 +181,14 @@ class CalibratorTest(googletest.TestCase):
 class CalibratorAlreadyQuantizedModelTest(googletest.TestCase):
 
   def test_check_is_float_model_succeeds_when_model_is_float(self):
-    test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "tests/models/conv_fc_mnist.tflite"
+    test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models/conv_fc_mnist.tflite"
     )
     _ = calibrator.Calibrator(test_model_path)
 
   def test_check_is_quantized_model_succeeds_when_model_is_quantized(self):
-    test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "tests/models/mnist_quantized.tflite"
+    test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models/mnist_quantized.tflite"
     )
     _ = calibrator.Calibrator(test_model_path)
 
@@ -197,9 +199,9 @@ class CalibratorToyGemma2Test(googletest.TestCase):
     super().setUp()
     np.random.seed(0)
 
-    self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        "tests/models/toy_model_with_kv_cache_multi_signature.tflite",
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / "tests/models/toy_model_with_kv_cache_multi_signature.tflite"
     )
 
     self._toy_gemma2_calibration_dataset = {

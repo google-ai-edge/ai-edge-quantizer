@@ -16,7 +16,7 @@
 """flatbuffer utils for the Quantizer."""
 
 import logging
-import os
+import pathlib
 from typing import Any, Optional, Union
 
 import immutabledict
@@ -29,7 +29,7 @@ import os
 
 _TFLOpName = qtyping.TFLOperationName
 
-Path = Union[str, os.PathLike]
+Path = Union[str, pathlib.Path]
 
 TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
     _TFLOpName.FULLY_CONNECTED: schema.BuiltinOperator.FULLY_CONNECTED,
@@ -130,7 +130,7 @@ def read_model(tflite_model: Union[Path, bytearray]) -> Any:
   Returns:
     flatbuffer_model: the flatbuffer_model.
   """
-  if isinstance(tflite_model, (str, os.PathLike)):
+  if isinstance(tflite_model, (str, pathlib.Path)):
     return flatbuffer_utils.read_model(tflite_model)
   elif isinstance(tflite_model, bytes) or isinstance(tflite_model, bytearray):
     return flatbuffer_utils.read_model_from_bytearray(tflite_model)

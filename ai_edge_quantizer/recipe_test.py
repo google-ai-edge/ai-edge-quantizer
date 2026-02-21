@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-import os
+import pathlib
 import unittest  # pylint: disable=unused-import, required for OSS.
 
 from absl.testing import parameterized
@@ -33,13 +33,13 @@ class RecipeTest(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     # Weights has < 1024 elements so legacy recipe will not quantize it.
-    self._small_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH,
-        'tests/models/single_conv2d_transpose_bias.tflite',
+    self._small_model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH)
+        / 'tests/models/single_conv2d_transpose_bias.tflite',
     )
-    self._test_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH,
-        'tests/models/conv_fc_mnist.tflite',
+    self._test_model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH)
+        / 'tests/models/conv_fc_mnist.tflite',
     )
 
   def _quantize_with_recipe_func(self, recipe_func, test_model_path):
@@ -65,7 +65,7 @@ class RecipeTest(parameterized.TestCase):
     )
     self.assertLess(
         len(quant_result.quantized_model),
-        os.path.getsize(self._test_model_path),
+        pathlib.Path(self._test_model_path).stat().st_size,
     )
 
   @unittest.skip('skipping due to b/438971945')
@@ -75,7 +75,7 @@ class RecipeTest(parameterized.TestCase):
     )
     self.assertLess(
         len(quant_result.quantized_model),
-        os.path.getsize(self._test_model_path),
+        pathlib.Path(self._test_model_path).stat().st_size,
     )
 
   @unittest.skip('skipping due to b/438971945')
@@ -85,7 +85,7 @@ class RecipeTest(parameterized.TestCase):
     )
     self.assertLess(
         len(quant_result.quantized_model),
-        os.path.getsize(self._test_model_path),
+        pathlib.Path(self._test_model_path).stat().st_size,
     )
 
   @unittest.skip('skipping due to b/438971945')
@@ -95,7 +95,7 @@ class RecipeTest(parameterized.TestCase):
     )
     self.assertLess(
         len(quant_result.quantized_model),
-        os.path.getsize(self._test_model_path),
+        pathlib.Path(self._test_model_path).stat().st_size,
     )
 
   def test_quantization_from_dynamic_legacy_wi8_afp32_func_succeeds(self):
@@ -105,7 +105,7 @@ class RecipeTest(parameterized.TestCase):
     )
     self.assertLen(
         quant_result.quantized_model,
-        os.path.getsize(self._small_model_path),
+        pathlib.Path(self._small_model_path).stat().st_size,
     )
 
   @parameterized.named_parameters(
@@ -149,7 +149,9 @@ class RecipeTest(parameterized.TestCase):
 
     # Quantize with recipe from json file.
     qt_json = quantizer.Quantizer(self._test_model_path)
-    json_recipe_path = os.path.join(_TEST_DATA_PREFIX_PATH, recipe_json_path)
+    json_recipe_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH) / recipe_json_path
+    )
     qt_json.load_quantization_recipe(json_recipe_path)
     if qt_json.need_calibration:
       calibration_data = tfl_interpreter_utils.create_random_normal_input_data(

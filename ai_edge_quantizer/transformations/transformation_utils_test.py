@@ -15,7 +15,7 @@
 
 """Tests for transformation_utils."""
 
-import os
+import pathlib
 import numpy as np
 from tensorflow.python.platform import googletest
 from absl.testing import parameterized
@@ -31,8 +31,8 @@ class TransformationUtilsTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
-    self.model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "single_fc_bias.tflite"
+    self.model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "single_fc_bias.tflite"
     )
     self.model = tfl_flatbuffer_utils.read_model(self.model_path)
 

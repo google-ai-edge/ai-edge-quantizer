@@ -14,7 +14,7 @@
 # ==============================================================================
 
 import json
-import os
+import pathlib
 
 from absl.testing import parameterized
 import numpy as np
@@ -81,12 +81,12 @@ class QuantizerTest(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     self._tmp_save_path = self.create_tempdir().full_path
-    self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/conv_fc_mnist.tflite'
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/conv_fc_mnist.tflite'
     )
-    self._test_recipe_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'recipes/default_af32w8float_recipe.json',
+    self._test_recipe_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'recipes/default_af32w8float_recipe.json',
     )
     with open(self._test_recipe_path) as json_file:
       self._test_recipe = json.load(json_file)
@@ -193,9 +193,9 @@ class QuantizerTest(parameterized.TestCase):
     self.assertEqual(qt.get_quantization_recipe(), self._test_recipe)
 
     # Load a different recipe.
-    new_recipe_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'recipes/dynamic_wi8_afp32_recipe.json',
+    new_recipe_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'recipes/dynamic_wi8_afp32_recipe.json',
     )
     with open(new_recipe_path) as json_file:
       new_recipe = json.load(json_file)
@@ -207,7 +207,7 @@ class QuantizerTest(parameterized.TestCase):
       'recipes/default_a16w8_recipe.json',
   )
   def test_calibrate_required_recipe_succeeds(self, recipe_path):
-    recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
+    recipe_path = str(pathlib.Path(TEST_DATA_PREFIX_PATH) / recipe_path)
     self._quantizer.load_quantization_recipe(recipe_path)
     self.assertTrue(self._quantizer.need_calibration)
     # Calibrate with empty state.
@@ -220,7 +220,7 @@ class QuantizerTest(parameterized.TestCase):
       'recipes/default_a16w8_recipe.json',
   )
   def test_reloaded_calibration_succeeds(self, recipe_path):
-    recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
+    recipe_path = str(pathlib.Path(TEST_DATA_PREFIX_PATH) / recipe_path)
     self._quantizer.load_quantization_recipe(recipe_path)
     calib_data = _get_calibration_data()
     calibration_result = self._quantizer.calibrate(calib_data)
@@ -240,7 +240,7 @@ class QuantizerTest(parameterized.TestCase):
       'recipes/default_af32w8float_recipe.json',
   )
   def test_calibrate_nonrequired_recipe_succeeds(self, recipe_path):
-    recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
+    recipe_path = str(pathlib.Path(TEST_DATA_PREFIX_PATH) / recipe_path)
     self._quantizer.load_quantization_recipe(recipe_path)
     self.assertFalse(self._quantizer.need_calibration)
     # Empty calibration result if no calibration is required.
@@ -259,7 +259,7 @@ class QuantizerTest(parameterized.TestCase):
       'recipes/default_a16w8_recipe.json',
   )
   def test_quantize_calibration_needed_succeeds(self, recipe_path):
-    recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
+    recipe_path = str(pathlib.Path(TEST_DATA_PREFIX_PATH) / recipe_path)
     with open(recipe_path) as json_file:
       recipe = json.load(json_file)
 
@@ -277,7 +277,7 @@ class QuantizerTest(parameterized.TestCase):
       'recipes/default_a16w8_recipe.json',
   )
   def test_quantize_calibration_needed_raise_error(self, recipe_path):
-    recipe_path = os.path.join(TEST_DATA_PREFIX_PATH, recipe_path)
+    recipe_path = str(pathlib.Path(TEST_DATA_PREFIX_PATH) / recipe_path)
 
     self._quantizer.load_quantization_recipe(recipe_path)
     self.assertTrue(self._quantizer.need_calibration)
@@ -303,8 +303,8 @@ class QuantizerTest(parameterized.TestCase):
     self._quantizer.load_quantization_recipe(self._test_recipe_path)
     result = self._quantizer.quantize()
     result.save(self._tmp_save_path, model_name)
-    saved_recipe_path = os.path.join(
-        self._tmp_save_path, model_name + '_recipe.json'
+    saved_recipe_path = str(
+        pathlib.Path(self._tmp_save_path) / (model_name + '_recipe.json')
     )
     with open(saved_recipe_path) as json_file:
       saved_recipe = json.load(json_file)
@@ -312,15 +312,15 @@ class QuantizerTest(parameterized.TestCase):
 
   def test_saved_legacy_recipe_lacks_block_size(self):
     model_name = 'test_model'
-    legacy_recipe_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'recipes/dynamic_legacy_wi8_afp32_recipe.json',
+    legacy_recipe_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'recipes/dynamic_legacy_wi8_afp32_recipe.json',
     )
     self._quantizer.load_quantization_recipe(legacy_recipe_path)
     result = self._quantizer.quantize()
     result.save(self._tmp_save_path, model_name)
-    saved_recipe_path = os.path.join(
-        self._tmp_save_path, model_name + '_recipe.json'
+    saved_recipe_path = str(
+        pathlib.Path(self._tmp_save_path) / (model_name + '_recipe.json')
     )
     with open(saved_recipe_path) as json_file:
       saved_recipe = json.load(json_file)
@@ -360,12 +360,12 @@ class QuantizerTest(parameterized.TestCase):
     self._quantizer.load_quantization_recipe(self._test_recipe_path)
     result = self._quantizer.quantize()
 
-    exported_model_path = os.path.join(
-        self._tmp_save_path, model_name + '.tflite'
+    exported_model_path = str(
+        pathlib.Path(self._tmp_save_path) / (model_name + '.tflite')
     )
-    self.assertFalse(os.path.exists(exported_model_path))
+    self.assertFalse(pathlib.Path(exported_model_path).exists())
     result.export_model(exported_model_path)
-    self.assertTrue(os.path.exists(exported_model_path))
+    self.assertTrue(pathlib.Path(exported_model_path).exists())
 
   def test_compare_succeeds(self):
     self._quantizer.quantize()
@@ -448,17 +448,20 @@ class QuantizerTest(parameterized.TestCase):
   def test_two_pass_quantization_with_conv_and_fc_succeeds(self):
     float_model_path = self._test_model_path
 
-    drq_recipe_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'recipes/dynamic_wi8_afp32_hadamard_recipe.json'
+    drq_recipe_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'recipes/dynamic_wi8_afp32_hadamard_recipe.json'
     )
     drq_quantizer = quantizer.Quantizer(float_model_path)
     drq_quantizer.load_quantization_recipe(drq_recipe_path)
     drq_result = drq_quantizer.quantize()
-    drq_model_path = os.path.join(self._tmp_save_path, 'drq_model.tflite')
+    drq_model_path = str(
+        pathlib.Path(self._tmp_save_path) / 'drq_model.tflite'
+    )
     drq_result.export_model(drq_model_path)
 
-    srq_recipe_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'recipes/default_a8w8_recipe.json'
+    srq_recipe_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'recipes/default_a8w8_recipe.json'
     )
     srq_quantizer = quantizer.Quantizer(drq_model_path)
     srq_quantizer.load_quantization_recipe(srq_recipe_path)
@@ -469,7 +472,9 @@ class QuantizerTest(parameterized.TestCase):
     )
     calibration_result = srq_quantizer.calibrate(representative_dataset)
     srq_result = srq_quantizer.quantize(calibration_result)
-    srq_model_path = os.path.join(self._tmp_save_path, 'srq_model.tflite')
+    srq_model_path = str(
+        pathlib.Path(self._tmp_save_path) / 'srq_model.tflite'
+    )
     srq_result.export_model(srq_model_path)
 
 
@@ -477,12 +482,12 @@ class QuantizerBytearrayInputs(googletest.TestCase):
 
   def setUp(self):
     super().setUp()
-    self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/conv_fc_mnist.tflite'
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/conv_fc_mnist.tflite'
     )
-    self._test_recipe_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'recipes/default_af32w8float_recipe.json',
+    self._test_recipe_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'recipes/default_af32w8float_recipe.json',
     )
     with open(self._test_model_path, 'rb') as f:
       model_content = bytearray(f.read())
@@ -518,12 +523,12 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     self._tmp_save_path = self.create_tempdir().full_path
-    self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/two_signatures.tflite'
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/two_signatures.tflite'
     )
-    self._test_recipe_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'recipes/default_a8w8_recipe.json',
+    self._test_recipe_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'recipes/default_a8w8_recipe.json',
     )
     with open(self._test_recipe_path) as json_file:
       self._test_recipe = json.load(json_file)
@@ -653,9 +658,9 @@ class QuantizerToyGemma2Test(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     self._tmp_save_path = self.create_tempdir().full_path
-    self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'tests/models/toy_model_with_kv_cache_multi_signature.tflite',
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/toy_model_with_kv_cache_multi_signature.tflite',
     )
 
     self._toy_gemma2_calibration_dataset = {
@@ -681,9 +686,9 @@ class QuantizerToyGemma2Test(parameterized.TestCase):
         }],
     }
 
-    self._test_recipe_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'recipes/default_a8w8_recipe.json',
+    self._test_recipe_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'recipes/default_a8w8_recipe.json',
     )
     with open(self._test_recipe_path) as json_file:
       self._test_recipe = json.load(json_file)
@@ -731,14 +736,14 @@ class QuantizerFullyConnectedTest(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     self._tmp_save_path = self.create_tempdir().full_path
-    self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'tests/models/single_fc.tflite',
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/single_fc.tflite',
     )
 
-    self._test_recipe_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'recipes/default_a8w8_recipe.json',
+    self._test_recipe_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'recipes/default_a8w8_recipe.json',
     )
     with open(self._test_recipe_path) as json_file:
       self._test_recipe = json.load(json_file)

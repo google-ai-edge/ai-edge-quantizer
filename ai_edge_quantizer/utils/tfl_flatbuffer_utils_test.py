@@ -15,7 +15,7 @@
 
 """Tests for tfl_flatbuffer_utils.py."""
 
-import os
+import pathlib
 import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
@@ -31,15 +31,15 @@ class FlatbufferUtilsTest(googletest.TestCase):
 
   def setUp(self):
     super().setUp()
-    self._test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "conv_fc_mnist.tflite"
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "conv_fc_mnist.tflite"
     )
 
     self._test_model = tfl_flatbuffer_utils.read_model(self._test_model_path)
 
   def test_get_model_buffer(self):
     model_buffer = tfl_flatbuffer_utils.get_model_buffer(self._test_model_path)
-    file_stats = os.stat(self._test_model_path)
+    file_stats = pathlib.Path(self._test_model_path).stat()
     self.assertLen(model_buffer, file_stats.st_size)
 
   def test_parse_op_tensors(self):
@@ -106,9 +106,9 @@ class FlatbufferUtilsTest(googletest.TestCase):
     self.assertEqual(tuple(conv2d_filter_tensor.shape), (8, 3, 3, 1))
 
   def test_buffer_to_tensors_has_unique_values(self):
-    test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        "constant_tensor_and_buffer_only_sharing_weight_fcs.tflite",
+    test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / "constant_tensor_and_buffer_only_sharing_weight_fcs.tflite",
     )
     test_model = tfl_flatbuffer_utils.read_model(test_model_path)
     buffer_to_tensor_map = tfl_flatbuffer_utils.buffer_to_tensors(test_model)
@@ -190,15 +190,15 @@ class FlatbufferUtilsTest(googletest.TestCase):
     )
 
   def test_check_is_float_model_true_when_model_is_float(self):
-    test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "conv_fc_mnist.tflite"
+    test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "conv_fc_mnist.tflite"
     )
     model = tfl_flatbuffer_utils.read_model(test_model_path)
     self.assertTrue(tfl_flatbuffer_utils.is_float_model(model))
 
   def test_check_is_float_model_false_when_model_is_quantized(self):
-    test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, "mnist_quantized.tflite"
+    test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "mnist_quantized.tflite"
     )
     model = tfl_flatbuffer_utils.read_model(test_model_path)
     self.assertFalse(tfl_flatbuffer_utils.is_float_model(model))

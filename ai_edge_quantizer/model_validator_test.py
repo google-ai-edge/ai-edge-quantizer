@@ -14,7 +14,7 @@
 # ==============================================================================
 
 import json
-import os
+import pathlib
 from absl import flags
 import numpy as np
 import os
@@ -34,15 +34,15 @@ class ComparisonResultTest(googletest.TestCase):
     # TODO: b/358437395 - Remove this line once the bug is fixed.
     flags.FLAGS.mark_as_parsed()
     super().setUp()
-    self.test_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/two_signatures.tflite'
+    self.test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/two_signatures.tflite'
     )
     self.test_model = tfl_flatbuffer_utils.get_model_buffer(
         self.test_model_path
     )
-    self.test_quantized_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'tests/models/two_signatures_a8w8.tflite',
+    self.test_quantized_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/two_signatures_a8w8.tflite',
     )
     self.test_quantized_model = tfl_flatbuffer_utils.get_model_buffer(
         self.test_quantized_model_path
@@ -140,8 +140,9 @@ class ComparisonResultTest(googletest.TestCase):
       )
     model_name = 'test_model'
     self.comparison_result.save(self.test_dir.full_path, model_name)
-    test_json_path = os.path.join(
-        self.test_dir.full_path, model_name + '_comparison_result.json'
+    test_json_path = str(
+        pathlib.Path(self.test_dir.full_path)
+        / (model_name + '_comparison_result.json')
     )
     with open(test_json_path) as json_file:
       json_dict = json.load(json_file)
@@ -182,12 +183,12 @@ class ModelValidatorCompareTest(googletest.TestCase):
     # TODO: b/358437395 - Remove this line once the bug is fixed.
     flags.FLAGS.mark_as_parsed()
     super().setUp()
-    self.reference_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/single_fc_bias.tflite'
+    self.reference_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/single_fc_bias.tflite'
     )
-    self.target_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'tests/models/single_fc_bias_sub_channel_weight_only_sym_weight.tflite',
+    self.target_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/single_fc_bias_sub_channel_weight_only_sym_weight.tflite',
     )
     self.reference_model = tfl_flatbuffer_utils.get_model_buffer(
         self.reference_model_path
@@ -268,12 +269,12 @@ class ModelValidatorMultiSignatureModelTest(googletest.TestCase):
     # TODO: b/358437395 - Remove this line once the bug is fixed.
     flags.FLAGS.mark_as_parsed()
     super().setUp()
-    self.reference_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH, 'tests/models/two_signatures.tflite'
+    self.reference_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/two_signatures.tflite'
     )
-    self.target_model_path = os.path.join(
-        TEST_DATA_PREFIX_PATH,
-        'tests/models/two_signatures_a8w8.tflite',
+    self.target_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/two_signatures_a8w8.tflite',
     )
     self.reference_model = tfl_flatbuffer_utils.get_model_buffer(
         self.reference_model_path

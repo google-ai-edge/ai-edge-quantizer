@@ -15,7 +15,7 @@
 
 """Test insertion of the Decomposed Hadamard rotation ops."""
 
-import os
+import pathlib
 import numpy as np
 from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
@@ -32,8 +32,8 @@ class InsertDecomposedHadamardRotationFullyConnectedTest(googletest.TestCase):
 
   def setUp(self):
     super().setUp()
-    model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, 'tests/models/single_fc_bias.tflite'
+    model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH) / 'tests/models/single_fc_bias.tflite'
     )
     self.model = tfl_flatbuffer_utils.read_model(model_path)
     self.params = qtyping.UniformQuantParams(
@@ -179,8 +179,8 @@ class InsertDecomposedHadamardRotationEmbeddingLookupTest(googletest.TestCase):
 
   def setUp(self):
     super().setUp()
-    model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, 'tests/models/embedding_lookup.tflite'
+    model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH) / 'tests/models/embedding_lookup.tflite'
     )
     self.model = tfl_flatbuffer_utils.read_model(model_path)
     self.params = qtyping.UniformQuantParams(

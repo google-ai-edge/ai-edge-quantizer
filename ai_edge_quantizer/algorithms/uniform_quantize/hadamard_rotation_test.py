@@ -15,7 +15,7 @@
 
 """Test Hadamard rotation materialization."""
 
-import os
+import pathlib
 
 from absl.testing import parameterized
 import numpy as np
@@ -36,8 +36,8 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     np.random.seed(888)
-    self._test_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, "conv_fc_mnist.tflite"
+    self._test_model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH) / "conv_fc_mnist.tflite"
     )
     self._test_model = tfl_flatbuffer_utils.read_model(self._test_model_path)
     self._graph_info = qtyping.GraphInfo(
@@ -345,8 +345,8 @@ class HadamardRotationEmbeddingLookupTest(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     np.random.seed(888)
-    self._test_model_path = os.path.join(
-        _TEST_DATA_PREFIX_PATH, "embedding_lookup.tflite"
+    self._test_model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH) / "embedding_lookup.tflite"
     )
     self._test_model = tfl_flatbuffer_utils.read_model(self._test_model_path)
     self._graph_info = qtyping.GraphInfo(
