@@ -16,9 +16,9 @@
 """E2E tests for the quantizer for model with slice."""
 
 from absl.testing import parameterized
+import absl.testing.absltest as absltest
 import numpy as np
 
-from tensorflow.python.platform import googletest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
@@ -114,4 +114,4 @@ class SliceTest(parameterized.TestCase):
 
 
 if __name__ == '__main__':
-  googletest.main()
+  absltest.main()
