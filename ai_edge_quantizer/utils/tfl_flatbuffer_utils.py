@@ -110,7 +110,7 @@ TENSOR_CODE_TO_TYPE = {}
 for dtype_code in range(NUM_TFL_DATATYPES):
   TENSOR_CODE_TO_TYPE[dtype_code] = flatbuffer_utils.type_to_name(dtype_code)
 TENSOR_CODE_TO_TYPE = immutabledict.immutabledict(TENSOR_CODE_TO_TYPE)
-TENSOR_TYPE_TO_CODE = immutabledict.immutabledict(
+TENSOR_TYPE_TO_CODE = immutabledict.immutabledict(  # pytype: disable=wrong-arg-types
     (reversed(item) for item in TENSOR_CODE_TO_TYPE.items())
 )
 
