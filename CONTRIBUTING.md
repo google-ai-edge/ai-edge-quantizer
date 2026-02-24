@@ -22,15 +22,6 @@ All tests:
 uv run pytest
 ```
 
-## Code Formatting
-
-You can format your changes with our preconfigured formatting script.
-
-```bash
-cd ai-edge-quantizer
-bash ./format.sh
-```
-
 ## Build PyPi Package at Local
 
 ```bash
