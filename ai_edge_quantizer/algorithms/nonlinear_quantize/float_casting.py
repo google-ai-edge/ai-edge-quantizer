@@ -141,23 +141,38 @@ def materialize_fc_conv(
       weight_tensor,
       graph_info.buffers,
   )
-  assert weight_content is not None
-  if not (
-      quant_params := tensor_quant_params_cache.lookup(
-          weight_tensor.buffer, _FP16_QUANT_CONFIG
+  if weight_content is None:
+    # If the weight data is not stored in the flatbuffer (e.g. dynamic weights),
+    # skip quantization for this tensor.
+    op2weight_params = qtyping.OpToTensorParams(
+        subgraph_op_id=op_info.subgraph_op_index,
+        transformations=[_QuantTransformation.NO_QUANTIZE],
+    )
+  else:
+    if not (
+        quant_params := tensor_quant_params_cache.lookup(
+            weight_tensor.buffer, _FP16_QUANT_CONFIG
+        )
+    ):
+      quant_params = qtyping.NonLinearQuantParams(
+          num_bits=16, quantized_data=weight_content.astype(np.float16)
       )
-  ):
+      tensor_quant_params_cache.insert(
+          weight_tensor.buffer, _FP16_QUANT_CONFIG, quant_params
+      )
+    op2weight_params = qtyping.OpToTensorParams(
+        subgraph_op_id=op_info.subgraph_op_index,
+        parameters=quant_params,
+        transformations=[_QuantTransformation.ADD_DEQUANTIZE],
+    )
     quant_params = qtyping.NonLinearQuantParams(
-        num_bits=16, quantized_data=weight_content.astype(np.float16)
+        num_bits=16, quantized_data=weight_content.astype(np.float16)  # pytype: disable=attribute-error
     )
-    tensor_quant_params_cache.insert(
-        weight_tensor.buffer, _FP16_QUANT_CONFIG, quant_params
+    op2weight_params = qtyping.OpToTensorParams(
+        subgraph_op_id=op_info.subgraph_op_index,
+        parameters=quant_params,
+        transformations=[_QuantTransformation.ADD_DEQUANTIZE],
     )
-  op2weight_params = qtyping.OpToTensorParams(
-      subgraph_op_id=op_info.subgraph_op_index,
-      parameters=quant_params,
-      transformations=[_QuantTransformation.ADD_DEQUANTIZE],
-  )
   op_tensor_params.append(
       qtyping.TensorTransformationParams(
           tensor_name=tfl_flatbuffer_utils.get_tensor_name(weight_tensor),
@@ -241,23 +256,30 @@ def materialize_conv2d_transpose(
       weight_tensor,
       graph_info.buffers,
   )
-  assert weight_content is not None
-  if not (
-      quant_params := tensor_quant_params_cache.lookup(
-          weight_tensor.buffer, _FP16_QUANT_CONFIG
+  if weight_content is None:
+    # If the weight data is not stored in the flatbuffer (e.g. dynamic weights),
+    # skip quantization for this tensor.
+    op2weight_params = qtyping.OpToTensorParams(
+        subgraph_op_id=op_info.subgraph_op_index,
+        transformations=[_QuantTransformation.NO_QUANTIZE],
+    )
+  else:
+    if not (
+        quant_params := tensor_quant_params_cache.lookup(
+            weight_tensor.buffer, _FP16_QUANT_CONFIG
+        )
+    ):
+      quant_params = qtyping.NonLinearQuantParams(
+          num_bits=16, quantized_data=weight_content.astype(np.float16)
       )
-  ):
-    quant_params = qtyping.NonLinearQuantParams(
-        num_bits=16, quantized_data=weight_content.astype(np.float16)
+      tensor_quant_params_cache.insert(
+          weight_tensor.buffer, _FP16_QUANT_CONFIG, quant_params
+      )
+    op2weight_params = qtyping.OpToTensorParams(
+        subgraph_op_id=op_info.subgraph_op_index,
+        parameters=quant_params,
+        transformations=[_QuantTransformation.ADD_DEQUANTIZE],
     )
-    tensor_quant_params_cache.insert(
-        weight_tensor.buffer, _FP16_QUANT_CONFIG, quant_params
-    )
-  op2weight_params = qtyping.OpToTensorParams(
-      subgraph_op_id=op_info.subgraph_op_index,
-      parameters=quant_params,
-      transformations=[_QuantTransformation.ADD_DEQUANTIZE],
-  )
   op_tensor_params.append(
       qtyping.TensorTransformationParams(
           tensor_name=tfl_flatbuffer_utils.get_tensor_name(weight_tensor),
