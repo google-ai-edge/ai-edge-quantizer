@@ -23,36 +23,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get and set nightly date
-        id: date
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Update Metadata for Nightly
         run: |
+          sed -i 's/name = "ai-edge-quantizer"/name = "ai-edge-quantizer-nightly"/' pyproject.toml
+
+          BASE_VERSION=$(cat VERSION | xargs)
           DATE=$(date +'%Y%m%d')
-          echo "NIGHTLY_RELEASE_DATE=${DATE}" >> $GITHUB_ENV
-          echo "date=${DATE}" >> $GITHUB_OUTPUT
+          echo "${BASE_VERSION}.dev${DATE}" > VERSION
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-            python-version: '3.11'
+          echo "Building $(cat PACKAGE_NAME) version $(cat VERSION)"
 
-      - name: Install python-build and twine
+      - name: Build Nightly Package
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install build twine wheel
-          python -m pip list
+          uv build
 
-      - name: Build the wheel
-        run: |
-          python setup.py bdist_wheel
-
-      - name: Verify the distribution
-        run: twine check --strict dist/*
-
-      - name: List the contents of the wheel
-        run: python -m zipfile --list dist/*.whl
-
-      - name: Upload to PyPI
-        run: twine upload dist/* --non-interactive -p ${{ secrets.PYPI_UPLOAD_TOKEN }}
+      - name: Publish to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_UPLOAD_TOKEN }}
+        run: uv publish
 
   run-pip-install-and-import-test:
     needs: build-and-release-nightly
