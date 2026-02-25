@@ -1,0 +1,9 @@
+-r ./requirements.txt
+build
+colorama
+isort
+parameterized
+pyink
+pytest
+pytest-xdist
+tf-nightly

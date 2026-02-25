@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-edge-quantizer"
+version = "0.5.0"
 description = "A quantizer for advanced developers to quantize converted AI Edge models."
-dynamic = ["version"]
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
@@ -49,15 +49,8 @@ dev = [
     "pyink",
     "pytest",
     "pytest-xdist",
+    "tf-nightly",
 ]
-
-[tool.uv]
-required-environments = [
-    "sys_platform == 'linux' and platform_machine == 'x86_64'",
-]
-
-[tool.setuptools.dynamic]
-version = {file = ["VERSION"]}
 
 [tool.setuptools.packages.find]
 include = ["ai_edge_quantizer*"]
