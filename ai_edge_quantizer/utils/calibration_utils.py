@@ -16,10 +16,12 @@
 """Utilities for model calibration."""
 
 import copy
+import json
 from typing import Any, Union
 
 import numpy as np
 
+import os
 from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.utils import common_utils
@@ -27,12 +29,24 @@ from ai_edge_quantizer.utils import constrained_ops_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 
-
 _SignatureInput = dict[str, Any]
 _OpQuantConstraint = common_utils.OpQuantConstraint
 _SignatureData = dict[
     str, list[str]
 ]  # signature_key -> list of signature_names.
+
+
+class NumpyEncoder(json.JSONEncoder):
+  """JSON Encoder for Numpy types."""
+
+  def default(self, o):
+    if isinstance(o, np.integer):
+      return int(o)
+    elif isinstance(o, np.floating):
+      return float(o)
+    elif isinstance(o, np.ndarray):
+      return o.tolist()
+    return super().default(o)
 
 
 def _update_moving_average(
@@ -99,6 +113,27 @@ def min_max_update(qsv: qtyping.QSV, new_qsv: qtyping.QSV) -> qtyping.QSV:
   updated_qsv["min"] = np.minimum(qsv["min"], new_qsv["min"])
   updated_qsv["max"] = np.maximum(qsv["max"], new_qsv["max"])
   return updated_qsv
+
+
+def load_calibration_results(file_path: str) -> dict[str, qtyping.QSV]:
+  """Loads calibration results from a file.
+
+  Args:
+    file_path: Path to the calibration results file.
+
+  Returns:
+    A dictionary of tensor name to QSV.
+  """
+  with open(file_path) as json_file:
+    model_qsvs = json.load(json_file)
+
+  # Convert lists back to numpy arrays
+  for _, qsv in model_qsvs.items():
+    if "min" in qsv:
+      qsv["min"] = np.array(qsv["min"])
+    if "max" in qsv:
+      qsv["max"] = np.array(qsv["max"])
+  return model_qsvs
 
 
 def _find_overall_min_max(

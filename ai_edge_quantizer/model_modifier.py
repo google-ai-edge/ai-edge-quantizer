@@ -32,6 +32,7 @@ from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tenso
 
 
 _DEQUANT_SUFFIX = "_dequant"
+_QUANT_SUFFIX = "_quantized"
 
 
 class ModelModifier:
@@ -119,26 +120,41 @@ class ModelModifier:
     serialized_quantized_model = serialize_fun(quantized_model)
 
     # Update signature defs if dequant is inserted before output.
-    if self._has_dequant_before_output(instructions):
-      quantized_model = self._update_signature_defs_for_dequant_output(
-          quantized_model, serialized_quantized_model
+    if self._has_transform_before_output(
+        instructions, qtyping.QuantTransformation.ADD_DEQUANTIZE
+    ):
+      quantized_model = self._update_signature_defs(
+          quantized_model, serialized_quantized_model, _DEQUANT_SUFFIX
+      )
+      serialized_quantized_model = serialize_fun(quantized_model)
+
+    # Update signature defs if quant is inserted before output.
+    if self._has_transform_before_output(
+        instructions, qtyping.QuantTransformation.ADD_QUANTIZE
+    ):
+      quantized_model = self._update_signature_defs(
+          quantized_model, serialized_quantized_model, _QUANT_SUFFIX
       )
       serialized_quantized_model = serialize_fun(quantized_model)
 
     return serialized_quantized_model
 
-  def _update_signature_defs_for_dequant_output(
-      self, model: schema_py_generated.ModelT, serialized_model: bytearray
-  ):
+  def _update_signature_defs(
+      self,
+      model: schema_py_generated.ModelT,
+      serialized_model: bytearray,
+      suffix: str,
+  ) -> schema_py_generated.ModelT:
     """Updates the signature definitions in the model.
 
-    This function is called when a dequantize operation is inserted before
-    an output tensor. It updates the tensor index in the signature
-    definitions to point to the newly inserted dequantize output tensor.
+    This function is called when a transformation (quantize or dequantize)
+    is inserted before an output tensor. It updates the tensor index in the
+    signature definitions to point to the newly inserted output tensor.
 
     Args:
       model: The TFlite ModelT object.
       serialized_model: The serialized bytearray of the TFlite model.
+      suffix: The suffix to append to the tensor name.
 
     Returns:
       The updated TFlite ModelT object.
@@ -164,7 +180,7 @@ class ModelModifier:
         logging.info("\tOutput tensor = `%s`", tensor_name)
 
         for signature_name, tensor_details in output_details.items():
-          if tensor_details["name"] + _DEQUANT_SUFFIX == tensor_name:
+          if tensor_details["name"] + suffix == tensor_name:
             logging.info(
                 "\t\tfound tensor mapping: `%s`->`%s` for signature name: `%s`",
                 tensor_details["name"],
@@ -184,18 +200,19 @@ class ModelModifier:
 
     return model
 
-  def _has_dequant_before_output(
-      self, instructions: dict[str, qtyping.TensorTransformationInsts]
+  def _has_transform_before_output(
+      self,
+      instructions: dict[str, qtyping.TensorTransformationInsts],
+      transformation: qtyping.QuantTransformation,
   ) -> bool:
-    """Check if the model has dequant insert to output."""
+    """Check if the model has transformation insert to output."""
     for tensor_name, tensor_trans_insts in instructions.items():
       for instr in tensor_trans_insts.instructions:
-        if (
-            qtyping.QuantTransformation.ADD_DEQUANTIZE == instr.transformation
-            and instr.consumers == [-1]
-        ):
+        if transformation == instr.transformation and instr.consumers == [-1]:
           logging.info(
-              "Found dequant insert to output for tensor: %s", tensor_name
+              "Found %s insert to output for tensor: %s",
+              transformation,
+              tensor_name,
           )
           return True
     return False
