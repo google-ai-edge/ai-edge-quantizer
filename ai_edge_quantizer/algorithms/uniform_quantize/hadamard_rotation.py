@@ -18,37 +18,13 @@
 from typing import Any, Optional
 import numpy as np
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.algorithms.uniform_quantize import hadamard_matrices
 from ai_edge_quantizer.algorithms.uniform_quantize import octav
-from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 
 CUSTOM_OP_ALGORITHM_KEY = "HADAMARD_ROTATION"
 DECOMPOSED_ALGORITHM_KEY = "DECOMPOSED_HADAMARD_ROTATION"
-
-
-def _make_hadamard_matrix(size: int) -> np.ndarray:
-  """Generates a Hadamard matrix of the given size.
-
-  Args:
-    size: The size of the Hadamard matrix. Must be a power of 2. This represents
-      a single dimension. E.g. if size is 4, then the Hadamard matrix is a 4x4
-      matrix.
-
-  Returns:
-    The Hadamard matrix.
-
-  Raises:
-    ValueError: If the size is not a power of 2.
-  """
-  if size <= 0 or (size & (size - 1)) != 0:
-    raise ValueError("Hadamard matrix size must be a power of 2. ")
-  h = h2 = np.array([[1, 1], [1, -1]])
-  current_size = 2
-  while current_size < size:
-    h = np.kron(h, h2)
-    current_size *= 2
-  return h / np.sqrt(size)
 
 
 def _rotate_with_diagonal_hadamard(
@@ -74,17 +50,16 @@ def _rotate_with_diagonal_hadamard(
         " dimension 0 (rotate last dimension)."
     )
 
-  # Use the largest power of 2 that is a factor of the dimension and then
-  # tile this Hadamard matrix along the diagonal. 2**30 is just a large power
-  # of 2 to calculate this factor.
-  hadamard_size = np.gcd(tensor_content.shape[axis], 2 ** 30)
-  diagonal_size = tensor_content.shape[axis] // hadamard_size
+  # Use a canonical Hadamard matrix.
+  hadamard, diagonal_size = hadamard_matrices.make_diag_hadamard_matrix(
+      tensor_content.shape[axis], max_size=32
+  )
+  hadamard_size = hadamard.shape[0]
+
   # Output size is the product of all dimensions except the one being rotated.
   output_size = np.prod(np.delete(tensor_content.shape, axis))
   random_vector = np.ones(hadamard_size, dtype=np.int8)
 
-  # Use a canonical Hadamard matrix.
-  hadamard = _make_hadamard_matrix(hadamard_size)
   reshaped_tensor = tensor_content.reshape(
       diagonal_size * output_size, hadamard_size)
   w_rotated = np.matmul(reshaped_tensor, hadamard)
