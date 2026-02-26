@@ -17,24 +17,145 @@
 
 from collections.abc import Callable, Iterable
 import copy
+import enum
+import json
 from typing import Any, Union
 
 from absl import logging
 import numpy as np
 
+import os
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import default_policy as policy
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer import recipe
 from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import calibration_utils
 from ai_edge_quantizer.utils import progress_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 
+
+class CalibrationMode(enum.Enum):
+  INFERENCE = 1
+  CALIBRATION = 2
+
+
 _SignatureInput = dict[str, Any]  # input_argument_name -> tensor_value.
 _SignatureOutput = dict[
     str, np.ndarray
 ]  # output_argument_name -> tensor_value.
+
+
+class CalibrationInterpreter:
+  """A TFL interpreter-like interface for model calibration.
+
+  This is a wrapper around Calibrator that replaces the TFL Interpreter to
+  enable calibration. If mode is CALIBRATION, it runs calibration, otherwise it
+  acts as a regular TFL interpreter for inference. When in CALIBRATION mode,
+  each invocation of a signature runner will update the calibration statistics
+  in self._calibrator. Calibrator is needed in both modes because it contains
+  tfl interpreter instance to run the model.
+  """
+
+  def __init__(
+      self,
+      model_path: str,
+      mode: CalibrationMode = CalibrationMode.INFERENCE,
+  ):
+    """Initializes the CalibrationInterpreter.
+
+    Args:
+      model_path: The path to the TFLite model.
+      mode: The mode of the interpreter. If CALIBRATION, the interpreter will
+        preserve all tensors for calibration purposes.
+    """
+    self._calibrator = Calibrator(
+        model_path,
+        interpreter_preserve_all_tensors=(mode == CalibrationMode.CALIBRATION),
+    )
+    self._mode = mode
+
+  def get_signature_runner(self, signature_key: str | None = None):
+    """Returns the signature runner."""
+    return CalibrationSignatureRunner(
+        self._calibrator, signature_key, self._mode
+    )
+
+  def get_calibration_results(self):
+    """Returns the calibration results."""
+    if self._mode == CalibrationMode.INFERENCE:
+      raise ValueError(
+          "Calibration results are not available in INFERENCE mode."
+      )
+    return self._calibrator.get_model_qsvs()
+
+  def save_calibration_result(self, output_path: str):
+    """Saves the calibration results."""
+    if self._mode == CalibrationMode.INFERENCE:
+      raise ValueError(
+          "Calibration results are not available in INFERENCE mode."
+      )
+    self._calibrator.save_calibration_result(output_path)
+
+  def get_signature_list(self) -> list[str]:
+    """Returns the signature list."""
+    return self._calibrator.get_signature_list()
+
+
+class CalibrationSignatureRunner:
+  """Wrapper around TFL signature runner to enable calibration."""
+
+  def __init__(
+      self,
+      calibrator_obj: "Calibrator",
+      signature_key: str | None = None,
+      mode: CalibrationMode = CalibrationMode.INFERENCE,
+      quantization_recipe: recipe_manager.ModelQuantizationRecipe = recipe.static_wi8_ai8(),
+  ):
+    """Initializes the CalibrationSignatureRunner.
+
+    Args:
+      calibrator_obj: The Calibrator instance.
+      signature_key: The key of the signature to run. If None, the default
+        signature is used.
+      mode: The mode of the runner. If CALIBRATION, invoking the runner will
+        update 'calibrator_obj' with new quantization statistics values. If
+        INFERENCE, the runner behaves like a standard signature runner.
+      quantization_recipe: The quantization recipe to use for calibration.
+        Defaults to static_wi8_ai8.
+    """
+    self._calibrator = calibrator_obj
+    self._signature_key = signature_key
+    self._mode = mode
+    self._recipe_manager = recipe_manager.RecipeManager()
+    self._recipe_manager.load_quantization_recipe(quantization_recipe)
+    self._signature_runner = (
+        self._calibrator._tfl_interpreter.get_signature_runner(
+            self._signature_key
+        )
+    )
+
+  def __call__(self, **kwargs):
+    if self._mode == CalibrationMode.INFERENCE:
+      return self._signature_runner(**kwargs)
+    self._calibrator.calibrate(
+        calibration_dataset={self._signature_key: [kwargs]},
+        model_recipe_manager=self._recipe_manager,
+        cache_output=True,
+    )
+    outputs = self._calibrator.get_cached_output()
+    assert len(outputs) == 1
+    self._calibrator.clear_cached_output()
+    return outputs[0]
+
+  def get_input_details(self):
+    """Returns the input details of the model."""
+    return self._signature_runner.get_input_details()
+
+  def get_output_details(self):
+    """Returns the output details of the model."""
+    return self._signature_runner.get_output_details()
 
 
 class Calibrator:
@@ -44,11 +165,15 @@ class Calibrator:
       self,
       float_tflite: Union[str, bytes],
       num_threads: int = 16,
+      interpreter_preserve_all_tensors: bool = True,
   ):
     self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
 
     self._tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
-        float_tflite, use_xnnpack=True, num_threads=num_threads
+        float_tflite,
+        use_xnnpack=True,
+        num_threads=num_threads,
+        preserve_all_tensors=interpreter_preserve_all_tensors,
     )
     # Tensor name to tensor content.
     self._tensor_content_map: dict[str, Any] = {}
@@ -140,7 +265,7 @@ class Calibrator:
         disable=total_ops
         < 1000,  # We skip the progress bar for small models and small datasets.
     ) as pbar:
-    # TODO: b/329322226 - Enable parallel calibration.
+      # TODO: b/329322226 - Enable parallel calibration.
       for signature_key, dataset in calibration_dataset.items():
         # Step0: get subgraph index.
         subgraph_idx = tfl_interpreter_utils.get_signature_main_subgraph_index(
@@ -242,13 +367,29 @@ class Calibrator:
     """Reset the model qsvs."""
     self._model_qsvs = {}
 
-  def load_model_qsvs(self, model_qsvs: dict[str, qtyping.QSV]) -> None:
+  def load_model_qsvs(
+      self, model_qsvs: Union[str, dict[str, qtyping.QSV]]
+  ) -> None:
     """Load the model qsvs.
 
     Args:
-      model_qsvs: A dictionary of tensor name to QSV.
+      model_qsvs: A dictionary of tensor name to QSV or a path to a JSON file
+        that contains the model qsvs (i.e., from save_calibration_result).
     """
-    self._model_qsvs = copy.deepcopy(model_qsvs)
+
+    if isinstance(model_qsvs, str):
+      self._model_qsvs = calibration_utils.load_calibration_results(model_qsvs)
+    else:
+      self._model_qsvs = copy.deepcopy(model_qsvs)
+
+  def save_calibration_result(self, file_path: str) -> None:
+    """Saves the calibration result to a json file."""
+    with open(file_path, "w") as f:
+      json.dump(self._model_qsvs, f, cls=calibration_utils.NumpyEncoder)
+
+  def get_signature_list(self) -> list[str]:
+    """Get the signature list of the model."""
+    return self._tfl_interpreter.get_signature_list()
 
   def _update_qsvs(
       self,

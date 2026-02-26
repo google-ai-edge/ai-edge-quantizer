@@ -177,6 +177,35 @@ class CalibratorTest(absltest.TestCase):
     test_calibrator.calibrate(calib_data, self._recipe_manager)
     self.assertNotEmpty(test_calibrator.get_model_qsvs())
 
+  def test_save_and_load_calibration_result(self):
+    # Setup some QSV
+    sample_qsv = {
+        "serving_default_input_1:0": {
+            "min": np.array([-10.0]),
+            "max": np.array([8.0]),
+        }
+    }
+    self._calibrator.load_model_qsvs(sample_qsv)
+
+    # Save
+    temp_file = self.create_tempfile().full_path
+    self._calibrator.save_calibration_result(temp_file)
+
+    # Reset
+    self._calibrator.reset_model_qsvs()
+    self.assertEmpty(self._calibrator.get_model_qsvs())
+
+    # Load
+    self._calibrator.load_model_qsvs(temp_file)
+
+    # Verify
+    model_tensor_qsvs = self._calibrator.get_model_qsvs()
+    self.assertLen(model_tensor_qsvs, 1)
+    self.assertIn("serving_default_input_1:0", model_tensor_qsvs)
+    input_qsv = model_tensor_qsvs["serving_default_input_1:0"]
+    self.assertSequenceAlmostEqual(input_qsv["min"], [-10.0])
+    self.assertSequenceAlmostEqual(input_qsv["max"], [8.0])
+
 
 class CalibratorAlreadyQuantizedModelTest(absltest.TestCase):
 
@@ -236,6 +265,101 @@ class CalibratorToyGemma2Test(absltest.TestCase):
         model_recipe_manager=recipe_mngr,
     )
     self.assertLen(calib.get_model_qsvs(), 202)
+
+
+class CalibrationInterpreterTest(absltest.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    np.random.seed(0)
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models/single_fc.tflite"
+    )
+    self._interpreter = calibrator.CalibrationInterpreter(
+        self._test_model_path, mode=calibrator.CalibrationMode.CALIBRATION
+    )
+
+  def test_initialization(self):
+    self.assertIsInstance(self._interpreter, calibrator.CalibrationInterpreter)
+
+  def test_get_signature_runner(self):
+    runner = self._interpreter.get_signature_runner()
+    self.assertIsInstance(runner, calibrator.CalibrationSignatureRunner)
+
+  def test_calibration_flow(self):
+    runner = self._interpreter.get_signature_runner()
+
+    # Run inference which triggers calibration
+    input_data = np.random.rand(1, 8).astype(np.float32)
+    output = runner(input_1=input_data)
+
+    # Check results
+    qsvs = self._interpreter.get_calibration_results()
+    self.assertNotEmpty(qsvs)
+
+    # Verify input tensor qsv
+    self.assertIn("serving_default_input_1:0", qsvs)
+    self.assertIsNotNone(output)
+
+  def test_disable_calibration(self):
+    interpreter = calibrator.CalibrationInterpreter(
+        self._test_model_path, mode=calibrator.CalibrationMode.INFERENCE
+    )
+    runner = interpreter.get_signature_runner()
+
+    input_data = np.random.rand(1, 8).astype(np.float32)
+    output = runner(input_1=input_data)
+
+    with self.assertRaisesRegex(
+        ValueError, "Calibration results are not available in INFERENCE mode."
+    ):
+      interpreter.get_calibration_results()
+    self.assertIsNotNone(output)
+
+  def test_save_calibration_result(self):
+    runner = self._interpreter.get_signature_runner()
+    input_data = np.random.rand(1, 8).astype(np.float32)
+    runner(input_1=input_data)
+
+    temp_file = self.create_tempfile().full_path
+    self._interpreter.save_calibration_result(temp_file)
+
+    # Verify file exists and has content
+    with open(temp_file, "r") as f:
+      content = f.read()
+      self.assertNotEmpty(content)
+
+  def test_get_signature_list(self):
+    signatures = self._interpreter.get_signature_list()
+    self.assertNotEmpty(signatures)
+    self.assertIn("serving_default", signatures)
+
+  def test_runner_details(self):
+    runner = self._interpreter.get_signature_runner()
+    input_details = runner.get_input_details()
+    output_details = runner.get_output_details()
+
+    self.assertNotEmpty(input_details)
+    self.assertNotEmpty(output_details)
+    self.assertIn("input_1", input_details)
+
+  def test_output_match_original_interpreter(self):
+    # Run calibration interpreter
+    calib_runner = self._interpreter.get_signature_runner()
+    input_data = np.random.rand(1, 8).astype(np.float32)
+    calib_output = calib_runner(input_1=input_data)
+
+    # Run original interpreter
+    original_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
+        self._test_model_path
+    )
+    original_runner = original_interpreter.get_signature_runner()
+    original_output = original_runner(input_1=input_data)
+
+    # Compare
+    self.assertEqual(calib_output.keys(), original_output.keys())
+    for key in calib_output:
+      np.testing.assert_array_equal(calib_output[key], original_output[key])
 
 
 if __name__ == "__main__":

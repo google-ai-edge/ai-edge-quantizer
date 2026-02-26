@@ -125,7 +125,7 @@ class ModelModifierTest(parameterized.TestCase):
     loosen_mem_use_factor = 4.5
     self.assertLess(mem_peak / len(self._model_content), loosen_mem_use_factor)
 
-  def test_has_dequant_before_output_true(self):
+  def test_has_transform_before_output_true_dequant(self):
     instructions = {
         'tensor1': qtyping.TensorTransformationInsts(
             'tensor1',
@@ -141,10 +141,12 @@ class ModelModifierTest(parameterized.TestCase):
         )
     }
     self.assertTrue(
-        self._model_modifier._has_dequant_before_output(instructions)
+        self._model_modifier._has_transform_before_output(
+            instructions, qtyping.QuantTransformation.ADD_DEQUANTIZE
+        )
     )
 
-  def test_has_dequant_before_output_false(self):
+  def test_has_transform_before_output_false_dequant(self):
     instructions = {
         'tensor1': qtyping.TensorTransformationInsts(
             'tensor1',
@@ -160,7 +162,51 @@ class ModelModifierTest(parameterized.TestCase):
         )
     }
     self.assertFalse(
-        self._model_modifier._has_dequant_before_output(instructions)
+        self._model_modifier._has_transform_before_output(
+            instructions, qtyping.QuantTransformation.ADD_DEQUANTIZE
+        )
+    )
+
+  def test_has_transform_before_output_true_quant(self):
+    instructions = {
+        'tensor1': qtyping.TensorTransformationInsts(
+            'tensor1',
+            0,
+            instructions=[
+                qtyping.TransformationInst(
+                    transformation=qtyping.QuantTransformation.ADD_QUANTIZE,
+                    tensor_id=0,
+                    producer=0,
+                    consumers=[-1],
+                )
+            ],
+        )
+    }
+    self.assertTrue(
+        self._model_modifier._has_transform_before_output(
+            instructions, qtyping.QuantTransformation.ADD_QUANTIZE
+        )
+    )
+
+  def test_has_transform_before_output_false_quant(self):
+    instructions = {
+        'tensor1': qtyping.TensorTransformationInsts(
+            'tensor1',
+            0,
+            instructions=[
+                qtyping.TransformationInst(
+                    transformation=qtyping.QuantTransformation.ADD_QUANTIZE,
+                    tensor_id=0,
+                    producer=0,
+                    consumers=[1],
+                )
+            ],
+        )
+    }
+    self.assertFalse(
+        self._model_modifier._has_transform_before_output(
+            instructions, qtyping.QuantTransformation.ADD_QUANTIZE
+        )
     )
 
   def test_pad_bytearray(self):
@@ -190,17 +236,25 @@ class ModelModifierTestWithSignature(parameterized.TestCase):
     )
     self._model_modifier = model_modifier.ModelModifier(self._model_content)
 
-  def test_update_signature_defs_for_dequant_output_succeeds(self):
+  def test_update_signature_defs_succeeds_dequant(self):
     # This is a simplified test that only checks if the function runs without
     # crashing and returns a model. A more thorough test with a model
     # with a known signature was added in `quantizer_test`.
     model_bytearray = flatbuffer_utils.read_model_from_bytearray(
         self._model_content
     )
-    updated_model = (
-        self._model_modifier._update_signature_defs_for_dequant_output(
-            model_bytearray, bytearray(self._model_content)
-        )
+    updated_model = self._model_modifier._update_signature_defs(
+        model_bytearray, bytearray(self._model_content), '_dequant'
+    )
+    self.assertIsNotNone(updated_model)
+
+  def test_update_signature_defs_succeeds_quant(self):
+    # This checks if the function runs without crashing and returns a model.
+    model_bytearray = flatbuffer_utils.read_model_from_bytearray(
+        self._model_content
+    )
+    updated_model = self._model_modifier._update_signature_defs(
+        model_bytearray, bytearray(self._model_content), '_quantized'
     )
     self.assertIsNotNone(updated_model)
 
