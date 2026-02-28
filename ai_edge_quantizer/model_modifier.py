@@ -15,7 +15,6 @@
 
 """Model Modifier class that produce the final quantized TFlite model."""
 
-from collections.abc import Sequence
 import copy
 import logging
 
@@ -55,7 +54,7 @@ class ModelModifier:
 
   def _get_tensor_processing_order(
       self,
-      tensor_names: Sequence[str],
+      tensor_names: set[str],
       flatbuffer_model: tfl_flatbuffer_utils.ModelT,
   ) -> list[str]:
     """Get the tensor processing order obtained from `buffer_to_tensors`.
@@ -109,7 +108,7 @@ class ModelModifier:
     )
 
     tensor_processing_order = self._get_tensor_processing_order(
-        list(instructions.keys()), quantized_model
+        set(instructions.keys()), quantized_model
     )
     self._transformation_performer.transform_graph(
         instructions, quantized_model, tensor_processing_order
