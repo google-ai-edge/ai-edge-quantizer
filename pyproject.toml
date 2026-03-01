@@ -54,11 +54,6 @@ dev = [
     "pytest-xdist",
 ]
 
-[tool.uv]
-required-environments = [
-    "sys_platform == 'linux' and platform_machine == 'x86_64'",
-]
-
 [tool.setuptools.dynamic]
 version = {file = ["VERSION"]}
 
