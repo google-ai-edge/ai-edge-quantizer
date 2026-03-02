@@ -21,6 +21,7 @@ from absl.testing import parameterized
 import numpy as np
 
 import os
+import io
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
