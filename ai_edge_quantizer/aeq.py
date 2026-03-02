@@ -16,7 +16,9 @@
 """A command-line tool to quantize TFLite models using a quantization recipe."""
 
 import argparse
+from collections.abc import Sequence
 import pathlib
+import sys
 
 import os
 from ai_edge_quantizer import quantizer
@@ -62,17 +64,17 @@ def quantize_model(
   qt.quantize().export_model(output_file_path, overwrite=overwrite)
 
 
-def parse_args(args):
+def parse_args(args: Sequence[str]) -> argparse.Namespace:
   """Parses command-line arguments.
 
   Args:
     args: A list of strings to parse. If None, sys.argv is used.
 
   Returns:
-    An argparse.Namespace containing the parsed arguments.
+    An argparse.Namespace containing the parsed arguments,
   """
   parser = argparse.ArgumentParser(
-      description="Quantize TFLite models using a quantization recipe."
+      description="Quantize TFLite models using a quantization recipe.",
   )
   parser.add_argument(
       "--model_file",
@@ -94,11 +96,10 @@ def parse_args(args):
       action="store_true",
       help="Overwrite exisiting output files without requesting user input.",
   )
-  return parser.parse_args(args)
+  return parser.parse_args(args[1:])
 
 
-def main(args=None):
-  parsed_args = parse_args(args)
+def main(parsed_args: argparse.Namespace):
   quantize_model(
       model_file=parsed_args.model_file,
       recipe_file=parsed_args.recipe_file,
@@ -108,4 +109,4 @@ def main(args=None):
 
 
 if __name__ == "__main__":
-  main()
+  main(parse_args(sys.argv))

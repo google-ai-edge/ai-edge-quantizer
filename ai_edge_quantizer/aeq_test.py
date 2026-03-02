@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
+import argparse
 import pathlib
 import tempfile
 
@@ -33,14 +34,14 @@ class AeqTest(absltest.TestCase):
     )
 
     with tempfile.TemporaryDirectory() as output_dir:
-      aeq.main([
-          "--model_file",
-          model_file,
-          "--recipe_file",
-          recipe_file,
-          "--output_dir",
-          output_dir,
-      ])
+      aeq.main(
+          argparse.Namespace(
+              model_file=model_file,
+              recipe_file=recipe_file,
+              output_dir=output_dir,
+              overwrite_outputs=False,
+          )
+      )
 
       model_basename = pathlib.Path(model_file).stem
       recipe_basename = pathlib.Path(recipe_file).stem
