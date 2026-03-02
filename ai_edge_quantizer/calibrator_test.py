@@ -19,9 +19,10 @@ from collections.abc import Generator
 import pathlib
 from typing import Any
 
+from absl.testing import absltest
 import numpy as np
 
-import absl.testing.absltest as absltest
+import os
 from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
@@ -211,13 +212,15 @@ class CalibratorAlreadyQuantizedModelTest(absltest.TestCase):
 
   def test_check_is_float_model_succeeds_when_model_is_float(self):
     test_model_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models/conv_fc_mnist.tflite"
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / "tests/models/conv_fc_mnist.tflite"
     )
     _ = calibrator.Calibrator(test_model_path)
 
   def test_check_is_quantized_model_succeeds_when_model_is_quantized(self):
     test_model_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models/mnist_quantized.tflite"
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / "tests/models/mnist_quantized.tflite"
     )
     _ = calibrator.Calibrator(test_model_path)
 
@@ -237,21 +240,21 @@ class CalibratorToyGemma2Test(absltest.TestCase):
         "signature_1": [{
             "cache_0": _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
             "cache_1": _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
-            "positions": _RNG.integers(low=0, high=10, size=(1, 100)).astype(
-                np.int32
+            "positions": (
+                _RNG.integers(low=0, high=10, size=(1, 100)).astype(np.int32)
             ),
-            "tokens": _RNG.integers(low=0, high=10, size=(1, 100)).astype(
-                np.int32
+            "tokens": (
+                _RNG.integers(low=0, high=10, size=(1, 100)).astype(np.int32)
             ),
         }],
         "signature_2": [{
             "cache_0": _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
             "cache_1": _RNG.random(size=(1, 100, 4, 4), dtype=np.float32),
-            "positions": _RNG.integers(low=0, high=10, size=(1, 100)).astype(
-                np.int32
+            "positions": (
+                _RNG.integers(low=0, high=10, size=(1, 100)).astype(np.int32)
             ),
-            "tokens": _RNG.integers(low=0, high=10, size=(1, 100)).astype(
-                np.int32
+            "tokens": (
+                _RNG.integers(low=0, high=10, size=(1, 100)).astype(np.int32)
             ),
         }],
     }
