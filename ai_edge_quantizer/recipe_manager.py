@@ -205,16 +205,28 @@ class RecipeManager:
     Returns:
       A list of quantization configs in the recipe.
     """
-    ret = []
-    for _, scope_config in self._scope_configs.items():
-      for quant_config in scope_config:
-        config = dict()
-        config['regex'] = quant_config.regex
-        config['operation'] = quant_config.operation
-        config['algorithm_key'] = quant_config.algorithm_key
-        config['op_config'] = quant_config.op_config.to_dict()
-        ret.append(config)
-    return ret
+    recipe = []
+    for _, op_recipes in self._scope_configs.items():
+      for op_recipe in op_recipes:
+        recipe_dict = dataclasses.asdict(
+            op_recipe,
+            dict_factory=lambda x: {  # pylint: disable=g-long-lambda
+                k: (
+                    dict(v)
+                    if isinstance(v, collections.abc.Mapping)
+                    and not isinstance(v, dict)
+                    else v
+                )
+                for (k, v) in x
+                # Skip None and empty dict values.
+                if v is not None
+                and not (
+                    isinstance(v, (dict, collections.abc.Mapping)) and not v
+                )
+            },
+        )
+        recipe.append(recipe_dict)
+    return recipe
 
   def load_quantization_recipe(
       self, quantization_recipe: ModelQuantizationRecipe
