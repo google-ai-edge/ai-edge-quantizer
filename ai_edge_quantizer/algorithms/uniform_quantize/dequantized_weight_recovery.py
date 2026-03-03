@@ -17,7 +17,9 @@
 
 import dataclasses
 from typing import Any, Optional
+
 import numpy as np
+
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
@@ -35,7 +37,7 @@ def _validate_recovered_weights(
     scale: np.ndarray,
     tol: float = 1e-4,
 ):
-  """Validates if recovered weights (from the quantized values) are close enough to the original ones.
+  """Validates if requantized weights are close enough to the original ones.
 
   Args:
     original_vals: Original values before quantization.
@@ -47,8 +49,9 @@ def _validate_recovered_weights(
     RuntimeError: If the maximum difference between original and recovered
     values exceeds the tolerance.
   """
+
   recovered_vals = quant_vals * scale
-  diff = np.abs(recovered_vals - original_vals).flatten()
+  diff = np.ravel(np.abs(recovered_vals - original_vals))
   max_diff = diff.max()
   if max_diff > tol:
     raise RuntimeError(
@@ -104,7 +107,7 @@ def get_zp_scale_from_dequantized_symmetric_weights(
 
   if quantized_dimension is None:
     # Per-tensor quantization: One scale for the entire tensor.
-    scales = _get_scale(dequant_vals.flatten(), min_scale)
+    scales = _get_scale(np.ravel(dequant_vals), min_scale)
     scales = np.array([[scales]])
   else:
     # Per-channel quantization: A scale for each slice along the dimension.
@@ -112,14 +115,12 @@ def get_zp_scale_from_dequantized_symmetric_weights(
     # number of dimensions as the input, with 1 in all dimensions except for the
     # quantized dimension, which retains its original size.
     scales = np.empty(
-        tuple(
-            [
-                1
-                if i != quantized_dimension
-                else dequant_vals.shape[quantized_dimension]
-                for i in range(dequant_vals.ndim)
-            ]
-        )
+        tuple([
+            1
+            if i != quantized_dimension
+            else dequant_vals.shape[quantized_dimension]
+            for i in range(dequant_vals.ndim)
+        ])
     )
     for i in range(dequant_vals.shape[quantized_dimension]):
       slices = [slice(None)] * dequant_vals.ndim

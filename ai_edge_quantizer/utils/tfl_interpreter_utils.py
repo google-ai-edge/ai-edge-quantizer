@@ -24,6 +24,7 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from ai_edge_litert import interpreter as tfl  # pylint: disable=g-direct-tensorflow-import
 import os
+import io
 
 DEFAULT_SIGNATURE_KEY = "serving_default"
 

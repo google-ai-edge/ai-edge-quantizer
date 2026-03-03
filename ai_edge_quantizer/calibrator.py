@@ -25,6 +25,7 @@ from absl import logging
 import numpy as np
 
 import os
+import io
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import default_policy as policy
 from ai_edge_quantizer import qtyping

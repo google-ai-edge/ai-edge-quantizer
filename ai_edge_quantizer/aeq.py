@@ -21,6 +21,7 @@ import pathlib
 import sys
 
 import os
+import io
 from ai_edge_quantizer import quantizer
 
 

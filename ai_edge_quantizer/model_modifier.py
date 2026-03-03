@@ -15,7 +15,6 @@
 
 """Model Modifier class that produce the final quantized TFlite model."""
 
-from collections.abc import Sequence
 import copy
 import logging
 
@@ -37,13 +36,13 @@ _QUANT_SUFFIX = "_quantized"
 class ModelModifier:
   """Model Modifier class that produce the final quantized TFlite model."""
 
-  def __init__(self, float_model: tfl_flatbuffer_utils.ModelT):
+  def __init__(self, float_model: qtyping.ModelT):
     """Constructor.
 
     Args:
       float_model: the original TFlite model.
     """
-    self._model: tfl_flatbuffer_utils.ModelT = float_model
+    self._model: qtyping.ModelT = float_model
 
     self._constant_map = []
     self._transformation_instruction_generator = (
@@ -55,8 +54,8 @@ class ModelModifier:
 
   def _get_tensor_processing_order(
       self,
-      tensor_names: Sequence[str],
-      flatbuffer_model: tfl_flatbuffer_utils.ModelT,
+      tensor_names: set[str],
+      flatbuffer_model: qtyping.ModelT,
   ) -> list[str]:
     """Get the tensor processing order obtained from `buffer_to_tensors`.
 
@@ -109,7 +108,7 @@ class ModelModifier:
     )
 
     tensor_processing_order = self._get_tensor_processing_order(
-        list(instructions.keys()), quantized_model
+        set(instructions.keys()), quantized_model
     )
     self._transformation_performer.transform_graph(
         instructions, quantized_model, tensor_processing_order
@@ -145,10 +144,10 @@ class ModelModifier:
 
   def _update_signature_defs(
       self,
-      model: tfl_flatbuffer_utils.ModelT,
+      model: qtyping.ModelT,
       serialized_model: bytearray,
       suffix: str,
-  ) -> tfl_flatbuffer_utils.ModelT:
+  ) -> qtyping.ModelT:
     """Updates the signature definitions in the model.
 
     This function is called when a transformation (quantize or dequantize)
@@ -221,9 +220,7 @@ class ModelModifier:
           return True
     return False
 
-  def _process_constant_map(
-      self, quantized_model: tfl_flatbuffer_utils.ModelT
-  ) -> int:
+  def _process_constant_map(self, quantized_model: qtyping.ModelT) -> int:
     """Process the constant map after all transformations are applied.
 
     If the resulting model is > 2GB then we would need to serialize constants
@@ -257,7 +254,7 @@ class ModelModifier:
 
   # TODO: b/333797307 - support > 2GB output model
   def _serialize_large_model(
-      self, quantized_model: tfl_flatbuffer_utils.ModelT
+      self, quantized_model: qtyping.ModelT
   ) -> bytearray:
     """serialize models > 2GB.
 
@@ -305,7 +302,7 @@ class ModelModifier:
     return model_bytearray
 
   def _serialize_small_model(
-      self, quantized_model: tfl_flatbuffer_utils.ModelT
+      self, quantized_model: qtyping.ModelT
   ) -> bytearray:
     """serialize models < 2GB.
 
