@@ -24,6 +24,7 @@ from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import octav
 from ai_edge_quantizer.algorithms.uniform_quantize.op_architecture_tests import test_utils as op_test_utils
+from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -104,6 +105,7 @@ class InputOutputTest(op_test_utils.BaseQuantizeTest):
         op_info,
         self._graph_info,
         self._model_qsv,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
     )
     # Only one input tensor for the test model.
     self.assertLen(quantization_params, 1)
@@ -159,6 +161,7 @@ class InputOutputTest(op_test_utils.BaseQuantizeTest):
         op_info,
         self._graph_info,
         self._model_qsv,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
     )
     # Only one output tensor for the test model.
     self.assertLen(quantization_params, 1)
@@ -218,6 +221,7 @@ class InputOutputTest(op_test_utils.BaseQuantizeTest):
         op_info,
         self._graph_info,
         self._model_qsv,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
     )
     # Only one input tensor for the test model.
     self.assertLen(quantization_params, 1)
@@ -280,6 +284,7 @@ class InputOutputTest(op_test_utils.BaseQuantizeTest):
         op_info,
         self._graph_info,
         self._model_qsv,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
     )
     # Only one output tensor for the test model.
     self.assertLen(quantization_params, 1)

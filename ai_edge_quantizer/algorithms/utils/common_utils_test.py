@@ -506,6 +506,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
           tensor_name_to_qsv={},
           output_activation_constraints={},
           get_tensor_quant_params_fn=lambda *args: [],
+          tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
       )
 
 

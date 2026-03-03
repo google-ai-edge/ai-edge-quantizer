@@ -24,6 +24,7 @@ import numpy as np
 
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
+from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 _TFLOpName = qtyping.TFLOperationName
@@ -265,7 +266,8 @@ class BaseQuantizeTest(parameterized.TestCase):
         get_tensor_quant_params_func,
         op_info,
         graph_info,
-        self._tensor_name_to_qsv,
+        tensor_name_to_qsv=self._tensor_name_to_qsv,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
     )
     self.assertLen(tensor_quant_params, num_inputs + num_outputs)
 
@@ -358,7 +360,8 @@ class BaseQuantizeTest(parameterized.TestCase):
         get_tensor_quant_params_func,
         op_info,
         graph_info,
-        self._tensor_name_to_qsv,
+        tensor_name_to_qsv=self._tensor_name_to_qsv,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
     )
 
     _, weight_tensor, bias_tensor, _ = (
@@ -672,7 +675,8 @@ class BaseQuantizeTest(parameterized.TestCase):
         get_tensor_quant_params_func,
         op_info,
         graph_info,
-        self._tensor_name_to_qsv,
+        tensor_name_to_qsv=self._tensor_name_to_qsv,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
     )
     self.assertEqual(
         weight_quant_params.tensor_name, op_test_info.op_tensor_names["weight"]

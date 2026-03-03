@@ -78,6 +78,7 @@ def get_constrained_op_list(
       materialize_bias_for_fc_conv_ops_wrapper
   )
   minmax_func_dict = algorithm_manager.MIN_MAX_OP_NAME_MATERIALIZE_FUNC_DICT
+  tensor_quant_params_cache = common_utils.TensorQuantParamsCache()
 
   # Loop over all available materialization functions to build up a list of
   # ops with the given constraint.
@@ -97,6 +98,7 @@ def get_constrained_op_list(
         op_info=op_info,
         graph_info=None,
         tensor_name_to_qsv=None,
+        tensor_quant_params_cache=tensor_quant_params_cache,
     )
 
   if verbose:

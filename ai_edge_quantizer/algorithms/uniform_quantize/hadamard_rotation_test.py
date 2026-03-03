@@ -23,6 +23,7 @@ import numpy as np
 
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import hadamard_rotation
+from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -64,7 +65,10 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
 
   def test_materialize_fully_connected_basic(self):
     params = hadamard_rotation.materialize_fully_connected_custom_op(
-        self._op_info, self._graph_info, self._tensor_name_to_qsv
+        self._op_info,
+        self._graph_info,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
+        tensor_name_to_qsv=self._tensor_name_to_qsv,
     )
     fc_input = params[0]
     weight = params[1]
@@ -112,7 +116,10 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
         ),
     )
     params = hadamard_rotation.materialize_fully_connected_custom_op(
-        self._op_info, self._graph_info, self._tensor_name_to_qsv
+        self._op_info,
+        self._graph_info,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
+        tensor_name_to_qsv=self._tensor_name_to_qsv,
     )
     self.assertLen(params, 4)
     fc_input = params[0]
@@ -152,7 +159,10 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
         ),
     )
     params = hadamard_rotation.materialize_fully_connected_custom_op(
-        self._op_info, self._graph_info, self._tensor_name_to_qsv
+        self._op_info,
+        self._graph_info,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
+        tensor_name_to_qsv=self._tensor_name_to_qsv,
     )
     self.assertLen(params, 4)
     fc_input = params[0]
@@ -180,7 +190,10 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
 
   def test_materialize_fully_connected_decomposed(self):
     params = hadamard_rotation.materialize_fully_connected_decomposed(
-        self._op_info, self._graph_info, self._tensor_name_to_qsv
+        self._op_info,
+        self._graph_info,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
+        tensor_name_to_qsv=self._tensor_name_to_qsv,
     )
     fc_input = params[0]
     weight = params[1]
@@ -372,7 +385,10 @@ class HadamardRotationEmbeddingLookupTest(parameterized.TestCase):
         ),
     )
     params = hadamard_rotation.materialize_embedding_lookup_custom_op(
-        op_info, self._graph_info, self._tensor_name_to_qsv
+        op_info,
+        self._graph_info,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
+        tensor_name_to_qsv=self._tensor_name_to_qsv,
     )
     self.assertLen(params, 3)
     lookup = params[0]
@@ -415,7 +431,10 @@ class HadamardRotationEmbeddingLookupTest(parameterized.TestCase):
         ),
     )
     params = hadamard_rotation.materialize_embedding_lookup_decomposed(
-        op_info, self._graph_info, self._tensor_name_to_qsv
+        op_info,
+        self._graph_info,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
+        tensor_name_to_qsv=self._tensor_name_to_qsv,
     )
     self.assertLen(params, 3)
     lookup = params[0]

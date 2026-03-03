@@ -161,6 +161,7 @@ def get_tensor_quant_params(
 def _materialize_fully_connected(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
+    tensor_quant_params_cache: common_utils.TensorQuantParamsCache,
     is_decomposed: bool = False,
     tensor_name_to_qsv: Optional[dict[str, Any]] = None,  # pylint: disable=unused-argument
 ) -> list[qtyping.TensorTransformationParams]:
@@ -169,6 +170,9 @@ def _materialize_fully_connected(
   Args:
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
     is_decomposed: Whether to use decomposed Hadamard rotation ops or a custom
       op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
@@ -193,14 +197,26 @@ def _materialize_fully_connected(
   tensor_data = tfl_flatbuffer_utils.get_tensor_data(
       weight_tensor, graph_info.buffers
   )
-  # quant_params contains the rotated and quantized weights done by
-  # get_tensor_quant_params().
-  quant_params = get_tensor_quant_params(
-      op_info,
-      op_info.op_quant_config.weight_tensor_config,
-      tensor_data,
-      None,
-  )
+
+  if not (
+      quant_params := tensor_quant_params_cache.lookup(
+          weight_tensor.buffer, op_info.op_quant_config.weight_tensor_config
+      )
+  ):
+    # quant_params contains the rotated and quantized weights done by
+    # get_tensor_quant_params().
+    quant_params = get_tensor_quant_params(
+        op_info,
+        op_info.op_quant_config.weight_tensor_config,
+        tensor_data,
+        None,
+    )
+    tensor_quant_params_cache.insert(
+        weight_tensor.buffer,
+        op_info.op_quant_config.weight_tensor_config,
+        quant_params,
+    )
+
   transformations = [qtyping.QuantTransformation.QUANTIZE_TENSOR]
   op2tensor_params = qtyping.OpToTensorParams(
       subgraph_op_id=op_info.subgraph_op_index,
@@ -273,32 +289,37 @@ def _materialize_fully_connected(
 def materialize_fully_connected_custom_op(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: Optional[dict[str, Any]] = None,  # pylint: disable=unused-argument
+    tensor_quant_params_cache: common_utils.TensorQuantParamsCache,
+    tensor_name_to_qsv: Optional[dict[str, Any]] = None,
 ) -> list[qtyping.TensorTransformationParams]:
   return _materialize_fully_connected(
       op_info,
       graph_info,
       is_decomposed=False,
       tensor_name_to_qsv=tensor_name_to_qsv,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
 def materialize_fully_connected_decomposed(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: Optional[dict[str, Any]] = None,  # pylint: disable=unused-argument
+    tensor_quant_params_cache: common_utils.TensorQuantParamsCache,
+    tensor_name_to_qsv: Optional[dict[str, Any]] = None,
 ) -> list[qtyping.TensorTransformationParams]:
   return _materialize_fully_connected(
       op_info,
       graph_info,
       is_decomposed=True,
       tensor_name_to_qsv=tensor_name_to_qsv,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
 def _materialize_embedding_lookup(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
+    tensor_quant_params_cache: common_utils.TensorQuantParamsCache,
     is_decomposed: bool = False,
     tensor_name_to_qsv: Optional[dict[str, Any]] = None,  # pylint: disable=unused-argument
 ) -> list[qtyping.TensorTransformationParams]:
@@ -307,6 +328,9 @@ def _materialize_embedding_lookup(
   Args:
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
     is_decomposed: Whether to use decomposed Hadamard rotation ops or a custom
       op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
@@ -345,12 +369,25 @@ def _materialize_embedding_lookup(
   tensor_data = tfl_flatbuffer_utils.get_tensor_data(
       embedding_tensor, graph_info.buffers
   )
-  quant_params = get_tensor_quant_params(
-      op_info,
-      op_info.op_quant_config.weight_tensor_config,
-      tensor_data,
-      None,
-  )
+
+  if tensor_quant_params_cache is None or not (
+      quant_params := tensor_quant_params_cache.lookup(
+          embedding_tensor.buffer, op_info.op_quant_config.weight_tensor_config
+      )
+  ):
+    quant_params = get_tensor_quant_params(
+        op_info,
+        op_info.op_quant_config.weight_tensor_config,
+        tensor_data,
+        None,
+    )
+    if tensor_quant_params_cache:
+      tensor_quant_params_cache.insert(
+          embedding_tensor.buffer,
+          op_info.op_quant_config.weight_tensor_config,
+          quant_params,
+      )
+
   transformations = [qtyping.QuantTransformation.QUANTIZE_TENSOR]
   op2tensor_params = qtyping.OpToTensorParams(
       subgraph_op_id=op_info.subgraph_op_index,
@@ -391,24 +428,28 @@ def _materialize_embedding_lookup(
 def materialize_embedding_lookup_custom_op(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: Optional[dict[str, Any]] = None,  # pylint: disable=unused-argument
+    tensor_quant_params_cache: common_utils.TensorQuantParamsCache,
+    tensor_name_to_qsv: Optional[dict[str, Any]] = None,
 ) -> list[qtyping.TensorTransformationParams]:
   return _materialize_embedding_lookup(
       op_info,
       graph_info,
       is_decomposed=False,
       tensor_name_to_qsv=tensor_name_to_qsv,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
 def materialize_embedding_lookup_decomposed(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
-    tensor_name_to_qsv: Optional[dict[str, Any]] = None,  # pylint: disable=unused-argument
+    tensor_quant_params_cache: common_utils.TensorQuantParamsCache,
+    tensor_name_to_qsv: Optional[dict[str, Any]] = None,
 ) -> list[qtyping.TensorTransformationParams]:
   return _materialize_embedding_lookup(
       op_info,
       graph_info,
       is_decomposed=True,
       tensor_name_to_qsv=tensor_name_to_qsv,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )

@@ -24,6 +24,7 @@ from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import default_policy as policy
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
+from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 _QuantTrans = qtyping.QuantTransformation
@@ -48,6 +49,7 @@ class ParamsGenerator:
         tfl_flatbuffer_utils.buffer_to_tensors(self.flatbuffer_model)
     )
     self.model_quant_results: dict[str, qtyping.TensorTransformationParams] = {}
+    self._tensor_quant_params_cache = common_utils.TensorQuantParamsCache()
 
   def generate_quantization_parameters(
       self,
@@ -134,9 +136,10 @@ class ParamsGenerator:
               qtyping.QuantizeMode.MATERIALIZE,
           )
           op_quant_results = materialize_func(
-              op_info,
-              graph_info,
-              model_qsvs,
+              op_info=op_info,
+              graph_info=graph_info,
+              tensor_name_to_qsv=model_qsvs,
+              tensor_quant_params_cache=self._tensor_quant_params_cache,
           )
         # Step3: update the results.
         self._update_model_quant_results(op_quant_results)
@@ -325,9 +328,9 @@ class ParamsGenerator:
   def _check_buffer_sharing_for_self_compatible_tensors(
       self, tensor1: Any, tensor2: Any
   ) -> bool:
-    """Check a pair of self compatible tensors have the same quantization params.
+    """Checks that self-compatible tensors have the same quantization params.
 
-    Self compatible means that all tensor's consumers have the same quantization
+    Self-compatible means that all tensor's consumers have the same quantization
     parameters.
 
     Args:

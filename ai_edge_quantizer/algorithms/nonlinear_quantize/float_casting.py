@@ -16,13 +16,22 @@
 """Performs float casting quantization."""
 
 from typing import Any, Optional
+
 import numpy as np
+
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 ALGORITHM_KEY = "float_casting"
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation
+
+# "Fake" quantization config for float casting.
+_FP16_QUANT_CONFIG = qtyping.TensorQuantizationConfig(
+    num_bits=16, dtype=qtyping.TensorDataType.FLOAT
+)
+
 
 # Ops that support weight quantization config (e.g., support Weight-only).
 SUPPORTED_WEIGHT_QUANT_OPS = frozenset([
@@ -91,7 +100,8 @@ def check_op_quantization_config(
 def materialize_fc_conv(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
-    _: dict[str, Any],
+    tensor_name_to_qsv: dict[str, Any],  # pylint: disable=unused-argument
+    tensor_quant_params_cache: common_utils.TensorQuantParamsCache,
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize tensors in fully_connected, conv_2d and depthwise_conv_2d ops.
 
@@ -101,7 +111,11 @@ def materialize_fc_conv(
   Args:
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
-    _: A map of tensor name to quantization parameters (unused).
+    tensor_name_to_qsv: A map of tensor name to quantization parameters
+      (unused).
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
 
   Returns:
     Quantization configuration for the weight tensor of the op.
@@ -110,6 +124,7 @@ def materialize_fc_conv(
     ValueError: If the op is not supported or the compute precision is not
       FLOAT.
   """
+
   input_tensor, weight_tensor, bias_tensor, output_tensor = (
       tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
           op_info.op, graph_info.subgraph_tensors
@@ -126,9 +141,18 @@ def materialize_fc_conv(
       weight_tensor,
       graph_info.buffers,
   )
-  quant_params = qtyping.NonLinearQuantParams(
-      num_bits=16, quantized_data=weight_content.astype(np.float16)  # pytype: disable=attribute-error
-  )
+  assert weight_content is not None
+  if not (
+      quant_params := tensor_quant_params_cache.lookup(
+          weight_tensor.buffer, _FP16_QUANT_CONFIG
+      )
+  ):
+    quant_params = qtyping.NonLinearQuantParams(
+        num_bits=16, quantized_data=weight_content.astype(np.float16)
+    )
+    tensor_quant_params_cache.insert(
+        weight_tensor.buffer, _FP16_QUANT_CONFIG, quant_params
+    )
   op2weight_params = qtyping.OpToTensorParams(
       subgraph_op_id=op_info.subgraph_op_index,
       parameters=quant_params,
@@ -157,15 +181,22 @@ def materialize_fc_conv(
 def materialize_embedding_lookup(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
-    _: dict[str, Any],
+    tensor_name_to_qsv: dict[str, Any],
+    tensor_quant_params_cache: common_utils.TensorQuantParamsCache,
 ) -> list[qtyping.TensorTransformationParams]:
-  return materialize_fc_conv(op_info, graph_info, _)
+  return materialize_fc_conv(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      tensor_quant_params_cache=tensor_quant_params_cache,
+  )
 
 
 def materialize_conv2d_transpose(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
-    _: dict[str, Any],
+    tensor_name_to_qsv: dict[str, Any],  # pylint: disable=unused-argument
+    tensor_quant_params_cache: common_utils.TensorQuantParamsCache,
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize tensors in fully_connected, conv_2d and depthwise_conv_2d ops.
 
@@ -175,7 +206,11 @@ def materialize_conv2d_transpose(
   Args:
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
-    _: A map of tensor name to quantization parameters (unused).
+    tensor_name_to_qsv: A map of tensor name to quantization parameters
+      (unused).
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
 
   Returns:
     Quantization configuration for the weight tensor of the op.
@@ -184,6 +219,7 @@ def materialize_conv2d_transpose(
     ValueError: If the op is not supported or the execution mode is not
       WEIGHT_ONLY.
   """
+
   input_tensor, weight_tensor, bias_tensor, output_tensor = (
       tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
           op_info.op,
@@ -205,9 +241,18 @@ def materialize_conv2d_transpose(
       weight_tensor,
       graph_info.buffers,
   )
-  quant_params = qtyping.NonLinearQuantParams(
-      num_bits=16, quantized_data=weight_content.astype(np.float16)  # pytype: disable=attribute-error
-  )
+  assert weight_content is not None
+  if not (
+      quant_params := tensor_quant_params_cache.lookup(
+          weight_tensor.buffer, _FP16_QUANT_CONFIG
+      )
+  ):
+    quant_params = qtyping.NonLinearQuantParams(
+        num_bits=16, quantized_data=weight_content.astype(np.float16)
+    )
+    tensor_quant_params_cache.insert(
+        weight_tensor.buffer, _FP16_QUANT_CONFIG, quant_params
+    )
   op2weight_params = qtyping.OpToTensorParams(
       subgraph_op_id=op_info.subgraph_op_index,
       parameters=quant_params,

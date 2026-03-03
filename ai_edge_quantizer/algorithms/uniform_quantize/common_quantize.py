@@ -33,7 +33,9 @@ from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation
 _OpQuantConstraint = common_utils.OpQuantConstraint
+_TensorQuantParamsCache = common_utils.TensorQuantParamsCache
 _ComputePrecision = qtyping.ComputePrecision
+_TensorTransformationParams = qtyping.TensorTransformationParams
 
 
 def check_if_quantized(tensor: Any) -> bool:
@@ -92,13 +94,15 @@ def materialize_input(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in the virtual input op."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -107,13 +111,15 @@ def materialize_output(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in the virtual output op."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -122,13 +128,15 @@ def materialize_composite(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in the virtual output op."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -137,13 +145,15 @@ def materialize_add(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.add."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -152,13 +162,15 @@ def materialize_sub(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.sub."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -167,13 +179,15 @@ def materialize_mul(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.mul."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -182,7 +196,8 @@ def materialize_softmax_and_logistic(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.softmax and tfl.logistic."""
   # Hard code scales and zp values as they are hard coded in TFL kernels.
   # Softmax:
@@ -211,6 +226,7 @@ def materialize_softmax_and_logistic(
       tensor_name_to_qsv,
       output_activation_constraints,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -219,13 +235,15 @@ def materialize_batch_matmul(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.batch_matmul."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -234,13 +252,15 @@ def materialize_embedding_lookup(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.embedding_lookup."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       inputs_to_ignore=[0],  # Lookup index does not need to be quantized.
   )
 
@@ -250,13 +270,15 @@ def materialize_reshape(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.reshape."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[1],  # Shape tensor does not need to be quantized.
   )
@@ -267,13 +289,15 @@ def materialize_average_pool_2d(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.average_pool_2d."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
   )
 
@@ -281,7 +305,7 @@ def materialize_average_pool_2d(
 def _materialize_bias_for_fc_conv_ops(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
-    op_tensor_params: list[qtyping.TensorTransformationParams],
+    op_tensor_params: list[_TensorTransformationParams],
     op_input_index: int = 0,
     op_weight_index: int = 1,
     op_bias_index: int = 2,
@@ -393,13 +417,15 @@ def materialize_slice(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.slice."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[
           1,
@@ -413,13 +439,15 @@ def materialize_select(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.select."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
       inputs_to_ignore=[
           0,
@@ -432,13 +460,15 @@ def materialize_select_v2(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.select_v2."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
       inputs_to_ignore=[
           0,
@@ -451,13 +481,15 @@ def materialize_dynamic_update_slice(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.dynamic_update_slice."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
       inputs_to_ignore=[
           2,
@@ -470,7 +502,8 @@ def materialize_sum(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.sum."""
   # For 8 bits the reference kernel calls a function without input/output
   # constraints. For all others it calls a function that enforces input/output
@@ -486,6 +519,7 @@ def materialize_sum(
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=constraint,
       inputs_to_ignore=[1],  # Axis index does not need to be quantized.
   )
@@ -496,10 +530,11 @@ def materialize_fc_conv(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
+    tensor_quant_params_cache: _TensorQuantParamsCache,
     input_index: int = 0,
     weight_index: int = 1,
     bias_index: int = 2,
-) -> list[qtyping.TensorTransformationParams]:
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in fully_connected, conv_2d and depthwise_conv_2d.
 
   Args:
@@ -508,6 +543,9 @@ def materialize_fc_conv(
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
     input_index: Index for the input tensor in the op.
     weight_index: Index for the weight tensor in the op.
     bias_index: Index for the bias tensor in the op.
@@ -531,6 +569,7 @@ def materialize_fc_conv(
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       inputs_to_ignore=ignored_inputs,
   )
 
@@ -551,7 +590,8 @@ def materialize_conv2d_transpose(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.conv2d_transpose.
 
   Args:
@@ -560,6 +600,9 @@ def materialize_conv2d_transpose(
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
 
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
@@ -582,6 +625,7 @@ def materialize_conv2d_transpose(
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       inputs_to_ignore=ignored_inputs,
   )
   if len(op_tensor_params) < 2:
@@ -606,7 +650,8 @@ def materialize_tanh(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.tanh."""
   # Hard code scales and zero point values as they are hard coded in:
   # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/mlir/lite/ir/tfl_ops.td#L3430
@@ -626,6 +671,7 @@ def materialize_tanh(
       tensor_name_to_qsv,
       output_activation_constraints,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -634,13 +680,15 @@ def materialize_transpose(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.transpose."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[1],  # Permutation tensor does not need to be quantized.
   )
@@ -651,13 +699,15 @@ def materialize_gelu(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.gelu."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -666,13 +716,15 @@ def materialize_strided_slice(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.strided_slice."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[1, 2, 3],  # Ignore the begin, end, and strides tensors.
   )
@@ -683,13 +735,15 @@ def materialize_mean(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.mean."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       inputs_to_ignore=[1],  # Axis tensor does not need to be quantized.
   )
 
@@ -699,13 +753,15 @@ def materialize_rsqrt(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.rsqrt."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -714,13 +770,15 @@ def materialize_concatenation(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.concatenation."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
   )
 
@@ -730,13 +788,15 @@ def materialize_split(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.split."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[0],  # Split dimension does not need to be quantized.
   )
@@ -747,13 +807,15 @@ def materialize_pad(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.pad."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[1],  # Paddings tensor does not need to be quantized.
   )
@@ -764,13 +826,15 @@ def materialize_padv2(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.padv2."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
       inputs_to_ignore=[1],  # Paddings tensor does not need to be quantized.
   )
@@ -781,7 +845,8 @@ def materialize_mirror_pad(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.mirror_pad.
 
   Args:
@@ -790,15 +855,19 @@ def materialize_mirror_pad(
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
 
   Returns:
-    A list of `qtyping.TensorTransformationParams` for the tensors in the op.
+    A list of `_TensorTransformationParams` for the tensors in the op.
   """
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[1],  # Paddings tensor does not need to be quantized.
   )
@@ -809,7 +878,8 @@ def materialize_space_to_depth(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.space_to_depth.
 
   Args:
@@ -818,15 +888,19 @@ def materialize_space_to_depth(
     op_info: Aggregated information about the op (e.g., quantization config).
     graph_info: Graph information needed to perform quantization for the op.
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
 
   Returns:
-    A list of `qtyping.TensorTransformationParams` for the tensors in the op.
+    A list of `_TensorTransformationParams` for the tensors in the op.
   """
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
   )
 
@@ -836,13 +910,15 @@ def materialize_squared_difference(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.squared_difference."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -851,13 +927,15 @@ def materialize_max_pool_2d(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.max_pool_2d."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
   )
 
@@ -867,13 +945,15 @@ def materialize_resize_bilinear(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.resize_bilinear."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[1],  # Resize size does not need to be quantized.
   )
@@ -884,13 +964,15 @@ def materialize_resize_nearest_neighbor(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.resize_nearest_neighbor."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[1],  # Resize size does not need to be quantized.
   )
@@ -901,13 +983,15 @@ def materialize_gather_nd(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.gather_nd."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[1],  # Gather indices do not need to be quantized.
   )
@@ -918,13 +1002,15 @@ def materialize_maximum(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.maximum."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
   )
 
@@ -934,13 +1020,15 @@ def materialize_pack(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.pack."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_OUTPUT_SCALE,
   )
 
@@ -950,13 +1038,15 @@ def materialize_unpack(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.unpack."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
   )
 
@@ -966,13 +1056,15 @@ def materialize_div(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.div."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -981,13 +1073,15 @@ def materialize_broadcast_to(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.broadcast_to."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[1],  # Shape tensor does not need to be quantized.
   )
@@ -998,13 +1092,15 @@ def materialize_sqrt(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.sqrt."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -1013,13 +1109,15 @@ def materialize_hard_swish(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.hard_swish."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -1028,13 +1126,15 @@ def materialize_gather(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.gather."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[1],  # Indices do not need to be quantized.
   )
@@ -1045,13 +1145,15 @@ def materialize_reduce_min(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.reduce_min."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
       constraint=_OpQuantConstraint.SAME_AS_INPUT_SCALE,
       inputs_to_ignore=[1],  # Axis index does not need to be quantized.
   )
@@ -1062,13 +1164,15 @@ def materialize_equal(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.equal."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -1077,13 +1181,15 @@ def materialize_not_equal(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.not_equal."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -1092,13 +1198,15 @@ def materialize_relu(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
-) -> list[qtyping.TensorTransformationParams]:
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.relu."""
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 

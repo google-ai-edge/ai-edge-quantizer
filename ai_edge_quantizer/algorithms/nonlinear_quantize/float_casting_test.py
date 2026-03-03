@@ -14,11 +14,14 @@
 # ==============================================================================
 
 import pathlib
+
 from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
+
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.nonlinear_quantize import float_casting
+from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
@@ -255,7 +258,9 @@ class Fp16QuantizeTest(parameterized.TestCase):
               "weight": "arith.constant1",
               "bias": "arith.constant2",
               "input": "sequential/flatten/Reshape",
-              "output": "sequential/dense/MatMul;sequential/dense/Relu;sequential/dense/BiasAdd",
+              "output": (
+                  "sequential/dense/MatMul;sequential/dense/Relu;sequential/dense/BiasAdd"
+              ),
           },
       ),
       dict(
@@ -263,7 +268,9 @@ class Fp16QuantizeTest(parameterized.TestCase):
           subgraph_op_id=4,
           op_tensor_names={
               "weight": "arith.constant",
-              "input": "sequential/dense/MatMul;sequential/dense/Relu;sequential/dense/BiasAdd",
+              "input": (
+                  "sequential/dense/MatMul;sequential/dense/Relu;sequential/dense/BiasAdd"
+              ),
               "output": "sequential/dense_1/MatMul",
           },
       ),
@@ -406,7 +413,10 @@ class Fp16QuantizeTest(parameterized.TestCase):
     op_tensor_names["output"] = "StatefulPartitionedCall:0"
 
     tensor_quant_params = float_casting.materialize_conv2d_transpose(
-        op_info, graph_info, self._tensor_name_to_qsv
+        op_info,
+        graph_info,
+        self._tensor_name_to_qsv,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
     )
     _, weight_tensor, bias_tensor, _ = (
         tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
@@ -555,7 +565,10 @@ class Fp16QuantizeTest(parameterized.TestCase):
   ):
 
     tensor_quant_params = materialization_func(
-        op_info, graph_info, self._tensor_name_to_qsv
+        op_info,
+        graph_info,
+        self._tensor_name_to_qsv,
+        tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
     )
     _, weight_tensor, bias_tensor, _ = (
         tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(

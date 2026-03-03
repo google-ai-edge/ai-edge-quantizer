@@ -15,7 +15,7 @@
 
 """Common utils for uniform quantization algorithms."""
 
-from collections.abc import Sequence
+from collections.abc import MutableMapping, Sequence
 import dataclasses
 import enum
 from typing import Any, Optional
@@ -28,6 +28,7 @@ from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tenso
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation
 _IntType = uniform_quantize_tensor.IntType
+TensorQuantParamsCacheKey = tuple[Any, qtyping.TensorQuantizationConfig]
 
 
 _DRQ_OR_WEIGHT_ONLY_OPS = frozenset([
@@ -43,6 +44,38 @@ _SUPPORTED_SUBCHANNEL_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
     _TFLOpName.EMBEDDING_LOOKUP,
 ])
+
+
+class TensorQuantParamsCache:
+  """Cache of `UniformQuantParams|NonLinearQuantParams` objects.
+
+  Cache of `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of
+  the buffer ID and the `TensorQuantizationConfig` used to compute it.
+  """
+
+  def __init__(self):
+    self._cache: MutableMapping[
+        TensorQuantParamsCacheKey,
+        qtyping.UniformQuantParams | qtyping.NonLinearQuantParams,
+    ] = {}
+
+  def lookup(
+      self, buffer_id: int, quant_config: qtyping.TensorQuantizationConfig
+  ) -> qtyping.UniformQuantParams | qtyping.NonLinearQuantParams | None:
+    cache_key: TensorQuantParamsCacheKey = (
+        buffer_id,
+        quant_config,
+    )
+    return self._cache.get(cache_key, None)
+
+  def insert(
+      self,
+      buffer_id: int,
+      quant_config: qtyping.TensorQuantizationConfig,
+      quant_params: qtyping.UniformQuantParams | qtyping.NonLinearQuantParams,
+  ) -> qtyping.UniformQuantParams | qtyping.NonLinearQuantParams:
+    self._cache[(buffer_id, quant_config)] = quant_params
+    return quant_params
 
 
 def check_subchannel_config(
@@ -136,6 +169,7 @@ def _get_tensor_transformation_params_wrapper(
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    tensor_quant_params_cache: TensorQuantParamsCache,
     quant_params=None,
 ) -> qtyping.TensorTransformationParams:
   """Util to get tensor transformation params.
@@ -148,6 +182,9 @@ def _get_tensor_transformation_params_wrapper(
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
     get_tensor_quant_params_fn: Function to get quantization parameters for the
       tensor.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
     quant_params: Quantization parameters for the tensor.
 
   Returns:
@@ -165,12 +202,23 @@ def _get_tensor_transformation_params_wrapper(
     tensor_quant_config = op_info.op_quant_config.weight_tensor_config
   # Get quant params.
   if quant_params is None and tensor_quant_config is not None:
-    quant_params = get_tensor_quant_params_fn(
-        op_info,
-        tensor_quant_config,
-        tensor_data,
-        tensor_name_to_qsv.get(tensor_name),
-    )
+    # Is there possibly a cached version of this value?
+    if not is_constant or not (
+        quant_params := tensor_quant_params_cache.lookup(
+            tensor.buffer, tensor_quant_config
+        )
+    ):
+      quant_params = get_tensor_quant_params_fn(
+          op_info,
+          tensor_quant_config,
+          tensor_data,
+          tensor_name_to_qsv.get(tensor_name),
+      )
+      # Update the cache if we have a key.
+      if is_constant:
+        tensor_quant_params_cache.insert(
+            tensor.buffer, tensor_quant_config, quant_params
+        )
   return get_tensor_transformation_params(
       tensor_name,
       op_info,
@@ -188,6 +236,7 @@ def _materialize_op_tensors(
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    tensor_quant_params_cache: TensorQuantParamsCache,
     quant_params=None,
 ) -> None:
   """Util to materialize op tensors. Appends the results to op_tensor_params.
@@ -202,6 +251,9 @@ def _materialize_op_tensors(
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
     get_tensor_quant_params_fn: Function to get quantization parameters for the
       tensor.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
     quant_params: Quantization parameters for the tensor.
   """
   for tensor in op_tensors:
@@ -213,6 +265,7 @@ def _materialize_op_tensors(
         tensor_name_to_qsv,
         get_tensor_quant_params_fn=get_tensor_quant_params_fn,
         quant_params=quant_params,
+        tensor_quant_params_cache=tensor_quant_params_cache,
     )
     op_tensor_params.append(tensor_params)
 
@@ -224,6 +277,7 @@ def _get_single_tensor_params(
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    tensor_quant_params_cache: TensorQuantParamsCache,
 ) -> qtyping.TensorTransformationParams:
   """Util to get single tensor params.
 
@@ -235,6 +289,9 @@ def _get_single_tensor_params(
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
     get_tensor_quant_params_fn: Function to get quantization parameters for the
       tensor.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
 
   Returns:
     Transformation parameters for the tensor.
@@ -254,6 +311,7 @@ def _get_single_tensor_params(
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn=get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
 
@@ -266,6 +324,7 @@ def _materialize_tensors_with_quantized_data_update(
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    tensor_quant_params_cache: TensorQuantParamsCache,
 ) -> None:
   """Materialize a list of tensors with `quantized_data` updated when needed.
 
@@ -280,6 +339,9 @@ def _materialize_tensors_with_quantized_data_update(
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
     get_tensor_quant_params_fn: Function to get quantization parameters for the
       tensor.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
   """
   if quant_params is not None and quant_params.quantized_data is not None:
     quant_params = dataclasses.replace(quant_params, quantized_data=None)
@@ -308,6 +370,7 @@ def _materialize_tensors_with_quantized_data_update(
         tensor_name_to_qsv=tensor_name_to_qsv,
         get_tensor_quant_params_fn=get_tensor_quant_params_fn,
         quant_params=tensor_quant_params,
+        tensor_quant_params_cache=tensor_quant_params_cache,
     )
 
 
@@ -318,6 +381,7 @@ def _materialize_standard_op_with_same_as_input_scale(
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    tensor_quant_params_cache: TensorQuantParamsCache,
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize tensors in an op with same as input scale constraint.
 
@@ -329,6 +393,9 @@ def _materialize_standard_op_with_same_as_input_scale(
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
     get_tensor_quant_params_fn: Function to get quantization parameters for the
       tensor.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
 
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
@@ -343,6 +410,7 @@ def _materialize_standard_op_with_same_as_input_scale(
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
       get_tensor_quant_params_fn=get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
   op_tensor_params.append(input_tensor_params)
   # Use input quantization params for all output tensors.
@@ -362,6 +430,7 @@ def _materialize_standard_op_with_same_as_input_scale(
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
       get_tensor_quant_params_fn=get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
   # Change output qsv to be the same as input qsv. This is safe since TFL
@@ -399,6 +468,7 @@ def _materialize_standard_op_with_same_as_output_scale(
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    tensor_quant_params_cache: TensorQuantParamsCache,
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize tensors in an op with same as output scale constraint.
 
@@ -410,6 +480,9 @@ def _materialize_standard_op_with_same_as_output_scale(
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
     get_tensor_quant_params_fn: Function to get quantization parameters for the
       tensor.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
 
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
@@ -424,6 +497,7 @@ def _materialize_standard_op_with_same_as_output_scale(
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
       get_tensor_quant_params_fn=get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
   # Use output quantization params for all input tensors.
   if output_tensor_params.producer is None:
@@ -445,6 +519,7 @@ def _materialize_standard_op_with_same_as_output_scale(
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
       get_tensor_quant_params_fn=get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
   op_tensor_params.append(output_tensor_params)
@@ -459,6 +534,7 @@ def _materialize_standard_op_no_constraint(
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    tensor_quant_params_cache: TensorQuantParamsCache,
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize tensors in an op with no constraint.
 
@@ -470,6 +546,9 @@ def _materialize_standard_op_no_constraint(
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
     get_tensor_quant_params_fn: Function to get quantization parameters for the
       tensor.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
 
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
@@ -484,6 +563,7 @@ def _materialize_standard_op_no_constraint(
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
       get_tensor_quant_params_fn=get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
   _materialize_op_tensors(
       op_tensor_params,
@@ -493,6 +573,7 @@ def _materialize_standard_op_no_constraint(
       graph_info=graph_info,
       tensor_name_to_qsv=tensor_name_to_qsv,
       get_tensor_quant_params_fn=get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
 
   return op_tensor_params
@@ -682,7 +763,7 @@ def _add_non_match_tensors_to_ignored_lists(
     inputs_to_ignore: Sequence[int],
     outputs_to_ignore: Sequence[int],
 ) -> tuple[list[int], list[int]]:
-  """Include tensors (indices) of data types other than the specified dtype in the ignored lists.
+  """Include tensors not matching the specified dtype in the ignored lists.
 
   Args:
     op: The op to be processed.
@@ -736,6 +817,7 @@ def materialize_standard_op(
     graph_info: qtyping.GraphInfo,
     tensor_name_to_qsv: dict[str, Any],
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    tensor_quant_params_cache: TensorQuantParamsCache,
     constraint: OpQuantConstraint = OpQuantConstraint.NO_CONSTRAIN,
     inputs_to_ignore: Optional[Sequence[int]] = None,
     outputs_to_ignore: Optional[Sequence[int]] = None,
@@ -751,6 +833,9 @@ def materialize_standard_op(
     tensor_name_to_qsv: A map of tensor name to quantization parameters.
     get_tensor_quant_params_fn: Function to get quantization parameters for the
       tensor.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
     constraint: The constraint for materializing the op.
     inputs_to_ignore: Input tensor indices to ignore.
     outputs_to_ignore: Output tensor indices to ignore.
@@ -795,6 +880,7 @@ def materialize_standard_op(
         graph_info,
         tensor_name_to_qsv,
         get_tensor_quant_params_fn,
+        tensor_quant_params_cache=tensor_quant_params_cache,
     )
   elif constraint == OpQuantConstraint.SAME_AS_OUTPUT_SCALE:
     tensor_params = _materialize_standard_op_with_same_as_output_scale(
@@ -804,6 +890,7 @@ def materialize_standard_op(
         graph_info,
         tensor_name_to_qsv,
         get_tensor_quant_params_fn,
+        tensor_quant_params_cache=tensor_quant_params_cache,
     )
   else:
     tensor_params = _materialize_standard_op_no_constraint(
@@ -813,6 +900,7 @@ def materialize_standard_op(
         graph_info,
         tensor_name_to_qsv,
         get_tensor_quant_params_fn,
+        tensor_quant_params_cache=tensor_quant_params_cache,
     )
 
   # Materialize ignored tensors.
@@ -839,6 +927,7 @@ def materialize_op_with_output_activation_constraint(
     tensor_name_to_qsv: dict[str, Any],
     output_activation_constraints: dict[int, qtyping.UniformQuantParams],
     get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    tensor_quant_params_cache: TensorQuantParamsCache,
 ) -> list[qtyping.TensorTransformationParams]:
   """Materialize tensors in an op with output activation constraint.
 
@@ -855,6 +944,9 @@ def materialize_op_with_output_activation_constraint(
       quantization parameters.
     get_tensor_quant_params_fn: Function to get quantization parameters for the
       tensor.
+    tensor_quant_params_cache: Cache of already computed
+      `UniformQuantParams|NonLinearQuantParams` objects keyed on a tuple of the
+      buffer ID and the `TensorQuantizationConfig` used to compute it.
 
   Returns:
     Quantization configuration for the tensors associated with the op (e.g.,
@@ -872,7 +964,11 @@ def materialize_op_with_output_activation_constraint(
     )
 
   tensor_params = materialize_standard_op(
-      op_info, graph_info, tensor_name_to_qsv, get_tensor_quant_params_fn
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
   )
   output_tensor_params = tensor_params[-1]
 
@@ -920,7 +1016,6 @@ def get_tensor_transformations(
   Returns:
     The transformations for the tensor.
   """
-  transformations = []
   # Check if SRQ.
   if (
       op_quant_config.compute_precision == qtyping.ComputePrecision.INTEGER
@@ -1057,6 +1152,3 @@ def get_bmm_weight_quantized_dim(
   if adj_y:
     return rank - 2
   return rank - 1
-
-
-
