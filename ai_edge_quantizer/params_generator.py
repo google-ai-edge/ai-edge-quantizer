@@ -185,7 +185,7 @@ class ParamsGenerator:
     for op_tensor_result in op_tensor_results:
       tensor_name = op_tensor_result.tensor_name
       if tensor_name not in self.model_quant_results:
-        self.model_quant_results[tensor_name] = copy.deepcopy(op_tensor_result)
+        self.model_quant_results[tensor_name] = copy.copy(op_tensor_result)
       else:
         tensor_params = self.model_quant_results[tensor_name]
         # Set source op.
@@ -197,14 +197,14 @@ class ParamsGenerator:
                 ' source op, which should not happen as every tensor should'
                 ' have only one source op.' % tensor_name
             )
-          tensor_params.producer = copy.deepcopy(op_tensor_result.producer)
+          tensor_params.producer = op_tensor_result.producer
         # Set target op, which can be multiple (a tensor can be consumed by
         # multiple ops).
         if op_tensor_result.consumers is not None:
           if tensor_params.consumers is None:
-            tensor_params.consumers = copy.deepcopy(op_tensor_result.consumers)
+            tensor_params.consumers = op_tensor_result.consumers[:]
           else:
-            tensor_params.consumers += copy.deepcopy(op_tensor_result.consumers)
+            tensor_params.consumers += op_tensor_result.consumers[:]
         self.model_quant_results[tensor_name] = tensor_params
 
   def _get_params_for_no_quant_op(

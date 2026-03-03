@@ -304,6 +304,13 @@ class TensorTransformationParams:
   producer: Optional[OpToTensorParams] = None
   consumers: Optional[list[OpToTensorParams]] = None
 
+  def __copy__(self):
+    return TensorTransformationParams(
+        tensor_name=self.tensor_name,
+        producer=self.producer,
+        consumers=self.consumers[:] if self.consumers is not None else None,
+    )
+
 
 @dataclasses.dataclass(frozen=True)
 class TensorQuantizationConfig:
