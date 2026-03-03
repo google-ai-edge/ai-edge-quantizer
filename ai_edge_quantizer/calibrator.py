@@ -62,6 +62,10 @@ class CalibrationInterpreter:
       self,
       model_path: str,
       mode: CalibrationMode = CalibrationMode.INFERENCE,
+      qsv_update_func: Callable[
+          [qtyping.QSV, qtyping.QSV],
+          qtyping.QSV,
+      ] = calibration_utils.moving_average_update,
   ):
     """Initializes the CalibrationInterpreter.
 
@@ -69,10 +73,12 @@ class CalibrationInterpreter:
       model_path: The path to the TFLite model.
       mode: The mode of the interpreter. If CALIBRATION, the interpreter will
         preserve all tensors for calibration purposes.
+      qsv_update_func: The function to update the QSVs across calibration steps.
     """
     self._calibrator = Calibrator(
         model_path,
         interpreter_preserve_all_tensors=(mode == CalibrationMode.CALIBRATION),
+        qsv_update_func=qsv_update_func,
     )
     self._mode = mode
 
@@ -166,9 +172,23 @@ class Calibrator:
       float_tflite: Union[str, bytes],
       num_threads: int = 16,
       interpreter_preserve_all_tensors: bool = True,
+      qsv_update_func: Callable[
+          [qtyping.QSV, qtyping.QSV],
+          qtyping.QSV,
+      ] = calibration_utils.moving_average_update,
   ):
-    self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
+    """Initializes the Calibrator.
 
+    Args:
+      float_tflite: The path to the TFLite model or the model content as bytes.
+      num_threads: The number of threads to use for the TFLite interpreter.
+      interpreter_preserve_all_tensors: Whether to preserve all tensors in the
+        TFLite interpreter. This must be True for calibration.
+      qsv_update_func: The function used to update Quantization Statistics
+        Values (QSVs) across different calibration steps.
+    """
+    self._qsv_update_func = qsv_update_func
+    self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
     self._tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
         float_tflite,
         use_xnnpack=True,
@@ -218,10 +238,6 @@ class Calibrator:
       calibration_dataset: dict[str, Iterable[_SignatureInput]],
       model_recipe_manager: recipe_manager.RecipeManager,
       cache_output: bool = False,
-      qsv_update_func: Callable[
-          [qtyping.QSV, qtyping.QSV],
-          qtyping.QSV,
-      ] = calibration_utils.moving_average_update,
   ) -> None:
     """Calibrates the model using the given dataset for a model signature.
 
@@ -246,7 +262,6 @@ class Calibrator:
       cache_output: Whether to cache the output of the model during the
         calibration process. This is useful if there are dependencies between
         signatures/models (e.g., decode requires encode output).
-      qsv_update_func: The function to update the QSVs.
     """
     op_codes = self._flatbuffer_model.operatorCodes
     if self._model_qsvs:
@@ -335,7 +350,7 @@ class Calibrator:
               # Step3: Update tensor qsvs with the new values. Ignore the tensor
               # names that are already updated in this round of calibration.
               op_updated_tensor_name = self._update_qsvs(
-                  op_qsvs, updated_tensor_names, qsv_update_func
+                  op_qsvs, updated_tensor_names
               )
               updated_tensor_names.update(op_updated_tensor_name)
 
@@ -395,14 +410,12 @@ class Calibrator:
       self,
       op_qsvs: dict[str, qtyping.QSV],
       ignore_tensor_names: set[str],
-      qsv_update_func: Callable[[qtyping.QSV, qtyping.QSV], qtyping.QSV],
   ) -> set[str]:
     """Update the model qsvs with the new values.
 
     Args:
       op_qsvs: A dictionary of tensor name to QSV.
       ignore_tensor_names: A set of tensor names to ignore.
-      qsv_update_func: The function to update the QSVs.
 
     Returns:
       A set of tensor names that are updated.
@@ -414,7 +427,7 @@ class Calibrator:
       if tensor_name not in self._model_qsvs:
         self._model_qsvs[tensor_name] = qsv
       else:
-        updated_qsv = qsv_update_func(self._model_qsvs[tensor_name], qsv)
+        updated_qsv = self._qsv_update_func(self._model_qsvs[tensor_name], qsv)
         self._model_qsvs[tensor_name] = updated_qsv
       updated_tensor_names.add(tensor_name)
     return updated_tensor_names
