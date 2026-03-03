@@ -19,6 +19,7 @@ Given quantization parameters, create a list of transformation instructions that
 can then be used by transformation_performer. Includes necessary optimizations
 """
 
+import collections
 from collections.abc import Iterator
 import dataclasses
 from typing import Optional
@@ -207,21 +208,21 @@ class TransformationInstructionsGenerator:
     Yields:
       A tuple of tensor_name and TensorGraphInfo.
     """
+    # Create mappings of the producers and consumers of each tensor.
+    consumers_for_tid = collections.defaultdict(list)
+    producer_of_tid = {}
+    for tid in subgraph.outputs:
+      consumers_for_tid[tid].append(-1)
+    for op_id, op in enumerate(subgraph.operators):
+      for tid in op.inputs:
+        consumers_for_tid[tid].append(op_id)
+      for tid in op.outputs:
+        producer_of_tid[tid] = op_id
+
+    # Loop over the tensors and pack their TensorGraphInfo.
     for tensor_id, tensor in enumerate(subgraph.tensors):
-      consumers = []
-      for op_id, op in enumerate(subgraph.operators):
-        # Some ops may use the same input tensor multiple times,
-        # and we should handle each time independently.
-        for op_input in op.inputs:
-          if op_input == tensor_id:
-            consumers.append(op_id)
-      producer = -1
-      for op_id, op in enumerate(subgraph.operators):
-        if tensor_id in op.outputs:
-          producer = op_id
-          break
-      if tensor_id in subgraph.outputs:
-        consumers.insert(0, -1)
+      consumers = consumers_for_tid[tensor_id]
+      producer = producer_of_tid.get(tensor_id, -1)
       tensor_info = self.TensorGraphInfo(
           tensor_id, subgraph_id, producer, consumers
       )
