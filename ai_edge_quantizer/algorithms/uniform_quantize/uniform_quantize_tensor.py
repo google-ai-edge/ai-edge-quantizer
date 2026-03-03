@@ -61,22 +61,28 @@ def extract_block_size_from_granularity(
     return 0
 
 
-def _round_and_clip(
+def _round_and_clip_inplace(
     tensor: np.ndarray, qtype: IntType, narrow: bool
 ) -> np.ndarray:
-  """Round and clip the tensor to the given type, but don't cast it."""
+  """Round and clip the tensor to the given type in-place, but don't cast it."""
   qmin, qmax = get_quantized_range(qtype)
   if narrow:
     if qtype.signed:
       return np.clip(
-          np.rint(tensor),
+          np.rint(tensor, out=tensor if not np.isscalar(tensor) else None),
           qmin + 1,
           qmax,
+          out=tensor if not np.isscalar(tensor) else None,
       )
     else:
       raise ValueError("Unsigned data type should not have narrow range.")
   else:
-    return np.clip(np.rint(tensor), qmin, qmax)
+    return np.clip(
+        np.rint(tensor, out=tensor if not np.isscalar(tensor) else None),
+        qmin,
+        qmax,
+        out=tensor if not np.isscalar(tensor) else None,
+    )
 
 
 def assign_quantized_type(tensor: np.ndarray, qtype: IntType) -> np.ndarray:
@@ -285,7 +291,6 @@ def uniform_quantize(
       quantization_params.scale,
       quantization_params.zero_point,
   )
-  inverse_scales = 1.0 / scales
   # TODO: b/332574603 - support unsigned data type.
   qtype = IntType(quantization_params.num_bits, signed=True)
   # For quantization with more than 8 bits, symmetric narrow-range quantization
@@ -303,8 +308,9 @@ def uniform_quantize(
         f"zero_points need to be {required_dtype}."
         f" But the actual type is {zero_points.dtype}."
     )
-  ret = np.multiply(tensor_data, inverse_scales) + zero_points
-  ret = _round_and_clip(ret, qtype, narrow_range)
+  ret = np.divide(tensor_data, scales)
+  ret = np.add(ret, zero_points, out=ret if not np.isscalar(ret) else None)
+  ret = _round_and_clip_inplace(ret, qtype, narrow_range)
   ret = assign_quantized_type(ret, qtype)
   return ret
 
