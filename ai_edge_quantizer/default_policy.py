@@ -150,6 +150,32 @@ DEFAULT_JSON_POLICY = """
       },
       "explicit_dequantize": true,
       "compute_precision": "FLOAT"
+    },
+    "weightonly_wi2_afp32": {
+      "weight_tensor_config": {
+        "num_bits": 2,
+        "symmetric": [true, false],
+        "granularity": ["CHANNELWISE", "TENSORWISE"],
+        "dtype": "INT"
+      },
+      "explicit_dequantize": true,
+      "compute_precision": "FLOAT"
+    },
+    "static_wi2_ai8": {
+      "activation_tensor_config": {
+        "num_bits": 8,
+        "symmetric": [true, false],
+        "granularity": ["TENSORWISE"],
+        "dtype": "INT"
+      },
+      "weight_tensor_config": {
+        "num_bits": 2,
+        "symmetric": [true],
+        "granularity": ["CHANNELWISE", "TENSORWISE"],
+        "dtype": "INT"
+      },
+      "explicit_dequantize": false,
+      "compute_precision": "INTEGER"
     }
   },
   "ops_per_config": {
@@ -254,7 +280,7 @@ DEFAULT_JSON_POLICY = """
       "SPACE_TO_DEPTH",
       "RELU"
     ],
-    "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT"],
+    "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT", "BATCH_MATMUL"],
     "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT"],
     "dynamic_wi8_afp32": [
       "BATCH_MATMUL",
@@ -274,7 +300,9 @@ DEFAULT_JSON_POLICY = """
       "EMBEDDING_LOOKUP",
       "FULLY_CONNECTED"
     ],
-    "weightonly_wi4_afp32": ["BATCH_MATMUL", "FULLY_CONNECTED", "EMBEDDING_LOOKUP", "CONV_2D"]
+    "weightonly_wi4_afp32": ["BATCH_MATMUL", "FULLY_CONNECTED", "EMBEDDING_LOOKUP", "CONV_2D"],
+    "weightonly_wi2_afp32": ["BATCH_MATMUL", "FULLY_CONNECTED"],
+    "static_wi2_ai8": ["FULLY_CONNECTED", "BATCH_MATMUL"]
   }
 }
 """
