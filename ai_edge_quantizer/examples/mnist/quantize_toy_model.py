@@ -29,6 +29,7 @@ from PIL import Image
 import tensorflow as tf
 
 import os
+import io
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils

@@ -109,7 +109,7 @@ def get_constant_buffer(
 
   if isinstance(data, np.ndarray):
     # in the case where the data is passed from quantization_params.
-    new_data = np.frombuffer(data.tobytes(), dtype=np.uint8).flatten()
+    new_data = np.ravel(data.view(np.uint8))
   elif isinstance(data, bytes):
     # in the case where the data is coming from duplicating buffers, we need to
     # make a copy of the data to avoid having two buffers pointing to the same

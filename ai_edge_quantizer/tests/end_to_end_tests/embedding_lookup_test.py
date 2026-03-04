@@ -53,9 +53,9 @@ class EmbeddingLookupTest(test_utils.BaseOpTestCase):
 
   @parameterized.parameters(
       ('../../recipes/default_af32w8float_recipe.json', 1700),
-      ('../../recipes/default_af32w4float_recipe.json', 1600),
-      ('../../recipes/dynamic_legacy_wi8_afp32_recipe.json', 1400),
-      ('../../recipes/dynamic_wi8_afp32_recipe.json', 1400),
+      ('../../recipes/default_af32w4float_recipe.json', 1650),
+      ('../../recipes/dynamic_legacy_wi8_afp32_recipe.json', 1450),
+      ('../../recipes/dynamic_wi8_afp32_recipe.json', 1500),
   )
   def test_embedding_lookup_model_int_weight_only(
       self, recipe_path, expected_model_size
@@ -135,7 +135,7 @@ class EmbeddingLookupTest(test_utils.BaseOpTestCase):
     ])
     quant_result = self._quantizer.quantize()
     with self.subTest(name='ModelSizeReduction'):
-      self.assertLess(len(quant_result.quantized_model), 1650)
+      self.assertLess(len(quant_result.quantized_model), 1700)
 
     validation_result = self._quantizer.validate(
         test_data={

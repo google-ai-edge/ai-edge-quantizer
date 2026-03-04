@@ -15,9 +15,11 @@
 
 """quantize a given tensor."""
 
-from typing import Optional, cast
+from typing import Optional
+
 import ml_dtypes
 import numpy as np
+
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import transformation_utils
 from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
@@ -84,13 +86,13 @@ def _perform_channelwise_quantization(
       transformation_input.quant_params, qtyping.UniformQuantParams
   )
   flatbuffer_quantization = schema_py_generated.QuantizationParametersT()
-  flatbuffer_quantization.scale = list(
-      transformation_input.quant_params.scale.flatten().astype(np.float32)
-  )  # Flatbuffer requires scale as list[float].
+  flatbuffer_quantization.scale = np.ravel(
+      transformation_input.quant_params.scale
+  ).astype(np.float32)
   if transformation_input.quant_params.zero_point is not None:
-    flatbuffer_quantization.zeroPoint = list(
-        transformation_input.quant_params.zero_point.flatten().astype(np.int64)
-    )  # Flatbuffer requires zeroPoint as list[int64]
+    flatbuffer_quantization.zeroPoint = np.ravel(
+        transformation_input.quant_params.zero_point
+    ).astype(np.int64)
   if transformation_input.quant_params.quantized_dimension is not None:
     flatbuffer_quantization.quantizedDimension = (
         transformation_input.quant_params.quantized_dimension
@@ -157,7 +159,9 @@ def quantize_tensor(
       num_ops_added: The total number of ops inserted by this operation, which
         is 0.
   """
-  tensor = transformation_input.subgraph.tensors[transformation_input.tensor_id]
+  tensor: schema_py_generated.TensorT = transformation_input.subgraph.tensors[
+      transformation_input.tensor_id
+  ]
   # TODO: b/336385820 - Suppport quantize buffer directly when quantized_data
   # is not provided.
   if tensor.buffer:
@@ -165,13 +169,9 @@ def quantize_tensor(
       transformation_input.buffers[tensor.buffer].data = (
           transformation_utils.pack_data(
               transformation_input.quant_params.num_bits,
-              np.frombuffer(
-                  cast(
-                      np.ndarray,
-                      transformation_input.quant_params.quantized_data,
-                  ).tobytes(),
-                  dtype=np.uint8,
-              ).flatten(),
+              np.ravel(
+                  np.asarray(transformation_input.quant_params.quantized_data)
+              ).view(np.uint8),
           )
       )
 

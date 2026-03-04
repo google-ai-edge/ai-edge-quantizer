@@ -65,9 +65,9 @@ class ModelModifierTest(parameterized.TestCase):
         },
     ]
 
-  def test_process_constant_map_succeeds(self):
-    constant_size = self._model_modifier._process_constant_map(self._model)
-    self.assertEqual(constant_size, 202540)
+  def test_pack_buffer_data_succeeds(self):
+    packed_buffer_data = model_modifier._PackedBufferData(self._model)
+    self.assertEqual(packed_buffer_data.packed_size, 202540)
 
   def test_modify_model_succeeds_with_recipe(self):
     recipe_manager_instance = recipe_manager.RecipeManager()
@@ -84,7 +84,7 @@ class ModelModifierTest(parameterized.TestCase):
     )
     self.assertIsInstance(
         flatbuffer_utils.convert_bytearray_to_object(new_model_binary),
-        tfl_flatbuffer_utils.ModelT,
+        qtyping.ModelT,
     )
     self.assertLess(len(new_model_binary), len(self._model_content))
 
@@ -213,19 +213,15 @@ class ModelModifierTest(parameterized.TestCase):
         )
     )
 
-  def test_pad_bytearray(self):
-    arr = bytearray(b'\x01\x02\x03')
-    self._model_modifier._pad_bytearray(arr)
-    self.assertLen(arr, 16)
-    self.assertEqual(arr, b'\x01\x02\x03' + b'\0' * 13)
+  def test_pad_offset(self):
+    arr_len = 3
+    self.assertLen(model_modifier._pad_offset(arr_len), 16)
 
-    arr = bytearray(b'\x01' * 16)
-    self._model_modifier._pad_bytearray(arr)
-    self.assertLen(arr, 16)
+    arr_len = 16
+    self.assertLen(model_modifier._pad_offset(arr_len), 16)
 
-    arr = bytearray(b'\x01' * 17)
-    self._model_modifier._pad_bytearray(arr)
-    self.assertLen(arr, 32)
+    arr_len = 17
+    self.assertLen(model_modifier._pad_offset(arr_len), 32)
 
 
 class ModelModifierTestWithSignature(parameterized.TestCase):
@@ -245,21 +241,17 @@ class ModelModifierTestWithSignature(parameterized.TestCase):
     # This is a simplified test that only checks if the function runs without
     # crashing and returns a model. A more thorough test with a model
     # with a known signature was added in `quantizer_test`.
-    model_bytearray = flatbuffer_utils.read_model_from_bytearray(
-        self._model_content
-    )
+    model = flatbuffer_utils.read_model_from_bytearray(self._model_content)
     updated_model = self._model_modifier._update_signature_defs(
-        model_bytearray, bytearray(self._model_content), '_dequant'
+        model, '_dequant'
     )
     self.assertIsNotNone(updated_model)
 
   def test_update_signature_defs_succeeds_quant(self):
     # This checks if the function runs without crashing and returns a model.
-    model_bytearray = flatbuffer_utils.read_model_from_bytearray(
-        self._model_content
-    )
+    model = flatbuffer_utils.read_model_from_bytearray(self._model_content)
     updated_model = self._model_modifier._update_signature_defs(
-        model_bytearray, bytearray(self._model_content), '_quantized'
+        model, '_quantized'
     )
     self.assertIsNotNone(updated_model)
 

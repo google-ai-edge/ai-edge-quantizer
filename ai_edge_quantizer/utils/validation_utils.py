@@ -225,11 +225,11 @@ def _preprocess_same_size_arrays(
   Raises:
     ValueError: if the two inputs don't have the same number of elements
   """
-  data1 = np.array(data1, dtype=np.float32).flatten()
-  data2 = np.array(data2, dtype=np.float32).flatten()
+  data1 = np.ravel(np.asarray(data1, dtype=np.float32))
+  data2 = np.ravel(np.asarray(data2, dtype=np.float32))
   if np.shape(data1) != np.shape(data2):
     raise ValueError("data1 & data2 must be of the same size")
-  data1 = np.nan_to_num(data1, nan=1e-9, neginf=-1e9, posinf=1e9)
-  data2 = np.nan_to_num(data2, nan=1e-9, neginf=-1e9, posinf=1e9)
+  data1 = np.nan_to_num(data1, nan=1e-9, neginf=-1e9, posinf=1e9, copy=False)
+  data2 = np.nan_to_num(data2, nan=1e-9, neginf=-1e9, posinf=1e9, copy=False)
 
   return data1, data2
