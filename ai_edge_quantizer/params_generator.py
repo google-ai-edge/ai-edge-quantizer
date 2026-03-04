@@ -17,7 +17,7 @@
 
 from collections.abc import Sequence
 import copy
-from typing import Any, Optional, Union
+from typing import Any, Optional
 import warnings
 
 from ai_edge_quantizer import algorithm_manager
@@ -34,10 +34,10 @@ _OpName = qtyping.TFLOperationName
 class ParamsGenerator:
   """Generate model tensor level quantization parameters."""
 
-  def __init__(self, float_tflite: Union[str, bytes]):
-    self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
+  def __init__(self, float_tflite: tfl_flatbuffer_utils.ModelT):
+    self.float_model: tfl_flatbuffer_utils.ModelT = float_tflite
 
-    if not tfl_flatbuffer_utils.is_float_model(self.flatbuffer_model):
+    if not tfl_flatbuffer_utils.is_float_model(self.float_model):
       warnings.warn(
           'Input model is already partially quantized. Proceeding with'
           ' re-quantization; existing quantized tensors will remain unchanged'
@@ -46,7 +46,7 @@ class ParamsGenerator:
 
     self._check_tensor_names_are_unique()
     self.buffer_to_tensors: dict[int, list[Any]] = (
-        tfl_flatbuffer_utils.buffer_to_tensors(self.flatbuffer_model)
+        tfl_flatbuffer_utils.buffer_to_tensors(self.float_model)
     )
     self.model_quant_results: dict[str, qtyping.TensorTransformationParams] = {}
     self._tensor_quant_params_cache = common_utils.TensorQuantParamsCache()
@@ -80,17 +80,15 @@ class ParamsGenerator:
       model_qsvs = {}
 
     skip_subgraphs = set()
-    op_codes = self.flatbuffer_model.operatorCodes
-    for sg_ind, subgraph in enumerate(self.flatbuffer_model.subgraphs):
+    op_codes = self.float_model.operatorCodes
+    for sg_ind, subgraph in enumerate(self.float_model.subgraphs):
 
-      graph_info = qtyping.GraphInfo(
-          subgraph.tensors, self.flatbuffer_model.buffers
-      )
+      graph_info = qtyping.GraphInfo(subgraph.tensors, self.float_model.buffers)
       # Add input/output operators to the subgraph.
-      subgraph.operators += (
+      subgraph_operators = subgraph.operators + (
           tfl_flatbuffer_utils.get_subgraph_input_output_operators(subgraph)
       )
-      for subgraph_op_id, op in enumerate(subgraph.operators):
+      for subgraph_op_id, op in enumerate(subgraph_operators):
         # Get the op key.
         if isinstance(op, qtyping.IOOperator):
           op_key = op.op_key
@@ -149,7 +147,7 @@ class ParamsGenerator:
   def _check_tensor_names_are_unique(self):
     """Checks if the tensor names are unique in the model."""
     global_tensor_names = set()
-    for subgraph in self.flatbuffer_model.subgraphs:
+    for subgraph in self.float_model.subgraphs:
       for tensor in subgraph.tensors:
         tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
         if tensor_name in global_tensor_names:
@@ -315,7 +313,7 @@ class ParamsGenerator:
 
     if _are_tensor_consumer_params_compatible(tensor_params):
       return True
-    elif _is_constant_tensor(tensor, self.flatbuffer_model.buffers):
+    elif _is_constant_tensor(tensor, self.float_model.buffers):
       return False
     else:
       error_msg = (
@@ -358,7 +356,7 @@ class ParamsGenerator:
         tensor1_params, tensor2_params
     ):
       return True
-    elif _is_constant_tensor(tensor1, self.flatbuffer_model.buffers):
+    elif _is_constant_tensor(tensor1, self.float_model.buffers):
       return False
     else:
       error_msg = (

@@ -28,7 +28,6 @@ from ai_edge_quantizer import transformation_performer
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_litert import interpreter as tfl  # pylint: disable=g-direct-tensorflow-import
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 _DEQUANT_SUFFIX = "_dequant"
@@ -38,14 +37,13 @@ _QUANT_SUFFIX = "_quantized"
 class ModelModifier:
   """Model Modifier class that produce the final quantized TFlite model."""
 
-  def __init__(self, float_tflite: bytes):
+  def __init__(self, float_model: tfl_flatbuffer_utils.ModelT):
     """Constructor.
 
     Args:
-      float_tflite: the original TFlite model in bytearray or file path
+      float_model: the original TFlite model.
     """
-
-    self._model_content = float_tflite
+    self._model: tfl_flatbuffer_utils.ModelT = float_model
 
     self._constant_map = []
     self._transformation_instruction_generator = (
@@ -58,7 +56,7 @@ class ModelModifier:
   def _get_tensor_processing_order(
       self,
       tensor_names: Sequence[str],
-      flatbuffer_model: schema_py_generated.ModelT,
+      flatbuffer_model: tfl_flatbuffer_utils.ModelT,
   ) -> list[str]:
     """Get the tensor processing order obtained from `buffer_to_tensors`.
 
@@ -96,9 +94,15 @@ class ModelModifier:
     Returns:
       a byte buffer that represents the serialized tflite model
     """
-    quantized_model = copy.deepcopy(
-        flatbuffer_utils.read_model_from_bytearray(self._model_content)
-    )
+    # Make a copy of the model, but don't duplicate the buffer data.
+    buffer_data = []
+    for buffer in self._model.buffers:
+      buffer_data.append(buffer.data)
+      buffer.data = None
+    quantized_model = copy.deepcopy(self._model)
+    for bid, data in enumerate(buffer_data):
+      self._model.buffers[bid].data = data
+      quantized_model.buffers[bid].data = data
 
     instructions = self._transformation_instruction_generator.quant_params_to_transformation_insts(
         params, quantized_model
@@ -141,10 +145,10 @@ class ModelModifier:
 
   def _update_signature_defs(
       self,
-      model: schema_py_generated.ModelT,
+      model: tfl_flatbuffer_utils.ModelT,
       serialized_model: bytearray,
       suffix: str,
-  ) -> schema_py_generated.ModelT:
+  ) -> tfl_flatbuffer_utils.ModelT:
     """Updates the signature definitions in the model.
 
     This function is called when a transformation (quantize or dequantize)
@@ -218,7 +222,7 @@ class ModelModifier:
     return False
 
   def _process_constant_map(
-      self, quantized_model: schema_py_generated.ModelT
+      self, quantized_model: tfl_flatbuffer_utils.ModelT
   ) -> int:
     """Process the constant map after all transformations are applied.
 
@@ -253,7 +257,7 @@ class ModelModifier:
 
   # TODO: b/333797307 - support > 2GB output model
   def _serialize_large_model(
-      self, quantized_model: schema_py_generated.ModelT
+      self, quantized_model: tfl_flatbuffer_utils.ModelT
   ) -> bytearray:
     """serialize models > 2GB.
 
@@ -301,7 +305,7 @@ class ModelModifier:
     return model_bytearray
 
   def _serialize_small_model(
-      self, quantized_model: schema_py_generated.ModelT
+      self, quantized_model: tfl_flatbuffer_utils.ModelT
   ) -> bytearray:
     """serialize models < 2GB.
 

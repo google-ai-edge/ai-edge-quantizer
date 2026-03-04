@@ -128,7 +128,7 @@ class BaseOpTestCase(parameterized.TestCase):
       if num_calibration_samples is None:
         num_calibration_samples = num_validation_samples * 8
       calibration_data = tfl_interpreter_utils.create_random_normal_input_data(
-          quantizer_instance.float_model,
+          quantizer_instance._float_model_buffer,  # pylint: disable=protected-access
           num_samples=num_calibration_samples,
           min_max_range=min_max_range,
       )

@@ -49,7 +49,7 @@ class RecipeTest(parameterized.TestCase):
     self.assertIsNone(qt._result.quantized_model)
     if qt.need_calibration:
       calibration_data = tfl_interpreter_utils.create_random_normal_input_data(
-          qt.float_model,
+          qt._float_model_buffer,
           num_samples=1,
       )
       calibration_result = qt.calibrate(calibration_data)
@@ -156,7 +156,7 @@ class RecipeTest(parameterized.TestCase):
     qt_json.load_quantization_recipe(json_recipe_path)
     if qt_json.need_calibration:
       calibration_data = tfl_interpreter_utils.create_random_normal_input_data(
-          qt_json.float_model,
+          qt_json._float_model_buffer,
           num_samples=1,
       )
       calibration_result = qt_json.calibrate(calibration_data)

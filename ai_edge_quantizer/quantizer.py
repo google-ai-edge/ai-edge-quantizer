@@ -22,6 +22,7 @@ import logging
 import pathlib
 from typing import Any, Optional, Union
 
+import os
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import default_policy
@@ -33,7 +34,6 @@ from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
-import os
 
 Path = str | pathlib.Path
 # Expose algorithm names to users.
@@ -127,12 +127,14 @@ class Quantizer:
   """AI Edge Quantizer API.
 
   Attributes:
-    float_model: TFLite model file path or bytearray.
+    float_model_buffer: TFLite model bytearray.
+    float_model: The `tf_flatbuffer_utils.ModelT` extracted from the
+      `float_model_buffer`.
     quantization_recipe: Quantization recipe .json filepath or in loaded json
       format.
-    previous_quantized_model: Optional previously quantized TFLite model file
-      path or bytearray. This is useful for validating a quantized model
-      without quantizing it again.
+    previous_quantized_model_buffer: Optional previously quantized TFLite model
+      bytearray. This is useful for validating a quantized model without
+      quantizing it again.
   """
 
   def __init__(
@@ -151,20 +153,27 @@ class Quantizer:
         model. This is useful for validating a quantized model without
         quantizing it again.
     """
-    # Use `float model` as bytes for memory efficiency.
-    self.float_model: bytes = (
+    # Load the `float_model` as a buffer.
+    self._float_model_buffer: bytes = (
         tfl_flatbuffer_utils.get_model_content(float_model)
         if isinstance(float_model, (str, pathlib.Path))
         else float_model
     )
     if previous_quantized_model is not None:
-      self.previous_quantized_model: bytes = (
+      self.previous_quantized_model_buffer: bytes = (
           tfl_flatbuffer_utils.get_model_content(previous_quantized_model)
           if isinstance(previous_quantized_model, (str, pathlib.Path))
           else previous_quantized_model
       )
     else:
-      self.previous_quantized_model = None
+      self.previous_quantized_model_buffer = None
+
+    # Extract the `float_model` from the buffer. Note that this will not
+    # duplicate the model's data, i.e. all arrays are views on the data of the
+    # underlying buffer.
+    self._float_model: tfl_flatbuffer_utils.ModelT = (
+        tfl_flatbuffer_utils.read_model(self._float_model_buffer)
+    )
 
     self._recipe_manager: recipe_manager.RecipeManager = (
         recipe_manager.RecipeManager()
@@ -197,8 +206,6 @@ class Quantizer:
     """
     with open(filename, 'r') as f:
       content = f.read()
-      if isinstance(content, bytes):
-        content = content.decode('utf-8')
       policy = default_policy.update_default_config_policy(content)
 
     # Register the policy for MIN_MAX_UNIFORM_QUANT algorithm.
@@ -375,7 +382,9 @@ class Quantizer:
     if not self.need_calibration:
       return {}
 
-    calib = calibrator.Calibrator(self.float_model, num_threads=num_threads)
+    calib = calibrator.Calibrator(
+        self._float_model_buffer, num_threads=num_threads
+    )
     if previous_calibration_result is not None:
       calib.load_model_qsvs(previous_calibration_result)
     calib.calibrate(calibration_data, self._recipe_manager)
@@ -391,7 +400,7 @@ class Quantizer:
 
     # Go over every signature and check if empty entry tensor belongs to it.
     tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
-        self.float_model
+        self._float_model_buffer
     )
     for signature_key in tfl_interpreter.get_signature_list():
       subgraph_idx = tfl_interpreter_utils.get_signature_main_subgraph_index(
@@ -469,17 +478,17 @@ class Quantizer:
     if test_data is None:
       # Create test data for all signatures in the model.
       test_data = tfl_interpreter_utils.create_random_normal_input_data(
-          self.float_model, num_samples=1
+          self._float_model_buffer, num_samples=1
       )
     if self._quantize_called:
       quantized_model = self._result.quantized_model
     else:
-      quantized_model = self.previous_quantized_model
+      quantized_model = self.previous_quantized_model_buffer
 
     if quantized_model is None:
       raise ValueError('No quantized model available to validate.')
     return model_validator.compare_model(
-        self.float_model,
+        self._float_model_buffer,
         quantized_model,
         test_data,
         error_metrics,
@@ -502,7 +511,7 @@ class Quantizer:
       A dictionary containing the quantization parameters.
     """
     params_generator_instance = params_generator.ParamsGenerator(
-        self.float_model
+        self._float_model
     )
     return params_generator_instance.generate_quantization_parameters(
         self._recipe_manager, calibration_result
@@ -519,5 +528,5 @@ class Quantizer:
     Returns:
       The quantized model.
     """
-    model_modifier_instance = model_modifier.ModelModifier(self.float_model)
+    model_modifier_instance = model_modifier.ModelModifier(self._float_model)
     return model_modifier_instance.modify_model(quant_params)

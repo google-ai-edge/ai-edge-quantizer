@@ -28,6 +28,10 @@ from ai_edge_quantizer import qtyping
 from ai_edge_litert import schema_py_generated as schema  # pylint:disable=g-direct-tensorflow-import
 
 
+# Export some common schema types.
+ModelT = schema.ModelT
+
+
 _TFLOpName = qtyping.TFLOperationName
 
 Path = Union[str, pathlib.Path]
@@ -119,7 +123,7 @@ TENSOR_TYPE_TO_CODE = immutabledict.immutabledict(  # pytype: disable=wrong-arg-
 write_model = flatbuffer_utils.write_model
 
 
-def read_model(tflite_model: Union[Path, bytearray]) -> Any:
+def read_model(tflite_model: Union[Path, bytearray, bytes]) -> schema.ModelT:
   """Read and convert the TFLite model into a flatbuffer object.
 
   Args:
@@ -133,7 +137,7 @@ def read_model(tflite_model: Union[Path, bytearray]) -> Any:
   """
   if isinstance(tflite_model, (str, pathlib.Path)):
     return flatbuffer_utils.read_model(tflite_model)
-  elif isinstance(tflite_model, bytes) or isinstance(tflite_model, bytearray):
+  elif isinstance(tflite_model, (bytes, bytearray)):
     return flatbuffer_utils.read_model_from_bytearray(tflite_model)
   else:
     raise ValueError(

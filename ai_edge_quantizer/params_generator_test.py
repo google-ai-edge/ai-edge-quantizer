@@ -17,10 +17,9 @@ from collections.abc import Generator
 import pathlib
 from typing import Any
 
+from absl.testing import absltest
 from absl.testing import parameterized
-import absl.testing.absltest as absltest
 import numpy as np
-
 
 from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import params_generator
@@ -85,12 +84,12 @@ class ParamsGeneratorTest(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     self._test_model_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/conv_fc_mnist.tflite'
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/conv_fc_mnist.tflite'
     )
+    self._test_model = tfl_flatbuffer_utils.read_model(self._test_model_path)
+    self._params_generator = params_generator.ParamsGenerator(self._test_model)
     self._recipe_manager = recipe_manager.RecipeManager()
-    self._params_generator = params_generator.ParamsGenerator(
-        self._test_model_path
-    )
 
   def test_update_model_quant_results(self):
     params_from_target = qtyping.TensorTransformationParams(
@@ -443,6 +442,10 @@ class ParamsGeneratorTest(parameterized.TestCase):
     single_fc_model_path = str(
         pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/single_fc.tflite'
     )
+    single_fc_model = tfl_flatbuffer_utils.read_model(single_fc_model_path)
+    params_generator_single_fc = params_generator.ParamsGenerator(
+        single_fc_model
+    )
     self._recipe_manager.add_quantization_config(
         regex='.*',
         operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
@@ -459,9 +462,6 @@ class ParamsGeneratorTest(parameterized.TestCase):
         ),
     )
 
-    params_generator_single_fc = params_generator.ParamsGenerator(
-        single_fc_model_path
-    )
     # Raise error when missing QSVs.
     error_message = 'Model quantization statistics values (QSVs) are required'
     with self.assertRaisesWithPredicateMatch(
@@ -559,8 +559,11 @@ class ParamsGeneratorTest(parameterized.TestCase):
       self, the_other_fc_difference
   ):
     model_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/weight_sharing_fcs.tflite'
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/weight_sharing_fcs.tflite'
     )
+    model = tfl_flatbuffer_utils.read_model(model_path)
+    pg = params_generator.ParamsGenerator(model)
     self._recipe_manager.add_quantization_config(
         regex='.*',
         operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
@@ -580,7 +583,6 @@ class ParamsGeneratorTest(parameterized.TestCase):
               compute_precision=_ComputePrecision.INTEGER,
           ),
       )
-    pg = params_generator.ParamsGenerator(model_path)
     quant_params = pg.generate_quantization_parameters(
         self._recipe_manager,
     )
@@ -609,8 +611,12 @@ class ParamsGeneratorTest(parameterized.TestCase):
       expected_tensor_with_buffer_duplication,
   ):
     model_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/weight_sharing_fcs.tflite'
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/weight_sharing_fcs.tflite'
     )
+    model = tfl_flatbuffer_utils.read_model(model_path)
+    pg = params_generator.ParamsGenerator(model)
+
     # Setup the quantization config for the first FC.
     self._recipe_manager.add_quantization_config(
         regex='PartitionedCall:0',
@@ -636,7 +642,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
               compute_precision=_ComputePrecision.INTEGER,
           ),
       )
-    pg = params_generator.ParamsGenerator(model_path)
+
     quant_params = pg.generate_quantization_parameters(
         self._recipe_manager,
     )
@@ -707,6 +713,9 @@ class ParamsGeneratorTest(parameterized.TestCase):
         pathlib.Path(TEST_DATA_PREFIX_PATH)
         / 'tests/models/constant_tensor_and_buffer_only_sharing_weight_fcs.tflite',
     )
+    model = tfl_flatbuffer_utils.read_model(model_path)
+    pg = params_generator.ParamsGenerator(model)
+    
     sig1_fc1_regex = 'BatchMatMulV3;'
     sig1_fc2_regex = 'PartitionedCall:0;'
     recipe = []
@@ -715,7 +724,6 @@ class ParamsGeneratorTest(parameterized.TestCase):
     if fc2_num_bits is not None:
       recipe.append(self._get_fc_recipe_entry(sig1_fc2_regex, fc2_num_bits))
     self._recipe_manager.load_quantization_recipe(recipe)
-    pg = params_generator.ParamsGenerator(model_path)
     quant_params = pg.generate_quantization_parameters(self._recipe_manager)
 
     expected_tensor = 'arith.constant'
@@ -764,6 +772,9 @@ class ParamsGeneratorTest(parameterized.TestCase):
         pathlib.Path(TEST_DATA_PREFIX_PATH)
         / 'tests/models/constant_tensor_and_buffer_only_sharing_weight_fcs.tflite',
     )
+    model = tfl_flatbuffer_utils.read_model(model_path)
+    pg = params_generator.ParamsGenerator(model)
+
     sig1_fc1_regex = 'BatchMatMulV3;'
     sig1_fc2_regex = 'PartitionedCall:0;'
     sig2_fc1_regex = 'BatchMatMulV31;'
@@ -775,8 +786,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
         self._get_fc_recipe_entry(sig2_fc2_regex, num_bits=4),
     ]
     self._recipe_manager.load_quantization_recipe(recipe)
-    pg = params_generator.ParamsGenerator(model_path)
     quant_params = pg.generate_quantization_parameters(self._recipe_manager)
+
     # Check transformations for sig1.
     sig1_expected_tensor = 'arith.constant'
     sig1_consumers = quant_params[sig1_expected_tensor].consumers
@@ -1004,17 +1015,19 @@ class ParamsGeneratorTest(parameterized.TestCase):
         pathlib.Path(TEST_DATA_PREFIX_PATH)
         / 'tests/models/duplicated_tensor_names.tflite'
     )
+    model = tfl_flatbuffer_utils.read_model(model_path)
     error_message = 'Tensor name test_same_name is not unique in the model.'
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
     ):
-      params_generator.ParamsGenerator(model_path)
+      params_generator.ParamsGenerator(model)
 
   def test_quantize_integer_input_output(self):
     model_path = str(
         pathlib.Path(TEST_DATA_PREFIX_PATH)
         / 'tests/models/single_transpose_int32.tflite'
     )
+    model = tfl_flatbuffer_utils.read_model(model_path)
     self._recipe_manager.add_quantization_config(
         regex='.*',
         operation_name=qtyping.TFLOperationName.ALL_SUPPORTED,
@@ -1028,7 +1041,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
             compute_precision=_ComputePrecision.INTEGER,
         ),
     )
-    pg = params_generator.ParamsGenerator(model_path)
+    pg = params_generator.ParamsGenerator(model)
 
     # Calibrate then quantize.
     model_calibrator = calibrator.Calibrator(model_path)
@@ -1134,15 +1147,19 @@ class ParamsGeneratorAlreadyQuantizedModelTest(absltest.TestCase):
 
   def test_check_is_float_model_succeeds_when_model_is_float(self):
     test_model_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/conv_fc_mnist.tflite'
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/conv_fc_mnist.tflite'
     )
-    _ = params_generator.ParamsGenerator(test_model_path)
+    test_model = tfl_flatbuffer_utils.read_model(test_model_path)
+    _ = params_generator.ParamsGenerator(test_model)
 
   def test_check_is_quantized_model_succeeds_when_model_is_quantized(self):
     test_model_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/mnist_quantized.tflite'
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/mnist_quantized.tflite'
     )
-    _ = params_generator.ParamsGenerator(test_model_path)
+    test_model = tfl_flatbuffer_utils.read_model(test_model_path)
+    _ = params_generator.ParamsGenerator(test_model)
 
 
 if __name__ == '__main__':
