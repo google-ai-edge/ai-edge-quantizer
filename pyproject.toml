@@ -55,7 +55,7 @@ dev = [
 ]
 
 [tool.uv]
-required-environments = [
+required-environment = [
     "sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]
 
