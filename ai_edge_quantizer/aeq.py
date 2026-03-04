@@ -64,11 +64,11 @@ def quantize_model(
   qt.quantize().export_model(output_file_path, overwrite=overwrite)
 
 
-def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+def parse_args(args: Sequence[str]) -> argparse.Namespace:
   """Parses command-line arguments.
 
   Args:
-    argv: A list of strings to parse. If None, sys.argv is used.
+    args: A list of strings to parse. If None, sys.argv is used.
 
   Returns:
     An argparse.Namespace containing the parsed arguments,
@@ -96,8 +96,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
       action="store_true",
       help="Overwrite exisiting output files without requesting user input.",
   )
-  argv = argv or sys.argv
-  return parser.parse_args(argv[1:])
+  return parser.parse_args(args[1:])
 
 
 def main(parsed_args: argparse.Namespace):
@@ -110,4 +109,4 @@ def main(parsed_args: argparse.Namespace):
 
 
 if __name__ == "__main__":
-  main(parse_args())
+  main(parse_args(sys.argv))
