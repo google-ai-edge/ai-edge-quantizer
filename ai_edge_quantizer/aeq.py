@@ -107,6 +107,10 @@ def main(parsed_args: argparse.Namespace):
       overwrite_outputs=parsed_args.overwrite_outputs,
   )
 
+# Wrapper to play nicely with uv tool install ai-edge-quantizer
+def cli_main():
+  main(parse_args(sys.argv))
+
 
 if __name__ == "__main__":
   main(parse_args(sys.argv))

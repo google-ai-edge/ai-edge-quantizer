@@ -41,7 +41,7 @@ dependencies = [
 Homepage = "https://github.com/google-ai-edge/ai-edge-quantizer"
 
 [project.scripts]
-aeq = "ai_edge_quantizer.aeq:main"
+aeq = "ai_edge_quantizer.aeq:cli_main"
 
 [dependency-groups]
 dev = [
@@ -52,11 +52,6 @@ dev = [
     "pyink",
     "pytest",
     "pytest-xdist",
-]
-
-[tool.uv]
-required-environments = [
-    "sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]
 
 [tool.setuptools.dynamic]
