@@ -130,11 +130,25 @@ class CalibrationQsvAlignmentUtilsTest(parameterized.TestCase):
 
   def test_load_calibration_results(self):
     temp_file = self.create_tempfile()
-    temp_file.write_text('{"tensor1": {"min": [-1.0], "max": [1.0]}}')
-    results = calibration_utils.load_calibration_results(temp_file.full_path)
+    temp_file.write_text(
+        '{"model_qsvs": {"tensor1": {"min": [-1.0], "max": [1.0]}}, "metadata":'
+        ' {}}'
+    )
+    results, _ = calibration_utils.load_calibration_results(temp_file.full_path)
     self.assertIn("tensor1", results)
     self.assertTrue(np.array_equal(results["tensor1"]["min"], [-1.0]))
     self.assertTrue(np.array_equal(results["tensor1"]["max"], [1.0]))
+
+  def test_load_legacy_calibration_results(self):
+    temp_file = self.create_tempfile()
+    temp_file.write_text('{"tensor1": {"min": [-1.0], "max": [1.0]}}')
+    results, metadata = calibration_utils.load_calibration_results(
+        temp_file.full_path
+    )
+    self.assertIn("tensor1", results)
+    self.assertTrue(np.array_equal(results["tensor1"]["min"], [-1.0]))
+    self.assertTrue(np.array_equal(results["tensor1"]["max"], [1.0]))
+    self.assertEmpty(metadata)
 
   def test_calibration_utils_init_fails(self):
     model_path = "non_existent_model.tflite"
