@@ -14,6 +14,7 @@
 # ==============================================================================
 
 import pathlib
+from unittest import mock
 
 from absl.testing import absltest
 from absl.testing import parameterized
@@ -335,6 +336,50 @@ class Fp16QuantizeTest(parameterized.TestCase):
         float_casting.materialize_fc_conv,
     )
 
+  def test_conv2d_dynamic_weight_succeeds(self):
+    # Read from Model Explorer.
+    subgraph0 = self._test_model.subgraphs[0]
+    subgraph_op_id = 0
+    op = subgraph0.operators[subgraph_op_id]
+
+    op_info = qtyping.OpInfo(
+        op=op,
+        op_name=_TFLOpName.CONV_2D,
+        subgraph_op_index=subgraph_op_id,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=16, dtype=qtyping.TensorDataType.FLOAT
+            ),
+            compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+            explicit_dequantize=True,
+        ),
+    )
+
+    with mock.patch.object(
+        tfl_flatbuffer_utils, "get_tensor_data", return_value=None
+    ):
+      tensor_quant_params = float_casting.materialize_fc_conv(
+          op_info,
+          self._graph_info,
+          self._tensor_name_to_qsv,
+          tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
+      )
+
+    # 4 tensors (input, weight, bias, output)
+    self.assertLen(tensor_quant_params, 4)
+    # The weight tensor is at index 1.
+    weight_params = tensor_quant_params[1]
+    self.assertEqual(weight_params.tensor_name, "sequential/conv2d/Conv2D")
+    self.assertLen(weight_params.consumers, 1)
+
+    # Transformation should be NO_QUANTIZE since we mocked get_tensor_data to
+    # None.
+    op_params = weight_params.consumers[0]
+    self.assertSequenceEqual(
+        op_params.transformations, [_QuantTransformation.NO_QUANTIZE]
+    )
+    self.assertIsNone(op_params.parameters)
+
   @parameterized.named_parameters(
       dict(
           testcase_name="invalid_fc",
@@ -467,6 +512,70 @@ class Fp16QuantizeTest(parameterized.TestCase):
           desired_transformations=[_QuantTransformation.NO_QUANTIZE],
           is_inbounding_tensor=True,
       )
+
+  def test_conv2d_transpose_dynamic_weight_succeeds(self):
+    # Read from Model Explorer.
+    test_model_path = str(
+        pathlib.Path(_TEST_DATA_PREFIX_PATH)
+        / "single_conv2d_transpose_bias.tflite"
+    )
+
+    test_model = tfl_flatbuffer_utils.read_model(test_model_path)
+    # The test model has one subgraph for now.
+    graph_info = qtyping.GraphInfo(
+        subgraph_tensors=test_model.subgraphs[0].tensors,
+        buffers=test_model.buffers,
+    )
+
+    subgraph0 = test_model.subgraphs[0]
+    subgraph_op_id = 0
+    op = subgraph0.operators[subgraph_op_id]
+
+    op_info = qtyping.OpInfo(
+        op=op,
+        op_name=_TFLOpName.CONV_2D_TRANSPOSE,
+        subgraph_op_index=subgraph_op_id,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=16, dtype=qtyping.TensorDataType.FLOAT
+            ),
+            compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+            explicit_dequantize=True,
+        ),
+    )
+
+    with mock.patch.object(
+        tfl_flatbuffer_utils, "get_tensor_data", return_value=None
+    ):
+      tensor_quant_params = float_casting.materialize_conv2d_transpose(
+          op_info,
+          graph_info,
+          self._tensor_name_to_qsv,
+          tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
+      )
+
+    _, _, bias_tensor, _ = tfl_flatbuffer_utils.parse_fc_bmm_conv_tensors(
+        op_info.op, graph_info.subgraph_tensors
+    )
+
+    num_configs = 4 if bias_tensor is not None else 3
+    self.assertLen(tensor_quant_params, num_configs)
+
+    # The weight tensor is at index 1.
+    weight_params = tensor_quant_params[1]
+    self.assertEqual(
+        weight_params.tensor_name,
+        "sequential_5/conv2d_transpose_3/conv2d_transpose",
+    )
+    self.assertLen(weight_params.consumers, 1)
+
+    # Transformation should be NO_QUANTIZE since we mocked get_tensor_data to
+    # None.
+    op_params = weight_params.consumers[0]
+    self.assertSequenceEqual(
+        op_params.transformations, [_QuantTransformation.NO_QUANTIZE]
+    )
+    self.assertIsNone(op_params.parameters)
 
   def test_depthwise_conv2d_weight_only_succeeds(self):
     # Read from Model Explorer.
