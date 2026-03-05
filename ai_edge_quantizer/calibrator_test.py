@@ -16,6 +16,7 @@
 """Tests for calibrator."""
 
 from collections.abc import Generator
+import json
 import pathlib
 from typing import Any
 
@@ -206,6 +207,123 @@ class CalibratorTest(absltest.TestCase):
     input_qsv = model_tensor_qsvs["serving_default_input_1:0"]
     self.assertSequenceAlmostEqual(input_qsv["min"], [-10.0])
     self.assertSequenceAlmostEqual(input_qsv["max"], [8.0])
+
+  def test_calibrate_updates_num_samples_calibrated(self):
+    _add_default_int8xint8_integer_recipe(self._recipe_manager)
+    # The representative dataset has 10 samples.
+    self._calibrator.calibrate(
+        self._representative_dataset, self._recipe_manager
+    )
+    # Check if internal counter is updated.
+    self.assertEqual(self._calibrator._num_samples_calibrated, 10)
+
+  def test_save_and_load_calibration_result_with_metadata(self):
+    # Setup some QSV
+    sample_qsv = {
+        "serving_default_input_1:0": {
+            "min": np.array([-10.0]),
+            "max": np.array([8.0]),
+        }
+    }
+    self._calibrator.load_model_qsvs(sample_qsv)
+    self._calibrator._num_samples_calibrated = 123
+
+    # Save
+    temp_file = self.create_tempfile().full_path
+    self._calibrator.save_calibration_result(temp_file)
+
+    # Reset
+    self._calibrator.reset_model_qsvs()
+    self.assertEmpty(self._calibrator.get_model_qsvs())
+    self.assertEqual(self._calibrator._num_samples_calibrated, 0)
+
+    # Load
+    self._calibrator.load_model_qsvs(temp_file)
+
+    # Verify
+    model_tensor_qsvs = self._calibrator.get_model_qsvs()
+    self.assertLen(model_tensor_qsvs, 1)
+    self.assertEqual(self._calibrator._num_samples_calibrated, 123)
+
+  def test_load_legacy_calibration_result(self):
+    # Create a legacy format file (just the dict)
+    legacy_data = {
+        "serving_default_input_1:0": {
+            "min": [-10.0],
+            "max": [8.0],
+        }
+    }
+    temp_file = self.create_tempfile().full_path
+    with open(temp_file, "w") as f:
+      json.dump(legacy_data, f)
+
+    self._calibrator.load_model_qsvs(temp_file)
+
+    model_tensor_qsvs = self._calibrator.get_model_qsvs()
+    self.assertLen(model_tensor_qsvs, 1)
+    self.assertEqual(self._calibrator._num_samples_calibrated, 0)
+
+  def test_preserve_metadata_on_save(self):
+    # Create a file with custom metadata
+    initial_data = {
+        "model_qsvs": {
+            "serving_default_input_1:0": {
+                "min": [-10.0],
+                "max": [8.0],
+            }
+        },
+        "metadata": {
+            "num_samples_calibrated": 10,
+            "custom_field": "custom_value",
+        },
+    }
+    temp_file = self.create_tempfile().full_path
+    with open(temp_file, "w") as f:
+      json.dump(initial_data, f)
+
+    # Load
+    self._calibrator.load_model_qsvs(temp_file)
+    self.assertEqual(self._calibrator._num_samples_calibrated, 10)
+
+    # Perform more calibration (update num samples)
+    self._calibrator.calibrate(
+        self._representative_dataset, self._recipe_manager
+    )
+    # 10 initial + 10 new samples = 20
+    self.assertEqual(self._calibrator._num_samples_calibrated, 20)
+
+    # Save
+    self._calibrator.save_calibration_result(temp_file)
+
+    # Reload and verify
+    with open(temp_file, "r") as f:
+      saved_data = json.load(f)
+
+    self.assertEqual(saved_data["metadata"]["num_samples_calibrated"], 20)
+    self.assertEqual(saved_data["metadata"]["custom_field"], "custom_value")
+
+  def test_save_with_extra_metadata(self):
+    _add_default_int8xint8_integer_recipe(self._recipe_manager)
+    self._calibrator.calibrate(
+        self._representative_dataset, self._recipe_manager
+    )
+    temp_file = self.create_tempfile().full_path
+    extra_metadata = {"model_name": "test_model", "version": "1.0"}
+    self._calibrator.save_calibration_result(
+        temp_file, extra_metadata=extra_metadata
+    )
+
+    with open(temp_file, "r") as f:
+      saved_data = json.load(f)
+
+    self.assertEqual(saved_data["metadata"]["num_samples_calibrated"], 10)
+    self.assertEqual(saved_data["metadata"]["model_name"], "test_model")
+    self.assertEqual(saved_data["metadata"]["version"], "1.0")
+
+  def test_reset_model_qsvs_resets_counter(self):
+    self._calibrator._num_samples_calibrated = 100
+    self._calibrator.reset_model_qsvs()
+    self.assertEqual(self._calibrator._num_samples_calibrated, 0)
 
 
 class CalibratorAlreadyQuantizedModelTest(absltest.TestCase):
