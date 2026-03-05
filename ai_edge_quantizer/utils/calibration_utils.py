@@ -115,17 +115,26 @@ def min_max_update(qsv: qtyping.QSV, new_qsv: qtyping.QSV) -> qtyping.QSV:
   return updated_qsv
 
 
-def load_calibration_results(file_path: str) -> dict[str, qtyping.QSV]:
+def load_calibration_results(
+    file_path: str,
+) -> tuple[dict[str, qtyping.QSV], dict[str, Any]]:
   """Loads calibration results from a file.
 
   Args:
     file_path: Path to the calibration results file.
 
   Returns:
-    A dictionary of tensor name to QSV.
+    A tuple of (model_qsvs, metadata).
   """
   with open(file_path) as json_file:
-    model_qsvs = json.load(json_file)
+    data = json.load(json_file)
+
+  metadata = {}
+  if "model_qsvs" in data:
+    model_qsvs = data["model_qsvs"]
+    metadata = data.get("metadata", {})
+  else:
+    model_qsvs = data
 
   # Convert lists back to numpy arrays
   for _, qsv in model_qsvs.items():
@@ -133,7 +142,8 @@ def load_calibration_results(file_path: str) -> dict[str, qtyping.QSV]:
       qsv["min"] = np.array(qsv["min"])
     if "max" in qsv:
       qsv["max"] = np.array(qsv["max"])
-  return model_qsvs
+
+  return model_qsvs, metadata
 
 
 def _find_overall_min_max(
