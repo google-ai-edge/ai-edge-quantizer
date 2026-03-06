@@ -21,6 +21,7 @@ from absl.testing import parameterized
 import absl.testing.absltest as absltest
 import numpy as np
 import os
+import io
 
 from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import quantizer
