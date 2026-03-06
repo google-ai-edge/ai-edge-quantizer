@@ -15,7 +15,7 @@
 
 """Quantization Calibration."""
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 import copy
 import enum
 import json
@@ -96,13 +96,15 @@ class CalibrationInterpreter:
       )
     return self._calibrator.get_model_qsvs()
 
-  def save_calibration_result(self, output_path: str):
+  def save_calibration_result(
+      self, output_path: str, extra_metadata: Mapping[str, str] | None = None
+  ) -> None:
     """Saves the calibration results."""
     if self._mode == CalibrationMode.INFERENCE:
       raise ValueError(
           "Calibration results are not available in INFERENCE mode."
       )
-    self._calibrator.save_calibration_result(output_path)
+    self._calibrator.save_calibration_result(output_path, extra_metadata)
 
   def get_signature_list(self) -> list[str]:
     """Returns the signature list."""
@@ -201,6 +203,8 @@ class Calibrator:
     self._model_qsvs: dict[str, qtyping.QSV] = {}
     # Cached output of the model.
     self._cached_output: list[_SignatureOutput] = []
+    # Metadata for the calibration result.
+    self._metadata: dict[str, Any] = {"num_samples_calibrated": 0}
 
   def _get_total_operations(self, calibration_dataset) -> int:
     """Get the total number of OPs to go through while calibrating the model."""
@@ -288,6 +292,7 @@ class Calibrator:
         )
 
         for data in dataset:
+          self._metadata["num_samples_calibrated"] += 1
           # Initialize tensor names updated in this round of calibration.
           updated_tensor_names = set()
 
@@ -381,6 +386,7 @@ class Calibrator:
   def reset_model_qsvs(self) -> None:
     """Reset the model qsvs."""
     self._model_qsvs = {}
+    self._metadata = {"num_samples_calibrated": 0}
 
   def load_model_qsvs(
       self, model_qsvs: Union[str, dict[str, qtyping.QSV]]
@@ -393,14 +399,33 @@ class Calibrator:
     """
 
     if isinstance(model_qsvs, str):
-      self._model_qsvs = calibration_utils.load_calibration_results(model_qsvs)
+      self._model_qsvs, self._metadata = (
+          calibration_utils.load_calibration_results(model_qsvs)
+      )
+      self._metadata["num_samples_calibrated"] = self._metadata.get(
+          "num_samples_calibrated", 0
+      )
     else:
       self._model_qsvs = copy.deepcopy(model_qsvs)
 
-  def save_calibration_result(self, file_path: str) -> None:
-    """Saves the calibration result to a json file."""
+  def save_calibration_result(
+      self, file_path: str, extra_metadata: Mapping[str, str] | None = None
+  ) -> None:
+    """Saves the calibration result to a json file.
+
+    Args:
+      file_path: Path to save the calibration result.
+      extra_metadata: Extra metadata to save.
+    """
     with open(file_path, "w") as f:
-      json.dump(self._model_qsvs, f, cls=calibration_utils.NumpyEncoder)
+      json.dump(
+          {
+              "model_qsvs": self._model_qsvs,
+              "metadata": {**self._metadata, **(extra_metadata or {})},
+          },
+          f,
+          cls=calibration_utils.NumpyEncoder,
+      )
 
   def get_signature_list(self) -> list[str]:
     """Get the signature list of the model."""
