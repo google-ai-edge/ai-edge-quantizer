@@ -24,6 +24,7 @@ from absl.testing import absltest
 import numpy as np
 
 import os
+import io
 from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager

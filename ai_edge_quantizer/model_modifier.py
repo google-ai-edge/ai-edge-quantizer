@@ -15,10 +15,10 @@
 
 """Model Modifier class that produce the final quantized TFlite model."""
 
-from collections.abc import Sequence
 import copy
 import logging
 
+import flatbuffers
 import numpy as np
 
 from ai_edge_litert.tools import flatbuffer_utils
@@ -26,24 +26,54 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import transformation_instruction_generator
 from ai_edge_quantizer import transformation_performer
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
-from ai_edge_quantizer.utils import tfl_interpreter_utils
-from ai_edge_litert import interpreter as tfl  # pylint: disable=g-direct-tensorflow-import
 
 
 _DEQUANT_SUFFIX = "_dequant"
 _QUANT_SUFFIX = "_quantized"
 
 
+def _pad_offset(offset: int) -> int:
+  return (offset + 15) & ~15
+
+
+class _PackedBufferData:
+  """Holds a `ModelT`'s buffer data for packing."""
+
+  packed_size: int
+  data_for_buffer_id: dict[int, memoryview]
+
+  def __init__(self, model: qtyping.ModelT):
+    self.data_for_buffer_id = {}
+    self.packed_size = 0
+    for buffer_id, buffer in enumerate(model.buffers):
+      if buffer.data is not None:
+        # Convert the buffer data to a `memoryview` of its bytes.
+        buffer_data = buffer.data
+        if not isinstance(buffer_data, np.ndarray):
+          buffer_data = np.array(buffer_data, dtype=np.uint8)
+        buffer_data = memoryview(np.ravel(buffer_data).view(np.uint8))
+
+        # Add this buffer to the list of buffers.
+        self.data_for_buffer_id[buffer_id] = buffer_data
+        self.packed_size = _pad_offset(self.packed_size + len(buffer_data))
+
+        # Clear the buffer data and set the offset and size to a non-zero value
+        # so that they are still packed into the flatbuffer.
+        buffer.data = None
+        buffer.offset = 1
+        buffer.size = 1
+
+
 class ModelModifier:
   """Model Modifier class that produce the final quantized TFlite model."""
 
-  def __init__(self, float_model: tfl_flatbuffer_utils.ModelT):
+  def __init__(self, float_model: qtyping.ModelT):
     """Constructor.
 
     Args:
       float_model: the original TFlite model.
     """
-    self._model: tfl_flatbuffer_utils.ModelT = float_model
+    self._model: qtyping.ModelT = float_model
 
     self._constant_map = []
     self._transformation_instruction_generator = (
@@ -55,8 +85,8 @@ class ModelModifier:
 
   def _get_tensor_processing_order(
       self,
-      tensor_names: Sequence[str],
-      flatbuffer_model: tfl_flatbuffer_utils.ModelT,
+      tensor_names: set[str],
+      flatbuffer_model: qtyping.ModelT,
   ) -> list[str]:
     """Get the tensor processing order obtained from `buffer_to_tensors`.
 
@@ -109,46 +139,40 @@ class ModelModifier:
     )
 
     tensor_processing_order = self._get_tensor_processing_order(
-        list(instructions.keys()), quantized_model
+        set(instructions.keys()), quantized_model
     )
     self._transformation_performer.transform_graph(
         instructions, quantized_model, tensor_processing_order
     )
-    constant_buffer_size = self._process_constant_map(quantized_model)
-    # we leave 256MB for the model architecture.
-    serialize_fun = (
-        self._serialize_large_model
-        if constant_buffer_size > 2**31 - 2**28
-        else self._serialize_small_model
-    )
-    serialized_quantized_model = serialize_fun(quantized_model)
 
     # Update signature defs if dequant is inserted before output.
     if self._has_transform_before_output(
         instructions, qtyping.QuantTransformation.ADD_DEQUANTIZE
     ):
       quantized_model = self._update_signature_defs(
-          quantized_model, serialized_quantized_model, _DEQUANT_SUFFIX
+          quantized_model, _DEQUANT_SUFFIX
       )
-      serialized_quantized_model = serialize_fun(quantized_model)
 
     # Update signature defs if quant is inserted before output.
     if self._has_transform_before_output(
         instructions, qtyping.QuantTransformation.ADD_QUANTIZE
     ):
       quantized_model = self._update_signature_defs(
-          quantized_model, serialized_quantized_model, _QUANT_SUFFIX
+          quantized_model, _QUANT_SUFFIX
       )
-      serialized_quantized_model = serialize_fun(quantized_model)
+
+    packed_buffer_data = _PackedBufferData(quantized_model)
+    serialized_quantized_model = self._serialize_model(
+        quantized_model, packed_buffer_data
+    )
 
     return serialized_quantized_model
 
   def _update_signature_defs(
       self,
-      model: tfl_flatbuffer_utils.ModelT,
-      serialized_model: bytearray,
+      model: qtyping.ModelT,
       suffix: str,
-  ) -> tfl_flatbuffer_utils.ModelT:
+  ) -> qtyping.ModelT:
     """Updates the signature definitions in the model.
 
     This function is called when a transformation (quantize or dequantize)
@@ -157,23 +181,15 @@ class ModelModifier:
 
     Args:
       model: The TFlite ModelT object.
-      serialized_model: The serialized bytearray of the TFlite model.
       suffix: The suffix to append to the tensor name.
 
     Returns:
       The updated TFlite ModelT object.
     """
-    interpreter = tfl.Interpreter(model_content=bytes(serialized_model))
-
     for signature_def in model.signatureDefs:
       signature_key = signature_def.signatureKey.decode("utf-8")
       logging.info("Signature = %s", signature_key)
-      subgraph_idx = tfl_interpreter_utils.get_signature_main_subgraph_index(
-          interpreter, signature_key
-      )
-      output_details = interpreter.get_signature_runner(
-          signature_key
-      ).get_output_details()
+      subgraph_idx = signature_def.subgraphIndex
       subgraph = model.subgraphs[subgraph_idx]
       graph_info = qtyping.GraphInfo(subgraph.tensors, model.buffers)
 
@@ -183,23 +199,25 @@ class ModelModifier:
         )
         logging.info("\tOutput tensor = `%s`", tensor_name)
 
-        for signature_name, tensor_details in output_details.items():
-          if tensor_details["name"] + suffix == tensor_name:
+        # for signature_name, tensor_details in output_details.items():
+        for signature_item in signature_def.outputs:
+          output_tensor = subgraph.tensors[signature_item.tensorIndex]
+          output_tensor_name = tfl_flatbuffer_utils.get_tensor_name(
+              output_tensor
+          )
+          if output_tensor_name + suffix == tensor_name:
             logging.info(
                 "\t\tfound tensor mapping: `%s`->`%s` for signature name: `%s`",
-                tensor_details["name"],
+                output_tensor_name,
                 tensor_name,
-                signature_name,
+                signature_item.name,
             )
-            for signature_item in signature_def.outputs:
-              if signature_item.name.decode("utf-8") == signature_name:
-                signature_item.tensorIndex = output
-                logging.info(
-                    "\t\t\tswapped tensor index: %s->%s",
-                    tensor_details["index"],
-                    output,
-                )
-                break
+            logging.info(
+                "\t\t\tswapping tensor index: %s->%s",
+                signature_item.tensorIndex,
+                output,
+            )
+            signature_item.tensorIndex = output
             break
 
     return model
@@ -221,101 +239,90 @@ class ModelModifier:
           return True
     return False
 
-  def _process_constant_map(
-      self, quantized_model: tfl_flatbuffer_utils.ModelT
-  ) -> int:
-    """Process the constant map after all transformations are applied.
+  def _set_packed_buffer_values(
+      self, packed_buffer: qtyping.Buffer, offset: int, size: int
+  ):
+    """Sets the `offset` and `size` values in a packed `Buffer` object.
 
-    If the resulting model is > 2GB then we would need to serialize constants
-    separately, as such, we collect all the constant buffers using this
-    function.
+    This is based on the implementation of `Buffer.Offset` and `Buffer.Size` in
+    `schema_py_generated.py`.
 
     Args:
-      quantized_model: a quantized TFlite ModelT
-
-    Returns:
-      an integer representing the total size of the constant buffers
+      packed_buffer: The packed `Buffer` object to modify.
+      offset: Integer offset value.
+      size: Integer size value.
     """
-    buffer_size = 0
-    for buffer in quantized_model.buffers:
-      if buffer.data is None:
-        self._constant_map.append(buffer.data)
-      elif isinstance(buffer.data, np.ndarray):
-        self._constant_map.append(buffer.data.tobytes())
-        buffer_size += len(buffer.data.tobytes())
-      else:
-        self._constant_map.append(buffer.data)
-        buffer_size += len(buffer.data)
-    return buffer_size
-
-  def _pad_bytearray(self, bytearr: bytearray):
-    """Pad the bytearray to 16 bytes."""
-    remainder = len(bytearr) % 16
-    if remainder != 0:
-      padding_size = 16 - remainder
-      bytearr.extend(b"\0" * padding_size)
+    table = packed_buffer._tab  # pylint: disable=protected-access
+    packer_type = flatbuffers.number_types.Uint64Flags.packer_type
+    flatbuffers.encode.Write(
+        packer_type,
+        table.Bytes,
+        flatbuffers.number_types.UOffsetTFlags.py_type(table.Offset(6))
+        + table.Pos,
+        offset,
+    )
+    flatbuffers.encode.Write(
+        packer_type,
+        table.Bytes,
+        flatbuffers.number_types.UOffsetTFlags.py_type(table.Offset(8))
+        + table.Pos,
+        size,
+    )
 
   # TODO: b/333797307 - support > 2GB output model
-  def _serialize_large_model(
-      self, quantized_model: tfl_flatbuffer_utils.ModelT
+  def _serialize_model(
+      self,
+      quantized_model: qtyping.ModelT,
+      packed_buffer_data: _PackedBufferData,
   ) -> bytearray:
-    """serialize models > 2GB.
+    """Serialize a model using external buffers.
 
     Args:
-      quantized_model: a quantized TFlite ModelT
+      quantized_model: a quantized TFlite ModelT.
+      packed_buffer_data: a `_PackedBufferData` created from `quantized_model`.
 
     Returns:
-      a byte buffer that represents the serialized tflite model
+      a `bytearray` that represents the serialized tflite model
     """
     # TODO: b/338244867 - we can have more efficient way to calculate the
     # buffer offsets.
 
-    # remove all the constant from the model.
-    for buffer in quantized_model.buffers:
-      if buffer.data is not None:
-        buffer.data = None
-        buffer.offset = 1
-        buffer.size = 1
-    dummy_bytearray = bytearray(
-        flatbuffer_utils.convert_object_to_bytearray(quantized_model)
+    # Serialize the model.
+    model_buffer = flatbuffer_utils.convert_object_to_bytearray(quantized_model)
+
+    # Resize the model_buffer to accommodate for the buffer data. Note that we
+    # do it this way since `bytearray.resize` is only available as of
+    # Python 3.14.
+    buffer_data_offset = _pad_offset(len(model_buffer))
+    combined_buffer = bytearray(
+        buffer_data_offset + packed_buffer_data.packed_size
     )
-    # calculate the correct buffer size and offset
-    self._pad_bytearray(dummy_bytearray)
-    for buffer_idx, buffer in enumerate(quantized_model.buffers):
-      buffer_data = self._constant_map[buffer_idx]
-      if buffer_data is None:
-        continue
-      buffer.offset = len(dummy_bytearray)
+    combined_buffer[: len(model_buffer)] = model_buffer
+    model_buffer = combined_buffer
+
+    # Get the model's serialized representation.
+    model_packed = qtyping.Model.GetRootAs(model_buffer)
+
+    # Pack the buffer contents at the end of the model_buffer, setting the
+    # correct sizes and offsets in the original quantized_model.
+    for buffer_id in packed_buffer_data.data_for_buffer_id:
+      # Retrieve the data for this buffer.
+      buffer_data = packed_buffer_data.data_for_buffer_id[buffer_id]
+
+      # Update the packed buffer with the correct size and offset.
+      buffer = quantized_model.buffers[buffer_id]
+      buffer.offset = buffer_data_offset
       buffer.size = len(buffer_data)
-      dummy_bytearray += buffer_data
-      self._pad_bytearray(dummy_bytearray)
-    del dummy_bytearray
+      self._set_packed_buffer_values(
+          model_packed.Buffers(buffer_id), buffer.offset, buffer.size
+      )
 
-    # build new tflite file with correct buffer offset
-    model_bytearray = bytearray(
-        flatbuffer_utils.convert_object_to_bytearray(quantized_model)
-    )
-    self._pad_bytearray(model_bytearray)
-    for buffer_idx, _ in enumerate(quantized_model.buffers):
-      buffer_data = self._constant_map[buffer_idx]
-      if buffer_data is None:
-        continue
-      model_bytearray += buffer_data
-      self._pad_bytearray(model_bytearray)
-    return model_bytearray
+      # Pack the buffer at the end of the model_buffer.
+      model_buffer[
+          buffer_data_offset : buffer_data_offset + len(buffer_data)
+      ] = memoryview(buffer_data)
 
-  def _serialize_small_model(
-      self, quantized_model: tfl_flatbuffer_utils.ModelT
-  ) -> bytearray:
-    """serialize models < 2GB.
+      # Increment the offset by the amount of data that we added, plus padding.
+      buffer_data_offset = _pad_offset(buffer_data_offset + len(buffer_data))
 
-    Args:
-      quantized_model: a quantized TFlite ModelT
-
-    Returns:
-      a byte buffer that represents the serialized tflite model
-    """
-    model_bytearray = flatbuffer_utils.convert_object_to_bytearray(
-        quantized_model
-    )
-    return model_bytearray
+    return model_buffer
