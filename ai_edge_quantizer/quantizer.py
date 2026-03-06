@@ -23,6 +23,7 @@ import pathlib
 from typing import Any, Optional, Union
 
 import os
+import io
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import default_policy
@@ -58,7 +59,7 @@ class QuantizationResult:
   """
 
   recipe: _QuantRecipe
-  quantized_model: Optional[bytearray]
+  quantized_model: Optional[qtyping.BufferType]
 
   def save(
       self, save_folder: Path, model_name: str, overwrite: bool = False
@@ -139,9 +140,11 @@ class Quantizer:
 
   def __init__(
       self,
-      float_model: Union[Path, bytearray],
+      float_model: Union[Path, qtyping.BufferType],
       quantization_recipe: Optional[Union[Path, _QuantRecipe]] = None,
-      previous_quantized_model: Optional[Union[Path, bytearray]] = None,
+      previous_quantized_model: Optional[
+          Union[Path, qtyping.BufferType]
+      ] = None,
   ):
     """Initializes the quantizer.
 
@@ -154,13 +157,13 @@ class Quantizer:
         quantizing it again.
     """
     # Load the `float_model` as a buffer.
-    self._float_model_buffer: bytes = (
+    self._float_model_buffer = memoryview(
         tfl_flatbuffer_utils.get_model_content(float_model)
         if isinstance(float_model, (str, pathlib.Path))
         else float_model
     )
     if previous_quantized_model is not None:
-      self.previous_quantized_model_buffer: bytes = (
+      self.previous_quantized_model_buffer = memoryview(
           tfl_flatbuffer_utils.get_model_content(previous_quantized_model)
           if isinstance(previous_quantized_model, (str, pathlib.Path))
           else previous_quantized_model
@@ -171,8 +174,8 @@ class Quantizer:
     # Extract the `float_model` from the buffer. Note that this will not
     # duplicate the model's data, i.e. all arrays are views on the data of the
     # underlying buffer.
-    self._float_model: tfl_flatbuffer_utils.ModelT = (
-        tfl_flatbuffer_utils.read_model(self._float_model_buffer)
+    self._float_model: qtyping.ModelT = tfl_flatbuffer_utils.read_model(
+        self._float_model_buffer
     )
 
     self._recipe_manager: recipe_manager.RecipeManager = (

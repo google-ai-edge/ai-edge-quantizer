@@ -198,7 +198,7 @@ def insert_decomposed_hadamard_rotation(
   hadamard_matrix_tensor_id = transformation_utils.add_new_constant_tensor(
       tensor_name=tensor.name + b'_hadamard_matrix',
       data=transformation_utils.pack_data(
-          bitwidth=4, flattened_data=hadamard_matrix.flatten()
+          bitwidth=4, flattened_data=np.ravel(hadamard_matrix)
       ),
       tensor_type=schema_py_generated.TensorType.INT4,
       subgraph=transformation_input.subgraph,
