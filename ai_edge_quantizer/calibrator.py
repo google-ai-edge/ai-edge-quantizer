@@ -281,8 +281,6 @@ class Calibrator:
         total_steps=total_ops,
         description="Running Calibration:",
         disappear_on_finish=True,
-        disable=total_ops
-        < 1000,  # We skip the progress bar for small models and small datasets.
     ) as pbar:
       # TODO: b/329322226 - Enable parallel calibration.
       for signature_key, dataset in calibration_dataset.items():
