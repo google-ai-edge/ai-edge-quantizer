@@ -614,8 +614,8 @@ class BaseQuantizeTest(parameterized.TestCase):
             tensor_data, quantization_params
         )
         self.assertSequenceEqual(
-            list(expected_quantized_data.flatten()),
-            list(quantization_params.quantized_data.flatten()),  # pytype: disable=attribute-error
+            np.ravel(expected_quantized_data).tolist(),
+            np.ravel(quantization_params.quantized_data).tolist(),  # pytype: disable=attribute-error
         )
       elif expected_tensor_max:
         max_q = 2**tensor_quant_config.num_bits / 2 - 1

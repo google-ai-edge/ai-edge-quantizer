@@ -18,6 +18,7 @@ import pathlib
 from absl import flags
 import numpy as np
 import os
+import io
 import absl.testing.absltest as absltest
 from ai_edge_quantizer import model_validator
 from ai_edge_quantizer.utils import test_utils

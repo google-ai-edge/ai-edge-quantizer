@@ -22,6 +22,7 @@ from typing import Any, Union
 import numpy as np
 
 import os
+import io
 from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.utils import common_utils
