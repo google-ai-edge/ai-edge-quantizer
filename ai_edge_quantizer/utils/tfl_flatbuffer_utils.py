@@ -16,6 +16,8 @@
 """flatbuffer utils for the Quantizer."""
 
 import logging
+import mmap
+import os
 import pathlib
 from typing import Any, Optional, Union
 
@@ -23,6 +25,7 @@ import immutabledict
 import numpy as np
 
 import os
+import io
 from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import qtyping
 from ai_edge_litert import schema_py_generated as schema  # pylint:disable=g-direct-tensorflow-import
@@ -123,7 +126,9 @@ TENSOR_TYPE_TO_CODE = immutabledict.immutabledict(  # pytype: disable=wrong-arg-
 write_model = flatbuffer_utils.write_model
 
 
-def read_model(tflite_model: Union[Path, bytearray, bytes]) -> schema.ModelT:
+def read_model(
+    tflite_model: Union[Path, bytearray, bytes, memoryview],
+) -> schema.ModelT:
   """Read and convert the TFLite model into a flatbuffer object.
 
   Args:
@@ -135,9 +140,9 @@ def read_model(tflite_model: Union[Path, bytearray, bytes]) -> schema.ModelT:
   Returns:
     flatbuffer_model: the flatbuffer_model.
   """
-  if isinstance(tflite_model, (str, pathlib.Path)):
+  if isinstance(tflite_model, Path):
     return flatbuffer_utils.read_model(tflite_model)
-  elif isinstance(tflite_model, (bytes, bytearray)):
+  elif isinstance(tflite_model, (bytes, bytearray, memoryview)):
     return flatbuffer_utils.read_model_from_bytearray(tflite_model)
   else:
     raise ValueError(
@@ -145,8 +150,8 @@ def read_model(tflite_model: Union[Path, bytearray, bytes]) -> schema.ModelT:
     )
 
 
-def get_model_content(tflite_path: Path) -> bytes:
-  """Get the model content (bytes) from the path.
+def get_model_content(tflite_path: Path) -> memoryview:
+  """Get the model content (read-only bytes) from the path.
 
   Args:
     tflite_path: Path to the .tflite.
@@ -154,12 +159,26 @@ def get_model_content(tflite_path: Path) -> bytes:
   Returns:
     The model bytes.
   """
-  with open(tflite_path, "rb") as tflite_file:
-    return tflite_file.read()
+  model_bytes = None
+
+  # Try to mmap the file first if it is local.
+  if (fd := os.open(tflite_path, os.O_RDONLY)) >= 0:
+    try:
+      model_bytes = mmap.mmap(fd, 0, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ)
+    except IOError as e:
+      print(f"Mapping model file {tflite_path} failed with exception: {e}.")
+    os.close(fd)
+
+  # If mapping failed, go at it conventionally.
+  if model_bytes is None:
+    with open(tflite_path, "rb") as tflite_file:
+      model_bytes = tflite_file.read()
+
+  return memoryview(model_bytes)
 
 
 def get_model_buffer(tflite_path: Path) -> bytearray:
-  """Get the model buffer from the path.
+  """Get a mutable model buffer from the path.
 
   Args:
     tflite_path: path to the .tflite.
@@ -167,8 +186,28 @@ def get_model_buffer(tflite_path: Path) -> bytearray:
   Returns:
     model_buffer: the model buffer.
   """
-  with open(tflite_path, "rb") as tflite_file:
-    return bytearray(tflite_file.read())
+  model_bytearray = None
+
+  # Try to mmap the file first if it is local.
+  try:
+    if (fd := os.open(tflite_path, os.O_RDONLY)) >= 0:
+      try:
+        model_mmap = mmap.mmap(
+            fd, 0, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ
+        )
+        model_bytearray = bytearray(model_mmap[:])
+      except IOError as e:
+        print(f"Mapping model file {tflite_path} failed with exception: {e}.")
+      os.close(fd)
+  except RuntimeError:
+    pass
+
+  # If mapping failed, go at it conventionally.
+  if model_bytearray is None:
+    with open(tflite_path, "rb") as tflite_file:
+      model_bytearray = bytearray(tflite_file.read())
+
+  return model_bytearray
 
 
 def parse_op_tensors(op: Any, subgraph_tensors: list[Any]) -> list[Any]:

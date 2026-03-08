@@ -26,6 +26,7 @@ import numpy as np
 
 from ai_edge_quantizer.utils import tfl_interpreter_utils as utils
 import os
+import io
 
 
 _DEFAULT_SIGNATURE_KEY = utils.DEFAULT_SIGNATURE_KEY
