@@ -59,7 +59,7 @@ class QuantizationResult:
   """
 
   recipe: _QuantRecipe
-  quantized_model: Optional[bytearray]
+  quantized_model: Optional[qtyping.BufferType]
 
   def save(
       self, save_folder: Path, model_name: str, overwrite: bool = False
@@ -140,9 +140,11 @@ class Quantizer:
 
   def __init__(
       self,
-      float_model: Union[Path, bytes, bytearray, memoryview],
+      float_model: Union[Path, qtyping.BufferType],
       quantization_recipe: Optional[Union[Path, _QuantRecipe]] = None,
-      previous_quantized_model: Optional[Union[Path, bytearray]] = None,
+      previous_quantized_model: Optional[
+          Union[Path, qtyping.BufferType]
+      ] = None,
   ):
     """Initializes the quantizer.
 
@@ -172,8 +174,8 @@ class Quantizer:
     # Extract the `float_model` from the buffer. Note that this will not
     # duplicate the model's data, i.e. all arrays are views on the data of the
     # underlying buffer.
-    self._float_model: tfl_flatbuffer_utils.ModelT = (
-        tfl_flatbuffer_utils.read_model(self._float_model_buffer)
+    self._float_model: qtyping.ModelT = tfl_flatbuffer_utils.read_model(
+        self._float_model_buffer
     )
 
     self._recipe_manager: recipe_manager.RecipeManager = (
