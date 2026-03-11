@@ -25,34 +25,8 @@ from typing import Any, Callable, Optional, Union
 import numpy as np
 from typing_extensions import TypeAlias
 
-from ai_edge_litert.tools import flatbuffer_utils
 
 QSV: TypeAlias = MutableMapping[str, Any]
-
-# Types imported from `schema_py_generated`.
-Buffer = flatbuffer_utils.Buffer
-BufferT = flatbuffer_utils.BufferT
-BuiltinOperator = flatbuffer_utils.BuiltinOperator
-BuiltinOptions = flatbuffer_utils.BuiltinOptions
-BuiltinOptions2 = flatbuffer_utils.BuiltinOptions2
-Model = flatbuffer_utils.Model
-ModelT = flatbuffer_utils.ModelT
-Operator = flatbuffer_utils.Operator
-OperatorCode = flatbuffer_utils.OperatorCode
-OperatorCodeT = flatbuffer_utils.OperatorCodeT
-OperatorT = flatbuffer_utils.OperatorT
-StableHLOCompositeOptions = flatbuffer_utils.StableHLOCompositeOptions
-StableHLOCompositeOptionsT = flatbuffer_utils.StableHLOCompositeOptionsT
-SubGraph = flatbuffer_utils.SubGraph
-SubGraphT = flatbuffer_utils.SubGraphT
-Tensor = flatbuffer_utils.Tensor
-TensorT = flatbuffer_utils.TensorT
-TensorType = flatbuffer_utils.TensorType
-
-# Local convenience types.
-Path = flatbuffer_utils.Path
-BufferType = flatbuffer_utils.BufferType
-Endiness = flatbuffer_utils.Endiness
 
 
 class TFLOperationName(str, enum.Enum):
@@ -489,8 +463,8 @@ class GraphInfo:
     buffers: Buffers in the subgraph.
   """
 
-  subgraph_tensors: list[TensorT]
-  buffers: list[BufferT]
+  subgraph_tensors: list[Any]
+  buffers: list[Any]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -504,7 +478,7 @@ class OpInfo:
     op_quant_config: The quantization configuration for the op.
   """
 
-  op: OperatorT
+  op: Any
   op_name: TFLOperationName
   subgraph_op_index: int  # Position of the op in the subgraph.
   op_quant_config: OpQuantizationConfig
@@ -603,6 +577,7 @@ class IOOperator:
   inputs: list[int]
   outputs: list[int]
   op_key: TFLOperationName
+
 
 # The function signature for `get_tensor_quant_params_fn`.
 GetTensorQuantParamsFuncSignature = Callable[

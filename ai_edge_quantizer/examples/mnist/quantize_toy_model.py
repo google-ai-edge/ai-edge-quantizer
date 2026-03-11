@@ -153,10 +153,7 @@ def quantize(
   # 5) Save the quantized model and the recipe used to the filesystem.
   quant_result.save(_OUTPUT_DIR.value, model_name='mnist_toy_model')
 
-  quantized_model = quant_result.quantized_model
-  if not isinstance(quantized_model, bytearray):
-    quantized_model = bytearray(quantized_model)
-  return quantized_model
+  return quant_result.quantized_model
 
 
 def inference(quantized_tflite: bytes, image_path: str):

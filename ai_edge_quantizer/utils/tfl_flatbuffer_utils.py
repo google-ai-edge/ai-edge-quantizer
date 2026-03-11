@@ -15,11 +15,11 @@
 
 """flatbuffer utils for the Quantizer."""
 
-import collections
 import logging
 import mmap
 import os
 import pathlib
+from typing import Any, Optional, Union
 
 import immutabledict
 import numpy as np
@@ -28,65 +28,70 @@ import os
 import io
 from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import qtyping
+from ai_edge_litert import schema_py_generated as schema  # pylint:disable=g-direct-tensorflow-import
+
+
+# Export some common schema types.
+ModelT = schema.ModelT
 
 
 _TFLOpName = qtyping.TFLOperationName
 
-Path = str | pathlib.Path
+Path = Union[str, pathlib.Path]
 
 TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
-    _TFLOpName.FULLY_CONNECTED: qtyping.BuiltinOperator.FULLY_CONNECTED,
-    _TFLOpName.BATCH_MATMUL: qtyping.BuiltinOperator.BATCH_MATMUL,
-    _TFLOpName.CONV_2D: qtyping.BuiltinOperator.CONV_2D,
-    _TFLOpName.DEPTHWISE_CONV_2D: qtyping.BuiltinOperator.DEPTHWISE_CONV_2D,
-    _TFLOpName.CONV_2D_TRANSPOSE: qtyping.BuiltinOperator.TRANSPOSE_CONV,
-    _TFLOpName.EMBEDDING_LOOKUP: qtyping.BuiltinOperator.EMBEDDING_LOOKUP,
-    _TFLOpName.SOFTMAX: qtyping.BuiltinOperator.SOFTMAX,
-    _TFLOpName.AVERAGE_POOL_2D: qtyping.BuiltinOperator.AVERAGE_POOL_2D,
-    _TFLOpName.RESHAPE: qtyping.BuiltinOperator.RESHAPE,
-    _TFLOpName.TANH: qtyping.BuiltinOperator.TANH,
-    _TFLOpName.TRANSPOSE: qtyping.BuiltinOperator.TRANSPOSE,
-    _TFLOpName.GELU: qtyping.BuiltinOperator.GELU,
-    _TFLOpName.ADD: qtyping.BuiltinOperator.ADD,
-    _TFLOpName.SUB: qtyping.BuiltinOperator.SUB,
-    _TFLOpName.MUL: qtyping.BuiltinOperator.MUL,
-    _TFLOpName.MEAN: qtyping.BuiltinOperator.MEAN,
-    _TFLOpName.RSQRT: qtyping.BuiltinOperator.RSQRT,
-    _TFLOpName.CONCATENATION: qtyping.BuiltinOperator.CONCATENATION,
-    _TFLOpName.STRIDED_SLICE: qtyping.BuiltinOperator.STRIDED_SLICE,
-    _TFLOpName.SPLIT: qtyping.BuiltinOperator.SPLIT,
-    _TFLOpName.LOGISTIC: qtyping.BuiltinOperator.LOGISTIC,
-    _TFLOpName.SLICE: qtyping.BuiltinOperator.SLICE,
-    _TFLOpName.SUM: qtyping.BuiltinOperator.SUM,
-    _TFLOpName.SELECT: qtyping.BuiltinOperator.SELECT,
-    _TFLOpName.SELECT_V2: qtyping.BuiltinOperator.SELECT_V2,
-    _TFLOpName.STABLEHLO_COMPOSITE: qtyping.BuiltinOperator.STABLEHLO_COMPOSITE,
+    _TFLOpName.FULLY_CONNECTED: schema.BuiltinOperator.FULLY_CONNECTED,
+    _TFLOpName.BATCH_MATMUL: schema.BuiltinOperator.BATCH_MATMUL,
+    _TFLOpName.CONV_2D: schema.BuiltinOperator.CONV_2D,
+    _TFLOpName.DEPTHWISE_CONV_2D: schema.BuiltinOperator.DEPTHWISE_CONV_2D,
+    _TFLOpName.CONV_2D_TRANSPOSE: schema.BuiltinOperator.TRANSPOSE_CONV,
+    _TFLOpName.EMBEDDING_LOOKUP: schema.BuiltinOperator.EMBEDDING_LOOKUP,
+    _TFLOpName.SOFTMAX: schema.BuiltinOperator.SOFTMAX,
+    _TFLOpName.AVERAGE_POOL_2D: schema.BuiltinOperator.AVERAGE_POOL_2D,
+    _TFLOpName.RESHAPE: schema.BuiltinOperator.RESHAPE,
+    _TFLOpName.TANH: schema.BuiltinOperator.TANH,
+    _TFLOpName.TRANSPOSE: schema.BuiltinOperator.TRANSPOSE,
+    _TFLOpName.GELU: schema.BuiltinOperator.GELU,
+    _TFLOpName.ADD: schema.BuiltinOperator.ADD,
+    _TFLOpName.SUB: schema.BuiltinOperator.SUB,
+    _TFLOpName.MUL: schema.BuiltinOperator.MUL,
+    _TFLOpName.MEAN: schema.BuiltinOperator.MEAN,
+    _TFLOpName.RSQRT: schema.BuiltinOperator.RSQRT,
+    _TFLOpName.CONCATENATION: schema.BuiltinOperator.CONCATENATION,
+    _TFLOpName.STRIDED_SLICE: schema.BuiltinOperator.STRIDED_SLICE,
+    _TFLOpName.SPLIT: schema.BuiltinOperator.SPLIT,
+    _TFLOpName.LOGISTIC: schema.BuiltinOperator.LOGISTIC,
+    _TFLOpName.SLICE: schema.BuiltinOperator.SLICE,
+    _TFLOpName.SUM: schema.BuiltinOperator.SUM,
+    _TFLOpName.SELECT: schema.BuiltinOperator.SELECT,
+    _TFLOpName.SELECT_V2: schema.BuiltinOperator.SELECT_V2,
+    _TFLOpName.STABLEHLO_COMPOSITE: schema.BuiltinOperator.STABLEHLO_COMPOSITE,
     _TFLOpName.DYNAMIC_UPDATE_SLICE: (
-        qtyping.BuiltinOperator.DYNAMIC_UPDATE_SLICE
+        schema.BuiltinOperator.DYNAMIC_UPDATE_SLICE
     ),
-    _TFLOpName.PAD: qtyping.BuiltinOperator.PAD,
-    _TFLOpName.SQUARED_DIFFERENCE: qtyping.BuiltinOperator.SQUARED_DIFFERENCE,
-    _TFLOpName.MAX_POOL_2D: qtyping.BuiltinOperator.MAX_POOL_2D,
-    _TFLOpName.RESIZE_BILINEAR: qtyping.BuiltinOperator.RESIZE_BILINEAR,
+    _TFLOpName.PAD: schema.BuiltinOperator.PAD,
+    _TFLOpName.SQUARED_DIFFERENCE: schema.BuiltinOperator.SQUARED_DIFFERENCE,
+    _TFLOpName.MAX_POOL_2D: schema.BuiltinOperator.MAX_POOL_2D,
+    _TFLOpName.RESIZE_BILINEAR: schema.BuiltinOperator.RESIZE_BILINEAR,
     _TFLOpName.RESIZE_NEAREST_NEIGHBOR: (
-        qtyping.BuiltinOperator.RESIZE_NEAREST_NEIGHBOR
+        schema.BuiltinOperator.RESIZE_NEAREST_NEIGHBOR
     ),
-    _TFLOpName.GATHER_ND: qtyping.BuiltinOperator.GATHER_ND,
-    _TFLOpName.PACK: qtyping.BuiltinOperator.PACK,
-    _TFLOpName.UNPACK: qtyping.BuiltinOperator.UNPACK,
-    _TFLOpName.DIV: qtyping.BuiltinOperator.DIV,
-    _TFLOpName.BROADCAST_TO: qtyping.BuiltinOperator.BROADCAST_TO,
-    _TFLOpName.SQRT: qtyping.BuiltinOperator.SQRT,
-    _TFLOpName.GATHER: qtyping.BuiltinOperator.GATHER,
-    _TFLOpName.HARD_SWISH: qtyping.BuiltinOperator.HARD_SWISH,
-    _TFLOpName.MAXIMUM: qtyping.BuiltinOperator.MAXIMUM,
-    _TFLOpName.PADV2: qtyping.BuiltinOperator.PADV2,
-    _TFLOpName.REDUCE_MIN: qtyping.BuiltinOperator.REDUCE_MIN,
-    _TFLOpName.EQUAL: qtyping.BuiltinOperator.EQUAL,
-    _TFLOpName.NOT_EQUAL: qtyping.BuiltinOperator.NOT_EQUAL,
-    _TFLOpName.MIRROR_PAD: qtyping.BuiltinOperator.MIRROR_PAD,
-    _TFLOpName.SPACE_TO_DEPTH: qtyping.BuiltinOperator.SPACE_TO_DEPTH,
-    _TFLOpName.RELU: qtyping.BuiltinOperator.RELU,
+    _TFLOpName.GATHER_ND: schema.BuiltinOperator.GATHER_ND,
+    _TFLOpName.PACK: schema.BuiltinOperator.PACK,
+    _TFLOpName.UNPACK: schema.BuiltinOperator.UNPACK,
+    _TFLOpName.DIV: schema.BuiltinOperator.DIV,
+    _TFLOpName.BROADCAST_TO: schema.BuiltinOperator.BROADCAST_TO,
+    _TFLOpName.SQRT: schema.BuiltinOperator.SQRT,
+    _TFLOpName.GATHER: schema.BuiltinOperator.GATHER,
+    _TFLOpName.HARD_SWISH: schema.BuiltinOperator.HARD_SWISH,
+    _TFLOpName.MAXIMUM: schema.BuiltinOperator.MAXIMUM,
+    _TFLOpName.PADV2: schema.BuiltinOperator.PADV2,
+    _TFLOpName.REDUCE_MIN: schema.BuiltinOperator.REDUCE_MIN,
+    _TFLOpName.EQUAL: schema.BuiltinOperator.EQUAL,
+    _TFLOpName.NOT_EQUAL: schema.BuiltinOperator.NOT_EQUAL,
+    _TFLOpName.MIRROR_PAD: schema.BuiltinOperator.MIRROR_PAD,
+    _TFLOpName.SPACE_TO_DEPTH: schema.BuiltinOperator.SPACE_TO_DEPTH,
+    _TFLOpName.RELU: schema.BuiltinOperator.RELU,
 })
 
 TFL_OP_CODE_TO_NAME = immutabledict.immutabledict(
@@ -109,9 +114,12 @@ TFL_OP_TO_BLOCKWISE_WEIGHT_QUANTIZED_DIM = immutabledict.immutabledict({
 })
 
 NUM_TFL_DATATYPES = 18
-TENSOR_TYPE_TO_CODE = immutabledict.immutabledict(qtyping.TensorType.__dict__)
-TENSOR_CODE_TO_TYPE = immutabledict.immutabledict(
-    {v: k for k, v in qtyping.TensorType.__dict__.items()}
+TENSOR_CODE_TO_TYPE = {}
+for dtype_code in range(NUM_TFL_DATATYPES):
+  TENSOR_CODE_TO_TYPE[dtype_code] = flatbuffer_utils.type_to_name(dtype_code)
+TENSOR_CODE_TO_TYPE = immutabledict.immutabledict(TENSOR_CODE_TO_TYPE)
+TENSOR_TYPE_TO_CODE = immutabledict.immutabledict(  # pytype: disable=wrong-arg-types
+    (reversed(item) for item in TENSOR_CODE_TO_TYPE.items())
 )
 
 # Expose functions in litert.python.tools.flatbuffer_utils
@@ -119,8 +127,8 @@ write_model = flatbuffer_utils.write_model
 
 
 def read_model(
-    tflite_model: Path | qtyping.BufferType,
-) -> qtyping.ModelT:
+    tflite_model: Union[Path, bytearray, bytes, memoryview],
+) -> schema.ModelT:
   """Read and convert the TFLite model into a flatbuffer object.
 
   Args:
@@ -202,9 +210,7 @@ def get_model_buffer(tflite_path: Path) -> bytearray:
   return model_bytearray
 
 
-def parse_op_tensors(
-    op: qtyping.OperatorT, subgraph_tensors: list[qtyping.TensorT]
-) -> list[qtyping.TensorT]:
+def parse_op_tensors(op: Any, subgraph_tensors: list[Any]) -> list[Any]:
   """Parse the op tensors.
 
   Args:
@@ -215,23 +221,21 @@ def parse_op_tensors(
     tensors: list of tensors that are associated with the op.
   """
 
-  return [
-      subgraph_tensors[tensor_idx]
-      for tensor_idx in list(op.outputs) + list(op.inputs)
-      if tensor_idx != -1
-  ]
+  tensors = []
+  for tensor_idx in list(op.outputs) + list(op.inputs):
+    if tensor_idx != -1:
+      tensors.append(subgraph_tensors[tensor_idx])
+  return tensors
 
 
 def parse_fc_bmm_conv_tensors(
-    op: qtyping.OperatorT,
-    subgraph_tensors: list[qtyping.TensorT],
+    op: Any,
+    subgraph_tensors: list[Any],
     input_index: int = 0,
     weight_index: int = 1,
     bias_index: int = 2,
     output_index: int = 0,
-) -> tuple[
-    qtyping.TensorT, qtyping.TensorT, qtyping.TensorT | None, qtyping.TensorT
-]:
+) -> tuple[Any, Any, Any, Any]:
   """Parse tensors in FullyConnected, BatchMatmul, and Convolutions.
 
   Args:
@@ -255,20 +259,22 @@ def parse_fc_bmm_conv_tensors(
   return input_tensor, weight_tensor, bias_tensor, output_tensor
 
 
-def buffer_to_tensors(
-    flatbuffer_model: qtyping.ModelT,
-) -> dict[int, list[qtyping.TensorT]]:
+# flatbuffer_model has Any type since litert.python.tools.flatbuffer_utils
+# is not type annotated.
+def buffer_to_tensors(flatbuffer_model: Any) -> dict[int, list[Any]]:
   """Returns a map from buffer id to tensors that use it."""
-  buffer_to_tensor_map = collections.defaultdict(list)
+  buffer_to_tensor_map = {}
   for subgraph in flatbuffer_model.subgraphs:
     for op in subgraph.operators:
       for tensor in parse_op_tensors(op, subgraph.tensors):
+        if tensor.buffer not in buffer_to_tensor_map:
+          buffer_to_tensor_map[tensor.buffer] = []
         if tensor not in buffer_to_tensor_map[tensor.buffer]:
           buffer_to_tensor_map[tensor.buffer].append(tensor)
   return buffer_to_tensor_map
 
 
-def get_tensor_name(tensor: qtyping.TensorT) -> str:
+def get_tensor_name(tensor: Any) -> str:
   """Get the tensor name for a fb tensor.
 
   Args:
@@ -280,9 +286,7 @@ def get_tensor_name(tensor: qtyping.TensorT) -> str:
   return tensor.name.decode("utf-8")
 
 
-def get_tensor_data(
-    tensor: qtyping.TensorT, buffers: list[qtyping.BufferT]
-) -> np.ndarray | None:
+def get_tensor_data(tensor: Any, buffers: list[Any]) -> Optional[np.ndarray]:
   """Get the tensor data.
 
   Args:
@@ -304,9 +308,7 @@ def get_tensor_data(
   return data
 
 
-def has_same_quantization(
-    tensor1: qtyping.TensorT, tensor2: qtyping.TensorT
-) -> bool:
+def has_same_quantization(tensor1: Any, tensor2: Any) -> bool:
   """Check if two tensors have the same quantization.
 
   Args:
@@ -345,7 +347,7 @@ def has_same_quantization(
   )
 
 
-def is_float_model(flatbuffer_model: qtyping.ModelT) -> bool:
+def is_float_model(flatbuffer_model: Any) -> bool:
   """Checks that the model is float and not already quantized."""
   for subgraph in flatbuffer_model.subgraphs:
     for tensor in subgraph.tensors:
@@ -357,7 +359,7 @@ def is_float_model(flatbuffer_model: qtyping.ModelT) -> bool:
 
 
 def get_subgraph_input_output_operators(
-    subgraph: qtyping.SubGraphT,
+    subgraph: Any,
 ) -> list[qtyping.IOOperator]:
   """Get the input/output operators for the subgraph.
 
@@ -381,7 +383,7 @@ def get_subgraph_input_output_operators(
 
 
 def get_op_side_effect_subgraphs(
-    op: qtyping.Operator | qtyping.OperatorT,
+    op: Union[schema.Operator, schema.OperatorT],
 ) -> list[int]:
   """Get indices of any subgraphs invoked as a side effect of the operator.
 
@@ -393,7 +395,7 @@ def get_op_side_effect_subgraphs(
     does not invoke any subgraphs.
   """
   if opts := flatbuffer_utils.get_options_as(
-      op, qtyping.StableHLOCompositeOptionsT
+      op, schema.StableHLOCompositeOptionsT
   ):
     return [opts.decompositionSubgraphIndex]
   # Can add other nested ops here (control flow ops, etc).
@@ -401,7 +403,7 @@ def get_op_side_effect_subgraphs(
 
 
 def get_op_name_by_index(
-    flatbuffer_model: qtyping.ModelT, subgraph_id: int, op_index: int
+    flatbuffer_model: Any, subgraph_id: int, op_index: int
 ) -> str:
   """Get the op name from the flatbuffer model."""
   op = flatbuffer_model.subgraphs[subgraph_id].operators[op_index]
@@ -410,9 +412,7 @@ def get_op_name_by_index(
 
 
 def get_op_scope(
-    op: qtyping.OperatorT,
-    subgraph_tensors: list[qtyping.TensorT],
-    max_length: int = 10000,
+    op: Any, subgraph_tensors: list[Any], max_length: int = 10000
 ) -> str:
   """Get the op scope.
 
