@@ -84,7 +84,7 @@ class ModelModifierTest(parameterized.TestCase):
     )
     self.assertIsInstance(
         flatbuffer_utils.convert_bytearray_to_object(new_model_binary),
-        tfl_flatbuffer_utils.ModelT,
+        qtyping.ModelT,
     )
     self.assertLess(len(new_model_binary), len(self._model_content))
 
