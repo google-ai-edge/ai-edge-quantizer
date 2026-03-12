@@ -154,12 +154,16 @@ def get_model_content(tflite_path: Path) -> memoryview:
   model_bytes = None
 
   # Try to mmap the file first if it is local.
-  if (fd := os.open(tflite_path, os.O_RDONLY)) >= 0:
-    try:
+  try:
+    if (fd := os.open(tflite_path, os.O_RDONLY)) >= 0:
       model_bytes = mmap.mmap(fd, 0, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ)
-    except IOError as e:
-      print(f"Mapping model file {tflite_path} failed with exception: {e}.")
-    os.close(fd)
+      os.close(fd)
+  except IOError as e:
+    logging.info(
+        'Mapping model file "%s" failed with exception: %s.',
+        tflite_path,
+        e,
+    )
 
   # If mapping failed, go at it conventionally.
   if model_bytes is None:
