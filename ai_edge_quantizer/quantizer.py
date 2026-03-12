@@ -24,6 +24,7 @@ from typing import Any, Optional, Union
 
 import os
 import io
+from ai_edge_litert.tools import mmap_utils
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import default_policy
@@ -120,8 +121,9 @@ class QuantizationResult:
             ' consider change the model name or specify overwrite=True to'
             ' overwrite the model if needed.'
         )
-    with open(filepath, 'wb') as output_file_handle:
-      output_file_handle.write(self.quantized_model)
+
+    # Try to write the file via an `mmap.mmap` to avoid any buffering.
+    mmap_utils.set_file_contents(filepath, self.quantized_model)
 
 
 class Quantizer:
