@@ -65,9 +65,9 @@ class ModelModifierTest(parameterized.TestCase):
         },
     ]
 
-  def test_process_constant_map_succeeds(self):
-    constant_size = self._model_modifier._process_constant_map(self._model)
-    self.assertEqual(constant_size, 202540)
+  def test_pack_buffer_data_succeeds(self):
+    packed_buffer_data = model_modifier._PackedBufferData(self._model)
+    self.assertEqual(packed_buffer_data.packed_size, 202560)
 
   def test_modify_model_succeeds_with_recipe(self):
     recipe_manager_instance = recipe_manager.RecipeManager()
@@ -213,19 +213,15 @@ class ModelModifierTest(parameterized.TestCase):
         )
     )
 
-  def test_pad_bytearray(self):
-    arr = bytearray(b'\x01\x02\x03')
-    self._model_modifier._pad_bytearray(arr)
-    self.assertLen(arr, 16)
-    self.assertEqual(arr, b'\x01\x02\x03' + b'\0' * 13)
+  def test_pad_offset(self):
+    arr_len = 3
+    self.assertEqual(model_modifier._round_up_16(arr_len), 16)
 
-    arr = bytearray(b'\x01' * 16)
-    self._model_modifier._pad_bytearray(arr)
-    self.assertLen(arr, 16)
+    arr_len = 16
+    self.assertEqual(model_modifier._round_up_16(arr_len), 16)
 
-    arr = bytearray(b'\x01' * 17)
-    self._model_modifier._pad_bytearray(arr)
-    self.assertLen(arr, 32)
+    arr_len = 17
+    self.assertEqual(model_modifier._round_up_16(arr_len), 32)
 
 
 class ModelModifierTestWithSignature(parameterized.TestCase):

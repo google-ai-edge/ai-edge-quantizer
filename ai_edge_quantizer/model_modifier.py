@@ -33,6 +33,33 @@ _DEQUANT_SUFFIX = "_dequant"
 _QUANT_SUFFIX = "_quantized"
 
 
+def _round_up_16(offset: int) -> int:
+  """Round the given `offset` to the next multiple of 16."""
+  return (offset + 15) & ~15
+
+
+class _PackedBufferData:
+  """Holds a `ModelT`'s buffer data for packing."""
+
+  packed_size: int
+  data_for_buffer_id: dict[int, memoryview]
+
+  def __init__(self, model: qtyping.ModelT):
+    self.data_for_buffer_id = {}
+    self.packed_size = 0
+    for buffer_id, buffer in enumerate(model.buffers):
+      if buffer.data is not None:
+        # Convert the buffer data to a `memoryview` of its bytes.
+        buffer_data = buffer.data
+        if not isinstance(buffer_data, np.ndarray):
+          buffer_data = np.array(buffer_data, dtype=np.uint8)
+        buffer_data = memoryview(np.ravel(buffer_data).view(np.uint8))
+
+        # Add this buffer to the list of buffers.
+        self.data_for_buffer_id[buffer_id] = buffer_data
+        self.packed_size = _round_up_16(self.packed_size + len(buffer_data))
+
+
 class ModelModifier:
   """Model Modifier class that produce the final quantized TFlite model."""
 
@@ -113,12 +140,12 @@ class ModelModifier:
     self._transformation_performer.transform_graph(
         instructions, quantized_model, tensor_processing_order
     )
-    constant_buffer_size = self._process_constant_map(quantized_model)
-    # we leave 256MB for the model architecture.
+
+    packed_buffer_data = _PackedBufferData(quantized_model)
     serialize_fun = (
-        self._serialize_large_model
-        if constant_buffer_size > 2**31 - 2**28
-        else self._serialize_small_model
+        self._serialize_small_model
+        if packed_buffer_data.packed_size < 1024 * 1024
+        else lambda m: self._serialize_model(m, packed_buffer_data)
     )
     serialized_quantized_model = serialize_fun(quantized_model)
 
@@ -220,89 +247,77 @@ class ModelModifier:
           return True
     return False
 
-  def _process_constant_map(self, quantized_model: qtyping.ModelT) -> int:
-    """Process the constant map after all transformations are applied.
-
-    If the resulting model is > 2GB then we would need to serialize constants
-    separately, as such, we collect all the constant buffers using this
-    function.
-
-    Args:
-      quantized_model: a quantized TFlite ModelT
-
-    Returns:
-      an integer representing the total size of the constant buffers
-    """
-    buffer_size = 0
-    for buffer in quantized_model.buffers:
-      if buffer.data is None:
-        self._constant_map.append(buffer.data)
-      elif isinstance(buffer.data, np.ndarray):
-        self._constant_map.append(buffer.data.tobytes())
-        buffer_size += len(buffer.data.tobytes())
-      else:
-        self._constant_map.append(buffer.data)
-        buffer_size += len(buffer.data)
-    return buffer_size
-
-  def _pad_bytearray(self, bytearr: bytearray):
-    """Pad the bytearray to 16 bytes."""
-    remainder = len(bytearr) % 16
-    if remainder != 0:
-      padding_size = 16 - remainder
-      bytearr.extend(b"\0" * padding_size)
-
-  # TODO: b/333797307 - support > 2GB output model
-  def _serialize_large_model(
-      self, quantized_model: qtyping.ModelT
+  def _serialize_model(
+      self,
+      quantized_model: qtyping.ModelT,
+      packed_buffer_data: _PackedBufferData,
   ) -> bytearray:
-    """serialize models > 2GB.
+    """Serialize a model using external buffers.
 
     Args:
-      quantized_model: a quantized TFlite ModelT
+      quantized_model: a quantized TFlite ModelT.
+      packed_buffer_data: a `_PackedBufferData` created from `quantized_model`.
 
     Returns:
-      a byte buffer that represents the serialized tflite model
+      a `bytearray` that represents the serialized tflite model
     """
-    # TODO: b/338244867 - we can have more efficient way to calculate the
-    # buffer offsets.
-
-    # remove all the constant from the model.
+    # Clear the buffer data and set the offset and size to a non-zero value so
+    # that they are still packed into the flatbuffer.
     for buffer in quantized_model.buffers:
       if buffer.data is not None:
         buffer.data = None
         buffer.offset = 1
         buffer.size = 1
-    dummy_bytearray = bytearray(
-        flatbuffer_utils.convert_object_to_bytearray(quantized_model)
-    )
-    # calculate the correct buffer size and offset
-    self._pad_bytearray(dummy_bytearray)
-    for buffer_idx, buffer in enumerate(quantized_model.buffers):
-      buffer_data = self._constant_map[buffer_idx]
-      if buffer_data is None:
-        continue
-      buffer.offset = len(dummy_bytearray)
-      buffer.size = len(buffer_data)
-      dummy_bytearray += buffer_data
-      self._pad_bytearray(dummy_bytearray)
-    del dummy_bytearray
 
-    # build new tflite file with correct buffer offset
-    model_bytearray = bytearray(
-        flatbuffer_utils.convert_object_to_bytearray(quantized_model)
+    # Serialize the model.
+    model_buffer = flatbuffer_utils.convert_object_to_bytearray(quantized_model)
+
+    # Always round the buffer length up to the next multiple of 16 bytes so that
+    # the buffer data is 16-byte aligned for potential faster reading with SIMD
+    # instructions.
+    buffer_data_offset = _round_up_16(len(model_buffer))
+
+    # Resize the model_buffer to accommodate for the buffer data. Note that we
+    # do it this way since `bytearray.resize` is only available as of
+    # Python 3.14.
+    combined_buffer = bytearray(
+        buffer_data_offset + packed_buffer_data.packed_size
     )
-    self._pad_bytearray(model_bytearray)
-    for buffer_idx, _ in enumerate(quantized_model.buffers):
-      buffer_data = self._constant_map[buffer_idx]
-      if buffer_data is None:
-        continue
-      model_bytearray += buffer_data
-      self._pad_bytearray(model_bytearray)
-    return model_bytearray
+    combined_buffer[: len(model_buffer)] = model_buffer
+    model_buffer = combined_buffer
+
+    # Get the model's serialized representation.
+    model_packed = qtyping.Model.GetRootAs(model_buffer)
+
+    # Pack the buffer contents at the end of the model_buffer, setting the
+    # correct sizes and offsets in the original quantized_model.
+    for buffer_id in packed_buffer_data.data_for_buffer_id:
+      # Retrieve the data for this buffer.
+      buffer_data = packed_buffer_data.data_for_buffer_id[buffer_id]
+
+      # Update the packed buffer with the correct size and offset.
+      buffer = quantized_model.buffers[buffer_id]
+      buffer.offset = buffer_data_offset
+      buffer.size = len(buffer_data)
+      flatbuffer_utils.update_packed_buffer(
+          model_packed.Buffers(buffer_id),
+          offset=buffer.offset,
+          size=buffer.size,
+      )
+
+      # Pack the buffer at the end of the model_buffer.
+      model_buffer[
+          buffer_data_offset : buffer_data_offset + len(buffer_data)
+      ] = memoryview(buffer_data)
+
+      # Increment the offset by the amount of data that we added, plus padding.
+      buffer_data_offset = _round_up_16(buffer_data_offset + len(buffer_data))
+
+    return model_buffer
 
   def _serialize_small_model(
-      self, quantized_model: qtyping.ModelT
+      self,
+      quantized_model: qtyping.ModelT,
   ) -> bytearray:
     """serialize models < 2GB.
 
