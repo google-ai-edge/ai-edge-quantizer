@@ -25,8 +25,6 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import transformation_instruction_generator
 from ai_edge_quantizer import transformation_performer
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
-from ai_edge_quantizer.utils import tfl_interpreter_utils
-from ai_edge_litert import interpreter as tfl  # pylint: disable=g-direct-tensorflow-import
 
 
 _DEQUANT_SUFFIX = "_dequant"
@@ -141,38 +139,35 @@ class ModelModifier:
         instructions, quantized_model, tensor_processing_order
     )
 
-    packed_buffer_data = _PackedBufferData(quantized_model)
-    serialize_fun = (
-        self._serialize_small_model
-        if packed_buffer_data.packed_size < 1024 * 1024
-        else lambda m: self._serialize_model(m, packed_buffer_data)
-    )
-    serialized_quantized_model = serialize_fun(quantized_model)
-
     # Update signature defs if dequant is inserted before output.
     if self._has_transform_before_output(
         instructions, qtyping.QuantTransformation.ADD_DEQUANTIZE
     ):
       quantized_model = self._update_signature_defs(
-          quantized_model, serialized_quantized_model, _DEQUANT_SUFFIX
+          quantized_model, _DEQUANT_SUFFIX
       )
-      serialized_quantized_model = serialize_fun(quantized_model)
 
     # Update signature defs if quant is inserted before output.
     if self._has_transform_before_output(
         instructions, qtyping.QuantTransformation.ADD_QUANTIZE
     ):
       quantized_model = self._update_signature_defs(
-          quantized_model, serialized_quantized_model, _QUANT_SUFFIX
+          quantized_model, _QUANT_SUFFIX
       )
-      serialized_quantized_model = serialize_fun(quantized_model)
+
+    packed_buffer_data = _PackedBufferData(quantized_model)
+    if packed_buffer_data.packed_size < 1024 * 1024:
+      serialized_quantized_model = self._serialize_small_model(quantized_model)
+    else:
+      serialized_quantized_model = self._serialize_model(
+          quantized_model, packed_buffer_data
+      )
 
     return serialized_quantized_model
 
   def _update_signature_defs(
       self,
       model: qtyping.ModelT,
-      serialized_model: bytearray,
       suffix: str,
   ) -> qtyping.ModelT:
     """Updates the signature definitions in the model.
@@ -183,23 +178,15 @@ class ModelModifier:
 
     Args:
       model: The TFlite ModelT object.
-      serialized_model: The serialized bytearray of the TFlite model.
       suffix: The suffix to append to the tensor name.
 
     Returns:
       The updated TFlite ModelT object.
     """
-    interpreter = tfl.Interpreter(model_content=bytes(serialized_model))
-
     for signature_def in model.signatureDefs:
       signature_key = signature_def.signatureKey.decode("utf-8")
       logging.info("Signature = %s", signature_key)
-      subgraph_idx = tfl_interpreter_utils.get_signature_main_subgraph_index(
-          interpreter, signature_key
-      )
-      output_details = interpreter.get_signature_runner(
-          signature_key
-      ).get_output_details()
+      subgraph_idx = signature_def.subgraphIndex
       subgraph = model.subgraphs[subgraph_idx]
       graph_info = qtyping.GraphInfo(subgraph.tensors, model.buffers)
 
@@ -209,23 +196,25 @@ class ModelModifier:
         )
         logging.info("\tOutput tensor = `%s`", tensor_name)
 
-        for signature_name, tensor_details in output_details.items():
-          if tensor_details["name"] + suffix == tensor_name:
+        # for signature_name, tensor_details in output_details.items():
+        for signature_item in signature_def.outputs:
+          output_tensor = subgraph.tensors[signature_item.tensorIndex]
+          output_tensor_name = tfl_flatbuffer_utils.get_tensor_name(
+              output_tensor
+          )
+          if output_tensor_name + suffix == tensor_name:
             logging.info(
                 "\t\tfound tensor mapping: `%s`->`%s` for signature name: `%s`",
-                tensor_details["name"],
+                output_tensor_name,
                 tensor_name,
-                signature_name,
+                signature_item.name,
             )
-            for signature_item in signature_def.outputs:
-              if signature_item.name.decode("utf-8") == signature_name:
-                signature_item.tensorIndex = output
-                logging.info(
-                    "\t\t\tswapped tensor index: %s->%s",
-                    tensor_details["index"],
-                    output,
-                )
-                break
+            logging.info(
+                "\t\t\tswapping tensor index: %s->%s",
+                signature_item.tensorIndex,
+                output,
+            )
+            signature_item.tensorIndex = output
             break
 
     return model

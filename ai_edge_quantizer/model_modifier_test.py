@@ -241,21 +241,17 @@ class ModelModifierTestWithSignature(parameterized.TestCase):
     # This is a simplified test that only checks if the function runs without
     # crashing and returns a model. A more thorough test with a model
     # with a known signature was added in `quantizer_test`.
-    model_bytearray = flatbuffer_utils.read_model_from_bytearray(
-        self._model_content
-    )
+    model = flatbuffer_utils.read_model_from_bytearray(self._model_content)
     updated_model = self._model_modifier._update_signature_defs(
-        model_bytearray, bytearray(self._model_content), '_dequant'
+        model, '_dequant'
     )
     self.assertIsNotNone(updated_model)
 
   def test_update_signature_defs_succeeds_quant(self):
     # This checks if the function runs without crashing and returns a model.
-    model_bytearray = flatbuffer_utils.read_model_from_bytearray(
-        self._model_content
-    )
+    model = flatbuffer_utils.read_model_from_bytearray(self._model_content)
     updated_model = self._model_modifier._update_signature_defs(
-        model_bytearray, bytearray(self._model_content), '_quantized'
+        model, '_quantized'
     )
     self.assertIsNotNone(updated_model)
 
