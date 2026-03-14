@@ -23,6 +23,7 @@ import absl.testing.absltest as absltest
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 
 _TEST_MODEL_FOLDER = test_utils.get_path_to_datafile('../models/')
@@ -59,6 +60,40 @@ class SpaceToDepthTest(test_utils.BaseOpTestCase):
         op_config=op_config,
         output_tolerance=output_tolerance,
     )
+
+  @parameterized.parameters(
+      # algorithm_key
+      _QuantAlgo.MIN_MAX_UNIFORM_QUANT,
+      _QuantAlgo.OCTAV,
+  )
+  def test_static_quantization_i16_succeeds(self, algorithm_key):
+    """Verifies that 16-bit quantization produces a valid quantized model.
+
+    The LiteRT runtime does not yet support INT16 for SPACE_TO_DEPTH, so
+    accuracy validation via the interpreter is not possible. This test
+    verifies that quantization completes successfully.
+    """
+    model_filename = 'single_space_to_depth.tflite'
+    model_path = str(pathlib.Path(_TEST_MODEL_FOLDER) / model_filename)
+
+    activation_config = test_utils.get_static_activation_quant_setting(
+        num_bits=16, symmetric=True
+    )
+    op_config = test_utils.get_static_op_quant_config(activation_config)
+    qt = quantizer.Quantizer(model_path)
+    qt.update_quantization_recipe(
+        algorithm_key=algorithm_key,
+        regex='.*',
+        operation_name=self._op_name,
+        op_config=op_config,
+    )
+    calibration_data = tfl_interpreter_utils.create_random_normal_input_data(
+        model_path
+    )
+    calibration_result = qt.calibrate(calibration_data)
+    quant_result = qt.quantize(calibration_result)
+    self.assertIsNotNone(quant_result.quantized_model)
+    self.assertGreater(len(quant_result.quantized_model), 0)
 
 
 if __name__ == '__main__':
