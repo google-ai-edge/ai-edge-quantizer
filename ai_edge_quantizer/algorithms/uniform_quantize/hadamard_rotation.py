@@ -77,18 +77,18 @@ def _rotate_with_diagonal_hadamard(
   # Use the largest power of 2 that is a factor of the dimension and then
   # tile this Hadamard matrix along the diagonal. 2**30 is just a large power
   # of 2 to calculate this factor.
-  hadamard_size = np.gcd(tensor_content.shape[axis], 2 ** 30)
-  diagonal_size = tensor_content.shape[axis] // hadamard_size
-  # Output size is the product of all dimensions except the one being rotated.
-  output_size = np.prod(np.delete(tensor_content.shape, axis))
+  hadamard_size = np.gcd(tensor_content.shape[axis], 2**30)
   random_vector = np.ones(hadamard_size, dtype=np.int8)
 
   # Use a canonical Hadamard matrix.
   hadamard = _make_hadamard_matrix(hadamard_size)
-  reshaped_tensor = tensor_content.reshape(
-      diagonal_size * output_size, hadamard_size)
+  reshaped_tensor = tensor_content.reshape((-1, hadamard_size), copy=False)
   w_rotated = np.matmul(reshaped_tensor, hadamard)
-  return w_rotated.reshape(tensor_content.shape), hadamard_size, random_vector
+  return (
+      w_rotated.reshape(tensor_content.shape, copy=False),
+      hadamard_size,
+      random_vector,
+  )
 
 
 def get_tensor_quant_params(
