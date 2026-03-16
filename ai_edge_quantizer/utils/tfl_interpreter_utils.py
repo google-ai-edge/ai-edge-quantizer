@@ -20,11 +20,10 @@ from typing import Any, Optional, Union
 import ml_dtypes
 import numpy as np
 
+from ai_edge_litert.tools import mmap_utils
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from ai_edge_litert import interpreter as tfl  # pylint: disable=g-direct-tensorflow-import
-import os
-import io
 
 DEFAULT_SIGNATURE_KEY = "serving_default"
 
@@ -52,8 +51,7 @@ def create_tfl_interpreter(
     A TFLite interpreter.
   """
   if isinstance(tflite_model, str):
-    with open(tflite_model, "rb") as f:
-      tflite_model = f.read()
+    tflite_model = mmap_utils.get_file_contents(tflite_model)
 
   if use_xnnpack:
     op_resolver = tfl.OpResolverType.BUILTIN

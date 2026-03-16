@@ -17,16 +17,13 @@
 
 import collections
 import logging
-import mmap
-import os
 import pathlib
 
 import immutabledict
 import numpy as np
 
-import os
-import io
 from ai_edge_litert.tools import flatbuffer_utils
+from ai_edge_litert.tools import mmap_utils
 from ai_edge_quantizer import qtyping
 
 
@@ -151,26 +148,7 @@ def get_model_content(tflite_path: Path) -> memoryview:
   Returns:
     The model bytes.
   """
-  model_bytes = None
-
-  # Try to mmap the file first if it is local.
-  try:
-    if (fd := os.open(tflite_path, os.O_RDONLY)) >= 0:
-      model_bytes = mmap.mmap(fd, 0, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ)
-      os.close(fd)
-  except IOError as e:
-    logging.info(
-        'Mapping model file "%s" failed with exception: %s.',
-        tflite_path,
-        e,
-    )
-
-  # If mapping failed, go at it conventionally.
-  if model_bytes is None:
-    with open(tflite_path, "rb") as tflite_file:
-      model_bytes = tflite_file.read()
-
-  return memoryview(model_bytes)
+  return mmap_utils.get_file_contents(tflite_path)
 
 
 def get_model_buffer(tflite_path: Path) -> bytearray:
@@ -182,28 +160,7 @@ def get_model_buffer(tflite_path: Path) -> bytearray:
   Returns:
     model_buffer: the model buffer.
   """
-  model_bytearray = None
-
-  # Try to mmap the file first if it is local.
-  try:
-    if (fd := os.open(tflite_path, os.O_RDONLY)) >= 0:
-      try:
-        model_mmap = mmap.mmap(
-            fd, 0, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ
-        )
-        model_bytearray = bytearray(model_mmap[:])
-      except IOError as e:
-        print(f"Mapping model file {tflite_path} failed with exception: {e}.")
-      os.close(fd)
-  except RuntimeError:
-    pass
-
-  # If mapping failed, go at it conventionally.
-  if model_bytearray is None:
-    with open(tflite_path, "rb") as tflite_file:
-      model_bytearray = bytearray(tflite_file.read())
-
-  return model_bytearray
+  return bytearray(mmap_utils.get_file_contents(tflite_path))
 
 
 def parse_op_tensors(
