@@ -43,12 +43,12 @@ def _make_hadamard_matrix(size: int) -> np.ndarray:
   """
   if size <= 0 or (size & (size - 1)) != 0:
     raise ValueError("Hadamard matrix size must be a power of 2. ")
-  h = h2 = np.array([[1, 1], [1, -1]])
+  h = h2 = np.array([[1, 1], [1, -1]], dtype=np.int8)
   current_size = 2
   while current_size < size:
     h = np.kron(h, h2)
     current_size *= 2
-  return h / np.sqrt(size)
+  return h / np.sqrt(size, dtype=np.float32)
 
 
 def _rotate_with_diagonal_hadamard(
