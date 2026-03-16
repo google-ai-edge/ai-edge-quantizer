@@ -60,8 +60,10 @@ class QuantizeTensorTest(parameterized.TestCase):
     )
     self.assertEqual(ret.op_id, 0)
     self.assertEqual(ret.num_ops_added, 0)
+    buffer_id = subgraph.tensors[7].buffer
     self.assertListEqual(
-        np.array(model.buffers[8].data).tolist(), data.flatten().tolist()
+        np.array(model.buffers[buffer_id].data).tolist(),
+        data.flatten().tolist(),
     )
     quant_param = subgraph.tensors[7].quantization
     self.assertListEqual(np.array(quant_param.scale).tolist(), [1])
@@ -211,7 +213,8 @@ class QuantizeTensorTest(parameterized.TestCase):
     )
     self.assertEqual(ret.op_id, 0)
     self.assertEqual(ret.num_ops_added, 0)
-    np.testing.assert_array_equal(model.buffers[8].data, expected)
+    buffer_id = subgraph.tensors[7].buffer
+    np.testing.assert_array_equal(model.buffers[buffer_id].data, expected)
     quant_param = subgraph.tensors[7].quantization
     np.testing.assert_array_equal(quant_param.scale, [1])
     np.testing.assert_array_equal(quant_param.zeroPoint, [1])
@@ -253,7 +256,8 @@ class QuantizeTensorTest(parameterized.TestCase):
     )
     self.assertEqual(ret.op_id, 0)
     self.assertEqual(ret.num_ops_added, 0)
-    np.testing.assert_array_equal(model.buffers[8].data, expected)
+    buffer_id = subgraph.tensors[tensor_id].buffer
+    np.testing.assert_array_equal(model.buffers[buffer_id].data, expected)
     quant_param = subgraph.tensors[tensor_id].quantization
     np.testing.assert_array_equal(quant_param.scale, [1])
     np.testing.assert_array_equal(quant_param.zeroPoint, [1])

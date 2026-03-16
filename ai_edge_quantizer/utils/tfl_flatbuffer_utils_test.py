@@ -100,7 +100,7 @@ class FlatbufferUtilsTest(absltest.TestCase):
         self._test_model
     )
     # Read from Netron/Model Explorer
-    tensors = buffer_to_tensor_map[6]
+    tensors = buffer_to_tensor_map[5]
     self.assertLen(tensors, 1)
     conv2d_filter_tensor = tensors[0]
     self.assertEqual(tuple(conv2d_filter_tensor.shape), (8, 3, 3, 1))
@@ -112,13 +112,13 @@ class FlatbufferUtilsTest(absltest.TestCase):
     )
     test_model = tfl_flatbuffer_utils.read_model(test_model_path)
     buffer_to_tensor_map = tfl_flatbuffer_utils.buffer_to_tensors(test_model)
-    self.assertLen(buffer_to_tensor_map, 7)
+    self.assertLen(buffer_to_tensor_map, 2)
     # The following buffer is shared by two tensors, each shared by two FC ops.
     # This is where before we had multiple enrties for the same tensor.
-    self.assertLen(buffer_to_tensor_map[2], 2)
+    self.assertLen(buffer_to_tensor_map[1], 2)
     got_tensor_names = [
         tfl_flatbuffer_utils.get_tensor_name(tensor)
-        for tensor in buffer_to_tensor_map[2]
+        for tensor in buffer_to_tensor_map[1]
     ]
     self.assertEqual(
         got_tensor_names,

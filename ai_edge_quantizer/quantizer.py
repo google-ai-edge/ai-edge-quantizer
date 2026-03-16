@@ -420,13 +420,17 @@ class Quantizer:
           )
 
   def quantize(
-      self, calibration_result: Optional[_CalibrationResult] = None
+      self,
+      calibration_result: Optional[_CalibrationResult] = None,
+      serialize_to_path: qtyping.Path | None = None,
   ) -> QuantizationResult:
     """Quantizes the float model.
 
     Args:
       calibration_result: Calibration result to be used for quantization (if
         needed, check with self.need_calibration).
+      serialize_to_path: If set, the quantized model will be serialized to this
+        path.
 
     Returns:
       Quantization result.
@@ -440,8 +444,13 @@ class Quantizer:
 
     if not self.get_quantization_recipe():
       raise RuntimeError('Can not quantize without a quantization recipe.')
+
     quant_params = self._get_quantization_params(calibration_result)
-    quantized_model = self._get_quantized_model(quant_params)
+
+    quantized_model = self._get_quantized_model(
+        quant_params, serialize_to_path=serialize_to_path
+    )
+
     self._result = QuantizationResult(
         self.get_quantization_recipe(), quantized_model
     )
@@ -521,15 +530,22 @@ class Quantizer:
     )
 
   def _get_quantized_model(
-      self, quant_params: _TensorTransformationParams
-  ) -> bytearray:
+      self,
+      quant_params: _TensorTransformationParams,
+      serialize_to_path: qtyping.Path | None = None,
+  ) -> qtyping.BufferType:
     """Gets the quantized model.
 
     Args:
       quant_params: A dictionary containing the quantization parameters.
+      serialize_to_path: If set, the quantized model will be serialized to this
+        path.
 
     Returns:
       The quantized model.
     """
     model_modifier_instance = model_modifier.ModelModifier(self._float_model)
-    return model_modifier_instance.modify_model(quant_params)
+
+    return model_modifier_instance.modify_model(
+        quant_params, serialize_to_path=serialize_to_path
+    )

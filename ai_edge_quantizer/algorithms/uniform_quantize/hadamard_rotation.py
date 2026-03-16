@@ -26,6 +26,8 @@ from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 CUSTOM_OP_ALGORITHM_KEY = "HADAMARD_ROTATION"
 DECOMPOSED_ALGORITHM_KEY = "DECOMPOSED_HADAMARD_ROTATION"
 
+_HADAMARD_MATRIX_CACHE = {}
+
 
 def _make_hadamard_matrix(size: int) -> np.ndarray:
   """Generates a Hadamard matrix of the given size.
@@ -43,12 +45,20 @@ def _make_hadamard_matrix(size: int) -> np.ndarray:
   """
   if size <= 0 or (size & (size - 1)) != 0:
     raise ValueError("Hadamard matrix size must be a power of 2. ")
+
+  # Check whether we already have a Hadamard matrix for this size.
+  if size in _HADAMARD_MATRIX_CACHE:
+    return _HADAMARD_MATRIX_CACHE[size]
+
+  # Otherwise, create one.
   h = h2 = np.array([[1, 1], [1, -1]], dtype=np.int8)
   current_size = 2
   while current_size < size:
     h = np.kron(h, h2)
     current_size *= 2
-  return h / np.sqrt(size, dtype=np.float32)
+    if current_size not in _HADAMARD_MATRIX_CACHE:
+      _HADAMARD_MATRIX_CACHE[current_size] = h / np.sqrt(size, dtype=np.float32)
+  return _HADAMARD_MATRIX_CACHE[size]
 
 
 def _rotate_with_diagonal_hadamard(
@@ -78,6 +88,8 @@ def _rotate_with_diagonal_hadamard(
   # tile this Hadamard matrix along the diagonal. 2**30 is just a large power
   # of 2 to calculate this factor.
   hadamard_size = np.gcd(tensor_content.shape[axis], 2**30)
+  # if tensor_content.size < 10 * hadamard_size * hadamard_size:
+  #   hadamard_size = min(hadamard_size, 32)
   random_vector = np.ones(hadamard_size, dtype=np.int8)
 
   # Use a canonical Hadamard matrix.
