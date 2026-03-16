@@ -16,7 +16,7 @@
 """Implements the OCTAV quantization."""
 
 import dataclasses
-from typing import Any, Optional, Sequence, Union
+from typing import Any, Optional
 import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
@@ -30,7 +30,7 @@ ALGORITHM_KEY = "OCTAV"
 def _guess_clipping_with_octav(
     x: np.ndarray,
     bits: int,
-    axis: Union[int, Sequence[int]],
+    axis: int,
     max_iterations: int,
     exponent_divisor: float,
     early_stop: bool = True,
@@ -52,24 +52,62 @@ def _guess_clipping_with_octav(
   Returns:
     A tensor of shape [num_channels] with clipping constant guesses.
   """
-  magnitude = np.abs(x)
-  x_reduced = np.mean(x, axis=axis, keepdims=True)
-  old_guess = np.zeros(x_reduced.shape)
-  guess = np.ones(x_reduced.shape)
+  if axis is not None:
+    axis = (axis,) if isinstance(axis, int) else axis
+    shape_reduced = tuple(1 if k in axis else d for k, d in enumerate(x.shape))
+    count = np.prod([x.shape[d] for d in axis])
+  else:
+    shape_reduced = (1,)
+    count = x.size
+  guess = np.ones(shape_reduced, dtype=np.float32)
+  guess_mask = np.zeros(x.shape, dtype=np.bool)
+  scale = np.asarray(4.0 ** (-bits) / exponent_divisor, dtype=np.float32)
   for _ in range(max_iterations):
-    if early_stop and np.allclose(guess, old_guess):
-      break
-    guess_broadcasted = np.broadcast_to(guess, magnitude.shape)
-    guess_mask = np.asarray(magnitude < guess_broadcasted, dtype=x.dtype)
-    numerator = np.sum(
-        magnitude * np.asarray(1.0 - guess_mask), axis=axis, keepdims=True
-    )
-    denominator1 = (4.0 ** (-bits) / exponent_divisor) * np.sum(
-        guess_mask, axis=axis, keepdims=True
-    )
-    denominator2 = np.sum(1.0 - guess_mask, axis=axis, keepdims=True)
     old_guess = guess
-    guess = numerator / (denominator1 + denominator2)
+
+    # Note: Computing `guess_mask = np.greater_equal(np.abs(x), old_guess)`
+    # requires making a temporary copy of `x` for the result of `np.abs(x)`.
+    # We therefore compute the mask _twice_, i.e. once for `x >= guess_mask`,
+    # and once for `x <= -guess_mask`, which does not require creating a copy
+    # of `x`.
+
+    # Values larger than `guess`.
+    guess_mask = np.greater_equal(x, old_guess, out=guess_mask)
+    denominator = np.count_nonzero(guess_mask, axis=axis, keepdims=True).astype(
+        np.float32
+    )
+    guess = np.sum(
+        x,
+        axis=axis,
+        where=guess_mask,
+        keepdims=True,
+        dtype=guess.dtype,
+    )
+
+    # Values smaller than `-guess`.
+    guess_mask = np.less_equal(x, -old_guess, out=guess_mask)
+    denominator = np.add(
+        denominator,
+        np.count_nonzero(guess_mask, axis=axis, keepdims=True),
+        out=denominator,
+    )
+    guess = np.subtract(
+        guess,
+        np.sum(
+            x,
+            axis=axis,
+            where=guess_mask,
+            keepdims=True,
+        ),
+        out=guess,
+    )
+
+    # Update the `guess` values.
+    denominator = np.multiply(denominator, 1.0 - scale, out=denominator)
+    denominator = np.add(denominator, scale * count, out=denominator)
+    guess = np.divide(guess, denominator, out=guess)
+    if early_stop and np.allclose(old_guess, guess):
+      break
 
   return guess
 
