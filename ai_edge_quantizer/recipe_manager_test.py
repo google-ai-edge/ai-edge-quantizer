@@ -987,6 +987,19 @@ class ConfiguratorTest(parameterized.TestCase):
     )
     self.assertTrue(self._recipe_manager.need_calibration())
 
+  def test_need_calibration_gptq_true(self):
+    self._recipe_manager.add_quantization_config(
+        regex='.*/Dense_1/.*',
+        operation_name=_TFLOpName.FULLY_CONNECTED,
+        algorithm_key=_AlgorithmName.GPTQ,
+        op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(num_bits=8),
+            compute_precision=_ComputePrecision.FLOAT,  # WEIGHT_ONLY.
+            skip_checks=True,
+        ),
+    )
+    self.assertTrue(self._recipe_manager.need_calibration())
+
 
 if __name__ == '__main__':
   absltest.main()

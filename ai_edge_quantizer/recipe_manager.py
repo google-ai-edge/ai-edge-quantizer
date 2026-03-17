@@ -246,6 +246,8 @@ class RecipeManager:
           and 'activation_tensor_config' in op_quant_config['op_config']
       ):
         return True
+      if op_quant_config['algorithm_key'] == AlgorithmName.GPTQ:
+        return True
     return False
 
   def add_dynamic_config(

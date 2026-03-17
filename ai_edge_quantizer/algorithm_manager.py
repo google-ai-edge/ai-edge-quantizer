@@ -17,17 +17,20 @@
 
 import enum
 import functools
-from immutabledict import immutabledict
+import immutabledict
 from ai_edge_quantizer import algorithm_manager_api
 from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.nonlinear_quantize import float_casting
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import dequantized_weight_recovery
+from ai_edge_quantizer.algorithms.uniform_quantize import gptq
 from ai_edge_quantizer.algorithms.uniform_quantize import hadamard_rotation
 from ai_edge_quantizer.algorithms.uniform_quantize import mse
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import octav
+
+immutabledict = immutabledict.immutabledict
 
 
 # TODO: b/399775701 - Clean up this file.
@@ -64,6 +67,7 @@ class AlgorithmName(str, enum.Enum):
   HADAMARD_ROTATION = hadamard_rotation.CUSTOM_OP_ALGORITHM_KEY
   DECOMPOSED_HADAMARD_ROTATION = hadamard_rotation.DECOMPOSED_ALGORITHM_KEY
   MSE = mse.ALGORITHM_KEY
+  GPTQ = gptq.ALGORITHM_KEY
 
 
 ### MIN/MAX_UNIFORM_QUANT ###
