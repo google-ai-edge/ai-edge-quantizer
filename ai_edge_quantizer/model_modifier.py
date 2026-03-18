@@ -16,11 +16,13 @@
 """Model Modifier class that produce the final quantized TFlite model."""
 
 import logging
+import mmap
 from typing import TypeVar
 
 import numpy as np
 
 from ai_edge_litert.tools import flatbuffer_utils
+from ai_edge_litert.tools import mmap_utils
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import transformation_instruction_generator
 from ai_edge_quantizer import transformation_performer
@@ -98,7 +100,6 @@ class ModelModifier:
     """
     self._model: qtyping.ModelT = float_model
 
-    self._constant_map = []
     self._transformation_instruction_generator = (
         transformation_instruction_generator.TransformationInstructionsGenerator()
     )
@@ -136,16 +137,20 @@ class ModelModifier:
     return processing_order
 
   def modify_model(
-      self, params: dict[str, qtyping.TensorTransformationParams]
-  ) -> bytearray:
+      self,
+      params: dict[str, qtyping.TensorTransformationParams],
+      serialize_to_path: qtyping.Path | None = None,
+  ) -> qtyping.BufferType:
     """Modify the model.
 
     Args:
       params: a dictionary with tensor name and a list of tensor transformation
         params
+      serialize_to_path: If set, the quantized model will be serialized to this
+        path.
 
     Returns:
-      a byte buffer that represents the serialized tflite model
+      a byte buffer that represents the serialized tflite model.
     """
     # Make a copy of the model, but don't duplicate the buffer data.
     quantized_model = _copy_with_views(self._model)
@@ -157,9 +162,11 @@ class ModelModifier:
     tensor_processing_order = self._get_tensor_processing_order(
         set(instructions.keys()), quantized_model
     )
+
     self._transformation_performer.transform_graph(
         instructions, quantized_model, tensor_processing_order
     )
+    del tensor_processing_order
 
     # Update signature defs if dequant is inserted before output.
     if self._has_transform_before_output(
@@ -176,13 +183,20 @@ class ModelModifier:
       quantized_model = self._update_signature_defs(
           quantized_model, _QUANT_SUFFIX
       )
+    del instructions
 
     packed_buffer_data = _PackedBufferData(quantized_model)
     if packed_buffer_data.packed_size < 1024 * 1024:
       serialized_quantized_model = self._serialize_small_model(quantized_model)
+      if serialize_to_path:
+        mmap_utils.set_file_contents(
+            serialize_to_path, serialized_quantized_model
+        )
     else:
       serialized_quantized_model = self._serialize_model(
-          quantized_model, packed_buffer_data
+          quantized_model,
+          packed_buffer_data,
+          serialize_to_path=serialize_to_path,
       )
 
     return serialized_quantized_model
@@ -262,12 +276,15 @@ class ModelModifier:
       self,
       quantized_model: qtyping.ModelT,
       packed_buffer_data: _PackedBufferData,
-  ) -> bytearray:
+      serialize_to_path: qtyping.Path | None = None,
+  ) -> qtyping.BufferType:
     """Serialize a model using external buffers.
 
     Args:
       quantized_model: a quantized TFlite ModelT.
       packed_buffer_data: a `_PackedBufferData` created from `quantized_model`.
+      serialize_to_path: If set, the quantized model will be serialized to this
+        path.
 
     Returns:
       a `bytearray` that represents the serialized tflite model
@@ -291,9 +308,19 @@ class ModelModifier:
     # Resize the model_buffer to accommodate for the buffer data. Note that we
     # do it this way since `bytearray.resize` is only available as of
     # Python 3.14.
-    combined_buffer = bytearray(
-        buffer_data_offset + packed_buffer_data.packed_size
-    )
+    if (
+        not serialize_to_path
+        or (
+            combined_buffer := mmap_utils.get_mapped_buffer_or_none(
+                serialize_to_path,
+                buffer_data_offset + packed_buffer_data.packed_size,
+            )
+        )
+        is None
+    ):
+      combined_buffer = bytearray(
+          buffer_data_offset + packed_buffer_data.packed_size
+      )
     combined_buffer[: len(model_buffer)] = model_buffer
     model_buffer = combined_buffer
 
@@ -323,6 +350,12 @@ class ModelModifier:
 
       # Increment the offset by the amount of data that we added, plus padding.
       buffer_data_offset = _round_up_16(buffer_data_offset + len(buffer_data))
+
+    # Clean up and write the buffer to a file if requested/needed.
+    if isinstance(model_buffer, mmap.mmap):
+      model_buffer.flush()
+    elif serialize_to_path:
+      mmap_utils.set_file_contents(serialize_to_path, model_buffer)
 
     return model_buffer
 

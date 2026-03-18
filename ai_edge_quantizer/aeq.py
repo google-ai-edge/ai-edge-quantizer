@@ -58,11 +58,12 @@ def quantize_model(
     if overwrite_input.lower() != "y":
       print("Aborting.")
       return
-    overwrite = True
 
   qt = quantizer.Quantizer(model_file)
+
   qt.load_quantization_recipe(recipe_file)
-  qt.quantize().export_model(output_file_path, overwrite=overwrite)
+
+  qt.quantize(serialize_to_path=output_file_path)
 
 
 def parse_args(args: Sequence[str]) -> argparse.Namespace:
