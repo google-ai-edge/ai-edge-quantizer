@@ -16,14 +16,15 @@
 """Test insertion of the Decomposed Hadamard rotation ops."""
 
 import pathlib
+
+from absl.testing import absltest
 import numpy as np
-import absl.testing.absltest as absltest
+
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import insert_decomposed_hadamard_rotation
 from ai_edge_quantizer.transformations import transformation_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('..')
 
@@ -33,7 +34,8 @@ class InsertDecomposedHadamardRotationFullyConnectedTest(absltest.TestCase):
   def setUp(self):
     super().setUp()
     model_path = str(
-        pathlib.Path(_TEST_DATA_PREFIX_PATH) / 'tests/models/single_fc_bias.tflite'
+        pathlib.Path(_TEST_DATA_PREFIX_PATH)
+        / 'tests/models/single_fc_bias.tflite'
     )
     self.model = tfl_flatbuffer_utils.read_model(model_path)
     self.params = qtyping.UniformQuantParams(
@@ -87,9 +89,7 @@ class InsertDecomposedHadamardRotationFullyConnectedTest(absltest.TestCase):
       )
 
   def test_raise_non_float32_tensor(self):
-    self.model.subgraphs[0].tensors[
-        0
-    ].type = schema_py_generated.TensorType.INT32
+    self.model.subgraphs[0].tensors[0].type = qtyping.TensorType.INT32
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: 'float32 tensors' in str(err)
     ):
@@ -130,18 +130,18 @@ class InsertDecomposedHadamardRotationFullyConnectedTest(absltest.TestCase):
     self.assertLen(self.model.operatorCodes, 3)
     self.assertEqual(
         self.model.operatorCodes[1].builtinCode,
-        schema_py_generated.BuiltinOperator.RESHAPE,
+        qtyping.BuiltinOperator.RESHAPE,
     )
     self.assertEqual(
         self.model.operatorCodes[2].builtinCode,
-        schema_py_generated.BuiltinOperator.FULLY_CONNECTED,
+        qtyping.BuiltinOperator.FULLY_CONNECTED,
     )
 
     # Op 0: RESHAPE
     reshape_op = subgraph.operators[0]
     self.assertEqual(
         self.model.operatorCodes[reshape_op.opcodeIndex].builtinCode,
-        schema_py_generated.BuiltinOperator.RESHAPE,
+        qtyping.BuiltinOperator.RESHAPE,
     )
     self.assertEqual(reshape_op.inputs[0], 0)  # Graph input
     self.assertEqual(reshape_op.outputs[0], 5)  # Reshape output
@@ -150,7 +150,7 @@ class InsertDecomposedHadamardRotationFullyConnectedTest(absltest.TestCase):
     fc_op = subgraph.operators[1]
     self.assertEqual(
         self.model.operatorCodes[fc_op.opcodeIndex].builtinCode,
-        schema_py_generated.BuiltinOperator.FULLY_CONNECTED,
+        qtyping.BuiltinOperator.FULLY_CONNECTED,
     )
     self.assertEqual(fc_op.inputs[0], 5)  # Reshape output
     self.assertEqual(fc_op.inputs[1], 6)  # Hadamard matrix tensor
@@ -160,7 +160,7 @@ class InsertDecomposedHadamardRotationFullyConnectedTest(absltest.TestCase):
     post_reshape_op = subgraph.operators[2]
     self.assertEqual(
         self.model.operatorCodes[post_reshape_op.opcodeIndex].builtinCode,
-        schema_py_generated.BuiltinOperator.RESHAPE,
+        qtyping.BuiltinOperator.RESHAPE,
     )
     self.assertEqual(post_reshape_op.inputs[0], 7)  # FC output
     self.assertEqual(post_reshape_op.outputs[0], 9)  # Post Reshape output
@@ -169,7 +169,7 @@ class InsertDecomposedHadamardRotationFullyConnectedTest(absltest.TestCase):
     orig_fc_op = subgraph.operators[3]
     self.assertEqual(
         self.model.operatorCodes[orig_fc_op.opcodeIndex].builtinCode,
-        schema_py_generated.BuiltinOperator.FULLY_CONNECTED,
+        qtyping.BuiltinOperator.FULLY_CONNECTED,
     )
     # Input to the original FC is the post reshape output
     self.assertEqual(orig_fc_op.inputs[0], 9)
@@ -180,7 +180,8 @@ class InsertDecomposedHadamardRotationEmbeddingLookupTest(absltest.TestCase):
   def setUp(self):
     super().setUp()
     model_path = str(
-        pathlib.Path(_TEST_DATA_PREFIX_PATH) / 'tests/models/embedding_lookup.tflite'
+        pathlib.Path(_TEST_DATA_PREFIX_PATH)
+        / 'tests/models/embedding_lookup.tflite'
     )
     self.model = tfl_flatbuffer_utils.read_model(model_path)
     self.params = qtyping.UniformQuantParams(

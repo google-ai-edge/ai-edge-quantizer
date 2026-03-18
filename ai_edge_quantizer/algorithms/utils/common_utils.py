@@ -23,7 +23,6 @@ import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 _TFLOpName = qtyping.TFLOperationName
 _QuantTransformation = qtyping.QuantTransformation
@@ -735,7 +734,7 @@ def _merge_materialized_tensors(
 
 def _tensor_indices_with_dtype(
     tensors: Sequence[int],
-    subgraph_tensors: Sequence[schema_py_generated.TensorT],
+    subgraph_tensors: Sequence[qtyping.TensorT],
     tensor_dtype_codes: Sequence[int],
 ) -> list[int]:
   """Get the indices of tensors with any of the given dtype.
@@ -757,8 +756,8 @@ def _tensor_indices_with_dtype(
 
 
 def _add_non_match_tensors_to_ignored_lists(
-    op: schema_py_generated.OperatorT,
-    subgraph_tensors: Sequence[schema_py_generated.TensorT],
+    op: qtyping.OperatorT,
+    subgraph_tensors: Sequence[qtyping.TensorT],
     dtypes_to_keep: Sequence[int],
     inputs_to_ignore: Sequence[int],
     outputs_to_ignore: Sequence[int],

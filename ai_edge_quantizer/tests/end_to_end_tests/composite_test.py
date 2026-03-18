@@ -17,18 +17,18 @@
 
 import json
 
+from absl.testing import absltest
 from absl.testing import parameterized
-import absl.testing.absltest as absltest
 import numpy as np
+
 import os
 import io
-
 from ai_edge_litert.tools import flatbuffer_utils
+from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
-from ai_edge_litert import schema_py_generated as schema  # pylint:disable=g-direct-tensorflow-import
 
 _RNG = np.random.default_rng(42)
 
@@ -48,12 +48,12 @@ _RNG = np.random.default_rng(42)
 
 
 def _get_calibration_data(
-    model: schema.ModelT,
+    model: qtyping.ModelT,
     name_pref: str,
     subgraph_index: int = 0,
     num_samples: int = 2,
 ):
-  sg: schema.SubGraphT = model.subgraphs[subgraph_index]
+  sg: qtyping.SubGraphT = model.subgraphs[subgraph_index]
   inputs = [sg.tensors[i] for i in sg.inputs]
 
   data = []
@@ -61,7 +61,7 @@ def _get_calibration_data(
   for _ in range(num_samples):
     samp_data = {}
     for i, inp in enumerate(inputs):
-      inp: schema.TensorT = inp
+      inp: qtyping.TensorT = inp
       name = f'{name_pref}{i}'
       samp_data[name] = _RNG.uniform(size=inp.shape).astype(np.float32)
 
@@ -78,9 +78,9 @@ class CompositeTest(parameterized.TestCase):
   def output_tolerance(self) -> float:
     return 1e-4
 
-  def assertNotQuantiezedType(self, tensor: schema.TensorT):
+  def assertNotQuantiezedType(self, tensor: qtyping.TensorT):
     self.assertIn(
-        tensor.type, [schema.TensorType.FLOAT32, schema.TensorType.INT32]
+        tensor.type, [qtyping.TensorType.FLOAT32, qtyping.TensorType.INT32]
     )
 
   @parameterized.parameters(

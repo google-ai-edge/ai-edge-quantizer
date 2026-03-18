@@ -22,7 +22,6 @@ from typing import Optional, Union
 import numpy as np
 
 from ai_edge_quantizer import qtyping
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 @dataclasses.dataclass
@@ -41,17 +40,17 @@ class TransformationInput:
   """
 
   tensor_id: int
-  op_codes: list[schema_py_generated.OperatorCodeT]
-  buffers: list[schema_py_generated.BufferT]
-  subgraph: schema_py_generated.SubGraphT
+  op_codes: list[qtyping.OperatorCodeT]
+  buffers: list[qtyping.BufferT]
+  subgraph: qtyping.SubGraphT
   producer: int
   consumers: list[int]
   quant_params: Union[qtyping.UniformQuantParams, qtyping.NonLinearQuantParams]
 
 
 def add_op_code(
-    op_code: schema_py_generated.OperatorCodeT,
-    model_op_codes: list[schema_py_generated.OperatorCodeT],
+    op_code: qtyping.OperatorCodeT,
+    model_op_codes: list[qtyping.OperatorCodeT],
     custom_op_name: Optional[str] = None,
 ) -> int:
   """Add an op code into a model if it's not present.
@@ -65,10 +64,7 @@ def add_op_code(
   Returns:
     The index of the op code in the model.
   """
-  if (
-      op_code == schema_py_generated.BuiltinOperator.CUSTOM
-      and custom_op_name is None
-  ):
+  if op_code == qtyping.BuiltinOperator.CUSTOM and custom_op_name is None:
     raise ValueError('Custom string is required for custom op code.')
 
   for i, model_op_code in enumerate(model_op_codes):
@@ -81,7 +77,7 @@ def add_op_code(
         # Built-in op
         return i
 
-  model_op_codes.append(schema_py_generated.OperatorCodeT())
+  model_op_codes.append(qtyping.OperatorCodeT())
   model_op_codes[-1].builtinCode = op_code
   if custom_op_name is not None:
     model_op_codes[-1].customCode = custom_op_name
@@ -90,7 +86,7 @@ def add_op_code(
 
 def get_constant_buffer(
     data: np.ndarray,
-    buffers: list[schema_py_generated.BufferT],
+    buffers: list[qtyping.BufferT],
     force_duplicate_buffer: bool = False,
 ) -> int:
   """Get the index of the constant buffer that contains the given data.
@@ -122,7 +118,7 @@ def get_constant_buffer(
     for index, buffer in enumerate(buffers):
       if np.array_equal(buffer.data, new_data):
         return index
-  new_buffer = schema_py_generated.BufferT()
+  new_buffer = qtyping.BufferT()
   new_buffer.data = new_data
   new_buffer.offset = 0
   new_buffer.size = 0
@@ -135,12 +131,12 @@ def get_constant_buffer(
 def add_new_constant_tensor(
     tensor_name: str,
     data: np.ndarray,
-    tensor_type: schema_py_generated.TensorType,
-    subgraph: schema_py_generated.SubGraphT,
-    buffers: list[schema_py_generated.BufferT],
+    tensor_type: qtyping.TensorType,
+    subgraph: qtyping.SubGraphT,
+    buffers: list[qtyping.BufferT],
     tensor_shape: Optional[list[int]] = None,
     force_duplicate_buffer: bool = False,
-    quantization: schema_py_generated.QuantizationParametersT | None = None,
+    quantization: qtyping.QuantizationParametersT | None = None,
 ) -> int:
   """Add a new constant tensor to the model.
 
@@ -162,7 +158,7 @@ def add_new_constant_tensor(
   """
   new_buffer_id = get_constant_buffer(data, buffers, force_duplicate_buffer)
 
-  new_tensor = schema_py_generated.TensorT()
+  new_tensor = qtyping.TensorT()
   if tensor_shape is None:
     tensor_shape = data.shape
   new_tensor.shape = tensor_shape
@@ -178,9 +174,9 @@ def add_new_constant_tensor(
 def add_new_activation_tensor(
     tensor_name: str,
     shape: list[int],
-    tensor_type: schema_py_generated.TensorType,
-    subgraph: schema_py_generated.SubGraphT,
-    quantization: schema_py_generated.QuantizationParametersT | None = None,
+    tensor_type: qtyping.TensorType,
+    subgraph: qtyping.SubGraphT,
+    quantization: qtyping.QuantizationParametersT | None = None,
 ) -> int:
   """Add a new activation tensor to the model.
 
@@ -195,7 +191,7 @@ def add_new_activation_tensor(
   Returns:
     The index of the new tensor in the subgraph.
   """
-  new_tensor = schema_py_generated.TensorT()
+  new_tensor = qtyping.TensorT()
   # If there's a dynamic shape, we need to read from the shapeSignature field
   # instead of shape. Shape should contain just 1 for the dynamic dimension but
   # shapeSignature should contain the true shape.
@@ -254,7 +250,7 @@ def get_producer_schema_op_id(
 
   Returns:
     The schema op id of the producer op. E.g.
-    schema_py_generated.BuiltinOperator.FULLY_CONNECTED.
+    qtyping.BuiltinOperator.FULLY_CONNECTED.
   """
   if transformation.producer == -1:
     return False

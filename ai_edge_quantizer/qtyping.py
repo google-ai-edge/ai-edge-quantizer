@@ -30,17 +30,22 @@ from ai_edge_litert.tools import flatbuffer_utils
 QSV: TypeAlias = MutableMapping[str, Any]
 
 # Types imported from `schema_py_generated`.
+ActivationFunctionType = flatbuffer_utils.ActivationFunctionType
+BlockwiseQuantizationT = flatbuffer_utils.BlockwiseQuantizationT
 Buffer = flatbuffer_utils.Buffer
 BufferT = flatbuffer_utils.BufferT
 BuiltinOperator = flatbuffer_utils.BuiltinOperator
 BuiltinOptions = flatbuffer_utils.BuiltinOptions
 BuiltinOptions2 = flatbuffer_utils.BuiltinOptions2
+FullyConnectedOptionsT = flatbuffer_utils.FullyConnectedOptionsT
 Model = flatbuffer_utils.Model
 ModelT = flatbuffer_utils.ModelT
 Operator = flatbuffer_utils.Operator
 OperatorCode = flatbuffer_utils.OperatorCode
 OperatorCodeT = flatbuffer_utils.OperatorCodeT
 OperatorT = flatbuffer_utils.OperatorT
+QuantizationDetails = flatbuffer_utils.QuantizationDetails
+QuantizationParametersT = flatbuffer_utils.QuantizationParametersT
 StableHLOCompositeOptions = flatbuffer_utils.StableHLOCompositeOptions
 StableHLOCompositeOptionsT = flatbuffer_utils.StableHLOCompositeOptionsT
 SubGraph = flatbuffer_utils.SubGraph

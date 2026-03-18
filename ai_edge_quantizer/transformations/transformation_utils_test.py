@@ -16,13 +16,15 @@
 """Tests for transformation_utils."""
 
 import pathlib
-import numpy as np
+
+from absl.testing import absltest
 from absl.testing import parameterized
-import absl.testing.absltest as absltest
+import numpy as np
+
+from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import transformation_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("../tests/models")
 
@@ -39,19 +41,19 @@ class TransformationUtilsTest(parameterized.TestCase):
   @parameterized.named_parameters(
       dict(
           testcase_name="add_new_op_code",
-          op_code=schema_py_generated.BuiltinOperator.LOGISTIC,
+          op_code=qtyping.BuiltinOperator.LOGISTIC,
           expected=1,
           custom_op_name=None,
       ),
       dict(
           testcase_name="add_existing_op_code",
-          op_code=schema_py_generated.BuiltinOperator.FULLY_CONNECTED,
+          op_code=qtyping.BuiltinOperator.FULLY_CONNECTED,
           expected=0,
           custom_op_name=None,
       ),
       dict(
           testcase_name="add_new_custom_op_code",
-          op_code=schema_py_generated.BuiltinOperator.CUSTOM,
+          op_code=qtyping.BuiltinOperator.CUSTOM,
           expected=1,
           custom_op_name="random_new_custom_op",
       ),
@@ -70,7 +72,7 @@ class TransformationUtilsTest(parameterized.TestCase):
   def test_add_custom_op_code_without_op_string_raises_error(self):
     with self.assertRaisesRegex(ValueError, "Custom string is required"):
       transformation_utils.add_op_code(
-          op_code=schema_py_generated.BuiltinOperator.CUSTOM,
+          op_code=qtyping.BuiltinOperator.CUSTOM,
           model_op_codes=self.model.operatorCodes,
           custom_op_name=None,
       )
@@ -78,7 +80,7 @@ class TransformationUtilsTest(parameterized.TestCase):
   def test_add_two_custom_op_codes(self):
     custom_op_name = "random_new_custom_op"
     added_index = transformation_utils.add_op_code(
-        op_code=schema_py_generated.BuiltinOperator.CUSTOM,
+        op_code=qtyping.BuiltinOperator.CUSTOM,
         model_op_codes=self.model.operatorCodes,
         custom_op_name=custom_op_name,
     )
@@ -89,7 +91,7 @@ class TransformationUtilsTest(parameterized.TestCase):
 
     custom_op_name_2 = "random_new_custom_op_2"
     added_index = transformation_utils.add_op_code(
-        op_code=schema_py_generated.BuiltinOperator.CUSTOM,
+        op_code=qtyping.BuiltinOperator.CUSTOM,
         model_op_codes=self.model.operatorCodes,
         custom_op_name=custom_op_name_2,
     )
@@ -134,8 +136,8 @@ class TransformationUtilsTest(parameterized.TestCase):
       dict(
           testcase_name="float32",
           tensor_data=np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32),
-          tensor_type=schema_py_generated.TensorType.FLOAT32,
-          expected_type=schema_py_generated.TensorType.FLOAT32,
+          tensor_type=qtyping.TensorType.FLOAT32,
+          expected_type=qtyping.TensorType.FLOAT32,
           expected_shape=(4,),
           expected_buffer_data=np.frombuffer(
               np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32).tobytes(),
@@ -145,8 +147,8 @@ class TransformationUtilsTest(parameterized.TestCase):
       dict(
           testcase_name="int8",
           tensor_data=np.array([[1, 2], [3, 4]], dtype=np.int8),
-          tensor_type=schema_py_generated.TensorType.INT8,
-          expected_type=schema_py_generated.TensorType.INT8,
+          tensor_type=qtyping.TensorType.INT8,
+          expected_type=qtyping.TensorType.INT8,
           expected_shape=(2, 2),
           expected_buffer_data=np.frombuffer(
               np.array([[1, 2], [3, 4]], dtype=np.int8).tobytes(),
@@ -192,17 +194,17 @@ class TransformationUtilsTest(parameterized.TestCase):
   @parameterized.named_parameters(
       dict(
           testcase_name="float32",
-          tensor_type=schema_py_generated.TensorType.FLOAT32,
+          tensor_type=qtyping.TensorType.FLOAT32,
           tensor_shape=[1, 1, 1, 1],
           expected_shape=[1, 1, 1, 1],
-          expected_type=schema_py_generated.TensorType.FLOAT32,
+          expected_type=qtyping.TensorType.FLOAT32,
       ),
       dict(
           testcase_name="int8",
-          tensor_type=schema_py_generated.TensorType.INT8,
+          tensor_type=qtyping.TensorType.INT8,
           tensor_shape=[1, 224, 224, 1],
           expected_shape=[1, 224, 224, 1],
-          expected_type=schema_py_generated.TensorType.INT8,
+          expected_type=qtyping.TensorType.INT8,
       ),
   )
   def test_add_new_activation_tensor_to_subgraph(
@@ -238,16 +240,14 @@ class TransformationUtilsTest(parameterized.TestCase):
     new_id = transformation_utils.add_new_activation_tensor(
         tensor_name="test_tensor",
         shape=[1, -1, -1, 1],
-        tensor_type=schema_py_generated.TensorType.FLOAT32,
+        tensor_type=qtyping.TensorType.FLOAT32,
         subgraph=subgraph,
     )
     # Originally had 4 tensors, new tensor is added at index 4.
     self.assertEqual(new_id, 4)
     self.assertLen(subgraph.tensors, 5)
     self.assertEqual(subgraph.tensors[-1].name, "test_tensor")
-    self.assertEqual(
-        subgraph.tensors[-1].type, schema_py_generated.TensorType.FLOAT32
-    )
+    self.assertEqual(subgraph.tensors[-1].type, qtyping.TensorType.FLOAT32)
     self.assertEqual(subgraph.tensors[-1].shape, [1, 1, 1, 1])
     self.assertEqual(subgraph.tensors[-1].shapeSignature, [1, -1, -1, 1])
 

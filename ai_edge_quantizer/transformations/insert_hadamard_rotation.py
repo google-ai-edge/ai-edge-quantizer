@@ -19,7 +19,6 @@ from flatbuffers import flexbuffers
 import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import transformation_utils
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 def _to_flexbuffer(
@@ -80,7 +79,7 @@ def _update_fully_connected_consumers(
   for consumer in transformation.consumers:
     if (
         transformation_utils.get_schema_op_id(transformation, consumer)
-        == schema_py_generated.BuiltinOperator.FULLY_CONNECTED
+        == qtyping.BuiltinOperator.FULLY_CONNECTED
     ):
       transformation.subgraph.operators[consumer].inputs[0] = new_tensor_id
       updated = True
@@ -120,7 +119,7 @@ def insert_hadamard_rotation(
     )
 
   tensor = transformation_input.subgraph.tensors[transformation_input.tensor_id]
-  if tensor.type != schema_py_generated.TensorType.FLOAT32:
+  if tensor.type != qtyping.TensorType.FLOAT32:
     raise ValueError(
         'The Hadamard rotation op supports float32 tensors only. Got'
         f' {tensor.type} tensor.'
@@ -129,11 +128,11 @@ def insert_hadamard_rotation(
   # Create new custom op with the current tensor as input and a new activation
   # tensor as output.
   custom_op_code_idx = transformation_utils.add_op_code(
-      schema_py_generated.BuiltinOperator.CUSTOM,
+      qtyping.BuiltinOperator.CUSTOM,
       transformation_input.op_codes,
       'aeq.hadamard_rotation',
   )
-  custom_op = schema_py_generated.OperatorT()
+  custom_op = qtyping.OperatorT()
   custom_op.opcodeIndex = custom_op_code_idx
   custom_op.inputs = [transformation_input.tensor_id]
   custom_op.customOptions = _to_flexbuffer(
@@ -145,7 +144,7 @@ def insert_hadamard_rotation(
       tensor.shapeSignature
       if tensor.shapeSignature is not None
       else tensor.shape,
-      schema_py_generated.TensorType.FLOAT32,
+      qtyping.TensorType.FLOAT32,
       transformation_input.subgraph,
   )
   custom_op.outputs = [new_tensor_id]
@@ -153,7 +152,7 @@ def insert_hadamard_rotation(
   # Update the users of this tensor to use the new tensor.
   if (
       transformation_utils.get_producer_schema_op_id(transformation_input)
-      == schema_py_generated.BuiltinOperator.EMBEDDING_LOOKUP
+      == qtyping.BuiltinOperator.EMBEDDING_LOOKUP
   ):
     _update_embedding_lookup_consumers(transformation_input, new_tensor_id)
   elif not _update_fully_connected_consumers(

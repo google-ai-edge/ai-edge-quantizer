@@ -22,7 +22,6 @@ the tensor consumer
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import quantize_tensor
 from ai_edge_quantizer.transformations import transformation_utils
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 def insert_quant(
@@ -41,7 +40,7 @@ def insert_quant(
         is 1
   """
   quant_op_code_idx = transformation_utils.add_op_code(
-      schema_py_generated.BuiltinOperator.QUANTIZE,
+      qtyping.BuiltinOperator.QUANTIZE,
       transformation_input.op_codes,
   )
 
@@ -50,7 +49,7 @@ def insert_quant(
   new_tensor_id = transformation_utils.add_new_activation_tensor(
       tensor.name + b'_quantized',
       tensor.shape,
-      schema_py_generated.TensorType.FLOAT32,
+      qtyping.TensorType.FLOAT32,
       transformation_input.subgraph,
   )
 
@@ -70,7 +69,7 @@ def insert_quant(
   )
 
   # create quantize_op
-  quant_op = schema_py_generated.OperatorT()
+  quant_op = qtyping.OperatorT()
   quant_op.opcodeIndex = quant_op_code_idx
   quant_op.outputs = [new_tensor_id]
   quant_op.inputs = [transformation_input.tensor_id]

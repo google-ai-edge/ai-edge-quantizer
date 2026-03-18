@@ -29,7 +29,6 @@ from ai_edge_quantizer.transformations import insert_hadamard_rotation
 from ai_edge_quantizer.transformations import quant_insert
 from ai_edge_quantizer.transformations import quantize_tensor
 from ai_edge_quantizer.transformations import transformation_utils
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 class TransformationPerformer:
@@ -107,7 +106,7 @@ class TransformationPerformer:
     self._original_op_id_map = []
     self._added_op_id_map = []
 
-  def _create_op_id_map(self, tflite_model: schema_py_generated.ModelT):
+  def _create_op_id_map(self, tflite_model: qtyping.ModelT):
     """init the original op_id to modified op_id map.
 
     At the beginning the graph has not been updated, so op_id maps to it's
@@ -225,7 +224,7 @@ class TransformationPerformer:
       self,
       transformation_inst: qtyping.TensorTransformationInsts,
       transformation_index: int,
-      tflite_model: schema_py_generated.ModelT,
+      tflite_model: qtyping.ModelT,
   ):
     """Apply a single transformation.
 
@@ -276,7 +275,7 @@ class TransformationPerformer:
   def _apply_transformations(
       self,
       transformation_inst: qtyping.TensorTransformationInsts,
-      tflite_model: schema_py_generated.ModelT,
+      tflite_model: qtyping.ModelT,
   ):
     """Apply all transformations for a tensor.
 
@@ -308,7 +307,7 @@ class TransformationPerformer:
   def transform_graph(
       self,
       transformation_instructions: dict[str, qtyping.TensorTransformationInsts],
-      tflite_model: schema_py_generated.ModelT,
+      tflite_model: qtyping.ModelT,
       tensor_processing_order: Optional[Sequence[str]] = None,
   ) -> None:
     """Apply all transformations to the given tflite_model in place.

@@ -21,7 +21,6 @@ import json
 from typing import Any, Union
 from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import qtyping
-from ai_edge_litert import schema_py_generated as schema  # pylint:disable=g-direct-tensorflow-import
 
 _TFLOpName = qtyping.TFLOperationName
 _OpQuantizationConfig = qtyping.OpQuantizationConfig
@@ -354,7 +353,7 @@ def _unroll_json_config(
 
 # TODO: b/401024954 - Have a better way to specify recipes based on op options.
 def is_non_quantizable_composite_op(
-    op: Union[schema.Operator, schema.OperatorT],
+    op: Union[qtyping.Operator, qtyping.OperatorT],
 ) -> bool:
   """Checks if the operator is a non-quantizable composite op.
 
@@ -369,7 +368,7 @@ def is_non_quantizable_composite_op(
     True if the operator is conditionally unquantized, False otherwise.
   """
   if opts := flatbuffer_utils.get_options_as(
-      op, schema.StableHLOCompositeOptionsT
+      op, qtyping.StableHLOCompositeOptionsT
   ):
     name = opts.name.decode("utf-8")
     if name not in QUANTIZABLE_COMPOSITES:

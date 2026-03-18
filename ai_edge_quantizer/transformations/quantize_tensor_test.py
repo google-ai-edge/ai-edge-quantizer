@@ -16,15 +16,16 @@
 """test for quantize tensor."""
 
 import pathlib
-import numpy as np
+
+from absl.testing import absltest
 from absl.testing import parameterized
-import absl.testing.absltest as absltest
+import numpy as np
+
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import quantize_tensor
 from ai_edge_quantizer.transformations import transformation_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("..")
 
@@ -132,9 +133,7 @@ class QuantizeTensorTest(parameterized.TestCase):
             qtyping.NonLinearQuantParams(16, None),
         )
     )
-    self.assertEqual(
-        subgraph.tensors[4].type, schema_py_generated.TensorType.FLOAT16
-    )
+    self.assertEqual(subgraph.tensors[4].type, qtyping.TensorType.FLOAT16)
 
   def test_blockwise_quantization_with_zero_point(self):
     """Test blockwise quantization with explicit zero point."""
@@ -165,7 +164,7 @@ class QuantizeTensorTest(parameterized.TestCase):
     quant_param = subgraph.tensors[test_tensor_id].quantization
     self.assertEqual(
         quant_param.detailsType,
-        schema_py_generated.QuantizationDetails.BlockwiseQuantization,
+        qtyping.QuantizationDetails.BlockwiseQuantization,
     )
     self.assertEqual(quant_param.details.blockSize, 32)
     # Check if the scale and zero point tensors are inserted correctly.

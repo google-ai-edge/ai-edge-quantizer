@@ -19,7 +19,6 @@ from flatbuffers import flexbuffers
 import numpy as np
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import transformation_utils
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 def _to_flexbuffer(
@@ -80,7 +79,7 @@ def _update_fully_connected_consumers(
   for consumer in transformation.consumers:
     if (
         transformation_utils.get_schema_op_id(transformation, consumer)
-        == schema_py_generated.BuiltinOperator.FULLY_CONNECTED
+        == qtyping.BuiltinOperator.FULLY_CONNECTED
     ):
       transformation.subgraph.operators[consumer].inputs[0] = new_tensor_id
       updated = True
@@ -150,7 +149,7 @@ def insert_decomposed_hadamard_rotation(
     )
 
   tensor = transformation_input.subgraph.tensors[transformation_input.tensor_id]
-  if tensor.type != schema_py_generated.TensorType.FLOAT32:
+  if tensor.type != qtyping.TensorType.FLOAT32:
     raise ValueError(
         'The Hadamard rotation op supports float32 tensors only. Got'
         f' {tensor.type} tensor.'
@@ -164,7 +163,7 @@ def insert_decomposed_hadamard_rotation(
   prerotate_shape_tensor_id = transformation_utils.add_new_constant_tensor(
       tensor.name + b'_prerotate_shape',
       np.array(prerotate_shape, dtype=np.int32),
-      schema_py_generated.TensorType.INT32,
+      qtyping.TensorType.INT32,
       transformation_input.subgraph,
       transformation_input.buffers,
   )
@@ -172,17 +171,17 @@ def insert_decomposed_hadamard_rotation(
       transformation_utils.add_new_activation_tensor(
           tensor.name + b'_prerotate_reshaped',
           prerotate_shape,
-          schema_py_generated.TensorType.FLOAT32,
+          qtyping.TensorType.FLOAT32,
           transformation_input.subgraph,
       )
   )
 
   prerotate_reshape_op_code_idx = transformation_utils.add_op_code(
-      schema_py_generated.BuiltinOperator.RESHAPE,
+      qtyping.BuiltinOperator.RESHAPE,
       transformation_input.op_codes,
       'RESHAPE',
   )
-  prerorate_reshape_op = schema_py_generated.OperatorT()
+  prerorate_reshape_op = qtyping.OperatorT()
   prerorate_reshape_op.opcodeIndex = prerotate_reshape_op_code_idx
   prerorate_reshape_op.inputs = [
       transformation_input.tensor_id,
@@ -200,11 +199,11 @@ def insert_decomposed_hadamard_rotation(
       data=transformation_utils.pack_data(
           bitwidth=4, flattened_data=np.ravel(hadamard_matrix)
       ),
-      tensor_type=schema_py_generated.TensorType.INT4,
+      tensor_type=qtyping.TensorType.INT4,
       subgraph=transformation_input.subgraph,
       buffers=transformation_input.buffers,
       tensor_shape=hadamard_matrix.shape,
-      quantization=schema_py_generated.QuantizationParametersT(
+      quantization=qtyping.QuantizationParametersT(
           scale=np.array([1.0 / np.sqrt(hadamard_size)], dtype=np.float32),
           zeroPoint=[0],
       ),
@@ -214,40 +213,36 @@ def insert_decomposed_hadamard_rotation(
   fc_output_tensor_id = transformation_utils.add_new_activation_tensor(
       tensor.name + b'_rotated',
       prerotate_shape,
-      schema_py_generated.TensorType.FLOAT32,
+      qtyping.TensorType.FLOAT32,
       transformation_input.subgraph,
   )
 
   fc_op_code_idx = transformation_utils.add_op_code(
-      schema_py_generated.BuiltinOperator.FULLY_CONNECTED,
+      qtyping.BuiltinOperator.FULLY_CONNECTED,
       transformation_input.op_codes,
       'FULLY_CONNECTED',
   )
-  fc_op = schema_py_generated.OperatorT()
+  fc_op = qtyping.OperatorT()
   fc_op.opcodeIndex = fc_op_code_idx
   fc_op.inputs = [prerotate_reshape_output_tensor_id, hadamard_matrix_tensor_id]
   fc_op.outputs = [fc_output_tensor_id]
-  fc_options = schema_py_generated.FullyConnectedOptionsT()
-  fc_options.fusedActivationFunction = (
-      schema_py_generated.ActivationFunctionType.NONE
-  )
-  fc_op.builtinOptionsType = (
-      schema_py_generated.BuiltinOptions.FullyConnectedOptions
-  )
+  fc_options = qtyping.FullyConnectedOptionsT()
+  fc_options.fusedActivationFunction = qtyping.ActivationFunctionType.NONE
+  fc_op.builtinOptionsType = qtyping.BuiltinOptions.FullyConnectedOptions
   fc_op.builtinOptions = fc_options
 
   # Insert x' = tfl.reshape(x', x.shape)
   post_reshape_op_code_idx = transformation_utils.add_op_code(
-      schema_py_generated.BuiltinOperator.RESHAPE,
+      qtyping.BuiltinOperator.RESHAPE,
       transformation_input.op_codes,
       'RESHAPE',
   )
-  post_reshape_op = schema_py_generated.OperatorT()
+  post_reshape_op = qtyping.OperatorT()
   post_reshape_op.opcodeIndex = post_reshape_op_code_idx
   post_reshape_shape_tensor_id = transformation_utils.add_new_constant_tensor(
       tensor.name + b'_postrotate_shape',
       np.array(tensor.shape, dtype=np.int32),
-      schema_py_generated.TensorType.INT32,
+      qtyping.TensorType.INT32,
       transformation_input.subgraph,
       transformation_input.buffers,
   )
@@ -256,7 +251,7 @@ def insert_decomposed_hadamard_rotation(
       transformation_utils.add_new_activation_tensor(
           tensor.name + b'_postrotate_reshaped',
           tensor.shape,
-          schema_py_generated.TensorType.FLOAT32,
+          qtyping.TensorType.FLOAT32,
           transformation_input.subgraph,
       )
   )
@@ -269,7 +264,7 @@ def insert_decomposed_hadamard_rotation(
   # Update the users of this tensor to use the new tensor.
   if (
       transformation_utils.get_producer_schema_op_id(transformation_input)
-      == schema_py_generated.BuiltinOperator.EMBEDDING_LOOKUP
+      == qtyping.BuiltinOperator.EMBEDDING_LOOKUP
   ):
     _update_embedding_lookup_consumers(
         transformation_input, post_reshape_output_tensor_id

@@ -16,14 +16,15 @@
 """Test for various transformations used by quantizer."""
 
 import pathlib
+
+from absl.testing import absltest
 import numpy as np
-import absl.testing.absltest as absltest
+
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import dequant_insert
 from ai_edge_quantizer.transformations import transformation_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("..")
 
@@ -42,7 +43,7 @@ class DequantInsertTest(absltest.TestCase):
     """Test dequant insert lib on a constant tensor."""
     subgraph = self._model.subgraphs[0]
     model = self._model
-    dequant_opcode = schema_py_generated.BuiltinOperator.DEQUANTIZE
+    dequant_opcode = qtyping.BuiltinOperator.DEQUANTIZE
     # insert dequant on the constant before the add node
     dequant_insert.insert_dequant(
         transformation_utils.TransformationInput(
@@ -64,12 +65,8 @@ class DequantInsertTest(absltest.TestCase):
 
     # check new tensor is correct created
     self.assertIn(b"_dequant", subgraph.tensors[9].name)
-    self.assertEqual(
-        subgraph.tensors[9].type, schema_py_generated.TensorType.FLOAT32
-    )
-    self.assertEqual(
-        subgraph.tensors[7].type, schema_py_generated.TensorType.INT8
-    )
+    self.assertEqual(subgraph.tensors[9].type, qtyping.TensorType.FLOAT32)
+    self.assertEqual(subgraph.tensors[7].type, qtyping.TensorType.INT8)
     # checking if consumer haves the correct input
     self.assertEqual(subgraph.operators[5].inputs[0], 6)
     self.assertEqual(subgraph.operators[5].inputs[1], 9)
@@ -86,7 +83,7 @@ class DequantInsertTest(absltest.TestCase):
     """Test dequant insert lib on activation tensors."""
     subgraph = self._model.subgraphs[0]
     model = self._model
-    dequant_opcode = schema_py_generated.BuiltinOperator.DEQUANTIZE
+    dequant_opcode = qtyping.BuiltinOperator.DEQUANTIZE
     # insert dequant on the output of a conv node
     dequant_insert.insert_dequant(
         transformation_utils.TransformationInput(
@@ -108,13 +105,9 @@ class DequantInsertTest(absltest.TestCase):
 
     # check new tensor is correct created
     self.assertIn(b"_dequant", subgraph.tensors[9].name)
-    self.assertEqual(
-        subgraph.tensors[9].type, schema_py_generated.TensorType.FLOAT32
-    )
+    self.assertEqual(subgraph.tensors[9].type, qtyping.TensorType.FLOAT32)
     # check original source tensor is updated
-    self.assertEqual(
-        subgraph.tensors[4].type, schema_py_generated.TensorType.INT8
-    )
+    self.assertEqual(subgraph.tensors[4].type, qtyping.TensorType.INT8)
 
     # checking if consumer haves the correct input
     self.assertEqual(subgraph.operators[4].inputs[0], 9)
@@ -132,7 +125,7 @@ class DequantInsertTest(absltest.TestCase):
     """Test dequant insert lib on tensors with multiple consumers."""
     subgraph = self._model.subgraphs[0]
     model = self._model
-    dequant_opcode = schema_py_generated.BuiltinOperator.DEQUANTIZE
+    dequant_opcode = qtyping.BuiltinOperator.DEQUANTIZE
     # insert dequant on the input of a conv node
     post_trans_info = dequant_insert.insert_dequant(
         transformation_utils.TransformationInput(
@@ -156,13 +149,9 @@ class DequantInsertTest(absltest.TestCase):
 
     # check new tensor is correct created
     self.assertIn(b"_dequant", subgraph.tensors[9].name)
-    self.assertEqual(
-        subgraph.tensors[9].type, schema_py_generated.TensorType.FLOAT32
-    )
+    self.assertEqual(subgraph.tensors[9].type, qtyping.TensorType.FLOAT32)
     # check original source tensor has the correct type
-    self.assertEqual(
-        subgraph.tensors[2].type, schema_py_generated.TensorType.INT8
-    )
+    self.assertEqual(subgraph.tensors[2].type, qtyping.TensorType.INT8)
 
     # checking the inserted node has the correct input/output
     self.assertEqual(subgraph.operators[1].outputs[0], 9)
@@ -180,7 +169,7 @@ class DequantInsertTest(absltest.TestCase):
     """Test dequant insert lib on tensors with multiple consumers."""
     subgraph = self._model.subgraphs[0]
     model = self._model
-    dequant_opcode = schema_py_generated.BuiltinOperator.DEQUANTIZE
+    dequant_opcode = qtyping.BuiltinOperator.DEQUANTIZE
     # insert dequant on the output of a conv node
     dequant_insert.insert_dequant(
         transformation_utils.TransformationInput(
@@ -202,13 +191,9 @@ class DequantInsertTest(absltest.TestCase):
 
     # check new tensor is correct created
     self.assertIn(b"_dequant", subgraph.tensors[9].name)
-    self.assertEqual(
-        subgraph.tensors[9].type, schema_py_generated.TensorType.FLOAT32
-    )
+    self.assertEqual(subgraph.tensors[9].type, qtyping.TensorType.FLOAT32)
     # check original source tensor is updated
-    self.assertEqual(
-        subgraph.tensors[1].type, schema_py_generated.TensorType.INT8
-    )
+    self.assertEqual(subgraph.tensors[1].type, qtyping.TensorType.INT8)
 
     # checking the inserted node has the correct input/output
     self.assertEqual(subgraph.operators[1].outputs[0], 9)
@@ -226,7 +211,7 @@ class DequantInsertTest(absltest.TestCase):
     """Test dequant insert lib on tensors with multiple consumers but only insert for one of them."""
     subgraph = self._model.subgraphs[0]
     model = self._model
-    dequant_opcode = schema_py_generated.BuiltinOperator.DEQUANTIZE
+    dequant_opcode = qtyping.BuiltinOperator.DEQUANTIZE
     # insert dequant on the output of a conv node
     dequant_insert.insert_dequant(
         transformation_utils.TransformationInput(
@@ -248,13 +233,9 @@ class DequantInsertTest(absltest.TestCase):
 
     # check new tensor is correct created
     self.assertIn(b"_dequant", subgraph.tensors[9].name)
-    self.assertEqual(
-        subgraph.tensors[9].type, schema_py_generated.TensorType.FLOAT32
-    )
+    self.assertEqual(subgraph.tensors[9].type, qtyping.TensorType.FLOAT32)
     # check original source tensor is updated
-    self.assertEqual(
-        subgraph.tensors[1].type, schema_py_generated.TensorType.INT8
-    )
+    self.assertEqual(subgraph.tensors[1].type, qtyping.TensorType.INT8)
 
     # checking the inserted node has the correct input/output
     self.assertEqual(subgraph.operators[1].outputs[0], 9)
@@ -272,7 +253,7 @@ class DequantInsertTest(absltest.TestCase):
     """Test dequant insert lib on graph output."""
     subgraph = self._model.subgraphs[0]
     model = self._model
-    dequant_opcode = schema_py_generated.BuiltinOperator.DEQUANTIZE
+    dequant_opcode = qtyping.BuiltinOperator.DEQUANTIZE
     # insert dequant on the graph output
     dequant_insert.insert_dequant(
         transformation_utils.TransformationInput(

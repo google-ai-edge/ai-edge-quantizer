@@ -15,16 +15,14 @@
 
 from collections.abc import Sequence
 
+from absl.testing import absltest
 from absl.testing import parameterized
-import absl.testing.absltest as absltest
-import numpy as np
 
 from ai_edge_quantizer import model_validator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
-from ai_edge_litert import schema_py_generated as schema_fb  # pylint: disable=g-direct-tensorflow-import
 
 
 _ComputePrecision = qtyping.ComputePrecision
@@ -300,13 +298,13 @@ class SharedBufferTest(parameterized.TestCase):
     ).quantized_model
     self.assertIsNotNone(quantized_model)
 
-    model = schema_fb.Model.GetRootAsModel(quantized_model, 0)
+    model = qtyping.Model.GetRootAsModel(quantized_model, 0)
     subgraph = model.Subgraphs(0)
     fc_ops = []
     for i in range(subgraph.OperatorsLength()):
       op = subgraph.Operators(i)
       op_code = model.OperatorCodes(op.OpcodeIndex())
-      if op_code.BuiltinCode() == schema_fb.BuiltinOperator.FULLY_CONNECTED:
+      if op_code.BuiltinCode() == qtyping.BuiltinOperator.FULLY_CONNECTED:
         fc_ops.append(op)
 
     sig1_fc1_op, sig1_fc2_op = None, None

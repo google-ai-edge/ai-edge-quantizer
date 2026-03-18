@@ -27,7 +27,6 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import constrained_ops_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 _OpQuantConstraint = common_utils.OpQuantConstraint
@@ -174,7 +173,7 @@ class TransformationInstructionsGenerator:
       self._tensor_name_to_graph_info: dict[
           str, TransformationInstructionsGenerator.TensorGraphInfo
       ] = {}
-      self.flatbuffer_model: schema_py_generated.ModelT = ()
+      self.flatbuffer_model: qtyping.ModelT = ()
     else:
       self.flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
       self._create_tensor_name_to_graph_info_map()
@@ -197,7 +196,7 @@ class TransformationInstructionsGenerator:
     consumers: list[int]
 
   def _tensor_info_generator(
-      self, subgraph_id: int, subgraph: schema_py_generated.SubGraphT
+      self, subgraph_id: int, subgraph: qtyping.SubGraphT
   ) -> Iterator[tuple[str, TensorGraphInfo]]:
     """Generator function for tensor info.
 
@@ -826,7 +825,7 @@ class TransformationInstructionsGenerator:
   def quant_params_to_transformation_insts(
       self,
       params: dict[str, qtyping.TensorTransformationParams],
-      flatbuffer_model: Optional[schema_py_generated.ModelT] = None,
+      flatbuffer_model: Optional[qtyping.ModelT] = None,
   ) -> dict[str, qtyping.TensorTransformationInsts]:
     """Converts quantization params to transformation instructions.
 

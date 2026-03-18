@@ -19,7 +19,6 @@ from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.utils import common_utils
-from ai_edge_litert import schema_py_generated as schema_fb  # pylint: disable=g-direct-tensorflow-import
 
 
 _OpQuantConstraint = common_utils.OpQuantConstraint
@@ -84,7 +83,7 @@ def get_constrained_op_list(
   # ops with the given constraint.
   for op, materialize_fn in minmax_func_dict.items():
     # Create a dummy op info to trigger the materialization.
-    mock_op = schema_fb.OperatorT()
+    mock_op = qtyping.OperatorT()
     mock_op.inputs = [0]
     mock_op.outputs = [0]
     op_info = qtyping.OpInfo(

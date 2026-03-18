@@ -22,7 +22,6 @@ the tensor consumer
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import quantize_tensor
 from ai_edge_quantizer.transformations import transformation_utils
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 def insert_dequant(
@@ -41,7 +40,7 @@ def insert_dequant(
         is 1
   """
   dequant_op_code_idx = transformation_utils.add_op_code(
-      schema_py_generated.BuiltinOperator.DEQUANTIZE,
+      qtyping.BuiltinOperator.DEQUANTIZE,
       transformation_input.op_codes,
   )
   # create output tensor for the dequant op
@@ -49,12 +48,12 @@ def insert_dequant(
   new_tensor_id = transformation_utils.add_new_activation_tensor(
       tensor.name + b'_dequant',
       tensor.shape,
-      schema_py_generated.TensorType.FLOAT32,
+      qtyping.TensorType.FLOAT32,
       transformation_input.subgraph,
   )
 
   # create dequantize_op
-  dequant_op = schema_py_generated.OperatorT()
+  dequant_op = qtyping.OperatorT()
   dequant_op.opcodeIndex = dequant_op_code_idx
   dequant_op.outputs = [new_tensor_id]
   dequant_op.inputs = [transformation_input.tensor_id]

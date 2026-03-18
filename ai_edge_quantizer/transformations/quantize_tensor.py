@@ -22,14 +22,13 @@ import numpy as np
 
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import transformation_utils
-from ai_edge_litert import schema_py_generated  # pylint: disable=g-direct-tensorflow-import
 
 
 # TODO: b/335014051 - Support distinguishing INT, FLOAT & UINT, BFLOAT.
 def quant_params_to_tflite_type(
     bitwidth: int,
-) -> Optional[schema_py_generated.TensorType]:
-  """Given specifications from quant param return the corresponding TFLite dtype.
+) -> Optional[qtyping.TensorType]:
+  """Returns the TFLite dtype for the given bit width.
 
   Args:
     bitwidth: Bit width from UniformQuantParams.
@@ -38,23 +37,23 @@ def quant_params_to_tflite_type(
     The corresponding TFLite tensor type.
   """
   if bitwidth == 4:
-    return schema_py_generated.TensorType.INT4
+    return qtyping.TensorType.INT4
   elif bitwidth <= 8:
-    return schema_py_generated.TensorType.INT8
+    return qtyping.TensorType.INT8
   elif bitwidth <= 16:
-    return schema_py_generated.TensorType.INT16
+    return qtyping.TensorType.INT16
   elif bitwidth <= 32:
-    return schema_py_generated.TensorType.INT32
+    return qtyping.TensorType.INT32
   elif bitwidth <= 64:
-    return schema_py_generated.TensorType.INT64
+    return qtyping.TensorType.INT64
   else:
     raise ValueError(f"Unsupported quant params: {bitwidth}")
 
 
 def nonlinear_quant_params_to_tflite_type(
     bitwidth: int,
-) -> Optional[schema_py_generated.TensorType]:
-  """Given specifications from quant param return the corresponding tflite dtype.
+) -> Optional[qtyping.TensorType]:
+  """Returns the TFLite dtype for the given bit width.
 
   Args:
     bitwidth: bitwidth from NonLinearQuantParams
@@ -63,16 +62,16 @@ def nonlinear_quant_params_to_tflite_type(
     the corresponding tflite tensortype
   """
   if bitwidth == 16:
-    return schema_py_generated.TensorType.FLOAT16
+    return qtyping.TensorType.FLOAT16
   elif bitwidth == 32:
-    return schema_py_generated.TensorType.FLOAT32
+    return qtyping.TensorType.FLOAT32
   else:
     raise ValueError(f"Unsupported nonlinear params: {bitwidth}")
 
 
 def _perform_channelwise_quantization(
     transformation_input: transformation_utils.TransformationInput,
-) -> schema_py_generated.QuantizationParametersT():
+) -> qtyping.QuantizationParametersT:
   """Perform channelwise quantization and fill the quantization parameters.
 
   Args:
@@ -85,14 +84,14 @@ def _perform_channelwise_quantization(
   assert isinstance(
       transformation_input.quant_params, qtyping.UniformQuantParams
   )
-  flatbuffer_quantization = schema_py_generated.QuantizationParametersT()
+  flatbuffer_quantization = qtyping.QuantizationParametersT()
   flatbuffer_quantization.scale = np.ravel(
       transformation_input.quant_params.scale
-  ).astype(np.float32)
+  ).astype(np.float32, copy=False)
   if transformation_input.quant_params.zero_point is not None:
     flatbuffer_quantization.zeroPoint = np.ravel(
         transformation_input.quant_params.zero_point
-    ).astype(np.int64)
+    ).astype(np.int64, copy=False)
   if transformation_input.quant_params.quantized_dimension is not None:
     flatbuffer_quantization.quantizedDimension = (
         transformation_input.quant_params.quantized_dimension
@@ -103,7 +102,7 @@ def _perform_channelwise_quantization(
 
 def _perform_blockwise_quantization(
     transformation_input: transformation_utils.TransformationInput,
-) -> schema_py_generated.QuantizationParametersT():
+) -> qtyping.QuantizationParametersT:
   """Perform blockwise quantization and fill the quantization parameters.
 
   Args:
@@ -116,19 +115,19 @@ def _perform_blockwise_quantization(
   assert isinstance(
       transformation_input.quant_params, qtyping.UniformQuantParams
   )
-  flatbuffer_quantization = schema_py_generated.QuantizationParametersT()
+  flatbuffer_quantization = qtyping.QuantizationParametersT()
   flatbuffer_quantization.detailsType = (
-      schema_py_generated.QuantizationDetails.BlockwiseQuantization
+      qtyping.QuantizationDetails.BlockwiseQuantization
   )
   tensor = transformation_input.subgraph.tensors[transformation_input.tensor_id]
-  blockwise_details = schema_py_generated.BlockwiseQuantizationT()
+  blockwise_details = qtyping.BlockwiseQuantizationT()
   # Downcast and round the scale to fp16 with 7 bit mantissa.
   scale_tensor_id = transformation_utils.add_new_constant_tensor(
       tensor.name + b"_scales",
       transformation_input.quant_params.scale.astype(ml_dtypes.bfloat16).astype(
           np.float16
       ),
-      schema_py_generated.TensorType.FLOAT16,
+      qtyping.TensorType.FLOAT16,
       transformation_input.subgraph,
       transformation_input.buffers,
   )
@@ -159,7 +158,7 @@ def quantize_tensor(
       num_ops_added: The total number of ops inserted by this operation, which
         is 0.
   """
-  tensor: schema_py_generated.TensorT = transformation_input.subgraph.tensors[
+  tensor: qtyping.TensorT = transformation_input.subgraph.tensors[
       transformation_input.tensor_id
   ]
   # TODO: b/336385820 - Suppport quantize buffer directly when quantized_data
