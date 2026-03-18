@@ -16,12 +16,16 @@
 """Tests for the ModelModifier class."""
 
 import pathlib
+import tempfile
 import tracemalloc
 
 from absl.testing import absltest
 from absl.testing import parameterized
 
+import os
+import io
 from ai_edge_litert.tools import flatbuffer_utils
+from ai_edge_litert.tools import mmap_utils
 from ai_edge_quantizer import model_modifier
 from ai_edge_quantizer import params_generator
 from ai_edge_quantizer import qtyping
@@ -87,6 +91,24 @@ class ModelModifierTest(parameterized.TestCase):
         qtyping.ModelT,
     )
     self.assertLess(len(new_model_binary), len(self._model_content))
+
+  def test_modify_model_serialize_to_path_succeeds(self):
+    recipe_manager_instance = recipe_manager.RecipeManager()
+    params_generator_instance = params_generator.ParamsGenerator(self._model)
+
+    recipe_manager_instance.load_quantization_recipe(self._global_recipe)
+    tensor_quantization_params = (
+        params_generator_instance.generate_quantization_parameters(
+            recipe_manager_instance
+        )
+    )
+    path = tempfile.mktemp()
+    serialized_model = self._model_modifier.modify_model(
+        tensor_quantization_params,
+        serialize_to_path=path,
+    )
+    self.assertTrue(os.path.exists(path))
+    self.assertEqual(serialized_model, mmap_utils.get_file_contents(path))
 
   def test_modify_model_preserves_original_model(self):
     recipe_manager_instance = recipe_manager.RecipeManager()

@@ -16,7 +16,7 @@
 """Uniform quantize in tensor level."""
 
 import dataclasses
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence
 import ml_dtypes
 import numpy as np
 from ai_edge_quantizer import qtyping
@@ -85,6 +85,17 @@ def _round_and_clip_inplace(
     )
 
 
+def _get_numpy_dtype(qtype: IntType) -> type[Any]:
+  if qtype.num_bits <= 8:
+    return np.int8 if qtype.signed else np.uint8
+  elif qtype.num_bits <= 16:
+    return np.int16 if qtype.signed else np.uint16
+  elif qtype.num_bits <= 32:
+    return np.int32 if qtype.signed else np.uint32
+  else:
+    return np.int64 if qtype.signed else np.uint64
+
+
 def assign_quantized_type(tensor: np.ndarray, qtype: IntType) -> np.ndarray:
   """Cast the tensor to the quantized type."""
   if qtype.num_bits <= 8:
@@ -95,7 +106,7 @@ def assign_quantized_type(tensor: np.ndarray, qtype: IntType) -> np.ndarray:
     qtype = np.int32 if qtype.signed else np.uint32
   else:
     qtype = np.int64 if qtype.signed else np.uint64
-  return tensor.astype(qtype)
+  return tensor.astype(qtype, copy=False)
 
 
 def fix_quantization_params_rank(
@@ -308,10 +319,46 @@ def uniform_quantize(
         f"zero_points need to be {required_dtype}."
         f" But the actual type is {zero_points.dtype}."
     )
-  ret = np.divide(tensor_data, scales)
-  ret = np.add(ret, zero_points, out=ret if not np.isscalar(ret) else None)
-  ret = _round_and_clip_inplace(ret, qtype, narrow_range)
-  ret = assign_quantized_type(ret, qtype)
+
+  # For large tensors, quantize the data in chunks of the leading dimension to
+  # avoid creating large intermediate values.
+  if (
+      tensor_data.ndim > 1
+      and tensor_data.nbytes > 32 * 1024 * 1024
+      and tensor_data.dtype.itemsize * 8 != qtype.num_bits
+  ):
+    # Reshape the `tensor_data`, `scales`, and `zero_points` to just two
+    # dimensions.
+    output_shape = tensor_data.shape
+    tensor_data = tensor_data.reshape([-1, output_shape[-1]])
+    scales = np.broadcast_to(scales, tensor_data.shape)
+    zero_points = np.broadcast_to(zero_points, tensor_data.shape)
+    ret = np.zeros(shape=tensor_data.shape, dtype=_get_numpy_dtype(qtype))
+
+    # Use a chunk size corresponding to 32 MiB of input data.
+    chunk_size = (32 * 1024 * 1024) // (
+        output_shape[-1] * tensor_data.dtype.itemsize
+    )
+
+    # Loop over `tensor_data` in chunks.
+    for k in range(0, tensor_data.size, chunk_size):
+      end = min(k + chunk_size, tensor_data.size)
+
+      # Quantize the chunk.
+      q = np.divide(tensor_data[k:end, :], scales[k:end, :])
+      q = np.add(q, zero_points[k:end, :], out=q)
+      q = _round_and_clip_inplace(q, qtype, narrow_range)
+      ret[k:end, :] = assign_quantized_type(q, qtype)
+
+    # Reshape the flat output.
+    ret = np.reshape(ret, output_shape)
+
+  else:
+    ret = np.divide(tensor_data, scales)
+    ret = np.add(ret, zero_points, out=ret if not np.isscalar(ret) else None)
+    ret = _round_and_clip_inplace(ret, qtype, narrow_range)
+    ret = assign_quantized_type(ret, qtype)
+
   return ret
 
 

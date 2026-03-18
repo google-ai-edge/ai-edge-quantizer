@@ -222,10 +222,8 @@ def buffer_to_tensors(
   """Returns a map from buffer id to tensors that use it."""
   buffer_to_tensor_map = collections.defaultdict(list)
   for subgraph in flatbuffer_model.subgraphs:
-    for op in subgraph.operators:
-      for tensor in parse_op_tensors(op, subgraph.tensors):
-        if tensor not in buffer_to_tensor_map[tensor.buffer]:
-          buffer_to_tensor_map[tensor.buffer].append(tensor)
+    for tensor in subgraph.tensors:
+      buffer_to_tensor_map[tensor.buffer].append(tensor)
   return buffer_to_tensor_map
 
 
