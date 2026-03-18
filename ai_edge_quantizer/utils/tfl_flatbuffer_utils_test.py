@@ -16,8 +16,10 @@
 """Tests for tfl_flatbuffer_utils.py."""
 
 import pathlib
+
+from absl.testing import absltest
 import numpy as np
-import absl.testing.absltest as absltest
+
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
@@ -100,7 +102,8 @@ class FlatbufferUtilsTest(absltest.TestCase):
         self._test_model
     )
     # Read from Netron/Model Explorer
-    tensors = buffer_to_tensor_map[6]
+    buffer_id = self._test_model.subgraphs[0].tensors[5].buffer
+    tensors = buffer_to_tensor_map[buffer_id]
     self.assertLen(tensors, 1)
     conv2d_filter_tensor = tensors[0]
     self.assertEqual(tuple(conv2d_filter_tensor.shape), (8, 3, 3, 1))
@@ -112,13 +115,18 @@ class FlatbufferUtilsTest(absltest.TestCase):
     )
     test_model = tfl_flatbuffer_utils.read_model(test_model_path)
     buffer_to_tensor_map = tfl_flatbuffer_utils.buffer_to_tensors(test_model)
-    self.assertLen(buffer_to_tensor_map, 7)
+    self.assertEqual(sum(len(v) for v in buffer_to_tensor_map.values()), 8)
     # The following buffer is shared by two tensors, each shared by two FC ops.
     # This is where before we had multiple enrties for the same tensor.
-    self.assertLen(buffer_to_tensor_map[2], 2)
+    tensor_for_name = {}
+    for subgraph in test_model.subgraphs:
+      for tensor in subgraph.tensors:
+        tensor_for_name[tfl_flatbuffer_utils.get_tensor_name(tensor)] = tensor
+    buffer_id = tensor_for_name["arith.constant"].buffer
+    self.assertLen(buffer_to_tensor_map[buffer_id], 2)
     got_tensor_names = [
         tfl_flatbuffer_utils.get_tensor_name(tensor)
-        for tensor in buffer_to_tensor_map[2]
+        for tensor in buffer_to_tensor_map[buffer_id]
     ]
     self.assertEqual(
         got_tensor_names,
