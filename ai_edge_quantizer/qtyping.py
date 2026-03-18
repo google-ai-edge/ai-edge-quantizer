@@ -214,7 +214,7 @@ class UniformQuantParams:
     def __eq__(self, other):
       if other.__class__ is not self.__class__:
         return NotImplemented
-      return (
+      return id(self) == id(other) or (
           np.array_equal(self.random_binary_vector, other.random_binary_vector)
           and self.hadamard_size == other.hadamard_size
       )
@@ -263,11 +263,11 @@ class UniformQuantParams:
   def __eq__(self, other):
     if other.__class__ is not self.__class__:
       return NotImplemented
-    return (
+    return id(self) == id(other) or (
         self.num_bits == other.num_bits
         and self.quantized_dimension == other.quantized_dimension
-        and np.array_equal(self.scale, other.scale)
-        and np.array_equal(self.zero_point, other.zero_point)
+        and _compare_array_or_none(self.scale, other.scale)
+        and _compare_array_or_none(self.zero_point, other.zero_point)
         and self.symmetric == other.symmetric
         and _compare_array_or_none(self.quantized_data, other.quantized_data)
         and self.block_size == other.block_size
@@ -294,7 +294,7 @@ class NonLinearQuantParams:
   def __eq__(self, other):
     if other.__class__ is not self.__class__:
       return NotImplemented
-    return (
+    return id(self) == id(other) or (
         self.num_bits == other.num_bits
         and self.data_type == other.data_type
         and _compare_array_or_none(self.quantized_data, other.quantized_data)
@@ -589,10 +589,11 @@ def _compare_array_or_none(
   """
   if obj1 is None and obj2 is None:
     return True  # Both None, so they're equal.
-  elif obj1 is None or obj2 is None:
+  if obj1 is None or obj2 is None:
     return False  # Only one is None, so they're different.
-  else:
-    return np.array_equal(obj1, obj2)
+  if id(obj1) == id(obj2) or obj1.data == obj2.data:
+    return True
+  return np.array_equal(obj1, obj2)
 
 
 @dataclasses.dataclass(frozen=True)
