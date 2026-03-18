@@ -15,8 +15,8 @@
 
 """Model Modifier class that produce the final quantized TFlite model."""
 
-import copy
 import logging
+from typing import TypeVar
 
 import numpy as np
 
@@ -56,6 +56,35 @@ class _PackedBufferData:
         # Add this buffer to the list of buffers.
         self.data_for_buffer_id[buffer_id] = buffer_data
         self.packed_size = _round_up_16(self.packed_size + len(buffer_data))
+
+
+T = TypeVar("T")
+
+
+def _copy_with_views(value: T) -> T:
+  """Recursively convert a nested structure without copying `np.ndarray`s.
+
+  If the input is a `list`, this function recurses over its elements. If the
+  input has a `__dict__` attribute, this function recurses over its non-`None`
+  entries.
+
+  Args:
+    value: The object in which to replace `np.ndarray`s with `list`s.
+
+  Returns:
+    The modified value.
+  """
+  if isinstance(value, np.ndarray):
+    return value.view()
+  if isinstance(value, list):
+    return [_copy_with_views(v) for v in value]
+  if hasattr(value, "__dict__"):
+    return type(value)(**{
+        k: _copy_with_views(v)
+        for k, v in value.__dict__.items()
+        if v is not None
+    })
+  return value
 
 
 class ModelModifier:
@@ -119,14 +148,7 @@ class ModelModifier:
       a byte buffer that represents the serialized tflite model
     """
     # Make a copy of the model, but don't duplicate the buffer data.
-    buffer_data = []
-    for buffer in self._model.buffers:
-      buffer_data.append(buffer.data)
-      buffer.data = None
-    quantized_model = copy.deepcopy(self._model)
-    for bid, data in enumerate(buffer_data):
-      self._model.buffers[bid].data = data
-      quantized_model.buffers[bid].data = data
+    quantized_model = _copy_with_views(self._model)
 
     instructions = self._transformation_instruction_generator.quant_params_to_transformation_insts(
         params, quantized_model
