@@ -26,6 +26,8 @@ from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 CUSTOM_OP_ALGORITHM_KEY = "HADAMARD_ROTATION"
 DECOMPOSED_ALGORITHM_KEY = "DECOMPOSED_HADAMARD_ROTATION"
 
+_HADAMARD_MATRIX_CACHE = {}
+
 
 def _make_hadamard_matrix(size: int) -> np.ndarray:
   """Generates a Hadamard matrix of the given size.
@@ -41,14 +43,27 @@ def _make_hadamard_matrix(size: int) -> np.ndarray:
   Raises:
     ValueError: If the size is not a power of 2.
   """
+  if not isinstance(size, int):
+    size = int(size)
+
   if size <= 0 or (size & (size - 1)) != 0:
     raise ValueError("Hadamard matrix size must be a power of 2. ")
-  h = h2 = np.array([[1, 1], [1, -1]], dtype=np.int8)
+
+  # Check whether we already have a Hadamard matrix for this size.
+  if size in _HADAMARD_MATRIX_CACHE:
+    return _HADAMARD_MATRIX_CACHE[size]
+
+  # Otherwise, create one.
+  h_int8 = h2 = np.array([[1, 1], [1, -1]], dtype=np.int8)
+  h_norm = h_int8 / np.sqrt(2, dtype=np.float32)
   current_size = 2
   while current_size < size:
-    h = np.kron(h, h2)
+    h_int8 = np.kron(h_int8, h2)
     current_size *= 2
-  return h / np.sqrt(size, dtype=np.float32)
+    if current_size not in _HADAMARD_MATRIX_CACHE:
+      h_norm = h_int8 / np.sqrt(size, dtype=np.float32)
+      _HADAMARD_MATRIX_CACHE[current_size] = h_norm
+  return h_norm
 
 
 def _rotate_with_diagonal_hadamard(
