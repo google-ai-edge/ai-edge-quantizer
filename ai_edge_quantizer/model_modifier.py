@@ -309,15 +309,17 @@ class ModelModifier:
     # do it this way since `bytearray.resize` is only available as of
     # Python 3.14.
     if (
-        not serialize_to_path
-        or (
+        serialize_to_path
+        and (
             combined_buffer := mmap_utils.get_mapped_buffer_or_none(
                 serialize_to_path,
                 buffer_data_offset + packed_buffer_data.packed_size,
             )
         )
-        is None
+        is not None
     ):
+      mmap_utils.advise_sequential(combined_buffer)
+    else:
       combined_buffer = bytearray(
           buffer_data_offset + packed_buffer_data.packed_size
       )
@@ -350,6 +352,9 @@ class ModelModifier:
 
       # Increment the offset by the amount of data that we added, plus padding.
       buffer_data_offset = _round_up_16(buffer_data_offset + len(buffer_data))
+      mmap_utils.advise_dont_need(buffer_data)
+      if isinstance(model_buffer, mmap.mmap):
+        mmap_utils.advise_dont_need(model_buffer, 0, buffer_data_offset)
 
     # Clean up and write the buffer to a file if requested/needed.
     if isinstance(model_buffer, mmap.mmap):
