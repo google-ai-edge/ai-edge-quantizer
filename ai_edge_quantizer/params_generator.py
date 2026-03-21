@@ -20,6 +20,7 @@ import copy
 from typing import Any, Optional
 import warnings
 
+from ai_edge_litert.tools import mmap_utils
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import default_policy as policy
 from ai_edge_quantizer import qtyping
@@ -139,6 +140,15 @@ class ParamsGenerator:
               tensor_name_to_qsv=model_qsvs,
               tensor_quant_params_cache=self._tensor_quant_params_cache,
           )
+        # Reclaim memory for op's tensors that have data.
+        for tensor_idx in list(op.inputs):
+          if tensor_idx != -1:
+            buffer_idx = subgraph.tensors[tensor_idx].buffer
+            if (
+                buffer := self.float_model.buffers[buffer_idx]
+            ).data is not None:
+              mmap_utils.advise_dont_need(buffer.data)
+
         # Step3: update the results.
         self._update_model_quant_results(op_quant_results)
     self._post_process_results()
