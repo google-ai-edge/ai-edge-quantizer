@@ -61,20 +61,24 @@ def _make_hadamard_matrix(size: int) -> np.ndarray:
     h_int8 = np.kron(h_int8, h2)
     current_size *= 2
     if current_size not in _HADAMARD_MATRIX_CACHE:
-      h_norm = h_int8 / np.sqrt(size, dtype=np.float32)
+      h_norm = h_int8 / np.sqrt(current_size, dtype=np.float32)
       _HADAMARD_MATRIX_CACHE[current_size] = h_norm
+    else:
+      h_norm = _HADAMARD_MATRIX_CACHE[current_size]
   return h_norm
 
 
 def _rotate_with_diagonal_hadamard(
     tensor_content: np.ndarray,
     axis: int,
+    max_size: int | None = None,
 ):
   """Quantizes the given float array using the diagonal Hadamard algorithm.
 
   Args:
     tensor_content: The float array to quantize.
     axis: The axis of the tensor to rotate.
+    max_size: The maximum size of the Hadamard matrix.
 
   Returns:
     A tuple containing the quantized array and the recovered array.
@@ -93,6 +97,8 @@ def _rotate_with_diagonal_hadamard(
   # tile this Hadamard matrix along the diagonal. 2**30 is just a large power
   # of 2 to calculate this factor.
   hadamard_size = np.gcd(tensor_content.shape[axis], 2**30)
+  if max_size:
+    hadamard_size = min(hadamard_size, 1 << (max_size.bit_length() - 1))
   random_vector = np.ones(hadamard_size, dtype=np.int8)
 
   # Use a canonical Hadamard matrix.
@@ -150,7 +156,9 @@ def get_tensor_quant_params(
 
   # Rotate the tensor with a Hadamard matrix.
   w_rotated, hadamard_size, random_vector = _rotate_with_diagonal_hadamard(
-      tensor_content, axis=reduce_axis
+      tensor_content,
+      axis=reduce_axis,
+      max_size=tensor_quant_config.algorithm_params.get("max_hadamard_size"),
   )
 
   # Get the quantized values of the rotated tensor.

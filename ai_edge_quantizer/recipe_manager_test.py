@@ -636,20 +636,20 @@ class ConfiguratorTest(parameterized.TestCase):
     expected_full_quantization_config = [
         {
             'regex': '.*',
-            'operation': '*',
+            'operation': _TFLOpName.ALL_SUPPORTED,
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'activation_tensor_config': {
                     'num_bits': 8,
                     'symmetric': False,
                     'granularity': _QuantGranularity.TENSORWISE,
-                    'dtype': 'INT',
+                    'dtype': _TensorDataType.INT,
                 },
                 'weight_tensor_config': {
                     'num_bits': 8,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
-                    'dtype': 'INT',
+                    'dtype': _TensorDataType.INT,
                 },
                 # WEIGHT_ONLY.
                 'compute_precision': _ComputePrecision.INTEGER,
@@ -660,11 +660,11 @@ class ConfiguratorTest(parameterized.TestCase):
         },
         {
             'regex': '.*',
-            'operation': 'BATCH_MATMUL',
+            'operation': _TFLOpName.BATCH_MATMUL,
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
-                    'dtype': 'INT',
+                    'dtype': _TensorDataType.INT,
                     'num_bits': 8,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
@@ -678,11 +678,11 @@ class ConfiguratorTest(parameterized.TestCase):
         },
         {
             'regex': '.*/Dense/.*',
-            'operation': '*',
+            'operation': _TFLOpName.ALL_SUPPORTED,
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
-                    'dtype': 'INT',
+                    'dtype': _TensorDataType.INT,
                     'num_bits': 4,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
@@ -696,11 +696,11 @@ class ConfiguratorTest(parameterized.TestCase):
         },
         {
             'regex': '.*/Dense_1/.*',
-            'operation': 'FULLY_CONNECTED',
+            'operation': _TFLOpName.FULLY_CONNECTED,
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
-                    'dtype': 'INT',
+                    'dtype': _TensorDataType.INT,
                     'num_bits': 6,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
@@ -714,11 +714,11 @@ class ConfiguratorTest(parameterized.TestCase):
         },
         {
             'regex': '.*/Dense_1/.*',
-            'operation': 'BATCH_MATMUL',
+            'operation': _TFLOpName.BATCH_MATMUL,
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
-                    'dtype': 'INT',
+                    'dtype': _TensorDataType.INT,
                     'num_bits': 3,
                     'symmetric': True,
                     'granularity': _QuantGranularity.TENSORWISE,
@@ -999,6 +999,28 @@ class ConfiguratorTest(parameterized.TestCase):
         ),
     )
     self.assertTrue(self._recipe_manager.need_calibration())
+
+  def test_get_hadamard_with_max_size(self):
+    self._recipe_manager.add_quantization_config(
+        regex='.*/Dense/.*',
+        operation_name=_TFLOpName.FULLY_CONNECTED,
+        algorithm_key=_AlgorithmName.HADAMARD_ROTATION,
+        op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=8, algorithm_params={'max_hadamard_size': 1024}
+            ),
+            compute_precision=_ComputePrecision.INTEGER,
+        ),
+    )
+    alg_key, op_config = self._recipe_manager.get_quantization_configs(
+        _TFLOpName.FULLY_CONNECTED, 'model/Dense/op'
+    )
+    self.assertEqual(alg_key, _AlgorithmName.HADAMARD_ROTATION)
+    weight_tensor_config = op_config.weight_tensor_config
+    assert weight_tensor_config is not None
+    self.assertEqual(
+        weight_tensor_config.algorithm_params['max_hadamard_size'], 1024
+    )
 
 
 if __name__ == '__main__':

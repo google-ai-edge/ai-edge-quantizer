@@ -20,10 +20,9 @@ from collections.abc import MutableMapping
 import copy
 import dataclasses
 import enum
-from typing import Any, Callable, Optional, Union
-
+from typing import Any, Callable, Mapping, Optional, Union, TypeAlias
+from immutabledict import immutabledict
 import numpy as np
-from typing_extensions import TypeAlias
 
 from ai_edge_litert.tools import flatbuffer_utils
 
@@ -355,22 +354,36 @@ class TensorQuantizationConfig:
       quantization.
     dtype: The data type of the tensor.
     algorithm_key: The algorithm key to use for quantization.
+    algorithm_params: Additional parameters for the quantization algorithm.
   """
 
   num_bits: int
   symmetric: bool = True
   granularity: QuantGranularity = QuantGranularity.TENSORWISE
   dtype: TensorDataType = TensorDataType.INT
+  algorithm_params: Mapping[str, Any] = dataclasses.field(
+      default_factory=immutabledict
+  )
+
+  def __post_init__(self):
+    if not isinstance(self.algorithm_params, immutabledict):
+      object.__setattr__(
+          self, 'algorithm_params', immutabledict(self.algorithm_params)
+      )
 
   def to_dict(self) -> dict[str, Any]:
     """Converts ActivationQuantizationConfig to dict."""
     return dataclasses.asdict(
         self,
         dict_factory=lambda x: {  # pylint: disable=g-long-lambda
-            k: v
+            k: (
+                dict(v)
+                if isinstance(v, Mapping) and not isinstance(v, dict)
+                else v
+            )
             for (k, v) in x
             # Skip None and empty dict values.
-            if v is not None and not (isinstance(v, dict) and not v)
+            if v is not None and not (isinstance(v, Mapping) and not v)
         },
     )
 
@@ -380,7 +393,15 @@ class TensorQuantizationConfig:
     params_copy = copy.deepcopy(params)
     # Process block_size config from legacy recipe.
     params_copy = _process_block_size(params_copy)
-    return cls(**params_copy)
+
+    # Move any unknown fields to algorithm_params for backward compatibility.
+    known_fields = {f.name for f in dataclasses.fields(cls)}
+    algorithm_params = params_copy.pop('algorithm_params', {})
+    for key in list(params_copy.keys()):
+      if key not in known_fields:
+        algorithm_params[key] = params_copy.pop(key)
+
+    return cls(algorithm_params=algorithm_params, **params_copy)
 
 
 def _process_block_size(params: dict[str, Any]) -> dict[str, Any]:
@@ -462,10 +483,14 @@ class OpQuantizationConfig:
     return dataclasses.asdict(
         self,
         dict_factory=lambda x: {  # pylint: disable=g-long-lambda
-            k: v
+            k: (
+                dict(v)
+                if isinstance(v, Mapping) and not isinstance(v, dict)
+                else v
+            )
             for (k, v) in x
             # Skip None and empty dict values.
-            if v is not None and not (isinstance(v, dict) and not v)
+            if v is not None and not (isinstance(v, Mapping) and not v)
         },
     )
 

@@ -7,13 +7,13 @@
       "activation_tensor_config": {
         "num_bits": 8,
         "symmetric": false,
-        "channel_wise": false,
+        "granularity": "TENSORWISE",
         "dtype": "INT"
       },
       "weight_tensor_config": {
         "num_bits": 8,
         "symmetric": true,
-        "channel_wise": true,
+        "granularity": "CHANNELWISE",
         "dtype": "INT"
       },
       "compute_precision": "INTEGER",
@@ -30,7 +30,7 @@
       "weight_tensor_config": {
         "num_bits": 4,
         "symmetric": true,
-        "channel_wise": true,
+        "granularity": "CHANNELWISE",
         "dtype": "INT"
       },
       "compute_precision": "FLOAT",
