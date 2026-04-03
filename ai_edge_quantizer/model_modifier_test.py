@@ -145,8 +145,10 @@ class ModelModifierTest(parameterized.TestCase):
     )
 
     tracemalloc.start()
+    tracemalloc.reset_peak()
     self._model_modifier.modify_model(tensor_quantization_params)
     _, mem_peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
 
     loosen_mem_use_factor = 4.5
     self.assertLess(mem_peak / len(self._model_content), loosen_mem_use_factor)
