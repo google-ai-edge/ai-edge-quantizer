@@ -15,6 +15,7 @@
 
 """Utility functions to display a progress bar and progress report."""
 
+import logging
 import time
 import tracemalloc
 import tqdm
@@ -55,42 +56,68 @@ class ProgressBar:
 
 
 class ProgressReport:
-  """A class to generate a progress report for the quantization process."""
+  """A class to generate a progress report for the quantization process.
+  
+  If initialized with `trace_memory=True`, it will also track the peak memory
+  use using `tracemalloc`, which may hurt performance and interfere with other
+  code using `tracemalloc` concurrently.
+  """
+  _description: str
+  _trace_memory: bool
+  _start_time: float | None = None
+  _tracemalloc_started_by_me: bool = False
 
-  def __init__(self, description: str = ''):
+  def __init__(self, description: str = '', trace_memory: bool = False):
     self._description = description
-    self._start_time = None
+    self._trace_memory = trace_memory
 
   def capture_progess_start(self):
     self._start_time = time.time()
-    tracemalloc.start()
+    if self._trace_memory:
+      logging.warning(
+          'Progress bar reporting with `trace_memory=True` is enabled which may'
+          ' significantly slow down your computations!'
+      )
+      self._tracemalloc_started_by_me = not tracemalloc.is_tracing()
+      if self._tracemalloc_started_by_me:
+        tracemalloc.start()
+      else:
+        tracemalloc.reset_peak()
+
+  def _capture_progress_end(self) -> int | None:
+    if self._trace_memory:
+      _, mem_peak_bytes = tracemalloc.get_traced_memory()
+      if self._tracemalloc_started_by_me:
+        tracemalloc.stop()
+        self._tracemalloc_started_by_me = False
+      return mem_peak_bytes
 
   def render_report(
       self,
       original_size: int,
       quantized_size: int,
       quantization_ratio: float,
-      memory_peak: float,
       total_time: float,
+      memory_peak: float | None,
   ):
     """Prints out the progress report."""
     print(f'Original model size: {original_size/1024:.2f} KB')
     print(f'Quantized model size: {quantized_size/1024:.2f} KB')
     print(f'Quantization Ratio: {quantization_ratio:.2f}')
     print(f'Total time: {total_time:.2f} seconds')
-    print(f'Memory peak: {memory_peak:.2f} MB')
+    if memory_peak is not None:
+      print(f'Memory peak: {memory_peak/1024/1024:.2f} MB')
 
   def generate_progress_report(self, original_model, quantized_model):
     original_size = len(original_model)
     quantized_size = len(quantized_model)
     quantization_ratio = quantized_size / original_size
     total_time = time.time() - self._start_time
-    _, mem_peak_bytes = tracemalloc.get_traced_memory()
-    mem_peak_mb = mem_peak_bytes / 1024 / 1024
+    mem_peak_bytes = self._capture_progress_end()
     self.render_report(
         original_size,
         quantized_size,
         quantization_ratio,
-        mem_peak_mb,
         total_time,
+        mem_peak_bytes,
     )

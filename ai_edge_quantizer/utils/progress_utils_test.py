@@ -15,74 +15,84 @@
 
 import io
 import sys
-import time
-import tracemalloc
 from unittest import mock
 
-import absl.testing.absltest as absltest
+from absl.testing import absltest
+from absl.testing import parameterized
+import tqdm
+
 from ai_edge_quantizer.utils import progress_utils
 
 
 class ProgressBarTest(absltest.TestCase):
 
-  @mock.patch('tqdm.tqdm')
-  def test_progress_bar_update(self, mock_tqdm):
-    mock_progress_bar_instance = mock_tqdm.return_value
+  def setUp(self):
+    super().setUp()
+    self.mock_tqdm = self.enter_context(
+        mock.patch.object(tqdm, 'tqdm', autospec=True, spec_set=True)
+    )
+
+  def test_progress_bar_update(self):
+    mock_progress_bar_instance = self.mock_tqdm.return_value
     with progress_utils.ProgressBar(total_steps=10) as pb:
       pb.update_single_step()
       pb.update_single_step()
 
-    mock_tqdm.assert_called_once_with(
+    self.mock_tqdm.assert_called_once_with(
         total=10, desc='', leave=True, disable=False
     )
     self.assertEqual(mock_progress_bar_instance.update.call_count, 2)
     mock_progress_bar_instance.update.assert_called_with(1)
     mock_progress_bar_instance.close.assert_called_once()
 
-  @mock.patch('tqdm.tqdm')
-  def test_progress_bar_disable(self, mock_tqdm):
-    mock_progress_bar_instance = mock_tqdm.return_value
+  def test_progress_bar_disable(self):
+    mock_progress_bar_instance = self.mock_tqdm.return_value
     with progress_utils.ProgressBar(total_steps=10, disable=True):
       pass
-    mock_tqdm.assert_called_once_with(
+    self.mock_tqdm.assert_called_once_with(
         total=10, desc='', leave=True, disable=True
     )
     mock_progress_bar_instance.close.assert_called_once()
 
-  @mock.patch('tqdm.tqdm')
-  def test_progress_bar_disappear_on_finish(self, mock_tqdm):
-    mock_progress_bar_instance = mock_tqdm.return_value
+  def test_progress_bar_disappear_on_finish(self):
+    mock_progress_bar_instance = self.mock_tqdm.return_value
     with progress_utils.ProgressBar(total_steps=10, disappear_on_finish=True):
       pass
-    mock_tqdm.assert_called_once_with(
+    self.mock_tqdm.assert_called_once_with(
         total=10, desc='', leave=False, disable=False
     )
     mock_progress_bar_instance.close.assert_called_once()
 
 
-class ProgressReportTest(absltest.TestCase):
+class ProgressReportTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
     self.mock_time = self.enter_context(
-        mock.patch.object(time, 'time', autospec=True)
+        mock.patch.object(progress_utils, 'time', autospec=True, spec_set=True)
     )
-    self.mock_tracemalloc_start = self.enter_context(
-        mock.patch.object(tracemalloc, 'start', autospec=True)
-    )
-    self.mock_tracemalloc_get_traced_memory = self.enter_context(
-        mock.patch.object(tracemalloc, 'get_traced_memory', autospec=True)
-    )
-
-  def test_generate_progress_report(self):
-    self.mock_time.side_effect = [100.0, 105.5]  # Start time, end time.
-    # Mock memory: current=1MB, peak=2MB.
-    self.mock_tracemalloc_get_traced_memory.return_value = (
-        1 * 1024 * 1024,
-        2 * 1024 * 1024,
+    self.mock_tracemalloc = self.enter_context(
+        mock.patch.object(
+            progress_utils, 'tracemalloc', autospec=True, spec_set=True
+        )
     )
 
-    progress_report = progress_utils.ProgressReport()
+  @parameterized.named_parameters(
+      ('trace_memory_enabled', True), ('trace_memory_disabled', False)
+  )
+  def test_generate_progress_report(self, trace_memory: bool):
+    self.mock_time.time.side_effect = [100.0, 105.5]  # Start time, end time.
+
+    if trace_memory:
+      self.mock_tracemalloc.is_tracing.return_value = False
+      self.mock_tracemalloc.start.side_effect = None
+      self.mock_tracemalloc.stop.return_value = None
+      self.mock_tracemalloc.get_traced_memory.return_value = (
+          1 * 1024 * 1024,
+          2 * 1024 * 1024,
+      )
+
+    progress_report = progress_utils.ProgressReport(trace_memory=trace_memory)
     progress_report.capture_progess_start()
 
     original_model = b'\x01' * 2048  # 2KB.
@@ -92,13 +102,17 @@ class ProgressReportTest(absltest.TestCase):
     with mock.patch.object(sys, 'stdout', mock_stdout):
       progress_report.generate_progress_report(original_model, quantized_model)
 
-    self.mock_tracemalloc_start.assert_called_once()
     output = mock_stdout.getvalue()
     self.assertIn('Original model size: 2.00 KB', output)
     self.assertIn('Quantized model size: 1.00 KB', output)
     self.assertIn('Quantization Ratio: 0.50', output)
     self.assertIn('Total time: 5.50 seconds', output)
-    self.assertIn('Memory peak: 2.00 MB', output)
+
+    if trace_memory:
+      self.mock_tracemalloc.is_tracing.assert_called_once_with()
+      self.mock_tracemalloc.start.assert_called_once_with()
+      self.mock_tracemalloc.stop.assert_called_once_with()
+      self.assertIn('Memory peak: 2.00 MB', output)
 
 
 if __name__ == '__main__':
