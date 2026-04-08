@@ -187,6 +187,11 @@ class TransformationInstructionsGenerator:
             _OpQuantConstraint.SAME_AS_OUTPUT_SCALE
         )
     )
+    self._fixed_output_scale_ops = (
+        constrained_ops_utils.get_constrained_op_list(
+            _OpQuantConstraint.FIXED_OUTPUT_SCALE
+        )
+    )
 
   @dataclasses.dataclass(frozen=True)
   class TensorGraphInfo:
@@ -550,6 +555,7 @@ class TransformationInstructionsGenerator:
     return (
         op_name in self._same_as_input_scale_ops
         or op_name in self._same_as_output_scale_ops
+        or op_name in self._fixed_output_scale_ops
     )
 
   def _are_quant_params_compatible(

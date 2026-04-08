@@ -174,6 +174,9 @@ class OpQuantConstraint(enum.Enum):
   # All tensors in the op have the same scale as the output tensor.
   # e.g., concatenate
   SAME_AS_OUTPUT_SCALE = 2
+  # The output tensor has a fixed scale, which is required by the op kernel.
+  # e.g., softmax/logistic/tanh.
+  FIXED_OUTPUT_SCALE = 3
 
 
 def _get_tensor_transformation_params_wrapper(
@@ -983,6 +986,7 @@ def materialize_op_with_output_activation_constraint(
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
       tensor_quant_params_cache=tensor_quant_params_cache,
+      constraint=OpQuantConstraint.FIXED_OUTPUT_SCALE,
   )
   output_tensor_params = tensor_params[-1]
 

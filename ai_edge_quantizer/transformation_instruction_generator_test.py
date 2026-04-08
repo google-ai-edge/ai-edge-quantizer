@@ -1472,6 +1472,43 @@ class EliminateUnnecessaryRequantizationTest(parameterized.TestCase):
     )
     self.assertLen(tensor_insts.instructions, 2)
 
+  def test_no_fusion_when_producer_constrained_fixed_scale_logistic(self):
+    # Logistic op (op index 1 in single_fc_bias_logistic.tflite) has fixed
+    # output scale.
+    self.ins_gen = instruction_generator.TransformationInstructionsGenerator(
+        str(
+            pathlib.Path(TEST_DATA_PREFIX_PATH)
+            / "tests/models/single_fc_bias_logistic.tflite"
+        )
+    )
+    # LOGISTIC is op 1 in this model.
+    tensor_insts = self._create_test_insts([
+        self._get_test_instruction(_QTransf.QUANTIZE_TENSOR, producer=1),
+        self._get_test_instruction(_QTransf.ADD_QUANTIZE, producer=1),
+    ])
+    self.ins_gen._eliminate_requantization_for_nonconstrained_provider(
+        tensor_insts
+    )
+    self.assertLen(tensor_insts.instructions, 2)
+
+  def test_no_fusion_when_producer_constrained_fixed_scale_tanh(self):
+    # Tanh op (op index 0 in single_tanh.tflite) has fixed output scale.
+    self.ins_gen = instruction_generator.TransformationInstructionsGenerator(
+        str(
+            pathlib.Path(TEST_DATA_PREFIX_PATH)
+            / "tests/models/single_tanh.tflite"
+        )
+    )
+    # TANH is op 0 in this model.
+    tensor_insts = self._create_test_insts([
+        self._get_test_instruction(_QTransf.QUANTIZE_TENSOR, producer=0),
+        self._get_test_instruction(_QTransf.ADD_QUANTIZE, producer=0),
+    ])
+    self.ins_gen._eliminate_requantization_for_nonconstrained_provider(
+        tensor_insts
+    )
+    self.assertLen(tensor_insts.instructions, 2)
+
   def test_fusion_succeeds(self):
     producer = 0
     consumers = [1]
