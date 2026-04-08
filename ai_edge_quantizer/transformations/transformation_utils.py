@@ -15,7 +15,6 @@
 
 """Utility functions for graph transformations."""
 
-import copy
 import dataclasses
 from typing import Optional, Union
 
@@ -85,7 +84,7 @@ def add_op_code(
 
 
 def get_constant_buffer(
-    data: np.ndarray,
+    data: np.ndarray | bytes | memoryview,
     buffers: list[qtyping.BufferT],
     force_duplicate_buffer: bool = False,
 ) -> int:
@@ -107,12 +106,16 @@ def get_constant_buffer(
     # in the case where the data is passed from quantization_params.
     new_data = np.ravel(data.view(np.uint8))
   elif isinstance(data, bytes):
-    # in the case where the data is coming from duplicating buffers, we need to
-    # make a copy of the data to avoid having two buffers pointing to the same
-    # data.
-    new_data = copy.deepcopy(data)
+    # Bytes are readonly, so we can just use them directly as the new data.
+    new_data = data
+  elif isinstance(data, memoryview):
+    new_data = data.toreadonly()
   else:
-    raise ValueError('data passed in must be either np.ndarray or bytes.')
+    raise ValueError(
+        'data passed in must be either np.ndarray, bytes, or memoryview.'
+        ' Got: %s'
+        % type(data)
+    )
   # TODO: b/417811116 - we should make this more efficient.
   if not force_duplicate_buffer:
     for index, buffer in enumerate(buffers):
