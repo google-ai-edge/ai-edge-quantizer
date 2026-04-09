@@ -20,6 +20,9 @@ import time
 import tracemalloc
 import tqdm
 
+from ai_edge_litert.tools import flatbuffer_utils
+from ai_edge_quantizer import qtyping
+
 
 class ProgressBar:
   """A Progress Bar that can be used to track the progress of a process."""
@@ -29,8 +32,14 @@ class ProgressBar:
       total_steps: int,
       description: str = '',
       disappear_on_finish: bool = False,
-      disable: bool = False,
+      enable: bool | None = None,
   ):
+
+    if enable is None:
+      # Progress bar will be skipped for smaller models.
+      disable = total_steps < 1000
+    else:
+      disable = not enable
     self._progress_bar = tqdm.tqdm(
         total=total_steps,
         desc=description,
@@ -108,14 +117,15 @@ class ProgressReport:
     if memory_peak is not None:
       print(f'Memory peak: {memory_peak/1024/1024:.2f} MB')
 
-  def generate_progress_report(self, original_model, quantized_model):
-    original_size = len(original_model)
+  def generate_progress_report(
+      self, original_model_size: int, quantized_model: qtyping.BufferType
+  ):
     quantized_size = len(quantized_model)
-    quantization_ratio = quantized_size / original_size
+    quantization_ratio = quantized_size / original_model_size
     total_time = time.time() - self._start_time
     mem_peak_bytes = self._capture_progress_end()
     self.render_report(
-        original_size,
+        original_model_size,
         quantized_size,
         quantization_ratio,
         total_time,

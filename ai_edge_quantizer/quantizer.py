@@ -33,6 +33,7 @@ from ai_edge_quantizer import model_validator
 from ai_edge_quantizer import params_generator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
+from ai_edge_quantizer.utils import progress_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
@@ -423,14 +424,25 @@ class Quantizer:
       self,
       calibration_result: Optional[_CalibrationResult] = None,
       serialize_to_path: qtyping.Path | None = None,
+      enable_progress_bar: bool | None = None,
   ) -> QuantizationResult:
     """Quantizes the float model.
 
+    Also prints a report summarizing the quantization process after the process
+    is done.
+    The report displays:
+    # - Original model size
+    # - Quantized model size
+    # - Quantization Ratio
+    # - Total time
+    # - Memory peak
     Args:
       calibration_result: Calibration result to be used for quantization (if
         needed, check with self.need_calibration).
       serialize_to_path: If set, the quantized model will be serialized to this
         path.
+      enable_progress_bar: Whether to enable the progress bar. By default, it is
+        disabled for smaller models and enabled for larger models.
 
     Returns:
       Quantization result.
@@ -445,7 +457,11 @@ class Quantizer:
     if not self.get_quantization_recipe():
       raise RuntimeError('Can not quantize without a quantization recipe.')
 
-    quant_params = self._get_quantization_params(calibration_result)
+    progress_report = progress_utils.ProgressReport()
+    progress_report.capture_progess_start()
+    quant_params = self._get_quantization_params(
+        calibration_result, enable_progress_bar
+    )
 
     quantized_model = self._get_quantized_model(
         quant_params, serialize_to_path=serialize_to_path
@@ -453,6 +469,9 @@ class Quantizer:
 
     self._result = QuantizationResult(
         self.get_quantization_recipe(), quantized_model
+    )
+    progress_report.generate_progress_report(
+        len(self._float_model_buffer), quantized_model
     )
     return self._result
 
@@ -511,13 +530,17 @@ class Quantizer:
     )
 
   def _get_quantization_params(
-      self, calibration_result: Optional[_CalibrationResult] = None
+      self,
+      calibration_result: Optional[_CalibrationResult] = None,
+      enable_progress_bar: bool | None = None,
   ) -> _TensorTransformationParams:
     """Gets the quantization parameters.
 
     Args:
       calibration_result: Calibration result to be used for quantization (if
         needed, check with self.need_calibration).
+      enable_progress_bar: Whether to enable the progress bar. By default, it is
+        disabled for smaller models and enabled for larger models.
 
     Returns:
       A dictionary containing the quantization parameters.
@@ -526,7 +549,7 @@ class Quantizer:
         self._float_model
     )
     return params_generator_instance.generate_quantization_parameters(
-        self._recipe_manager, calibration_result
+        self._recipe_manager, calibration_result, enable_progress_bar
     )
 
   def _get_quantized_model(

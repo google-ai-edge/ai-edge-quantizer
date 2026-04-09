@@ -140,6 +140,7 @@ class ModelModifier:
       self,
       params: dict[str, qtyping.TensorTransformationParams],
       serialize_to_path: qtyping.Path | None = None,
+      enable_progress_bar: bool | None = None,
   ) -> qtyping.BufferType:
     """Modify the model.
 
@@ -148,6 +149,8 @@ class ModelModifier:
         params
       serialize_to_path: If set, the quantized model will be serialized to this
         path.
+      enable_progress_bar: Whether to enable the progress bar. By default, it is
+        disabled for smaller models and enabled for larger models.
 
     Returns:
       a byte buffer that represents the serialized tflite model.
@@ -156,7 +159,7 @@ class ModelModifier:
     quantized_model = _copy_with_views(self._model)
 
     instructions = self._transformation_instruction_generator.quant_params_to_transformation_insts(
-        params, quantized_model
+        params, quantized_model, enable_progress_bar
     )
 
     tensor_processing_order = self._get_tensor_processing_order(
@@ -164,7 +167,8 @@ class ModelModifier:
     )
 
     self._transformation_performer.transform_graph(
-        instructions, quantized_model, tensor_processing_order
+        instructions, quantized_model, tensor_processing_order,
+        enable_progress_bar,
     )
     del tensor_processing_order
 
@@ -185,6 +189,7 @@ class ModelModifier:
       )
     del instructions
 
+    logging.info("Serializing model.......")
     packed_buffer_data = _PackedBufferData(quantized_model)
     if packed_buffer_data.packed_size < 1024 * 1024:
       serialized_quantized_model = self._serialize_small_model(quantized_model)
@@ -376,6 +381,7 @@ class ModelModifier:
     Returns:
       a byte buffer that represents the serialized tflite model
     """
+    logging.info("Serializing model.......")
     model_bytearray = flatbuffer_utils.convert_object_to_bytearray(
         quantized_model
     )

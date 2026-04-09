@@ -21,7 +21,11 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import tqdm
 
+import os
+import io
 from ai_edge_quantizer.utils import progress_utils
+from ai_edge_quantizer.utils import test_utils
+from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 
 class ProgressBarTest(absltest.TestCase):
@@ -34,7 +38,7 @@ class ProgressBarTest(absltest.TestCase):
 
   def test_progress_bar_update(self):
     mock_progress_bar_instance = self.mock_tqdm.return_value
-    with progress_utils.ProgressBar(total_steps=10) as pb:
+    with progress_utils.ProgressBar(total_steps=10, enable=True) as pb:
       pb.update_single_step()
       pb.update_single_step()
 
@@ -47,7 +51,7 @@ class ProgressBarTest(absltest.TestCase):
 
   def test_progress_bar_disable(self):
     mock_progress_bar_instance = self.mock_tqdm.return_value
-    with progress_utils.ProgressBar(total_steps=10, disable=True):
+    with progress_utils.ProgressBar(total_steps=10, enable=False):
       pass
     self.mock_tqdm.assert_called_once_with(
         total=10, desc='', leave=True, disable=True
@@ -56,7 +60,9 @@ class ProgressBarTest(absltest.TestCase):
 
   def test_progress_bar_disappear_on_finish(self):
     mock_progress_bar_instance = self.mock_tqdm.return_value
-    with progress_utils.ProgressBar(total_steps=10, disappear_on_finish=True):
+    with progress_utils.ProgressBar(
+        total_steps=10, disappear_on_finish=True, enable=True
+    ):
       pass
     self.mock_tqdm.assert_called_once_with(
         total=10, desc='', leave=False, disable=False
@@ -95,17 +101,27 @@ class ProgressReportTest(parameterized.TestCase):
     progress_report = progress_utils.ProgressReport(trace_memory=trace_memory)
     progress_report.capture_progess_start()
 
-    original_model = b'\x01' * 2048  # 2KB.
-    quantized_model = b'\x02' * 1024  # 1KB
+    original_model_path = test_utils.get_path_to_datafile(
+        '../tests/models/conv_fc_mnist.tflite'
+    )
+    quantized_model_path = test_utils.get_path_to_datafile(
+        '../tests/models/mnist_quantized.tflite'
+    )
+    with open(original_model_path, 'rb') as f:
+      original_model_data = f.read()
+    with open(quantized_model_path, 'rb') as f:
+      quantized_model = f.read()
 
     mock_stdout = io.StringIO()
     with mock.patch.object(sys, 'stdout', mock_stdout):
-      progress_report.generate_progress_report(original_model, quantized_model)
+      progress_report.generate_progress_report(
+          len(original_model_data), quantized_model
+      )
 
     output = mock_stdout.getvalue()
-    self.assertIn('Original model size: 2.00 KB', output)
-    self.assertIn('Quantized model size: 1.00 KB', output)
-    self.assertIn('Quantization Ratio: 0.50', output)
+    self.assertIn('Original model size: 200.23 KB', output)
+    self.assertIn('Quantized model size: 53.08 KB', output)
+    self.assertIn('Quantization Ratio: 0.27', output)
     self.assertIn('Total time: 5.50 seconds', output)
 
     if trace_memory:

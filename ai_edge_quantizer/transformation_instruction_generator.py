@@ -26,6 +26,7 @@ from typing import Optional
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import constrained_ops_utils
+from ai_edge_quantizer.utils import progress_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 
@@ -236,7 +237,7 @@ class TransformationInstructionsGenerator:
   def _create_tensor_name_to_graph_info_map(self):
     """Create a mapping between tensor name and tensor info."""
     self._tensor_name_to_graph_info = {}
-    # TODO: b/333607428 - support graph input & output
+      # TODO: b/333607428 - support graph input & output
     for subgraph_id, subgraph in enumerate(self.flatbuffer_model.subgraphs):
       for tensor_name, tensor_info in self._tensor_info_generator(
           subgraph_id, subgraph
@@ -832,6 +833,7 @@ class TransformationInstructionsGenerator:
       self,
       params: dict[str, qtyping.TensorTransformationParams],
       flatbuffer_model: Optional[qtyping.ModelT] = None,
+      enable_progress_bar: bool | None = None,
   ) -> dict[str, qtyping.TensorTransformationInsts]:
     """Converts quantization params to transformation instructions.
 
@@ -840,6 +842,8 @@ class TransformationInstructionsGenerator:
         type is designed to be the same as the output of
         generate_quantization_parameters.
       flatbuffer_model: the flatbuffer model to be quantized.
+      enable_progress_bar: Whether to enable the progress bar. By default, it is
+        disabled for smaller models and enabled for larger models.
 
     Returns:
       a dictionary with tensor name as key and transformation instructions as

@@ -29,6 +29,7 @@ from ai_edge_quantizer.transformations import insert_hadamard_rotation
 from ai_edge_quantizer.transformations import quant_insert
 from ai_edge_quantizer.transformations import quantize_tensor
 from ai_edge_quantizer.transformations import transformation_utils
+from ai_edge_quantizer.utils import progress_utils
 
 
 class TransformationPerformer:
@@ -308,6 +309,7 @@ class TransformationPerformer:
       transformation_instructions: dict[str, qtyping.TensorTransformationInsts],
       tflite_model: qtyping.ModelT,
       tensor_processing_order: Optional[Sequence[str]] = None,
+      enable_progress_bar: bool | None = None,
   ) -> None:
     """Apply all transformations to the given tflite_model in place.
 
@@ -318,13 +320,21 @@ class TransformationPerformer:
       tflite_model: The tflite model to apply quantization to.
       tensor_processing_order: The order of tensors to process. If not provided,
         the order will be inferred from `transformation_instructions`.
+      enable_progress_bar: Whether to enable the progress bar. By default, it is
+        disabled for smaller models and enabled for larger models.
     """
     self._original_op_id_map = []
     self._added_op_id_map = []
     self._create_op_id_map(tflite_model)
     if tensor_processing_order is None:
       tensor_processing_order = transformation_instructions.keys()
-    for tensor_name in tensor_processing_order:
-      self._apply_transformations(
-          transformation_instructions[tensor_name], tflite_model
-      )
+    with progress_utils.ProgressBar(
+        total_steps=len(tensor_processing_order),
+        description="Applying Transformations to tensors:",
+        enable=enable_progress_bar,
+    ) as progress_bar:
+      for tensor_name in tensor_processing_order:
+        progress_bar.update_single_step()
+        self._apply_transformations(
+            transformation_instructions[tensor_name], tflite_model
+        )
