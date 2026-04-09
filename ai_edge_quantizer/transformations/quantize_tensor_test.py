@@ -48,8 +48,7 @@ class QuantizeTensorTest(parameterized.TestCase):
     ret = quantize_tensor.quantize_tensor(
         transformation_utils.TransformationInput(
             7,
-            model.operatorCodes,
-            model.buffers,
+            model,
             subgraph,
             -1,
             [4],
@@ -77,8 +76,7 @@ class QuantizeTensorTest(parameterized.TestCase):
     ret = quantize_tensor.quantize_tensor(
         transformation_utils.TransformationInput(
             4,
-            model.operatorCodes,
-            model.buffers,
+            model,
             subgraph,
             1,
             [3],
@@ -101,8 +99,7 @@ class QuantizeTensorTest(parameterized.TestCase):
     ret = quantize_tensor.quantize_tensor(
         transformation_utils.TransformationInput(
             4,
-            model.operatorCodes,
-            model.buffers,
+            model,
             subgraph,
             1,
             [3],
@@ -127,8 +124,7 @@ class QuantizeTensorTest(parameterized.TestCase):
     quantize_tensor.quantize_tensor(
         transformation_utils.TransformationInput(
             4,
-            model.operatorCodes,
-            model.buffers,
+            model,
             subgraph,
             1,
             [3],
@@ -147,8 +143,7 @@ class QuantizeTensorTest(parameterized.TestCase):
     quantize_tensor.quantize_tensor(
         transformation_utils.TransformationInput(
             tensor_id=test_tensor_id,
-            op_codes=model.operatorCodes,
-            buffers=model.buffers,
+            model=model,
             subgraph=subgraph,
             producer=1,
             consumers=[3],
@@ -201,8 +196,7 @@ class QuantizeTensorTest(parameterized.TestCase):
     ret = quantize_tensor.quantize_tensor(
         transformation_utils.TransformationInput(
             tensor_id=7,
-            op_codes=model.operatorCodes,
-            buffers=model.buffers,
+            model=model,
             subgraph=subgraph,
             producer=-1,
             consumers=[4],
@@ -239,8 +233,7 @@ class QuantizeTensorTest(parameterized.TestCase):
     ret = quantize_tensor.quantize_tensor(
         transformation_utils.TransformationInput(
             tensor_id=tensor_id,
-            op_codes=model.operatorCodes,
-            buffers=model.buffers,
+            model=model,
             subgraph=subgraph,
             producer=-1,
             consumers=[4],

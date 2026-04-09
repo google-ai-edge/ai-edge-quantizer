@@ -29,9 +29,7 @@ class TransformationInput:
 
   Attributes:
     tensor_id: the tensor index to insert dequant op after
-    op_codes: list of operatorCode in the model, if dequantize op doesn't exist,
-      we need to insert the op code into the list
-    buffers: list of buffer in the original TFlite model for buffer quantization
+    model: The original TFlite model for buffer quantization
     subgraph: flatbuffer subgraph object which the tensor resides.
     producer: op id for the producer of the tensor.
     consumers: op ids for consumers of the new dequant op.
@@ -39,12 +37,37 @@ class TransformationInput:
   """
 
   tensor_id: int
-  op_codes: list[qtyping.OperatorCodeT]
-  buffers: list[qtyping.BufferT]
+  model: qtyping.ModelT
   subgraph: qtyping.SubGraphT
   producer: int
   consumers: list[int]
   quant_params: Union[qtyping.UniformQuantParams, qtyping.NonLinearQuantParams]
+
+
+class HashableMemoryView:
+  """Hashable wrapper class for a `memoryview`."""
+
+  _mv: memoryview
+
+  def __init__(self, value):
+    if isinstance(value, np.ndarray):
+      value = value.reshape(-1).view(np.uint8)
+    self._mv = memoryview(value)
+
+  def __hash__(self):
+    # There are two things going on here:
+    # * We only hash the shape, format, and first 16 entries to avoid traversing
+    #   the entire buffer. Note that if two hashes match, the objects still
+    #   have to test equal.
+    # * We pack the first 16 entries of the buffer into a `tuple` because
+    #   `memoryview.__hash__` delegates to the underlying buffer, which may be
+    #   unhashable, e.g. a `np.ndarray`.
+    return hash((self._mv.shape, self._mv.format, tuple(self._mv[:16])))
+
+  def __eq__(self, value, /):
+    if isinstance(value, self.__class__):
+      return self._mv == value._mv
+    return self._mv == value
 
 
 def add_op_code(
@@ -84,8 +107,8 @@ def add_op_code(
 
 
 def get_constant_buffer(
-    data: np.ndarray | bytes | memoryview,
-    buffers: list[qtyping.BufferT],
+    data: np.ndarray | qtyping.BufferType,
+    model: qtyping.ModelT,
     force_duplicate_buffer: bool = False,
 ) -> int:
   """Get the index of the constant buffer that contains the given data.
@@ -94,39 +117,42 @@ def get_constant_buffer(
 
   Args:
     data: The data of the new tensor.
-    buffers: The buffers of the model.
+    model: The model holding the buffers.
     force_duplicate_buffer: Whether to add a new buffer even if the same buffer
       already exists.
 
   Returns:
     The index of the new buffer in the model.
   """
-
+  # Convert the data to a 1-D `memoryview`.
   if isinstance(data, np.ndarray):
     # in the case where the data is passed from quantization_params.
-    new_data = np.ravel(data.view(np.uint8))
-  elif isinstance(data, bytes):
-    # Bytes are readonly, so we can just use them directly as the new data.
-    new_data = data
-  elif isinstance(data, memoryview):
-    new_data = data.toreadonly()
-  else:
-    raise ValueError(
-        'data passed in must be either np.ndarray, bytes, or memoryview.'
-        ' Got: %s'
-        % type(data)
-    )
-  # TODO: b/417811116 - we should make this more efficient.
-  if not force_duplicate_buffer:
-    for index, buffer in enumerate(buffers):
-      if np.array_equal(buffer.data, new_data):
-        return index
+    data = np.ravel(data.view(np.uint8))
+
+  # Check if the model has a buffer lookup mapping, and if not, add one.
+  if not (id_for_buffer_data := getattr(model, '_id_for_buffer_data', None)):
+    id_for_buffer_data: dict[HashableMemoryView, int] = {}
+    for buffer_id, buffer in enumerate(model.buffers):
+      if (buffer_data := buffer.data) is not None:
+        id_for_buffer_data[HashableMemoryView(buffer_data)] = buffer_id
+    model._id_for_buffer_data = id_for_buffer_data  # pylint: disable=protected-access
+
+  # Check if we already have a buffer for this data.
+  if not force_duplicate_buffer and (
+      index := id_for_buffer_data.get(HashableMemoryView(data))
+  ) is not None:
+    return index
+
+  # Create a new `qtyping.BufferT` object.
   new_buffer = qtyping.BufferT()
-  new_buffer.data = new_data
+  new_buffer.data = data
   new_buffer.offset = 0
   new_buffer.size = 0
-  new_buffer_id = len(buffers)
-  buffers.append(new_buffer)
+
+  # Store the new buffer.
+  new_buffer_id = len(model.buffers)
+  model.buffers.append(new_buffer)
+  id_for_buffer_data[HashableMemoryView(data)] = new_buffer_id
 
   return new_buffer_id
 
@@ -136,7 +162,7 @@ def add_new_constant_tensor(
     data: np.ndarray,
     tensor_type: qtyping.TensorType,
     subgraph: qtyping.SubGraphT,
-    buffers: list[qtyping.BufferT],
+    model: qtyping.ModelT,
     tensor_shape: Optional[list[int]] = None,
     force_duplicate_buffer: bool = False,
     quantization: qtyping.QuantizationParametersT | None = None,
@@ -148,7 +174,7 @@ def add_new_constant_tensor(
     data: The data of the new tensor.
     tensor_type: The type of the new tensor.
     subgraph: The subgraph where the new tensor is added.
-    buffers: The buffers of the model.
+    model: The model holding the buffers.
     tensor_shape: The shape of the new tensor. If not provided, the shape of the
       data will be used.
     force_duplicate_buffer: Whether to add a new buffer even if the same buffer
@@ -159,7 +185,7 @@ def add_new_constant_tensor(
   Returns:
     The index of the new tensor in the subgraph.
   """
-  new_buffer_id = get_constant_buffer(data, buffers, force_duplicate_buffer)
+  new_buffer_id = get_constant_buffer(data, model, force_duplicate_buffer)
 
   new_tensor = qtyping.TensorT()
   if tensor_shape is None:
@@ -258,13 +284,9 @@ def get_producer_schema_op_id(
   if transformation.producer == -1:
     return False
   else:
-    return (
-        transformation.op_codes[
-            transformation.subgraph.operators[
-                transformation.producer
-            ].opcodeIndex
-        ].builtinCode
-    )
+    return transformation.model.operatorCodes[
+        transformation.subgraph.operators[transformation.producer].opcodeIndex
+    ].builtinCode
 
 
 def get_schema_op_id(
@@ -279,8 +301,6 @@ def get_schema_op_id(
   Returns:
     The schema op id of the given op.
   """
-  return (
-      transformation.op_codes[
-          transformation.subgraph.operators[op_id].opcodeIndex
-      ].builtinCode
-  )
+  return transformation.model.operatorCodes[
+      transformation.subgraph.operators[op_id].opcodeIndex
+  ].builtinCode

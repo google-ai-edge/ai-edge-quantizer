@@ -47,13 +47,14 @@ class DequantInsertTest(absltest.TestCase):
     # insert dequant on the constant before the add node
     dequant_insert.insert_dequant(
         transformation_utils.TransformationInput(
-            7,
-            model.operatorCodes,
-            model.buffers,
-            subgraph,
-            -1,
-            [4],
-            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+            tensor_id=7,
+            model=model,
+            subgraph=subgraph,
+            producer=-1,
+            consumers=[4],
+            quant_params=qtyping.UniformQuantParams(
+                8, None, np.array([1]), np.array([0])
+            ),
         )
     )
 
@@ -87,13 +88,14 @@ class DequantInsertTest(absltest.TestCase):
     # insert dequant on the output of a conv node
     dequant_insert.insert_dequant(
         transformation_utils.TransformationInput(
-            4,
-            model.operatorCodes,
-            model.buffers,
-            subgraph,
-            1,
-            [3],
-            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+            tensor_id=4,
+            model=model,
+            subgraph=subgraph,
+            producer=1,
+            consumers=[3],
+            quant_params=qtyping.UniformQuantParams(
+                8, None, np.array([1]), np.array([0])
+            ),
         )
     )
 
@@ -129,13 +131,14 @@ class DequantInsertTest(absltest.TestCase):
     # insert dequant on the input of a conv node
     post_trans_info = dequant_insert.insert_dequant(
         transformation_utils.TransformationInput(
-            2,
-            model.operatorCodes,
-            model.buffers,
-            subgraph,
-            -1,
-            [1, 2],
-            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+            tensor_id=2,
+            model=model,
+            subgraph=subgraph,
+            producer=-1,
+            consumers=[1, 2],
+            quant_params=qtyping.UniformQuantParams(
+                8, None, np.array([1]), np.array([0])
+            ),
         )
     )
     self.assertEqual(post_trans_info.op_id, 1)
@@ -173,13 +176,14 @@ class DequantInsertTest(absltest.TestCase):
     # insert dequant on the output of a conv node
     dequant_insert.insert_dequant(
         transformation_utils.TransformationInput(
-            1,
-            model.operatorCodes,
-            model.buffers,
-            subgraph,
-            0,
-            [1, 2],
-            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+            tensor_id=1,
+            model=model,
+            subgraph=subgraph,
+            producer=0,
+            consumers=[1, 2],
+            quant_params=qtyping.UniformQuantParams(
+                8, None, np.array([1]), np.array([0])
+            ),
         )
     )
 
@@ -215,13 +219,14 @@ class DequantInsertTest(absltest.TestCase):
     # insert dequant on the output of a conv node
     dequant_insert.insert_dequant(
         transformation_utils.TransformationInput(
-            1,
-            model.operatorCodes,
-            model.buffers,
-            subgraph,
-            0,
-            [1],
-            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+            tensor_id=1,
+            model=model,
+            subgraph=subgraph,
+            producer=0,
+            consumers=[1],
+            quant_params=qtyping.UniformQuantParams(
+                8, None, np.array([1]), np.array([0])
+            ),
         )
     )
 
@@ -257,13 +262,14 @@ class DequantInsertTest(absltest.TestCase):
     # insert dequant on the graph output
     dequant_insert.insert_dequant(
         transformation_utils.TransformationInput(
-            8,
-            model.operatorCodes,
-            model.buffers,
-            subgraph,
-            4,
-            [-1],
-            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+            tensor_id=8,
+            model=model,
+            subgraph=subgraph,
+            producer=4,
+            consumers=[-1],
+            quant_params=qtyping.UniformQuantParams(
+                8, None, np.array([1]), np.array([0])
+            ),
         )
     )
 

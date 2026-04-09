@@ -56,8 +56,7 @@ class InsertDecomposedHadamardRotationFullyConnectedTest(absltest.TestCase):
       insert_decomposed_hadamard_rotation.insert_decomposed_hadamard_rotation(
           transformation_utils.TransformationInput(
               tensor_id=0,
-              op_codes=self.model.operatorCodes,
-              buffers=self.model.buffers,
+              model=self.model,
               subgraph=self.model.subgraphs[0],
               producer=-1,
               consumers=[-1],
@@ -74,8 +73,7 @@ class InsertDecomposedHadamardRotationFullyConnectedTest(absltest.TestCase):
       insert_decomposed_hadamard_rotation.insert_decomposed_hadamard_rotation(
           transformation_utils.TransformationInput(
               tensor_id=0,
-              op_codes=self.model.operatorCodes,
-              buffers=self.model.buffers,
+              model=self.model,
               subgraph=self.model.subgraphs[0],
               producer=-1,
               consumers=[-1],
@@ -96,8 +94,7 @@ class InsertDecomposedHadamardRotationFullyConnectedTest(absltest.TestCase):
       insert_decomposed_hadamard_rotation.insert_decomposed_hadamard_rotation(
           transformation_utils.TransformationInput(
               tensor_id=0,
-              op_codes=self.model.operatorCodes,
-              buffers=self.model.buffers,
+              model=self.model,
               subgraph=self.model.subgraphs[0],
               producer=-1,
               consumers=[-1],
@@ -111,8 +108,7 @@ class InsertDecomposedHadamardRotationFullyConnectedTest(absltest.TestCase):
         insert_decomposed_hadamard_rotation.insert_decomposed_hadamard_rotation(
             transformation_utils.TransformationInput(
                 tensor_id=0,
-                op_codes=self.model.operatorCodes,
-                buffers=self.model.buffers,
+                model=self.model,
                 subgraph=self.model.subgraphs[0],
                 producer=-1,
                 consumers=[0],  # Consumer is the FC op
@@ -201,8 +197,7 @@ class InsertDecomposedHadamardRotationEmbeddingLookupTest(absltest.TestCase):
         insert_decomposed_hadamard_rotation.insert_decomposed_hadamard_rotation(
             transformation_utils.TransformationInput(
                 tensor_id=2,  # Output of embedding_lookup
-                op_codes=self.model.operatorCodes,
-                buffers=self.model.buffers,
+                model=self.model,
                 subgraph=self.model.subgraphs[0],
                 producer=0,
                 consumers=[-1],  # Output is a graph output

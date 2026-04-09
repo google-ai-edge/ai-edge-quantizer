@@ -41,7 +41,7 @@ def insert_dequant(
   """
   dequant_op_code_idx = transformation_utils.add_op_code(
       qtyping.BuiltinOperator.DEQUANTIZE,
-      transformation_input.op_codes,
+      transformation_input.model.operatorCodes,
   )
   # create output tensor for the dequant op
   tensor = transformation_input.subgraph.tensors[transformation_input.tensor_id]

@@ -165,7 +165,7 @@ def insert_decomposed_hadamard_rotation(
       np.array(prerotate_shape, dtype=np.int32),
       qtyping.TensorType.INT32,
       transformation_input.subgraph,
-      transformation_input.buffers,
+      transformation_input.model,
   )
   prerotate_reshape_output_tensor_id = (
       transformation_utils.add_new_activation_tensor(
@@ -178,7 +178,7 @@ def insert_decomposed_hadamard_rotation(
 
   prerotate_reshape_op_code_idx = transformation_utils.add_op_code(
       qtyping.BuiltinOperator.RESHAPE,
-      transformation_input.op_codes,
+      transformation_input.model.operatorCodes,
       'RESHAPE',
   )
   prerorate_reshape_op = qtyping.OperatorT()
@@ -201,7 +201,7 @@ def insert_decomposed_hadamard_rotation(
       ),
       tensor_type=qtyping.TensorType.INT4,
       subgraph=transformation_input.subgraph,
-      buffers=transformation_input.buffers,
+      model=transformation_input.model,
       tensor_shape=hadamard_matrix.shape,
       quantization=qtyping.QuantizationParametersT(
           scale=np.array([1.0 / np.sqrt(hadamard_size)], dtype=np.float32),
@@ -219,7 +219,7 @@ def insert_decomposed_hadamard_rotation(
 
   fc_op_code_idx = transformation_utils.add_op_code(
       qtyping.BuiltinOperator.FULLY_CONNECTED,
-      transformation_input.op_codes,
+      transformation_input.model.operatorCodes,
       'FULLY_CONNECTED',
   )
   fc_op = qtyping.OperatorT()
@@ -234,7 +234,7 @@ def insert_decomposed_hadamard_rotation(
   # Insert x' = tfl.reshape(x', x.shape)
   post_reshape_op_code_idx = transformation_utils.add_op_code(
       qtyping.BuiltinOperator.RESHAPE,
-      transformation_input.op_codes,
+      transformation_input.model.operatorCodes,
       'RESHAPE',
   )
   post_reshape_op = qtyping.OperatorT()
@@ -244,7 +244,7 @@ def insert_decomposed_hadamard_rotation(
       np.array(tensor.shape, dtype=np.int32),
       qtyping.TensorType.INT32,
       transformation_input.subgraph,
-      transformation_input.buffers,
+      transformation_input.model,
   )
 
   post_reshape_output_tensor_id = (

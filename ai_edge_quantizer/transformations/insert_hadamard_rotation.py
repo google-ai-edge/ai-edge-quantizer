@@ -129,7 +129,7 @@ def insert_hadamard_rotation(
   # tensor as output.
   custom_op_code_idx = transformation_utils.add_op_code(
       qtyping.BuiltinOperator.CUSTOM,
-      transformation_input.op_codes,
+      transformation_input.model.operatorCodes,
       'aeq.hadamard_rotation',
   )
   custom_op = qtyping.OperatorT()

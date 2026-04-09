@@ -26,7 +26,7 @@ def duplicate_buffer(
   """Duplicates the buffer of the tensor."""
   tensor_id = transformation_input.tensor_id
   tensor = transformation_input.subgraph.tensors[tensor_id]
-  buffer_data = transformation_input.buffers[tensor.buffer].data
+  buffer_data = transformation_input.model.buffers[tensor.buffer].data
   if buffer_data is None:
     tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
     raise ValueError(
@@ -36,7 +36,7 @@ def duplicate_buffer(
 
   duplicated_buffer_id = transformation_utils.get_constant_buffer(
       data=buffer_data,
-      buffers=transformation_input.buffers,
+      model=transformation_input.model,
       force_duplicate_buffer=True,
   )
   tensor.buffer = duplicated_buffer_id

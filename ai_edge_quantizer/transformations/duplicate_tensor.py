@@ -28,7 +28,7 @@ def duplicate_tensor(
   subgraph = transformation_input.subgraph
   tensor = subgraph.tensors[tensor_id]
   tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
-  buffer_data = transformation_input.buffers[tensor.buffer].data
+  buffer_data = transformation_input.model.buffers[tensor.buffer].data
   if buffer_data is None:
     raise ValueError(
         'Duplicate Tensor transformation supports only constant tensors.'
@@ -40,7 +40,7 @@ def duplicate_tensor(
       tensor_type=tensor.type,
       tensor_shape=tensor.shape,
       subgraph=subgraph,
-      buffers=transformation_input.buffers,
+      model=transformation_input.model,
       force_duplicate_buffer=True,
   )
   # Update the tensor name to avoid name collision in case when tensor is

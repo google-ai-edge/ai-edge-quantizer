@@ -16,8 +16,10 @@
 """Test for various transformations used by quantization toolkit."""
 
 import pathlib
+
+from absl.testing import absltest
 import numpy as np
-import absl.testing.absltest as absltest
+
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import quant_insert
 from ai_edge_quantizer.transformations import transformation_utils
@@ -45,13 +47,14 @@ class QuantInsertTest(absltest.TestCase):
     # insert quant on the constant before the add node
     quant_insert.insert_quant(
         transformation_utils.TransformationInput(
-            7,
-            model.operatorCodes,
-            model.buffers,
-            subgraph,
-            -1,
-            [4],
-            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+            tensor_id=7,
+            model=model,
+            subgraph=subgraph,
+            producer=-1,
+            consumers=[4],
+            quant_params=qtyping.UniformQuantParams(
+                8, None, np.array([1]), np.array([0])
+            ),
         )
     )
 
@@ -83,13 +86,14 @@ class QuantInsertTest(absltest.TestCase):
     # insert quant on the output of a conv node
     quant_insert.insert_quant(
         transformation_utils.TransformationInput(
-            4,
-            model.operatorCodes,
-            model.buffers,
-            subgraph,
-            1,
-            [3],
-            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+            tensor_id=4,
+            model=model,
+            subgraph=subgraph,
+            producer=1,
+            consumers=[3],
+            quant_params=qtyping.UniformQuantParams(
+                8, None, np.array([1]), np.array([0])
+            ),
         )
     )
 
@@ -123,13 +127,14 @@ class QuantInsertTest(absltest.TestCase):
     # insert quant on the input of a conv node
     post_trans_info = quant_insert.insert_quant(
         transformation_utils.TransformationInput(
-            2,
-            model.operatorCodes,
-            model.buffers,
-            subgraph,
-            -1,
-            [1, 2],
-            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+            tensor_id=2,
+            model=model,
+            subgraph=subgraph,
+            producer=-1,
+            consumers=[1, 2],
+            quant_params=qtyping.UniformQuantParams(
+                8, None, np.array([1]), np.array([0])
+            ),
         )
     )
     self.assertEqual(post_trans_info.op_id, 1)
@@ -165,13 +170,14 @@ class QuantInsertTest(absltest.TestCase):
     # insert quant on the output of a conv node
     quant_insert.insert_quant(
         transformation_utils.TransformationInput(
-            1,
-            model.operatorCodes,
-            model.buffers,
-            subgraph,
-            0,
-            [1, 2],
-            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+            tensor_id=1,
+            model=model,
+            subgraph=subgraph,
+            producer=0,
+            consumers=[1, 2],
+            quant_params=qtyping.UniformQuantParams(
+                8, None, np.array([1]), np.array([0])
+            ),
         )
     )
 
@@ -205,13 +211,14 @@ class QuantInsertTest(absltest.TestCase):
     # insert quant on the output of a conv node
     quant_insert.insert_quant(
         transformation_utils.TransformationInput(
-            1,
-            model.operatorCodes,
-            model.buffers,
-            subgraph,
-            0,
-            [1],
-            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+            tensor_id=1,
+            model=model,
+            subgraph=subgraph,
+            producer=0,
+            consumers=[1],
+            quant_params=qtyping.UniformQuantParams(
+                8, None, np.array([1]), np.array([0])
+            ),
         )
     )
 
@@ -245,13 +252,14 @@ class QuantInsertTest(absltest.TestCase):
     # insert dequant on the graph output
     quant_insert.insert_quant(
         transformation_utils.TransformationInput(
-            8,
-            model.operatorCodes,
-            model.buffers,
-            subgraph,
-            4,
-            [-1],
-            qtyping.UniformQuantParams(8, None, np.array([1]), np.array([0])),
+            tensor_id=8,
+            model=model,
+            subgraph=subgraph,
+            producer=4,
+            consumers=[-1],
+            quant_params=qtyping.UniformQuantParams(
+                8, None, np.array([1]), np.array([0])
+            ),
         )
     )
     # checking inserted node is the quant node

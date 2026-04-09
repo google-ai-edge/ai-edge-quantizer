@@ -41,7 +41,7 @@ def insert_quant(
   """
   quant_op_code_idx = transformation_utils.add_op_code(
       qtyping.BuiltinOperator.QUANTIZE,
-      transformation_input.op_codes,
+      transformation_input.model.operatorCodes,
   )
 
   # create output tensor for the quantize op
@@ -59,8 +59,7 @@ def insert_quant(
   quantize_tensor.quantize_tensor(
       transformation_utils.TransformationInput(
           new_tensor_id,
-          transformation_input.op_codes,
-          transformation_input.buffers,
+          transformation_input.model,
           transformation_input.subgraph,
           transformation_input.producer,
           transformation_input.consumers,

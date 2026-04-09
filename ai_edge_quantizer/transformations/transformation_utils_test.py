@@ -115,7 +115,7 @@ class TransformationUtilsTest(parameterized.TestCase):
     prev_num_buffers = len(self.model.buffers) - 1
     new_buffer_idx = transformation_utils.get_constant_buffer(
         data=data,
-        buffers=self.model.buffers,
+        model=self.model,
     )
     self.assertEqual(new_buffer_idx, prev_num_buffers + 1)
 
@@ -170,7 +170,7 @@ class TransformationUtilsTest(parameterized.TestCase):
         data=tensor_data,
         tensor_type=tensor_type,
         subgraph=self.model.subgraphs[0],
-        buffers=self.model.buffers,
+        model=self.model,
     )
     self.assertEqual(ret, len(self.model.subgraphs[0].tensors) - 1)
     self.assertEqual(

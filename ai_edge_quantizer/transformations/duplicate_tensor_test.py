@@ -14,8 +14,10 @@
 # ==============================================================================
 
 import pathlib
+
+from absl.testing import absltest
 import numpy as np
-import absl.testing.absltest as absltest
+
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.transformations import duplicate_tensor
 from ai_edge_quantizer.transformations import transformation_utils
@@ -43,10 +45,9 @@ class DuplicateTensorTest(absltest.TestCase):
   ) -> transformation_utils.TransformationInput:
     return transformation_utils.TransformationInput(
         tensor_id=tensor_idx,
-        buffers=self.model.buffers,
+        model=self.model,
         consumers=consumers,
         # Dummy params below.
-        op_codes=self.model.operatorCodes,
         subgraph=self.model.subgraphs[subgraph_idx],
         producer=-1,
         quant_params=qtyping.UniformQuantParams(

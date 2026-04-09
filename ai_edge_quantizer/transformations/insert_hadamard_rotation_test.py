@@ -56,8 +56,7 @@ class InsertHadamardRotationFullyConnectedTest(absltest.TestCase):
       insert_hadamard_rotation.insert_hadamard_rotation(
           transformation_utils.TransformationInput(
               tensor_id=0,
-              op_codes=self.model.operatorCodes,
-              buffers=self.model.buffers,
+              model=self.model,
               subgraph=self.model.subgraphs[0],
               producer=-1,
               consumers=[-1],
@@ -74,8 +73,7 @@ class InsertHadamardRotationFullyConnectedTest(absltest.TestCase):
       insert_hadamard_rotation.insert_hadamard_rotation(
           transformation_utils.TransformationInput(
               tensor_id=0,
-              op_codes=self.model.operatorCodes,
-              buffers=self.model.buffers,
+              model=self.model,
               subgraph=self.model.subgraphs[0],
               producer=-1,
               consumers=[-1],
@@ -96,8 +94,7 @@ class InsertHadamardRotationFullyConnectedTest(absltest.TestCase):
       insert_hadamard_rotation.insert_hadamard_rotation(
           transformation_utils.TransformationInput(
               tensor_id=0,
-              op_codes=self.model.operatorCodes,
-              buffers=self.model.buffers,
+              model=self.model,
               subgraph=self.model.subgraphs[0],
               producer=-1,
               consumers=[-1],
@@ -110,8 +107,7 @@ class InsertHadamardRotationFullyConnectedTest(absltest.TestCase):
     info = insert_hadamard_rotation.insert_hadamard_rotation(
         transformation_utils.TransformationInput(
             tensor_id=0,
-            op_codes=self.model.operatorCodes,
-            buffers=self.model.buffers,
+            model=self.model,
             subgraph=self.model.subgraphs[0],
             producer=-1,
             consumers=[-1],
@@ -166,8 +162,7 @@ class InsertHadamardRotationEmbeddingLookupTest(absltest.TestCase):
     info = insert_hadamard_rotation.insert_hadamard_rotation(
         transformation_utils.TransformationInput(
             tensor_id=2,
-            op_codes=self.model.operatorCodes,
-            buffers=self.model.buffers,
+            model=self.model,
             subgraph=self.model.subgraphs[0],
             producer=0,
             consumers=[-1],

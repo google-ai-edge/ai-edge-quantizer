@@ -247,8 +247,7 @@ class TransformationPerformer:
     trans_info = self._transformation_registration[instruction.transformation](
         transformation_utils.TransformationInput(
             instruction.tensor_id,
-            tflite_model.operatorCodes,
-            tflite_model.buffers,
+            tflite_model,
             tflite_model.subgraphs[transformation_inst.subgraph_id],
             producer,
             consumers,

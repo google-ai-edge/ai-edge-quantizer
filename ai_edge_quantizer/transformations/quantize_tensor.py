@@ -129,7 +129,7 @@ def _perform_blockwise_quantization(
       ),
       qtyping.TensorType.FLOAT16,
       transformation_input.subgraph,
-      transformation_input.buffers,
+      transformation_input.model,
   )
   blockwise_details.scales = scale_tensor_id
   # Blockwise quantization does not support zero point yet, so this points to
@@ -165,7 +165,7 @@ def quantize_tensor(
   # is not provided.
   if tensor.buffer:
     if transformation_input.quant_params.quantized_data is not None:
-      transformation_input.buffers[tensor.buffer].data = (
+      transformation_input.model.buffers[tensor.buffer].data = (
           transformation_utils.pack_data(
               transformation_input.quant_params.num_bits,
               np.ravel(
