@@ -189,7 +189,7 @@ class ModelModifier:
       )
     del instructions
 
-    logging.info("Serializing model.......")
+    logging.info("Serializing model...")
     packed_buffer_data = _PackedBufferData(quantized_model)
     if packed_buffer_data.packed_size < 1024 * 1024:
       serialized_quantized_model = self._serialize_small_model(quantized_model)
@@ -381,7 +381,6 @@ class ModelModifier:
     Returns:
       a byte buffer that represents the serialized tflite model
     """
-    logging.info("Serializing model.......")
     model_bytearray = flatbuffer_utils.convert_object_to_bytearray(
         quantized_model
     )
