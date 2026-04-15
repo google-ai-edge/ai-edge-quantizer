@@ -15,6 +15,7 @@
 
 """Tests for the ModelModifier class."""
 
+import gc
 import pathlib
 import tempfile
 import tracemalloc
@@ -36,42 +37,49 @@ from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('.')
 
 
-class ModelModifierTest(parameterized.TestCase):
+class BaseModelModifierTest(parameterized.TestCase):
+  """Base test class that pre-loads a model and creates a modifier for it."""
+
+  _model_path: str = str(
+      pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/conv_fc_mnist.tflite'
+  )
 
   def setUp(self):
     super().setUp()
-    self._model_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH)
-        / 'tests/models/conv_fc_mnist.tflite'
-    )
     self._model_content: bytes = tfl_flatbuffer_utils.get_model_content(
         self._model_path
     )
     self._model = tfl_flatbuffer_utils.read_model(self._model_content)
     self._model_modifier = model_modifier.ModelModifier(self._model)
-    self._global_recipe = [
-        {
-            'regex': '.*',
-            'operation': 'FULLY_CONNECTED',
-            'algorithm_key': 'min_max_uniform_quantize',
-            'op_config': {
-                'weight_tensor_config': {
-                    'dtype': qtyping.TensorDataType.INT,
-                    'num_bits': 8,
-                    'symmetric': False,
-                    'granularity': qtyping.QuantGranularity.CHANNELWISE,
-                    'block_size': 0,
-                },
-                # Equivalent to WEIGHT_ONLY.
-                'compute_precision': qtyping.ComputePrecision.FLOAT,
-                'explicit_dequantize': True,
-            },
-        },
-    ]
+
+
+class ModelModifierTestSmallModel(BaseModelModifierTest):
+  _packed_buffer_data_size: int = 201984
+  _global_recipe: recipe_manager.ModelQuantizationRecipe = [
+      {
+          'regex': '.*',
+          'operation': 'FULLY_CONNECTED',
+          'algorithm_key': 'min_max_uniform_quantize',
+          'op_config': {
+              'weight_tensor_config': {
+                  'dtype': qtyping.TensorDataType.INT,
+                  'num_bits': 8,
+                  'symmetric': False,
+                  'granularity': qtyping.QuantGranularity.CHANNELWISE,
+                  'block_size': 0,
+              },
+              # Equivalent to WEIGHT_ONLY.
+              'compute_precision': qtyping.ComputePrecision.FLOAT,
+              'explicit_dequantize': True,
+          },
+      },
+  ]
 
   def test_pack_buffer_data_succeeds(self):
     packed_buffer_data = model_modifier._PackedBufferData(self._model)
-    self.assertEqual(packed_buffer_data.packed_size, 202560)
+    self.assertEqual(
+        packed_buffer_data.packed_size, self._packed_buffer_data_size
+    )
 
   def test_modify_model_succeeds_with_recipe(self):
     recipe_manager_instance = recipe_manager.RecipeManager()
@@ -144,14 +152,25 @@ class ModelModifierTest(parameterized.TestCase):
         )
     )
 
+    # Run once and garbage-collect to make sure we're really only measuring
+    # what's allocated during the operation itself (e.g. avoid module import
+    # stuff).
+    res = self._model_modifier.modify_model(tensor_quantization_params)
+    del res
+    gc.collect()
+
+    # Trace the peak memory usage of calling `ModelModifier.modify_model`.
     tracemalloc.start()
     tracemalloc.reset_peak()
-    self._model_modifier.modify_model(tensor_quantization_params)
+    quantized_model = self._model_modifier.modify_model(
+        tensor_quantization_params
+    )
     _, mem_peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
 
-    loosen_mem_use_factor = 4.5
-    self.assertLess(mem_peak / len(self._model_content), loosen_mem_use_factor)
+    self.assertLessEqual(
+        mem_peak, len(self._model_content) + len(quantized_model)
+    )
 
   def test_has_transform_before_output_true_dequant(self):
     instructions = {
@@ -248,18 +267,39 @@ class ModelModifierTest(parameterized.TestCase):
     self.assertEqual(model_modifier._round_up_16(arr_len), 32)
 
 
-class ModelModifierTestWithSignature(parameterized.TestCase):
+class ModelModifierTestLargeModel(ModelModifierTestSmallModel):
 
-  def setUp(self):
-    super().setUp()
-    self._model_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/single_fc.tflite',
-    )
-    self._model_content: bytes = tfl_flatbuffer_utils.get_model_content(
-        self._model_path
-    )
-    self._model = tfl_flatbuffer_utils.read_model(self._model_content)
-    self._model_modifier = model_modifier.ModelModifier(self._model)
+  _model_path = str(
+      pathlib.Path(TEST_DATA_PREFIX_PATH)
+      / 'tests/models/toy_model_with_kv_cache_multi_signature.tflite'
+  )
+  _packed_buffer_data_size: int = 745472
+  _global_recipe: recipe_manager.ModelQuantizationRecipe = [
+      {
+          'regex': '.*',
+          'operation': '*',
+          'algorithm_key': 'min_max_uniform_quantize',
+          'op_config': {
+              'weight_tensor_config': {
+                  'dtype': qtyping.TensorDataType.INT,
+                  'num_bits': 8,
+                  'symmetric': False,
+                  'granularity': qtyping.QuantGranularity.CHANNELWISE,
+                  'block_size': 0,
+              },
+              # Equivalent to WEIGHT_ONLY.
+              'compute_precision': qtyping.ComputePrecision.FLOAT,
+              'explicit_dequantize': True,
+          },
+      },
+  ]
+
+
+class ModelModifierTestWithSignature(BaseModelModifierTest):
+
+  _model_path = str(
+      pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/single_fc.tflite',
+  )
 
   def test_update_signature_defs_succeeds_dequant(self):
     # This is a simplified test that only checks if the function runs without

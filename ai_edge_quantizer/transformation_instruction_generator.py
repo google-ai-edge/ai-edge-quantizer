@@ -237,7 +237,7 @@ class TransformationInstructionsGenerator:
   def _create_tensor_name_to_graph_info_map(self):
     """Create a mapping between tensor name and tensor info."""
     self._tensor_name_to_graph_info = {}
-      # TODO: b/333607428 - support graph input & output
+    # TODO: b/333607428 - support graph input & output
     for subgraph_id, subgraph in enumerate(self.flatbuffer_model.subgraphs):
       for tensor_name, tensor_info in self._tensor_info_generator(
           subgraph_id, subgraph
@@ -759,18 +759,19 @@ class TransformationInstructionsGenerator:
         instruction_subsets.append([instruction])
         subset_idx = len(instruction_subsets) - 1
         for consumer in instruction.consumers:
-          if consumer in consumer_to_subset_idx:
+          if (
+              consumer_to_subset_idx.setdefault(consumer, subset_idx)
+              != subset_idx
+          ):
             raise ValueError(
                 f"Tensor {instructions.tensor_name} : duplicate tensor should"
                 " be the first instruction for its consumers."
             )
-          else:
-            consumer_to_subset_idx[consumer] = subset_idx
       else:
         first_consumer = instruction.consumers[0]
-        if first_consumer not in consumer_to_subset_idx:
-          consumer_to_subset_idx[first_consumer] = original_tensor_subset_idx
-        subset_idx = consumer_to_subset_idx[first_consumer]
+        subset_idx = consumer_to_subset_idx.setdefault(
+            first_consumer, original_tensor_subset_idx
+        )
         instruction_subsets[subset_idx].append(instruction)
 
     return instruction_subsets

@@ -41,14 +41,16 @@ def _round_up_16(offset: int) -> int:
 class _PackedBufferData:
   """Holds a `ModelT`'s buffer data for packing."""
 
+  data_size: int
   packed_size: int
   data_for_buffer_id: dict[int, memoryview]
 
-  def __init__(self, model: qtyping.ModelT):
+  def __init__(self, model: qtyping.ModelT, min_size_bytes: int = 1024):
     self.data_for_buffer_id = {}
+    self.data_size = 0
     self.packed_size = 0
     for buffer_id, buffer in enumerate(model.buffers):
-      if buffer.data is not None:
+      if buffer.data is not None and min_size_bytes <= len(buffer.data):
         # Convert the buffer data to a `memoryview` of its bytes.
         buffer_data = buffer.data
         if not isinstance(buffer_data, np.ndarray):
@@ -57,7 +59,15 @@ class _PackedBufferData:
 
         # Add this buffer to the list of buffers.
         self.data_for_buffer_id[buffer_id] = buffer_data
+        self.data_size += len(buffer_data)
         self.packed_size = _round_up_16(self.packed_size + len(buffer_data))
+    logging.debug(
+        "Created _PackedBufferData with %d buffers, data_size=%d,"
+        " packed_size=%d.",
+        len(self.data_for_buffer_id),
+        self.data_size,
+        self.packed_size,
+    )
 
 
 T = TypeVar("T")
@@ -191,7 +201,7 @@ class ModelModifier:
 
     logging.info("Serializing model...")
     packed_buffer_data = _PackedBufferData(quantized_model)
-    if packed_buffer_data.packed_size < 1024 * 1024:
+    if packed_buffer_data.packed_size < 256 * 1024:
       serialized_quantized_model = self._serialize_small_model(quantized_model)
       if serialize_to_path:
         mmap_utils.set_file_contents(
@@ -296,8 +306,8 @@ class ModelModifier:
     """
     # Clear the buffer data and set the offset and size to a non-zero value so
     # that they are still packed into the flatbuffer.
-    for buffer in quantized_model.buffers:
-      if buffer.data is not None:
+    for buffer_id, buffer in enumerate(quantized_model.buffers):
+      if buffer_id in packed_buffer_data.data_for_buffer_id:
         buffer.data = None
         buffer.offset = 1
         buffer.size = 1
@@ -336,10 +346,7 @@ class ModelModifier:
 
     # Pack the buffer contents at the end of the model_buffer, setting the
     # correct sizes and offsets in the original quantized_model.
-    for buffer_id in packed_buffer_data.data_for_buffer_id:
-      # Retrieve the data for this buffer.
-      buffer_data = packed_buffer_data.data_for_buffer_id[buffer_id]
-
+    for buffer_id, buffer_data in packed_buffer_data.data_for_buffer_id.items():
       # Update the packed buffer with the correct size and offset.
       buffer = quantized_model.buffers[buffer_id]
       buffer.offset = buffer_data_offset
