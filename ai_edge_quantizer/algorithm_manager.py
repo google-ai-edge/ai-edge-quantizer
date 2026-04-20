@@ -69,6 +69,10 @@ class AlgorithmName(str, enum.Enum):
   MSE = mse.ALGORITHM_KEY
   GPTQ = gptq.ALGORITHM_KEY
 
+  @classmethod
+  def list(cls) -> list[str]:
+    return list(map(lambda c: c.value, cls))
+
 
 ### MIN/MAX_UNIFORM_QUANT ###
 
