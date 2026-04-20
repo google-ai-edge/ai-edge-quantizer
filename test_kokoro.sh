@@ -17,6 +17,18 @@ function ensure_uv {
   fi
 }
 
+GET_REQUIRED_ENVIRONMENTS="import sys
+import platform
+print('\n[tool.uv]')
+print('required-environments = [')
+print(f'    \"sys_platform == \'{sys.platform}\' and platform_machine == \'{platform.machine()}\' and python_version == \'PYTHON_VERSION_PLACEHOLDER\'\",')
+print(']')
+"
+python -c "${GET_REQUIRED_ENVIRONMENTS}" >> pyproject.toml
+
+# Create a copy of the templated pyproject.toml file.
+cp -f pyproject.toml pyproject.toml.bak
+
 ensure_uv
 
 PYTHON_VERSIONS=("3.10" "3.11" "3.12" "3.13")
@@ -25,6 +37,13 @@ for PYTHON_VERSION in "${PYTHON_VERSIONS[@]}"; do
   echo "----------------------------------------------------------------"
   echo "Testing on Python version ${PYTHON_VERSION}"
   echo "----------------------------------------------------------------"
+
+  # Set up required environment to match the target architecture.
+  sed "s/PYTHON_VERSION_PLACEHOLDER/${PYTHON_VERSION}/g" pyproject.toml.bak > pyproject.toml
+  uv sync \
+    --python "${PYTHON_VERSION}" \
+    --all-packages
+
 
   # Install Python version
   uv python install "${PYTHON_VERSION}"
