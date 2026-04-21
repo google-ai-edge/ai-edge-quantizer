@@ -1,6 +1,6 @@
 ---
 title: "{{ env.GITHUB_WORKFLOW }} GitHub Action is failing"
-assignees: v-dziuba
+assignees: gonnet
 labels: bug
 ---
 
