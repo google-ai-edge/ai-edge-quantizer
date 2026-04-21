@@ -120,7 +120,7 @@ class CalibrationSignatureRunner:
       calibrator_obj: "Calibrator",
       signature_key: str | None = None,
       mode: CalibrationMode = CalibrationMode.INFERENCE,
-      quantization_recipe: recipe_manager.ModelQuantizationRecipe = recipe.static_wi8_ai8(),
+      quantization_recipe: qtyping.ModelQuantizationRecipe = recipe.static_wi8_ai8(),
   ):
     """Initializes the CalibrationSignatureRunner.
 

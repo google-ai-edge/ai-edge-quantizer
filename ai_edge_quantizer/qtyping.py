@@ -28,6 +28,11 @@ from ai_edge_litert.tools import flatbuffer_utils
 
 QSV: TypeAlias = MutableMapping[str, Any]
 
+# A collection of quantization configuration.
+# Key: scope regex.
+# Value: list of OpQuantizationRecipe in dictionary format.
+ModelQuantizationRecipe = list[dict[str, Any]]
+
 # Types imported from `schema_py_generated`.
 ActivationFunctionType = flatbuffer_utils.ActivationFunctionType
 BlockwiseQuantizationT = flatbuffer_utils.BlockwiseQuantizationT

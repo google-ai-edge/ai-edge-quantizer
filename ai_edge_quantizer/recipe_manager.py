@@ -18,7 +18,7 @@
 import collections
 import dataclasses
 import re
-from typing import Any, Mapping, Optional
+from typing import Mapping, Optional
 from absl import logging
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import qtyping
@@ -26,10 +26,12 @@ from ai_edge_quantizer import qtyping
 # A collection of quantization configuration.
 # Key: scope regex.
 # Value: list of OpQuantizationRecipe in dictionary format.
-ModelQuantizationRecipe = list[dict[str, Any]]
+ModelQuantizationRecipe = qtyping.ModelQuantizationRecipe
+
 # Expose algorithm names to users.
 AlgorithmName = algorithm_manager.AlgorithmName
 
+# Internal types.
 _TFLOpName = qtyping.TFLOperationName
 _OpQuantizationConfig = qtyping.OpQuantizationConfig
 _TensorQuantizationConfig = qtyping.TensorQuantizationConfig
@@ -199,7 +201,7 @@ class RecipeManager:
 
     return result_key, result_config
 
-  def get_quantization_recipe(self) -> ModelQuantizationRecipe:
+  def get_quantization_recipe(self) -> qtyping.ModelQuantizationRecipe:
     """Gets the full quantization recipe from the manager.
 
     Returns:
@@ -212,24 +214,21 @@ class RecipeManager:
             op_recipe,
             dict_factory=lambda x: {  # pylint: disable=g-long-lambda
                 k: (
-                    dict(v)
-                    if isinstance(v, Mapping)
-                    and not isinstance(v, dict)
+                    dict(v)  # pylint: disable=g-long-ternary
+                    if isinstance(v, Mapping) and not isinstance(v, dict)
                     else v
                 )
                 for (k, v) in x
                 # Skip None and empty dict values.
                 if v is not None
-                and not (
-                    isinstance(v, (dict, Mapping)) and not v
-                )
+                and not (isinstance(v, (dict, Mapping)) and not v)
             },
         )
         recipe.append(recipe_dict)
     return recipe
 
   def load_quantization_recipe(
-      self, quantization_recipe: ModelQuantizationRecipe
+      self, quantization_recipe: qtyping.ModelQuantizationRecipe
   ) -> None:
     """Loads the quantization recipe to the manager.
 

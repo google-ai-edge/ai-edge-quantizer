@@ -19,28 +19,65 @@ import tempfile
 
 from absl.testing import absltest
 
+from ai_edge_litert.tools import mmap_utils
 from ai_edge_quantizer import aeq
+from ai_edge_quantizer import model_validator
+from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.utils import litertlm_utils
 from ai_edge_quantizer.utils import test_utils
+from ai_edge_quantizer.utils import tfl_interpreter_utils
+from ai_edge_quantizer.utils import validation_utils
+
+TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(".")
 
 
 class AeqTest(absltest.TestCase):
 
-  def test_quantize(self):
-    model_file = test_utils.get_path_to_datafile(
-        "tests/models/conv_fc_mnist.tflite"
+  def _validate_quantized_model(
+      self,
+      float_model_buffer: qtyping.BufferType,
+      quantized_model_buffer: qtyping.BufferType,
+  ):
+    # Create some random test data.
+    test_data = tfl_interpreter_utils.create_random_normal_input_data(
+        float_model_buffer, num_samples=10
     )
-    recipe_file = test_utils.get_path_to_datafile(
-        "recipes/default_af32w8float_recipe.json"
+
+    # Run the evaluation.
+    result = model_validator.compare_model(
+        float_model_buffer,
+        quantized_model_buffer,
+        test_data,
+        error_metric="mse",
+        compare_fn=validation_utils.get_validation_func("mse"),
+        validate_output_tensors_only=True,
+    )
+
+    # Verify that the results are indeed reasonable.
+    for mse in result.get_all_tensor_results().values():
+      self.assertLess(mse, 1e-4)
+
+  def test_quantize_and_validate_single_tflite_file(self):
+    model_file = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / "tests/models/conv_fc_mnist.tflite"
+    )
+    recipe_file = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / "recipes/dynamic_wi8_afp32_recipe.json"
     )
 
     with tempfile.TemporaryDirectory() as output_dir:
-      aeq.main(
-          argparse.Namespace(
-              model_file=model_file,
-              recipe_file=recipe_file,
-              output_dir=output_dir,
-              overwrite_outputs=False,
-          )
+      self.assertEqual(
+          aeq.main(
+              argparse.Namespace(
+                  model_file=model_file,
+                  recipe_file=recipe_file,
+                  output_dir=output_dir,
+                  overwrite_outputs=False,
+              )
+          ),
+          0,
       )
 
       model_basename = pathlib.Path(model_file).stem
@@ -56,6 +93,68 @@ class AeqTest(absltest.TestCase):
       # Check whether the file size of the quantized model is roughly 4X smaller
       # than that of the float model
       self.assertLess(quantized_size, original_size * 0.35)
+
+      # Validate the quantized model.
+      self._validate_quantized_model(
+          mmap_utils.get_file_contents(model_file),
+          mmap_utils.get_file_contents(output_path),
+      )
+
+  def test_quantize_and_validate_tflite_models_in_litertlm_file(self):
+    model_file = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / "tests/models/conv_fc_mnist.litertlm"
+    )
+    recipe_file = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / "recipes/dynamic_wi8_afp32_litertlm_recipe.json"
+    )
+
+    with tempfile.TemporaryDirectory() as output_dir:
+      self.assertEqual(
+          aeq.main(
+              argparse.Namespace(
+                  model_file=model_file,
+                  litertlm_recipe_file=recipe_file,
+                  output_dir=output_dir,
+                  overwrite_outputs=False,
+              )
+          ),
+          0,
+      )
+
+      model_basename = pathlib.Path(model_file).stem
+      recipe_basename = pathlib.Path(recipe_file).stem
+      output_filename = f"{model_basename}_{recipe_basename}.litertlm"
+      output_path = str(pathlib.Path(output_dir) / output_filename)
+
+      self.assertTrue(pathlib.Path(output_path).exists())
+
+      original_size = pathlib.Path(model_file).stat().st_size
+      quantized_size = pathlib.Path(output_path).stat().st_size
+
+      # Check whether the file size of the quantized model is roughly 4X smaller
+      # than that of the float model (keep in mind that the LiteRT-LM header
+      # size did not change).
+      self.assertLess(quantized_size, original_size * 0.36)
+
+      # Check whether the system and section metadata match.
+      original_litertlm = litertlm_utils.LiteRTLMFile(model_file)
+      quantized_litertlm = litertlm_utils.LiteRTLMFile(output_path)
+      self.assertEqual(
+          original_litertlm.get_system_metadata(),
+          quantized_litertlm.get_system_metadata(),
+      )
+      self.assertEqual(
+          original_litertlm.get_section_metadata(0),
+          quantized_litertlm.get_section_metadata(0),
+      )
+
+      # Validate the quantized model.
+      self._validate_quantized_model(
+          original_litertlm.get_section_buffer(0),
+          quantized_litertlm.get_section_buffer(0),
+      )
 
 
 if __name__ == "__main__":

@@ -55,7 +55,7 @@ class BaseModelModifierTest(parameterized.TestCase):
 
 class ModelModifierTestSmallModel(BaseModelModifierTest):
   _packed_buffer_data_size: int = 201984
-  _global_recipe: recipe_manager.ModelQuantizationRecipe = [
+  _global_recipe: qtyping.ModelQuantizationRecipe = [
       {
           'regex': '.*',
           'operation': 'FULLY_CONNECTED',
@@ -274,7 +274,7 @@ class ModelModifierTestLargeModel(ModelModifierTestSmallModel):
       / 'tests/models/toy_model_with_kv_cache_multi_signature.tflite'
   )
   _packed_buffer_data_size: int = 745472
-  _global_recipe: recipe_manager.ModelQuantizationRecipe = [
+  _global_recipe: qtyping.ModelQuantizationRecipe = [
       {
           'regex': '.*',
           'operation': '*',

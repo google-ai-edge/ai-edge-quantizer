@@ -24,7 +24,7 @@ AlgorithmName = algorithm_manager.AlgorithmName
 
 def dynamic_wi8_afp32(
     algorithm_key: AlgorithmName = AlgorithmName.MIN_MAX_UNIFORM_QUANT,
-) -> recipe_manager.ModelQuantizationRecipe:
+) -> qtyping.ModelQuantizationRecipe:
   """Returns a dynamic quantization recipe with int8 weights and float32 activation.
 
   All supported ops will be quantized with int8 weights and float32 activations,
@@ -50,7 +50,7 @@ def dynamic_wi8_afp32(
 
 def dynamic_wi4_afp32(
     algorithm_key: AlgorithmName = AlgorithmName.MIN_MAX_UNIFORM_QUANT,
-) -> recipe_manager.ModelQuantizationRecipe:
+) -> qtyping.ModelQuantizationRecipe:
   """Returns a dynamic quantization recipe with int4 weights and float32 activation.
 
   All supported ops will be quantized with int4 weights and float32 activations,
@@ -75,7 +75,7 @@ def dynamic_wi4_afp32(
 
 def weight_only_wi8_afp32(
     algorithm_key: AlgorithmName = AlgorithmName.MIN_MAX_UNIFORM_QUANT,
-) -> recipe_manager.ModelQuantizationRecipe:
+) -> qtyping.ModelQuantizationRecipe:
   """Returns a weight-only quantization recipe with int8 weights and float32 activation.
 
   All supported ops will be quantized with int8 weights and float32 activations.
@@ -101,7 +101,7 @@ def weight_only_wi8_afp32(
 
 def weight_only_wi4_afp32(
     algorithm_key: AlgorithmName = AlgorithmName.MIN_MAX_UNIFORM_QUANT,
-) -> recipe_manager.ModelQuantizationRecipe:
+) -> qtyping.ModelQuantizationRecipe:
   """Returns a weight-only quantization recipe with int4 weights and float32 activation.
 
   All supported ops will be quantized with int4 weights and float32 activations.
@@ -126,7 +126,7 @@ def weight_only_wi4_afp32(
 
 def static_wi8_ai8(
     algorithm_key: AlgorithmName = AlgorithmName.MIN_MAX_UNIFORM_QUANT,
-) -> recipe_manager.ModelQuantizationRecipe:
+) -> qtyping.ModelQuantizationRecipe:
   """Returns a static quantization recipe with int8 weights and int8 activations.
 
   All supported ops will be quantized with int8 weights and int8 activations.
@@ -151,7 +151,7 @@ def static_wi8_ai8(
 
 def static_wi8_ai16(
     algorithm_key: AlgorithmName = AlgorithmName.MIN_MAX_UNIFORM_QUANT,
-) -> recipe_manager.ModelQuantizationRecipe:
+) -> qtyping.ModelQuantizationRecipe:
   """Returns a static quantization recipe with int8 weights and int16 activations.
 
   All supported ops will be quantized with int8 weights and int16 activations.

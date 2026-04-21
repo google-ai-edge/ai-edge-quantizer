@@ -42,7 +42,7 @@ Path = str | pathlib.Path
 # Expose algorithm names to users.
 AlgorithmName = algorithm_manager.AlgorithmName
 
-_QuantRecipe = recipe_manager.ModelQuantizationRecipe
+_QuantRecipe = qtyping.ModelQuantizationRecipe
 _TFLOpName = qtyping.TFLOperationName
 _OpQuantizationConfig = qtyping.OpQuantizationConfig
 _TensorQuantizationConfig = qtyping.TensorQuantizationConfig
