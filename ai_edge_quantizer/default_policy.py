@@ -199,7 +199,8 @@ DEFAULT_JSON_POLICY = """
       "EQUAL",
       "NOT_EQUAL",
       "MIRROR_PAD",
-      "RELU"
+      "RELU",
+      "SPACE_TO_DEPTH"
     ],
     "static_wi8_ai8": [
       "ADD",
