@@ -138,7 +138,7 @@ class LiteRTLMFile:
     header_bytes = mmap_utils.get_file_contents(
         self._path, size=litertlm_core.HEADER_BEGIN_BYTE_OFFSET
     )
-    assert header_bytes[:8] == b'LITERTLM'
+    assert header_bytes[:8] == litertlm_core.HEADER_MAGIC_BYTES
 
     # Get the end offset of the serialized metadata.
     header_end_offset = struct.unpack(
@@ -275,7 +275,7 @@ class LiteRTLMFile:
     # failing on file systems that don't support it.
     # TODO: b/495763732 - This should be part of litertlm_core.
     buff_offset = 0
-    buff_offset += buff.write(b'LITERTLM')
+    buff_offset += buff.write(litertlm_core.HEADER_MAGIC_BYTES)
     buff_offset += buff.write(
         litertlm_core.LITERTLM_MAJOR_VERSION.to_bytes(4, 'little')
     )
