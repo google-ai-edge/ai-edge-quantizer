@@ -324,20 +324,43 @@ class CalibrationQsvAlignmentUtils:
   def align_quant_stats(
       self, qsv: dict[str, Any], signature_data: _SignatureData
   ) -> tuple[np.ndarray, np.ndarray]:
-    """Aligns quantization statistics for a given signature data.
+    """Aligns quantization statistics (QSVs) across tensors in the given signatures.
 
-    This function takes quantization statistics and signature data as input,
-    identifies the tensors associated with the signature data, and aligns
-    the quantization statistics of these tensors by setting their minimum
-    and maximum values to the same value. This ensures that the tensors
-    have the same quantization parameters.
+    This function identifies all tensors associated with the provided
+    signatures, finds the global minimum and maximum values across those tensors
+    in the `qsv` dictionary, and updates the dictionary so all these tensors
+    share these same min/max values. This ensures consistent quantization
+    parameters.
+
+    Example:
+      To align the KV cache tensors 'kv_cache_k_0' and 'kv_slice_k_0' across
+      'prefill' and 'decode' signatures:
+
+      ```
+      alignment_utils = CalibrationQsvAlignmentUtils(model_path)
+      signature_data = {
+          'prefill': ['kv_cache_k_0', 'kv_slice_k_0'],
+          'decode': ['kv_cache_k_0', 'kv_slice_k_0'],
+      }
+      min_val, max_val = alignment_utils.align_quant_stats(
+          qsv, signature_data
+      )
+      ```
+
+      This will update `qsv` in place so that both 'kv_cache_k_0' and
+      'kv_slice_k_0' have the same min and max values found across all
+      tensors in the 'prefill' and 'decode' signatures, and returns those
+      values. In other words, kv_cache_k_0 and kv_slice_k_0 will have the
+      same quantization parameters across prefill and decode signatures.
 
     Args:
-      qsv: Quantization statistics.
-      signature_data: Signature data.
+      qsv: Dictionary mapping tensor names to their quantization scale values
+        (min and max). This dictionary is modified in place.
+      signature_data: Mapping from signature keys to lists of signature names.
 
     Returns:
-      Tuple of min and max values.
+      A tuple (min_value, max_value), where min_value is the global minimum
+      value and max_value is the global maximum value used for alignment.
     """
     # Go over all signature info and find the corresponding tensor names.
     tensor_names = []
@@ -364,20 +387,38 @@ class CalibrationQsvAlignmentUtils:
       signature_data: _SignatureData,
       min_value: np.ndarray,
       max_value: np.ndarray,
-  ):
-    """Updates quantization statistics for a given signature data.
+  ) -> None:
+    """Updates quantization statistics for tensors associated with the given signatures.
 
-    This function updates the quantization statistics with the provided min, max
-    values for the tensors specified in the signature data.
+    This function identifies all tensors associated with the provided
+    signatures,
+    and updates their min/max values in the `qsv` dictionary with the provided
+    `min_value` and `max_value`. This is typically used to apply aligned
+    quantization parameters across different models (e.g., applying parameters
+    aligned on a main model to an auxiliary model).
+
+    Example:
+      To apply pre-computed min and max values to KV cache tensors
+      'kv_cache_k_0'
+      and 'kv_slice_k_0' across 'prefill' and 'decode' signatures:
+
+      ```
+      alignment_utils = CalibrationQsvAlignmentUtils(aux_model_path)
+      signature_data = {
+          'prefill': ['kv_cache_k_0', 'kv_slice_k_0'],
+          'decode': ['kv_cache_k_0', 'kv_slice_k_0'],
+      }
+      alignment_utils.update_quant_stats(
+          aux_qsv, signature_data, min_value, max_value
+      )
+      ```
 
     Args:
-      qsv: Quantization statistics.
-      signature_data: Signature data.
-      min_value: Minimum value to update.
-      max_value: Maximum value to update.
-
-    Returns:
-      Updated quantization statistics.
+      qsv: Dictionary mapping tensor names to their quantization scale values
+        (min and max). This dictionary is modified in place.
+      signature_data: Mapping from signature keys to lists of signature names.
+      min_value: The global minimum value to apply.
+      max_value: The global maximum value to apply.
     """
     # Go over all signature info and find the corresponding tensor names.
     tensor_names = []
