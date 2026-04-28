@@ -13,8 +13,9 @@
 # limitations under the License.
 # ==============================================================================
 
+from absl.testing import absltest
 from absl.testing import parameterized
-import absl.testing.absltest as absltest
+
 from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import constrained_ops_utils
 

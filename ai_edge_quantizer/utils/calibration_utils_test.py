@@ -13,10 +13,10 @@
 # limitations under the License.
 # ==============================================================================
 
+from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
 
-import absl.testing.absltest as absltest
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import calibration_utils
 from ai_edge_quantizer.utils import test_utils
@@ -132,7 +132,7 @@ class CalibrationQsvAlignmentUtilsTest(parameterized.TestCase):
     temp_file = self.create_tempfile()
     temp_file.write_text(
         '{"model_qsvs": {"tensor1": {"min": [-1.0], "max": [1.0]}}, "metadata":'
-        ' {}}'
+        " {}}"
     )
     results, _ = calibration_utils.load_calibration_results(temp_file.full_path)
     self.assertIn("tensor1", results)

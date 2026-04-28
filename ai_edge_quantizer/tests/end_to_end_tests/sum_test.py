@@ -17,8 +17,8 @@
 
 from typing import Any
 
+from absl.testing import absltest
 from absl.testing import parameterized
-import absl.testing.absltest as absltest
 import numpy as np
 
 from ai_edge_quantizer import qtyping

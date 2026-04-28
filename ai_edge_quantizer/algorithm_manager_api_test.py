@@ -16,7 +16,7 @@
 """Tests for algorithm_manager_api."""
 
 
-import absl.testing.absltest as absltest
+from absl.testing import absltest
 from absl.testing import parameterized
 
 from ai_edge_quantizer import algorithm_manager_api

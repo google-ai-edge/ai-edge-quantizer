@@ -15,11 +15,13 @@
 
 import json
 import pathlib
+
 from absl import flags
+from absl.testing import absltest
 import numpy as np
+
 import os
 import io
-import absl.testing.absltest as absltest
 from ai_edge_quantizer import model_validator
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
@@ -36,7 +38,8 @@ class ComparisonResultTest(absltest.TestCase):
     flags.FLAGS.mark_as_parsed()
     super().setUp()
     self.test_model_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/two_signatures.tflite'
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/two_signatures.tflite'
     )
     self.test_model = tfl_flatbuffer_utils.get_model_buffer(
         self.test_model_path
@@ -211,7 +214,8 @@ class ModelValidatorCompareTest(absltest.TestCase):
     flags.FLAGS.mark_as_parsed()
     super().setUp()
     self.reference_model_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/single_fc_bias.tflite'
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/single_fc_bias.tflite'
     )
     self.target_model_path = str(
         pathlib.Path(TEST_DATA_PREFIX_PATH)
@@ -323,7 +327,8 @@ class ModelValidatorMultiSignatureModelTest(absltest.TestCase):
     flags.FLAGS.mark_as_parsed()
     super().setUp()
     self.reference_model_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/two_signatures.tflite'
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/two_signatures.tflite'
     )
     self.target_model_path = str(
         pathlib.Path(TEST_DATA_PREFIX_PATH)

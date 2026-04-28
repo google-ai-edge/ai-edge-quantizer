@@ -14,8 +14,10 @@
 # ==============================================================================
 
 """Test for validation_utils."""
+
+from absl.testing import absltest
 import numpy as np
-import absl.testing.absltest as absltest
+
 from ai_edge_quantizer.utils import validation_utils
 
 
