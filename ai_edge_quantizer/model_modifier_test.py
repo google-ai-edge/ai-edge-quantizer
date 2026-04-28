@@ -57,8 +57,8 @@ class ModelModifierTestSmallModel(BaseModelModifierTest):
   _packed_buffer_data_size: int = 201984
   _global_recipe: qtyping.ModelQuantizationRecipe = [
       {
-          'regex': '.*',
-          'operation': 'FULLY_CONNECTED',
+          'op_scope_regex': '.*',
+          'operations': ['FULLY_CONNECTED'],
           'algorithm_key': 'min_max_uniform_quantize',
           'op_config': {
               'weight_tensor_config': {
@@ -276,8 +276,8 @@ class ModelModifierTestLargeModel(ModelModifierTestSmallModel):
   _packed_buffer_data_size: int = 745472
   _global_recipe: qtyping.ModelQuantizationRecipe = [
       {
-          'regex': '.*',
-          'operation': '*',
+          'op_scope_regex': '.*',
+          'operations': ['*'],
           'algorithm_key': 'min_max_uniform_quantize',
           'op_config': {
               'weight_tensor_config': {

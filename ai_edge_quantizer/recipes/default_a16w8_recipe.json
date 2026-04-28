@@ -1,7 +1,7 @@
 [
   {
-    "regex": ".*",
-    "operation": "*",
+    "op_scope_regex": ".*",
+    "operations": ["*"],
     "algorithm_key": "min_max_uniform_quantize",
     "op_config": {
       "activation_tensor_config": {

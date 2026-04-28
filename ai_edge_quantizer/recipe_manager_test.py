@@ -59,13 +59,13 @@ def _add_default_int8xint8_integer_recipe(recipe_manager_object):
 # register some currently unsupported ops for testing purposes
 def _register_testing_op(algorithm_key, tfl_op):
   # Sample functions for test cases.
-  def _sample_init_qsvs(*_, **__):
+  def _sample_init_qsvs(*_, **__):  # pylint: disable=unused-argument
     return {'name': dict()}
 
-  def _sample_calibration_func(*_, **__):
+  def _sample_calibration_func(*_, **__):  # pylint: disable=unused-argument
     return {'name2': dict()}
 
-  def _sample_materialize_func(*_, **__):
+  def _sample_materialize_func(*_, **__):  # pylint: disable=unused-argument
     return []
 
   algorithm_manager.register_op_quant_config_validation_func(
@@ -635,8 +635,8 @@ class ConfiguratorTest(parameterized.TestCase):
 
     expected_full_quantization_config = [
         {
-            'regex': '.*',
-            'operation': _TFLOpName.ALL_SUPPORTED,
+            'op_scope_regex': '.*',
+            'operations': [_TFLOpName.ALL_SUPPORTED],
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'activation_tensor_config': {
@@ -659,8 +659,8 @@ class ConfiguratorTest(parameterized.TestCase):
             },
         },
         {
-            'regex': '.*',
-            'operation': _TFLOpName.BATCH_MATMUL,
+            'op_scope_regex': '.*',
+            'operations': [_TFLOpName.BATCH_MATMUL],
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
@@ -677,8 +677,8 @@ class ConfiguratorTest(parameterized.TestCase):
             },
         },
         {
-            'regex': '.*/Dense/.*',
-            'operation': _TFLOpName.ALL_SUPPORTED,
+            'op_scope_regex': '.*/Dense/.*',
+            'operations': [_TFLOpName.ALL_SUPPORTED],
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
@@ -695,8 +695,8 @@ class ConfiguratorTest(parameterized.TestCase):
             },
         },
         {
-            'regex': '.*/Dense_1/.*',
-            'operation': _TFLOpName.FULLY_CONNECTED,
+            'op_scope_regex': '.*/Dense_1/.*',
+            'operations': [_TFLOpName.FULLY_CONNECTED],
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
@@ -713,8 +713,8 @@ class ConfiguratorTest(parameterized.TestCase):
             },
         },
         {
-            'regex': '.*/Dense_1/.*',
-            'operation': _TFLOpName.BATCH_MATMUL,
+            'op_scope_regex': '.*/Dense_1/.*',
+            'operations': [_TFLOpName.BATCH_MATMUL],
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
@@ -770,8 +770,8 @@ class ConfiguratorTest(parameterized.TestCase):
   def test_load_from_full_quantization_config(self):
     full_quantization_config = [
         {
-            'regex': '.*',
-            'operation': 'BATCH_MATMUL',
+            'op_scope_regex': '.*',
+            'operations': ['BATCH_MATMUL'],
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
@@ -786,8 +786,8 @@ class ConfiguratorTest(parameterized.TestCase):
             },
         },
         {
-            'regex': '.*/Dense/.*',
-            'operation': '*',
+            'op_scope_regex': '.*/Dense/.*',
+            'operations': ['*'],
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
@@ -842,8 +842,8 @@ class ConfiguratorTest(parameterized.TestCase):
   def test_load_from_full_quantization_config_full_integer(self):
     full_quantization_config = [
         {
-            'regex': '.*',
-            'operation': '*',
+            'op_scope_regex': '.*',
+            'operations': ['*'],
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'activation_tensor_config': {
@@ -863,8 +863,8 @@ class ConfiguratorTest(parameterized.TestCase):
             },
         },
         {
-            'regex': '.*',
-            'operation': 'BATCH_MATMUL',
+            'op_scope_regex': '.*',
+            'operations': ['BATCH_MATMUL'],
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
@@ -879,8 +879,8 @@ class ConfiguratorTest(parameterized.TestCase):
             },
         },
         {
-            'regex': '.*/Dense/.*',
-            'operation': '*',
+            'op_scope_regex': '.*/Dense/.*',
+            'operations': ['*'],
             'algorithm_key': _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
             'op_config': {
                 'weight_tensor_config': {
