@@ -1,7 +1,7 @@
 [
   {
-    "regex": ".*",
-    "operation": "*",
+    "op_scope_regex": ".*",
+    "operations": ["*"],
     "algorithm_key": "min_max_uniform_quantize",
     "op_config": {
       "activation_tensor_config": {
@@ -23,8 +23,8 @@
     }
   },
   {
-    "regex": ".*",
-    "operation": "FULLY_CONNECTED",
+    "op_scope_regex": ".*",
+    "operations": ["FULLY_CONNECTED"],
     "algorithm_key": "min_max_uniform_quantize",
     "op_config": {
       "weight_tensor_config": {
@@ -40,8 +40,8 @@
     }
   },
   {
-    "regex": ".*",
-    "operation": "CONV_2D",
+    "op_scope_regex": ".*",
+    "operations": ["CONV_2D"],
     "algorithm_key": "no_quantize"
   }
 ]

@@ -134,7 +134,7 @@ class MulTest(parameterized.TestCase):
     self._quantizer.load_config_policy(dummy_policy_path)
 
     try:
-      with self.assertRaisesRegex(ValueError, 'Unsupported op for .*: MUL'):
+      with self.assertRaisesRegex(ValueError, r'Unsupported op for .*\bMUL'):
         self._quantizer.update_quantization_recipe(
             regex='.*',
             operation_name='MUL',

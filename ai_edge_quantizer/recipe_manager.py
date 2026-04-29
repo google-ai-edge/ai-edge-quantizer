@@ -16,10 +16,12 @@
 """Manages model quantization recipe (configuration) for the quantizer."""
 
 import collections
+from collections.abc import Container
 import dataclasses
+import logging
 import re
 from typing import Mapping, Optional
-from absl import logging
+
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import qtyping
 
@@ -42,27 +44,80 @@ class OpQuantizationRecipe:
   """Dataclass for quantization configuration under a scope.
 
   This class is the main entry point to a recipe schema. There could be a single
-  instance of this associated with a model (with `regex=.*` if the full model is
-  to be quantized with the same spec), or multiple instances targeting different
-  `regex` or `operation`.
+  instance of this associated with a model (with `op_scope_regex=.*` if the full
+  model is to be quantized with the same spec), or multiple instances targeting
+  different `op_scope_regex` or `operations`.
 
   Attributes:
-    regex: Regular expression for scope name matching. Any op that matches
-      `regex` will be quantized according to this instance. The narrowest scope
-      would be the full output tensor name of an op. The widest scope would be
-      '.*' which applies to the full model.
-    operation: Target TFL operation. * for any supported TFLite operation.
+    op_scope_regex: Regular expression for scope name matching. Any op that
+      matches `regex` will be quantized according to this instance. The
+      narrowest scope would be the full output tensor name of an op. The widest
+      scope would be '.*' which applies to the full model.
+    operations: Set of target TFL operation types. Use an empty set for any
+      supported TFLite operation.
     algorithm_key: Algorithm key to be applied. This can be any one of the
       strings as enumerated in `AlgorithmName`.
     op_config: Quantization configuration to be applied for the op.
   """
 
-  regex: str
-  operation: _TFLOpName
+  op_scope_regex: str
+  operations: set[_TFLOpName]
   algorithm_key: str
-  op_config: _OpQuantizationConfig = dataclasses.field(
-      default_factory=_OpQuantizationConfig
-  )
+  op_config: _OpQuantizationConfig
+
+  def __init__(
+      self,
+      op_scope_regex: str,
+      operations: set[_TFLOpName] | list[_TFLOpName] | _TFLOpName,
+      algorithm_key: str,
+      op_config: _OpQuantizationConfig | None = None,
+  ):
+    # Convert the `operations` to a `set[_TFLOpName]`.
+    match operations:
+      case set():
+        pass
+      case list():
+        operations = set(operations)
+      case _TFLOpName() | str():
+        operations = {_TFLOpName(operations),}  # pyformat: disable
+      case _:
+        raise ValueError(f'Unexpected type {type(operations)} for operations.')
+    if _TFLOpName.ALL_SUPPORTED in operations:
+      operations = set()
+
+    if op_config is None:
+      op_config = _OpQuantizationConfig()
+
+    self.op_scope_regex: str = op_scope_regex
+    self.operations = operations
+    self.algorithm_key: str = algorithm_key
+    self.op_config: _OpQuantizationConfig = op_config
+
+  @property
+  def __dict__(self):
+    return {
+        'op_scope_regex': self.op_scope_regex,
+        'operations': (
+            list(self.operations)
+            if self.operations
+            else [_TFLOpName.ALL_SUPPORTED]
+        ),
+        'algorithm_key': self.algorithm_key,
+        'op_config': dataclasses.asdict(
+            self.op_config,
+            dict_factory=lambda x: {
+                key: (
+                    dict(value)  # pylint: disable=g-long-ternary
+                    if isinstance(value, Mapping)
+                    and not isinstance(value, dict)
+                    else value
+                )
+                for key, value in x
+                if value is not None
+                and not (isinstance(value, (Container, Mapping)) and not value)
+            },
+        ),
+    }
 
 
 class RecipeManager:
@@ -80,14 +135,14 @@ class RecipeManager:
     The priority between rules are determined by the order they entered: later
     one has higher priority.
     """
-    self._scope_configs: collections.OrderedDict[
+    self._scope_configs: collections.defaultdict[
         str, list[OpQuantizationRecipe]
-    ] = collections.OrderedDict()
+    ] = collections.defaultdict(list)
 
   def add_quantization_config(
       self,
       regex: str,
-      operation_name: _TFLOpName,
+      operation_name: list[_TFLOpName] | _TFLOpName = _TFLOpName.ALL_SUPPORTED,
       op_config: Optional[_OpQuantizationConfig] = None,
       algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
   ) -> None:
@@ -103,8 +158,8 @@ class RecipeManager:
 
     Args:
       regex: Regular expression for layer name matching.
-      operation_name: Target TFLite operation. * for all supported TFLite
-        operation.
+      operation_name: List of, or single, target TFL operation types. Use an
+        empty list or `'*'` for any supported TFLite operation.
       op_config: Quantization configuration which will be used to update the
         default configuration. None or empty dict means the default
         configuration will be used.
@@ -121,38 +176,40 @@ class RecipeManager:
     config = OpQuantizationRecipe(
         regex, operation_name, algorithm_key, op_config
     )
-    # Special care if trying to set all ops to some config.
-    if config.operation == _TFLOpName.ALL_SUPPORTED:
+
+    # If this quantization will override all op types, just replace the configs.
+    if not config.operations:
       self._scope_configs[regex] = [config]
       return
 
+    # Validate the quantization config for the requested operation types.
     if algorithm_key != AlgorithmName.NO_QUANTIZE:
-      algorithm_manager.check_op_quantization_config(
-          algorithm_key, operation_name, op_config
-      )
+      for op_name in config.operations:
+        algorithm_manager.check_op_quantization_config(
+            algorithm_key, op_name, op_config
+        )
 
-    if regex not in self._scope_configs:
-      self._scope_configs[regex] = [config]
-    else:
-      # Reiterate configs to avoid duplication on op settings.
-      configs = []
-      is_new_op = True
-      for existing_config in self._scope_configs[regex]:
-        if existing_config.operation == config.operation:
-          is_new_op = False
-          op_config = config
+    # Add this config to the end of the list and clear out any configs
+    # overridden by it..
+    filtered_configs = []
+    for existing_config in self._scope_configs[regex]:
+      if not existing_config.operations:
+        filtered_configs.append(existing_config)
+      else:
+        if common_ops := existing_config.operations.intersection(
+            config.operations
+        ):
           logging.warning(
               'Overwrite operation %s config under scope_regex %s with %s.',
-              existing_config.operation,
+              common_ops,
               regex,
               config,
           )
-        else:
-          op_config = existing_config
-        configs.append(op_config)
-      if is_new_op:
-        configs.append(config)
-      self._scope_configs[regex] = configs
+          existing_config.operations -= common_ops
+        if existing_config.operations:
+          filtered_configs.append(existing_config)
+    filtered_configs.append(config)
+    self._scope_configs[regex] = filtered_configs
 
   def get_quantization_configs(
       self,
@@ -182,10 +239,7 @@ class RecipeManager:
     for scope_regex, recipes in self._scope_configs.items():
       if re.search(scope_regex, scope_name):
         for recipe in recipes:
-          if (
-              recipe.operation != _TFLOpName.ALL_SUPPORTED
-              and recipe.operation != target_op_name
-          ):
+          if recipe.operations and target_op_name not in recipe.operations:
             continue
           selected_recipe = recipe
           if selected_recipe.algorithm_key != AlgorithmName.NO_QUANTIZE:
@@ -207,25 +261,11 @@ class RecipeManager:
     Returns:
       A list of quantization configs in the recipe.
     """
-    recipe = []
-    for _, op_recipes in self._scope_configs.items():
-      for op_recipe in op_recipes:
-        recipe_dict = dataclasses.asdict(
-            op_recipe,
-            dict_factory=lambda x: {  # pylint: disable=g-long-lambda
-                k: (
-                    dict(v)  # pylint: disable=g-long-ternary
-                    if isinstance(v, Mapping) and not isinstance(v, dict)
-                    else v
-                )
-                for (k, v) in x
-                # Skip None and empty dict values.
-                if v is not None
-                and not (isinstance(v, (dict, Mapping)) and not v)
-            },
-        )
-        recipe.append(recipe_dict)
-    return recipe
+    recipes_as_dicts = []
+    for recipes in self._scope_configs.values():
+      for recipe in recipes:
+        recipes_as_dicts.append(recipe.__dict__)
+    return recipes_as_dicts
 
   def load_quantization_recipe(
       self, quantization_recipe: qtyping.ModelQuantizationRecipe
@@ -236,15 +276,24 @@ class RecipeManager:
       quantization_recipe: A configuration dictionary which is generated by
         get_full_config.
     """
-    self._scope_configs = collections.OrderedDict()
+    self._scope_configs.clear()
     for config in quantization_recipe:
+      # TODO: b/495763732 - Clean this up once "regex" and "operation" are no
+      # longer used.
+      if (regex := config.get('op_scope_regex')) is None:
+        regex = config['regex']
+      if (operations := config.get('operations')) is None:
+        operations = [config['operation']]
+      op_config = None
+      if (
+          algorithm_key := config['algorithm_key']
+      ) != AlgorithmName.NO_QUANTIZE:
+        op_config = _OpQuantizationConfig.from_dict(config['op_config'])
       self.add_quantization_config(
-          config['regex'],
-          config['operation'],
-          _OpQuantizationConfig.from_dict(config['op_config'])
-          if config['algorithm_key'] != AlgorithmName.NO_QUANTIZE
-          else None,
-          config['algorithm_key'],
+          regex,
+          operations,
+          op_config,
+          algorithm_key,
       )
 
   def need_calibration(self) -> bool:
@@ -264,7 +313,7 @@ class RecipeManager:
   def add_dynamic_config(
       self,
       regex: str,
-      operation_name: _TFLOpName,
+      operation_name: list[_TFLOpName] | _TFLOpName,
       num_bits: int,
       granularity: qtyping.QuantGranularity = qtyping.QuantGranularity.CHANNELWISE,
       algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
@@ -282,7 +331,8 @@ class RecipeManager:
 
     Args:
       regex: Regular expression for layer name matching.
-      operation_name: Target TFLite operation.
+      operation_name: List of, or single, target TFL operation types. Use an
+        empty list or `'*'` for any supported TFLite operation.
       num_bits: Number of bits for quantization.
       granularity: Granularity of quantization.
       algorithm_key: Algorithm key to be applied.
@@ -307,7 +357,7 @@ class RecipeManager:
   def add_weight_only_config(
       self,
       regex: str,
-      operation_name: _TFLOpName,
+      operation_name: list[_TFLOpName] | _TFLOpName,
       num_bits: int,
       granularity: qtyping.QuantGranularity = qtyping.QuantGranularity.CHANNELWISE,
       algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
@@ -329,7 +379,8 @@ class RecipeManager:
 
     Args:
       regex: Regular expression for layer name matching.
-      operation_name: Target TFLite operation.
+      operation_name: List of, or single, target TFL operation types. Use an
+        empty list or `'*'` for any supported TFLite operation.
       num_bits: Number of bits for quantization.
       granularity: Granularity of quantization.
       algorithm_key: Algorithm key to be applied.
@@ -361,7 +412,7 @@ class RecipeManager:
   def add_static_config(
       self,
       regex: str,
-      operation_name: _TFLOpName,
+      operation_name: list[_TFLOpName] | _TFLOpName,
       activation_num_bits: int,
       weight_num_bits: int,
       weight_granularity: qtyping.QuantGranularity = qtyping.QuantGranularity.CHANNELWISE,
@@ -381,7 +432,8 @@ class RecipeManager:
 
     Args:
       regex: Regular expression for layer name matching.
-      operation_name: Target TFLite operation.
+      operation_name: List of, or single, target TFL operation types. Use an
+        empty list or `'*'` for any supported TFLite operation.
       activation_num_bits: Number of bits for activation quantization.
       weight_num_bits: Number of bits for weight quantization.
       weight_granularity: Granularity of weight quantization.

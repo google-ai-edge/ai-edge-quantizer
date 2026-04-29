@@ -182,8 +182,8 @@ def dynamic_legacy_wi8_afp32():
   """
   return [
       dict({
-          'regex': '.*',
-          'operation': '*',
+          'op_scope_regex': '.*',
+          'operations': ['*'],
           'algorithm_key': 'min_max_uniform_quantize',
           'op_config': {
               'weight_tensor_config': {
