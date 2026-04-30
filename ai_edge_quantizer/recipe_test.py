@@ -24,7 +24,6 @@ from ai_edge_quantizer import recipe
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 
-
 _TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('')
 
 
@@ -111,37 +110,37 @@ class RecipeTest(parameterized.TestCase):
   @parameterized.named_parameters(
       dict(
           testcase_name='dynamic_wi8_afp32',
-          recipe_json_path='recipes/dynamic_wi8_afp32_recipe.json',
+          recipe_name='dynamic_wi8_afp32',
           recipe_func=recipe.dynamic_wi8_afp32,
       ),
       dict(
           testcase_name='weight_only_wi8_afp32',
-          recipe_json_path='recipes/default_af32w8float_recipe.json',
+          recipe_name='default_af32w8float',
           recipe_func=recipe.weight_only_wi8_afp32,
       ),
       dict(
           testcase_name='weight_only_wi4_afp32',
-          recipe_json_path='recipes/default_af32w4float_recipe.json',
+          recipe_name='default_af32w4float',
           recipe_func=recipe.weight_only_wi4_afp32,
       ),
       dict(
           testcase_name='dynamic_legacy_wi8_afp32',
-          recipe_json_path='recipes/dynamic_legacy_wi8_afp32_recipe.json',
+          recipe_name='dynamic_legacy_wi8_afp32',
           recipe_func=recipe.dynamic_legacy_wi8_afp32,
       ),
       dict(
           testcase_name='a8w8',
-          recipe_json_path='recipes/default_a8w8_recipe.json',
+          recipe_name='default_a8w8',
           recipe_func=recipe.static_wi8_ai8,
       ),
       dict(
           testcase_name='a16w8',
-          recipe_json_path='recipes/default_a16w8_recipe.json',
+          recipe_name='default_a16w8',
           recipe_func=recipe.static_wi8_ai16,
       ),
   )
   @unittest.skip('skipping due to b/438971945')
-  def test_recipe_func_and_json_matches(self, recipe_json_path, recipe_func):
+  def test_recipe_func_and_json_matches(self, recipe_name, recipe_func):
     # Quantize with recipe from function in recipe module.
     quant_result_from_func = self._quantize_with_recipe_func(
         recipe_func, self._test_model_path
@@ -149,10 +148,7 @@ class RecipeTest(parameterized.TestCase):
 
     # Quantize with recipe from json file.
     qt_json = quantizer.Quantizer(self._test_model_path)
-    json_recipe_path = str(
-        pathlib.Path(_TEST_DATA_PREFIX_PATH) / recipe_json_path
-    )
-    qt_json.load_quantization_recipe(json_recipe_path)
+    qt_json.load_quantization_recipe(recipe_name)
     if qt_json.need_calibration:
       calibration_data = tfl_interpreter_utils.create_random_normal_input_data(
           qt_json._float_model_buffer,

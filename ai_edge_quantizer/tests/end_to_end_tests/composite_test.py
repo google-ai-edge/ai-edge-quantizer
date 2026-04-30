@@ -15,14 +15,10 @@
 
 """E2E tests for the quantizer for model with add."""
 
-import json
-
 from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
 
-import os
-import io
 from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
@@ -84,17 +80,13 @@ class CompositeTest(parameterized.TestCase):
     )
 
   @parameterized.parameters(
-      '../../recipes/default_a8w8_recipe.json',
-      '../../recipes/default_a16w8_recipe.json',
+      'default_a8w8',
+      'default_a16w8',
   )
-  def test_composite_with_decomposition(self, recipe_path):
+  def test_composite_with_decomposition(self, recipe_name):
     model = test_utils.get_path_to_datafile('../models/simple_composite.tflite')
     qt = quantizer.Quantizer(model)
-
-    recipe_path = test_utils.get_path_to_datafile(recipe_path)
-    with open(recipe_path, 'r') as f:
-      recipe_json = json.load(f)
-    qt.load_quantization_recipe(recipe_json)
+    qt.load_quantization_recipe(recipe_name)
 
     f_model = tfl_flatbuffer_utils.read_model(model)
     self.assertTrue(qt.need_calibration)
@@ -114,17 +106,13 @@ class CompositeTest(parameterized.TestCase):
     self.assertLess(output_mse, self.output_tolerance)
 
   @parameterized.parameters(
-      '../../recipes/default_a8w8_recipe.json',
-      '../../recipes/default_a16w8_recipe.json',
+      'default_a8w8',
+      'default_a16w8',
   )
-  def test_composite_with_kernel(self, recipe_path):
+  def test_composite_with_kernel(self, recipe_name):
     model = test_utils.get_path_to_datafile('../models/sdpa_composite.tflite')
     qt = quantizer.Quantizer(model)
-
-    recipe_path = test_utils.get_path_to_datafile(recipe_path)
-    with open(recipe_path, 'r') as f:
-      recipe_json = json.load(f)
-    qt.load_quantization_recipe(recipe_json)
+    qt.load_quantization_recipe(recipe_name)
     self.assertTrue(qt.need_calibration)
 
     f_model = tfl_flatbuffer_utils.read_model(model)

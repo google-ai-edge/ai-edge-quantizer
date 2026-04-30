@@ -17,7 +17,6 @@
 
 from collections.abc import Mapping
 import copy
-import json
 import pathlib
 import struct
 from typing import Any, TypeVar
@@ -43,66 +42,6 @@ T = TypeVar('T')
 
 # TODO: b/495756579 - Fix a mis-named function in the generated schema.
 schema.VDataCreator = schema.VdataCreator
-
-
-def resolve_litertlm_recipes(
-    recipe_mapping_path: str,
-) -> dict[str, qtyping.ModelQuantizationRecipe]:
-  """Reads a JSON file containing quant recipes or paths thereto.
-
-  The JSON file contains a mapping of strings, corresponding to a `model_type`
-  or `'default'`,
-  to either:
-  * A `list[dict[str, Any]]` corresponding to a quantization recipe for the
-    `model_type`,
-  * A `str` containing the absolute path to a JSON file containing the
-    quantization recipe for the `model_type`,
-  * A `str` containing the  path, relative to the current working directory, to
-    a JSON file containing the quantization recipe for the `model_type`,
-  * A `str` containing the  path, relative to the directory containing
-    `recipe_mapping_path`, to a JSON file containing the quantization recipe for
-    the `model_type`.
-
-  Args:
-    recipe_mapping_path: The path to a JSON file containing the per-`model_type`
-      recipe mapping.
-
-  Returns:
-    A `dict[str, qtyping.ModelQuantizationRecipe]` mapping `model_type`
-    or `'default'` to a quantization recipe.
-  """
-  # Load the per model_type dictionary of recipes.
-  recipe_mapping_path = pathlib.Path(recipe_mapping_path)
-  with open(recipe_mapping_path, 'r') as f:
-    recipe_for_model_type: dict[str, Any] = json.load(f)
-
-  # Loop over the map of model_type to recipe.
-  for model_type, recipe_or_path in recipe_for_model_type.items():
-    if isinstance(recipe_or_path, list) and all(
-        isinstance(val, dict) for val in recipe_or_path
-    ):
-      # If this entry is a quantization recipe, then we're good.
-      continue
-
-    elif isinstance(recipe_or_path, str):
-      # Otherwise, if this entry is string, assume it's a file path.
-      path = pathlib.Path(recipe_or_path)
-      if not os.path.exists(  # Assume this is an absolute or relative path.
-          path
-      ) and not os.path.exists(  # Assume it is relative to the mapping file.
-          path := recipe_mapping_path.parent / path
-      ):
-        raise ValueError(
-            'Unable to load quantization recipe for model_type'
-            f" '{model_type}' from {recipe_or_path}."
-        )
-      with open(path, 'r') as f:
-        recipe_for_model_type[model_type] = json.load(f)
-    else:
-      raise ValueError(
-          f"Unexpected recipe for model_type '{model_type}': {recipe_or_path}."
-      )
-  return recipe_for_model_type
 
 
 def _bytes_to_str(val: bytes | T) -> str | T:

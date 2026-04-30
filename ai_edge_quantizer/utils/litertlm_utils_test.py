@@ -15,17 +15,12 @@
 
 """Unit tests for reading/parsing LiteRT-LM files."""
 
-import json
 import os
-import pathlib
 import random
 
 from absl.testing import absltest
 
-import os
-import io
 from ai_edge_litert.internal import litertlm_core
-from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.utils import litertlm_utils
 from ai_edge_quantizer.utils import test_utils
 
@@ -90,46 +85,6 @@ class LitertlmUtilsTest(absltest.TestCase):
             litertlm_file.get_section_buffer(section_id),
             modified_litertlm_file.get_section_buffer(section_id),
         )
-
-  def test_resolve_litertlm_quant_recipe_files_correctly(self):
-    # Load a single quantization recipe.
-    recipe_file = os.path.join(
-        test_utils.get_path_to_datafile("../recipes"),
-        "dynamic_wi8_afp32_recipe.json",
-    )
-    with open(recipe_file, "r") as f:
-      orig_recipe: qtyping.ModelQuantizationRecipe = json.load(f)
-
-    # Create a litertlm recipe consisting of:
-    #  * "raw": The recipe itself,
-    #  * "basename": The name of the recipe file in the same directory,
-    #  * "path": The full path of the recipe.
-    orig_litertlm_recipe = {
-        "raw": orig_recipe,
-        "basename": pathlib.Path(recipe_file).name,
-        "path": recipe_file,
-    }
-    output_dir = self.create_tempdir()
-    os.mkdir(pathlib.Path(output_dir) / "recipes")
-    with open(
-        pathlib.Path(output_dir) / "recipes/dynamic_wi8_afp32_recipe.json",
-        "w",
-    ) as f:
-      json.dump(orig_recipe, f)
-    litertlm_recipe_file = str(
-        pathlib.Path(output_dir) / "recipes/generated_litertlm_recipe.json"
-    )
-    with open(litertlm_recipe_file, "w") as f:
-      json.dump(orig_litertlm_recipe, f)
-
-    # Check that the litertlm default recipe resolves to the corresponding.
-    self.assertIsNotNone(
-        litertlm_recipe := litertlm_utils.resolve_litertlm_recipes(
-            litertlm_recipe_file
-        )
-    )
-    for key in orig_litertlm_recipe:
-      self.assertCountEqual(orig_recipe, litertlm_recipe[key])
 
 
 if __name__ == "__main__":

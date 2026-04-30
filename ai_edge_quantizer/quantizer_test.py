@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 
-import json
 import pathlib
 
 from absl.testing import absltest
@@ -26,6 +25,7 @@ from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
+from ai_edge_quantizer.utils import recipe_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 
@@ -88,18 +88,13 @@ class QuantizerTest(parameterized.TestCase):
         pathlib.Path(TEST_DATA_PREFIX_PATH)
         / 'tests/models/conv_fc_mnist.tflite'
     )
-    self._test_recipe_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH)
-        / 'recipes/default_af32w8float_recipe.json',
-    )
-    with open(self._test_recipe_path) as json_file:
-      self._test_recipe = json.load(json_file)
+    self._test_recipe = recipe_utils.resolve_recipe('default_af32w8float')
     self._quantizer = quantizer.Quantizer(
-        self._test_model_path, self._test_recipe_path
+        self._test_model_path, self._test_recipe
     )
 
   def test_update_quantization_recipe_succeeds(self):
-    self._quantizer.load_quantization_recipe(self._test_recipe_path)
+    self._quantizer.load_quantization_recipe(self._test_recipe)
     scope_regex = '.*/Dense/.*'
     new_op_config = qtyping.OpQuantizationConfig(
         weight_tensor_config=_TensorQuantConfig(num_bits=4, symmetric=True),
@@ -122,7 +117,7 @@ class QuantizerTest(parameterized.TestCase):
     )
 
   def test_add_dynamic_config_succeeds(self):
-    self._quantizer.load_quantization_recipe(self._test_recipe_path)
+    self._quantizer.load_quantization_recipe(self._test_recipe)
     scope_regex = '.*/Dense/.*'
     self._quantizer.add_dynamic_config(
         regex=scope_regex,
@@ -144,7 +139,7 @@ class QuantizerTest(parameterized.TestCase):
     )
 
   def test_add_weight_only_config_succeeds(self):
-    self._quantizer.load_quantization_recipe(self._test_recipe_path)
+    self._quantizer.load_quantization_recipe(self._test_recipe)
     scope_regex = '.*/Dense/.*'
     self._quantizer.add_weight_only_config(
         regex=scope_regex,
@@ -166,7 +161,7 @@ class QuantizerTest(parameterized.TestCase):
     )
 
   def test_add_static_config_succeeds(self):
-    self._quantizer.load_quantization_recipe(self._test_recipe_path)
+    self._quantizer.load_quantization_recipe(self._test_recipe)
     scope_regex = '.*/Dense/.*'
     self._quantizer.add_static_config(
         regex=scope_regex,
@@ -193,26 +188,20 @@ class QuantizerTest(parameterized.TestCase):
 
   def test_load_quantization_recipe_succeeds(self):
     qt = quantizer.Quantizer(self._test_model_path, None)
-    qt.load_quantization_recipe(self._test_recipe_path)
+    qt.load_quantization_recipe(self._test_recipe)
     self.assertEqual(qt.get_quantization_recipe(), self._test_recipe)
 
     # Load a different recipe.
-    new_recipe_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH)
-        / 'recipes/dynamic_wi8_afp32_recipe.json',
-    )
-    with open(new_recipe_path) as json_file:
-      new_recipe = json.load(json_file)
-    qt.load_quantization_recipe(new_recipe_path)
+    new_recipe = recipe_utils.resolve_recipe('dynamic_wi8_afp32')
+    qt.load_quantization_recipe('dynamic_wi8_afp32')
     self.assertEqual(qt.get_quantization_recipe(), new_recipe)
 
   @parameterized.parameters(
-      'recipes/default_a8w8_recipe.json',
-      'recipes/default_a16w8_recipe.json',
+      'default_a8w8',
+      'default_a16w8',
   )
-  def test_calibrate_required_recipe_succeeds(self, recipe_path):
-    recipe_path = str(pathlib.Path(TEST_DATA_PREFIX_PATH) / recipe_path)
-    self._quantizer.load_quantization_recipe(recipe_path)
+  def test_calibrate_required_recipe_succeeds(self, recipe_name):
+    self._quantizer.load_quantization_recipe(recipe_name)
     self.assertTrue(self._quantizer.need_calibration)
     # Calibrate with empty state.
     calib_data = _get_calibration_data()
@@ -220,12 +209,11 @@ class QuantizerTest(parameterized.TestCase):
     self.assertLen(calibration_result, 7)
 
   @parameterized.parameters(
-      'recipes/default_a8w8_recipe.json',
-      'recipes/default_a16w8_recipe.json',
+      'default_a8w8',
+      'default_a16w8',
   )
-  def test_reloaded_calibration_succeeds(self, recipe_path):
-    recipe_path = str(pathlib.Path(TEST_DATA_PREFIX_PATH) / recipe_path)
-    self._quantizer.load_quantization_recipe(recipe_path)
+  def test_reloaded_calibration_succeeds(self, recipe_name):
+    self._quantizer.load_quantization_recipe(recipe_name)
     calib_data = _get_calibration_data()
     calibration_result = self._quantizer.calibrate(calib_data)
     # Load and calibrate again.
@@ -239,35 +227,32 @@ class QuantizerTest(parameterized.TestCase):
     )
 
   @parameterized.parameters(
-      'recipes/dynamic_legacy_wi8_afp32_recipe.json',
-      'recipes/dynamic_wi8_afp32_recipe.json',
-      'recipes/default_af32w8float_recipe.json',
+      'dynamic_legacy_wi8_afp32',
+      'dynamic_wi8_afp32',
+      'default_af32w8float',
   )
-  def test_calibrate_nonrequired_recipe_succeeds(self, recipe_path):
-    recipe_path = str(pathlib.Path(TEST_DATA_PREFIX_PATH) / recipe_path)
-    self._quantizer.load_quantization_recipe(recipe_path)
+  def test_calibrate_nonrequired_recipe_succeeds(self, recipe_name):
+    self._quantizer.load_quantization_recipe(recipe_name)
     self.assertFalse(self._quantizer.need_calibration)
     # Empty calibration result if no calibration is required.
     calibration_result = self._quantizer.calibrate(_get_calibration_data())
     self.assertEmpty(calibration_result)
 
   def test_quantize_no_calibration_succeeds(self):
-    self._quantizer.load_quantization_recipe(self._test_recipe_path)
+    self._quantizer.load_quantization_recipe(self._test_recipe)
     self.assertIsNone(self._quantizer._result.quantized_model)
     quant_result = self._quantizer.quantize()
     self.assertEqual(quant_result.recipe, self._test_recipe)
     self.assertIsNotNone(quant_result.quantized_model)
 
   @parameterized.parameters(
-      'recipes/default_a8w8_recipe.json',
-      'recipes/default_a16w8_recipe.json',
+      'default_a8w8',
+      'default_a16w8',
   )
-  def test_quantize_calibration_needed_succeeds(self, recipe_path):
-    recipe_path = str(pathlib.Path(TEST_DATA_PREFIX_PATH) / recipe_path)
-    with open(recipe_path) as json_file:
-      recipe = json.load(json_file)
+  def test_quantize_calibration_needed_succeeds(self, recipe_name):
+    recipe = recipe_utils.resolve_recipe(recipe_name)
 
-    self._quantizer.load_quantization_recipe(recipe_path)
+    self._quantizer.load_quantization_recipe(recipe_name)
     self.assertTrue(self._quantizer.need_calibration)
     calibration_result = self._quantizer.calibrate(_get_calibration_data())
 
@@ -277,13 +262,11 @@ class QuantizerTest(parameterized.TestCase):
     self.assertIsNotNone(quant_result.quantized_model)
 
   @parameterized.parameters(
-      'recipes/default_a8w8_recipe.json',
-      'recipes/default_a16w8_recipe.json',
+      'default_a8w8',
+      'default_a16w8',
   )
-  def test_quantize_calibration_needed_raise_error(self, recipe_path):
-    recipe_path = str(pathlib.Path(TEST_DATA_PREFIX_PATH) / recipe_path)
-
-    self._quantizer.load_quantization_recipe(recipe_path)
+  def test_quantize_calibration_needed_raise_error(self, recipe_name):
+    self._quantizer.load_quantization_recipe(recipe_name)
     self.assertTrue(self._quantizer.need_calibration)
     error_message = (
         'Model quantization statistics values (QSVs) are required for the input'
@@ -304,32 +287,26 @@ class QuantizerTest(parameterized.TestCase):
 
   def test_save_succeeds(self):
     model_name = 'test_model'
-    self._quantizer.load_quantization_recipe(self._test_recipe_path)
+    self._quantizer.load_quantization_recipe(self._test_recipe)
     result = self._quantizer.quantize()
     result.save(self._tmp_save_path, model_name)
     saved_recipe_path = str(
         pathlib.Path(self._tmp_save_path) / (model_name + '_recipe.json')
     )
-    with open(saved_recipe_path) as json_file:
-      saved_recipe = json.load(json_file)
+    saved_recipe = recipe_utils.resolve_recipe(saved_recipe_path)
     self.assertEqual(saved_recipe, self._test_recipe)
 
   def test_saved_legacy_recipe_lacks_block_size(self):
     model_name = 'test_model'
-    legacy_recipe_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH)
-        / 'recipes/dynamic_legacy_wi8_afp32_recipe.json',
-    )
-    self._quantizer.load_quantization_recipe(legacy_recipe_path)
+    legacy_recipe_name = 'dynamic_legacy_wi8_afp32'
+    self._quantizer.load_quantization_recipe(legacy_recipe_name)
     result = self._quantizer.quantize()
     result.save(self._tmp_save_path, model_name)
     saved_recipe_path = str(
         pathlib.Path(self._tmp_save_path) / (model_name + '_recipe.json')
     )
-    with open(saved_recipe_path) as json_file:
-      saved_recipe = json.load(json_file)
-    with open(legacy_recipe_path) as json_file:
-      legacy_recipe = json.load(json_file)
+    saved_recipe = recipe_utils.resolve_recipe(saved_recipe_path)
+    legacy_recipe = recipe_utils.resolve_recipe(legacy_recipe_name)
 
     self.assertNotEqual(saved_recipe, legacy_recipe)
 
@@ -361,7 +338,7 @@ class QuantizerTest(parameterized.TestCase):
 
   def test_export_model_succeeds(self):
     model_name = 'exported_model'
-    self._quantizer.load_quantization_recipe(self._test_recipe_path)
+    self._quantizer.load_quantization_recipe(self._test_recipe)
     result = self._quantizer.quantize()
 
     exported_model_path = str(
@@ -492,14 +469,9 @@ class QuantizerBytearrayInputs(absltest.TestCase):
         pathlib.Path(TEST_DATA_PREFIX_PATH)
         / 'tests/models/conv_fc_mnist.tflite'
     )
-    self._test_recipe_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH)
-        / 'recipes/default_af32w8float_recipe.json',
-    )
     with open(self._test_model_path, 'rb') as f:
       model_content = bytearray(f.read())
-    with open(self._test_recipe_path, 'r') as f:
-      self._test_recipe = json.load(f)
+    self._test_recipe = recipe_utils.resolve_recipe('default_af32w8float')
     self._quantizer = quantizer.Quantizer(model_content, self._test_recipe)
 
   def test_quantize_compare_succeeds(self):
@@ -534,12 +506,7 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
         pathlib.Path(TEST_DATA_PREFIX_PATH)
         / 'tests/models/two_signatures.tflite'
     )
-    self._test_recipe_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH)
-        / 'recipes/default_a8w8_recipe.json',
-    )
-    with open(self._test_recipe_path) as json_file:
-      self._test_recipe = json.load(json_file)
+    self._test_recipe = recipe_utils.resolve_recipe('default_a8w8')
     self._calibration_result = {
         'add_x:0': {'min': -2.0, 'max': 2.0},
         'PartitionedCall:0': {'min': -8.0, 'max': 12.0},
@@ -547,7 +514,7 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
         'PartitionedCall_1:0': {'min': -20.0, 'max': 20.0},
     }
     self._quantizer = quantizer.Quantizer(
-        self._test_model_path, self._test_recipe_path
+        self._test_model_path, self._test_recipe
     )
 
   @parameterized.named_parameters(
@@ -692,15 +659,10 @@ class QuantizerToyGemma2Test(parameterized.TestCase):
         }],
     }
 
-    self._test_recipe_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH)
-        / 'recipes/default_a8w8_recipe.json',
-    )
-    with open(self._test_recipe_path) as json_file:
-      self._test_recipe = json.load(json_file)
+    self._test_recipe = recipe_utils.resolve_recipe('default_a8w8')
 
     self._quantizer = quantizer.Quantizer(
-        self._test_model_path, self._test_recipe_path
+        self._test_model_path, self._test_recipe
     )
 
     self._quantizer.update_quantization_recipe(
@@ -746,15 +708,10 @@ class QuantizerFullyConnectedTest(parameterized.TestCase):
         pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models/single_fc.tflite',
     )
 
-    self._test_recipe_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH)
-        / 'recipes/default_a8w8_recipe.json',
-    )
-    with open(self._test_recipe_path) as json_file:
-      self._test_recipe = json.load(json_file)
+    self._test_recipe = recipe_utils.resolve_recipe('default_a8w8')
 
     self._quantizer = quantizer.Quantizer(
-        self._test_model_path, self._test_recipe_path
+        self._test_model_path, self._test_recipe
     )
 
     self._quantizer.update_quantization_recipe(

@@ -34,6 +34,7 @@ from ai_edge_quantizer import params_generator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import recipe_manager
 from ai_edge_quantizer.utils import progress_utils
+from ai_edge_quantizer.utils import recipe_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
@@ -61,7 +62,7 @@ class QuantizationResult:
   """
 
   recipe: _QuantRecipe
-  quantized_model: Optional[Union[bytes|bytearray]]
+  quantized_model: bytes | bytearray | None
 
   def save(
       self, save_folder: Path, model_name: str, overwrite: bool = False
@@ -80,9 +81,7 @@ class QuantizationResult:
     if not os.path.exists(save_folder):
       os.makedirs(save_folder)
 
-    model_save_path = str(
-        pathlib.Path(save_folder) / f'{model_name}.tflite'
-    )
+    model_save_path = str(pathlib.Path(save_folder) / f'{model_name}.tflite')
     self.export_model(model_save_path, overwrite)
 
     recipe_save_path = str(
@@ -197,8 +196,7 @@ class Quantizer:
       recipe: Quantization recipe in json format.
     """
     if isinstance(recipe, (str, pathlib.Path)):
-      with open(recipe) as json_file:
-        recipe = json.load(json_file)
+      recipe = recipe_utils.resolve_recipe(recipe)
     self._recipe_manager.load_quantization_recipe(recipe)
 
   def load_config_policy(self, filename: Path) -> None:

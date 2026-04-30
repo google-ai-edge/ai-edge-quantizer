@@ -26,6 +26,7 @@ import io
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import litertlm_utils
+from ai_edge_quantizer.utils import recipe_utils
 
 
 def _verify_output_path(
@@ -75,8 +76,10 @@ def quantize_litertlm(
   recipe_basename = pathlib.Path(recipe_path).stem
 
   # Load the quantization recipe.
-  litertlm_recipe = litertlm_utils.resolve_litertlm_recipes(recipe_path)
-  default_recipe = litertlm_recipe.get("default")
+  litertlm_recipe_map = recipe_utils.resolve_litertlm_recipe_mapping(
+      recipe_path
+  )
+  default_recipe = litertlm_recipe_map.get("default")
 
   # Load the `.litertlm` file.
   litertlm_file = litertlm_utils.LiteRTLMFile(litertlm_path)
@@ -105,7 +108,7 @@ def quantize_litertlm(
 
     # Get the recipe for this model type, skip if none is given.
     if (
-        model_recipe := litertlm_recipe.get(model_type, default_recipe)
+        model_recipe := litertlm_recipe_map.get(model_type, default_recipe)
     ) is None:
       logging.info(
           "No quantization recipe specified for model_type '%s', skipping.",
