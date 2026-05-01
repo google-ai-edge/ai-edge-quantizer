@@ -33,6 +33,7 @@ from ai_edge_quantizer.utils import tfl_interpreter_utils
 
 _ComputePrecision = qtyping.ComputePrecision
 _AlgorithmName = recipe_manager.AlgorithmName
+_CalibrationMode = calibrator.CalibrationMode
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile("")
 _TENSOR_QUANT_CONFIG = qtyping.TensorQuantizationConfig
@@ -82,15 +83,21 @@ class CalibratorTest(absltest.TestCase):
   def setUp(self):
     super().setUp()
     np.random.seed(0)
-    self._test_model_path = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models/single_fc.tflite"
-    )
-    self._calibrator = calibrator.Calibrator(self._test_model_path)
     self._recipe_manager = recipe_manager.RecipeManager()
     dataset_gen = _representative_dataset_gen()
     self._representative_dataset = _get_calibration_data(dataset_gen)
 
+  def _single_fc_model_init(self) -> None:
+    self._test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models/single_fc.tflite"
+    )
+    self._calibrator = calibrator.Calibrator(
+        self._test_model_path,
+        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+    )
+
   def test_calibrator_state_manipulation(self):
+    self._single_fc_model_init()
     # load/get qsvs
     sample_qsv = {"serving_default_input_1:0": {"min": -10, "max": 8}}
     self._calibrator.load_model_qsvs(sample_qsv)
@@ -107,6 +114,7 @@ class CalibratorTest(absltest.TestCase):
     self.assertEmpty(model_tensor_qsvs)
 
   def test_calibrate_single_fc_success(self):
+    self._single_fc_model_init()
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
     self._calibrator.calibrate(
         self._representative_dataset, self._recipe_manager
@@ -128,6 +136,7 @@ class CalibratorTest(absltest.TestCase):
     self.assertSequenceAlmostEqual(output_qsv["min"].flatten(), [0])
 
   def test_calibration_cache_is_empty_when_off(self):
+    self._single_fc_model_init()
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
     self.assertEmpty(self._calibrator.get_cached_output())
     self._calibrator.calibrate(
@@ -136,6 +145,7 @@ class CalibratorTest(absltest.TestCase):
     self.assertEmpty(self._calibrator.get_cached_output())
 
   def test_calibration_cache_when_on(self):
+    self._single_fc_model_init()
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
     self.assertEmpty(self._calibrator.get_cached_output())
     self._calibrator.calibrate(
@@ -144,6 +154,7 @@ class CalibratorTest(absltest.TestCase):
     self.assertLen(self._calibrator.get_cached_output(), 10)
 
   def test_calibration_cache_is_empty_after_reset(self):
+    self._single_fc_model_init()
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
     self._calibrator.calibrate(
         self._representative_dataset, self._recipe_manager, cache_output=True
@@ -181,6 +192,7 @@ class CalibratorTest(absltest.TestCase):
     self.assertNotEmpty(test_calibrator.get_model_qsvs())
 
   def test_save_and_load_calibration_result(self):
+    self._single_fc_model_init()
     # Setup some QSV
     sample_qsv = {
         "serving_default_input_1:0": {
@@ -210,6 +222,7 @@ class CalibratorTest(absltest.TestCase):
     self.assertSequenceAlmostEqual(input_qsv["max"], [8.0])
 
   def test_calibrate_updates_num_samples_calibrated(self):
+    self._single_fc_model_init()
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
     # The representative dataset has 10 samples.
     self._calibrator.calibrate(
@@ -219,6 +232,7 @@ class CalibratorTest(absltest.TestCase):
     self.assertEqual(self._calibrator._metadata["num_samples_calibrated"], 10)
 
   def test_save_and_load_calibration_result_with_metadata(self):
+    self._single_fc_model_init()
     # Setup some QSV
     sample_qsv = {
         "serving_default_input_1:0": {
@@ -247,6 +261,7 @@ class CalibratorTest(absltest.TestCase):
     self.assertEqual(self._calibrator._metadata["num_samples_calibrated"], 123)
 
   def test_load_legacy_calibration_result(self):
+    self._single_fc_model_init()
     # Create a legacy format file (just the dict)
     legacy_data = {
         "serving_default_input_1:0": {
@@ -265,6 +280,7 @@ class CalibratorTest(absltest.TestCase):
     self.assertEqual(self._calibrator._metadata["num_samples_calibrated"], 0)
 
   def test_preserve_metadata_on_save(self):
+    self._single_fc_model_init()
     # Create a file with custom metadata
     initial_data = {
         "model_qsvs": {
@@ -304,6 +320,7 @@ class CalibratorTest(absltest.TestCase):
     self.assertEqual(saved_data["metadata"]["custom_field"], "custom_value")
 
   def test_save_with_extra_metadata(self):
+    self._single_fc_model_init()
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
     self._calibrator.calibrate(
         self._representative_dataset, self._recipe_manager
@@ -322,6 +339,7 @@ class CalibratorTest(absltest.TestCase):
     self.assertEqual(saved_data["metadata"]["version"], "1.0")
 
   def test_reset_model_qsvs_resets_counter(self):
+    self._single_fc_model_init()
     self._calibrator._metadata["num_samples_calibrated"] = 100
     self._calibrator.reset_model_qsvs()
     self.assertEqual(self._calibrator._metadata["num_samples_calibrated"], 0)
@@ -401,14 +419,14 @@ class CalibrationInterpreterTest(absltest.TestCase):
   def test_initialization(self):
     interpreter = calibrator.CalibrationInterpreter(
         self._test_model_path,
-        mode=calibrator.CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
     )
     self.assertIsInstance(interpreter, calibrator.CalibrationInterpreter)
 
   def test_calibration_mode(self):
     interpreter = calibrator.CalibrationInterpreter(
         self._test_model_path,
-        mode=calibrator.CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
     )
     runner = interpreter.get_signature_runner()
 
@@ -424,25 +442,10 @@ class CalibrationInterpreterTest(absltest.TestCase):
     self.assertIn("serving_default_input_1:0", qsvs)
     self.assertIsNotNone(output)
 
-  def test_inference_mode(self):
-    interpreter = calibrator.CalibrationInterpreter(
-        self._test_model_path, mode=calibrator.CalibrationMode.INFERENCE
-    )
-    runner = interpreter.get_signature_runner()
-
-    input_data = np.random.rand(1, 8).astype(np.float32)
-    output = runner(input_1=input_data)
-
-    with self.assertRaisesRegex(
-        ValueError, "Calibration results are not available in INFERENCE mode."
-    ):
-      interpreter.get_calibration_results()
-    self.assertIsNotNone(output)
-
   def test_save_calibration_result(self):
     interpreter = calibrator.CalibrationInterpreter(
         self._test_model_path,
-        mode=calibrator.CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
     )
     runner = interpreter.get_signature_runner()
     input_data = np.random.rand(1, 8).astype(np.float32)
@@ -459,7 +462,7 @@ class CalibrationInterpreterTest(absltest.TestCase):
   def test_get_signature_list(self):
     interpreter = calibrator.CalibrationInterpreter(
         self._test_model_path,
-        mode=calibrator.CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
     )
     signatures = interpreter.get_signature_list()
     self.assertNotEmpty(signatures)
@@ -468,7 +471,7 @@ class CalibrationInterpreterTest(absltest.TestCase):
   def test_runner_details(self):
     interpreter = calibrator.CalibrationInterpreter(
         self._test_model_path,
-        mode=calibrator.CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
     )
     runner = interpreter.get_signature_runner()
     input_details = runner.get_input_details()
@@ -482,7 +485,7 @@ class CalibrationInterpreterTest(absltest.TestCase):
     # Run calibration interpreter
     interpreter = calibrator.CalibrationInterpreter(
         self._test_model_path,
-        mode=calibrator.CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
     )
     calib_runner = interpreter.get_signature_runner()
     input_data = np.random.rand(1, 8).astype(np.float32)
@@ -499,6 +502,27 @@ class CalibrationInterpreterTest(absltest.TestCase):
     self.assertEqual(calib_output.keys(), original_output.keys())
     for key in calib_output:
       np.testing.assert_array_equal(calib_output[key], original_output[key])
+
+
+class CalibrationInterpreterInferenceModeTest(absltest.TestCase):
+
+  def test_inference_mode_raises_error_on_get_calibration_results(self):
+    test_model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models/single_fc.tflite"
+    )
+    interpreter = calibrator.CalibrationInterpreter(
+        test_model_path, mode=_CalibrationMode.INFERENCE
+    )
+    runner = interpreter.get_signature_runner()
+
+    input_data = np.random.rand(1, 8).astype(np.float32)
+    output = runner(input_1=input_data)
+
+    with self.assertRaisesRegex(
+        ValueError, "Calibration results are not available in INFERENCE mode."
+    ):
+      interpreter.get_calibration_results()
+    self.assertIsNotNone(output)
 
 
 if __name__ == "__main__":
