@@ -400,13 +400,15 @@ class CalibrationInterpreterTest(absltest.TestCase):
 
   def test_initialization(self):
     interpreter = calibrator.CalibrationInterpreter(
-        self._test_model_path, mode=calibrator.CalibrationMode.CALIBRATION
+        self._test_model_path,
+        mode=calibrator.CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
     )
     self.assertIsInstance(interpreter, calibrator.CalibrationInterpreter)
 
   def test_calibration_mode(self):
     interpreter = calibrator.CalibrationInterpreter(
-        self._test_model_path, mode=calibrator.CalibrationMode.CALIBRATION
+        self._test_model_path,
+        mode=calibrator.CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
     )
     runner = interpreter.get_signature_runner()
 
@@ -439,7 +441,8 @@ class CalibrationInterpreterTest(absltest.TestCase):
 
   def test_save_calibration_result(self):
     interpreter = calibrator.CalibrationInterpreter(
-        self._test_model_path, mode=calibrator.CalibrationMode.CALIBRATION
+        self._test_model_path,
+        mode=calibrator.CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
     )
     runner = interpreter.get_signature_runner()
     input_data = np.random.rand(1, 8).astype(np.float32)
@@ -455,7 +458,8 @@ class CalibrationInterpreterTest(absltest.TestCase):
 
   def test_get_signature_list(self):
     interpreter = calibrator.CalibrationInterpreter(
-        self._test_model_path, mode=calibrator.CalibrationMode.CALIBRATION
+        self._test_model_path,
+        mode=calibrator.CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
     )
     signatures = interpreter.get_signature_list()
     self.assertNotEmpty(signatures)
@@ -463,7 +467,8 @@ class CalibrationInterpreterTest(absltest.TestCase):
 
   def test_runner_details(self):
     interpreter = calibrator.CalibrationInterpreter(
-        self._test_model_path, mode=calibrator.CalibrationMode.CALIBRATION
+        self._test_model_path,
+        mode=calibrator.CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
     )
     runner = interpreter.get_signature_runner()
     input_details = runner.get_input_details()
@@ -476,7 +481,8 @@ class CalibrationInterpreterTest(absltest.TestCase):
   def test_output_match_original_interpreter(self):
     # Run calibration interpreter
     interpreter = calibrator.CalibrationInterpreter(
-        self._test_model_path, mode=calibrator.CalibrationMode.CALIBRATION
+        self._test_model_path,
+        mode=calibrator.CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
     )
     calib_runner = interpreter.get_signature_runner()
     input_data = np.random.rand(1, 8).astype(np.float32)

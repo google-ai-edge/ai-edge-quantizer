@@ -21,8 +21,8 @@ import enum
 import json
 from typing import Any, Union
 
-from absl import logging
 import numpy as np
+from typing_extensions import override
 
 import os
 import io
@@ -35,11 +35,15 @@ from ai_edge_quantizer.utils import calibration_utils
 from ai_edge_quantizer.utils import progress_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
+from ai_edge_litert import interpreter as tfl  # pylint: disable=g-direct-tensorflow-import
 
 
 class CalibrationMode(enum.Enum):
-  INFERENCE = 1
-  CALIBRATION = 2
+  INFERENCE = 1  # Inference only mode. No calibration is performed.
+  CALIBRATION_PRESERVE_ALL_TENSORS = 2  # Calibration with XNNPACK enabled that
+  # preserves all intermediate tensors.
+  CALIBRATION = 2  # Keeping this for backward compatibility. Please use
+  # CALIBRATION_PRESERVE_ALL_TENSORS instead of this.
 
 
 _SignatureInput = dict[str, Any]  # input_argument_name -> tensor_value.
@@ -78,7 +82,7 @@ class CalibrationInterpreter:
     """
     self._calibrator = Calibrator(
         model_path,
-        interpreter_preserve_all_tensors=(mode == CalibrationMode.CALIBRATION),
+        mode=mode,
         qsv_update_func=qsv_update_func,
     )
     self._mode = mode
@@ -168,36 +172,80 @@ class CalibrationSignatureRunner:
 
 
 class Calibrator:
-  """Calibrator for TFLite model."""
+  """Base class and factory for TFLite model calibrators.
+
+  This class acts both as a factory for instantiating specific algorithm
+  subclasses (via __new__) and as the shared interface for them.
+
+  Notes on Design Architecture:
+
+    1. Calibrator is not an abstract class because it uses the factory pattern
+    via __new__ to return instances of its subclasses. Making it abstract would
+    cause static type checkers (like pytype) to flag direct instantiations
+    as errors. Instead, we raise NotImplementedError in methods that must be
+    overridden by subclasses (e.g., _create_interpreter, _calibrate_step).
+
+    2. We prohibit direct instantiation of any subclass of Calibrator to enforce
+    the use of the factory pattern implemented in __new__. Meaning no custom
+    wrapper classes are allowed to inherit directly from Calibrator.
+  """
+
+  def __new__(
+      cls,
+      float_tflite: Union[str, bytes],
+      num_threads: int = 16,
+      mode: CalibrationMode = CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+      qsv_update_func: Callable[
+          [qtyping.QSV, qtyping.QSV],
+          qtyping.QSV,
+      ] = calibration_utils.moving_average_update,
+  ) -> "Calibrator":
+    """Creates a new instance of the appropriate calibrator subclass.
+
+    Args:
+      float_tflite: The path to the TFLite model or the model content as bytes.
+      num_threads: The number of threads to use for the TFLite interpreter.
+      mode: The mode of the calibrator. Check the docstring of
+        CalibrationMode for more details.
+      qsv_update_func: The function to update the QSVs across calibration steps.
+
+    Returns:
+      An instance of the appropriate calibrator subclass based on the mode.
+
+    Raises:
+      TypeError: If trying to instantiate a subclass of Calibrator directly.
+    """
+    if cls is not Calibrator:
+      raise TypeError(
+          f"Direct instantiation of {cls.__name__} is not allowed. "
+          "Please use the Calibrator factory class instead."
+      )
+
+    del float_tflite, num_threads, qsv_update_func
+
+    if mode == CalibrationMode.INFERENCE:
+      return super().__new__(_InferenceOnlyCalibrator)
+    elif mode == CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS:
+      return super().__new__(_PreserveAllTensorsCalibrator)
+    else:
+      raise ValueError(f"Unsupported calibration mode: {mode}")
 
   def __init__(
       self,
       float_tflite: Union[str, bytes],
       num_threads: int = 16,
-      interpreter_preserve_all_tensors: bool = True,
+      mode: CalibrationMode = CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
       qsv_update_func: Callable[
           [qtyping.QSV, qtyping.QSV],
           qtyping.QSV,
       ] = calibration_utils.moving_average_update,
   ):
-    """Initializes the Calibrator.
+    """Initializes the Calibrator. Check details in docstring of __new__."""
+    del mode  # Used only in __new__ and passed to __init__ automatically.
 
-    Args:
-      float_tflite: The path to the TFLite model or the model content as bytes.
-      num_threads: The number of threads to use for the TFLite interpreter.
-      interpreter_preserve_all_tensors: Whether to preserve all tensors in the
-        TFLite interpreter. This must be True for calibration.
-      qsv_update_func: The function used to update Quantization Statistics
-        Values (QSVs) across different calibration steps.
-    """
     self._qsv_update_func = qsv_update_func
     self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
-    self._tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
-        float_tflite,
-        use_xnnpack=True,
-        num_threads=num_threads,
-        preserve_all_tensors=interpreter_preserve_all_tensors,
-    )
+    self._tfl_interpreter = self._create_interpreter(float_tflite, num_threads)
     # Tensor name to tensor content.
     self._tensor_content_map: dict[str, Any] = {}
     # QSV of all the tensors in the model.
@@ -207,163 +255,55 @@ class Calibrator:
     # Metadata for the calibration result.
     self._metadata: dict[str, Any] = {"num_samples_calibrated": 0}
 
-  def _get_total_operations(self, calibration_dataset) -> int:
-    """Get the total number of OPs to go through while calibrating the model."""
-    data_sizes = {
-        key: len(list(dataset)) for key, dataset in calibration_dataset.items()
-    }
-    total_ops = 0
-    for key, value in data_sizes.items():
-      subgraph_idx = tfl_interpreter_utils.get_signature_main_subgraph_index(
-          self._tfl_interpreter, key
-      )
-      subgraph_inds = [subgraph_idx]
-      total_operators = 0
-      while subgraph_inds:
-        subgraph_idx = subgraph_inds.pop()
-        subgraph = self._flatbuffer_model.subgraphs[subgraph_idx]
-        subgraph_operators = subgraph.operators
-        if not any(
-            isinstance(op, qtyping.IOOperator) for op in subgraph.operators
-        ):
-          subgraph_operators += (
-              tfl_flatbuffer_utils.get_subgraph_input_output_operators(subgraph)
-          )
-        total_operators += len(subgraph_operators)
-        for op in subgraph_operators:
-          subgraph_inds.extend(
-              tfl_flatbuffer_utils.get_op_side_effect_subgraphs(op)
-          )
-      total_ops += value * total_operators
-    return total_ops
+  def _create_interpreter(
+      self,
+      float_tflite: Union[str, bytes],
+      num_threads: int,
+  ) -> tfl.Interpreter:
+    """Creates the TFLite interpreter."""
+    raise NotImplementedError(
+        "Subclasses must implement _create_interpreter()."
+    )
 
-  # TODO(b/330740605)- Collect multiple QSVs in one run to save compute.
+  def _calibrate_step(
+      self,
+      signature_key: str,
+      data: _SignatureInput,
+      model_recipe_manager: recipe_manager.RecipeManager,
+      cache_output: bool,
+      pbar: progress_utils.ProgressBar,
+  ) -> None:
+    """Performs a single calibration step for a data sample.
+
+    Args:
+      signature_key: The signature key for the data sample.
+      data: The input data for the signature.
+      model_recipe_manager: The recipe manager that contains the quantization
+        recipes.
+      cache_output: Whether to cache the output of the model during calibration.
+      pbar: The progress bar to update.
+    """
+    raise NotImplementedError("Subclasses must implement _calibrate_step().")
+
   def calibrate(
       self,
       calibration_dataset: dict[str, Iterable[_SignatureInput]],
       model_recipe_manager: recipe_manager.RecipeManager,
       cache_output: bool = False,
   ) -> None:
-    """Calibrates the model using the given dataset for a model signature.
-
-    The process is
-    0. Initialize quantization statistics values (QSVs) using the initialization
-    function (from AlgorithmManager) for the op if needed.
-    1. Invoke TFL interpreter on the calibration data.
-    2. Go through each op, ask RecipeManager for the quantization setting
-    of the op.
-    3. Ask AlgorithmManager for the calibration function of the op given the
-    quantization setting.
-    4. Apply the function to the op to obtain quantization statistics (qsvs) for
-    the tensors associated with the op.
-    5. Update the global qsv dictionary
-    6. Start another round of calibration.
-
-    Args:
-      calibration_dataset: A dictionary of input data for calibration for the
-        given model signature.
-      model_recipe_manager: A RecipeManager object that contains the
-        quantization recipe.
-      cache_output: Whether to cache the output of the model during the
-        calibration process. This is useful if there are dependencies between
-        signatures/models (e.g., decode requires encode output).
-    """
-    op_codes = self._flatbuffer_model.operatorCodes
-    if self._model_qsvs:
-      logging.warning(
-          "Calibrator contains non-empty model qsvs, and the current"
-          " calibration process will start on top of this state (i.e., update"
-          " the existing qsvs). If this is an unintended behavior please call"
-          " reset_model_qsvs to reset model qsvs."
-      )
-
+    """Calibrates the model."""
     total_ops = self._get_total_operations(calibration_dataset)
     with progress_utils.ProgressBar(
         total_steps=total_ops,
         description="Running Calibration:",
         disappear_on_finish=True,
     ) as pbar:
-      # TODO: b/329322226 - Enable parallel calibration.
       for signature_key, dataset in calibration_dataset.items():
-        # Step0: get subgraph index.
-        subgraph_idx = tfl_interpreter_utils.get_signature_main_subgraph_index(
-            self._tfl_interpreter, signature_key
-        )
-
         for data in dataset:
           self._metadata["num_samples_calibrated"] += 1
-          # Initialize tensor names updated in this round of calibration.
-          updated_tensor_names = set()
-
-          # Step1: run tfl interpreter on subgraph to get tensor content.
-          signature_output = tfl_interpreter_utils.invoke_interpreter_signature(
-              self._tfl_interpreter, data, signature_key
+          self._calibrate_step(
+              signature_key, data, model_recipe_manager, cache_output, pbar
           )
-          if cache_output:
-            self._cached_output.append(signature_output)
-
-          # Step2: go through each op in subgraph to update quantization
-          # statistic values.
-          subgraphs_inds = [subgraph_idx]
-          while subgraphs_inds:
-            subgraph_ind = subgraphs_inds.pop()
-            self._tensor_content_map.update(
-                tfl_interpreter_utils.get_tensor_name_to_content_map(
-                    self._tfl_interpreter, subgraph_ind
-                )
-            )
-            subgraph = self._flatbuffer_model.subgraphs[subgraph_ind]
-            graph_info = qtyping.GraphInfo(
-                subgraph.tensors, self._flatbuffer_model.buffers
-            )
-            # Add input/output operators if they are not in the subgraph.
-            if not any(
-                isinstance(op, qtyping.IOOperator) for op in subgraph.operators
-            ):
-              subgraph.operators += (
-                  tfl_flatbuffer_utils.get_subgraph_input_output_operators(
-                      subgraph
-                  )
-              )
-            for op in subgraph.operators:
-              pbar.update_single_step()
-              if isinstance(op, qtyping.IOOperator):
-                op_key = op.op_key
-              else:
-                op_code = op_codes[op.opcodeIndex].builtinCode
-                if op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME:
-                  continue
-                op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
-              # Step2.1: query the quantization_recipe to get op quantization
-              # settings.
-              op_scope = tfl_flatbuffer_utils.get_op_scope(op, subgraph.tensors)
-              algorithm_name, _ = model_recipe_manager.get_quantization_configs(
-                  op_key, op_scope
-              )
-              if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
-                continue
-              if policy.is_non_quantizable_composite_op(op):
-                continue
-
-              # Step2.2: query algorithm_manager to get/call the related
-              # calibration function.
-              calibrate_func = algorithm_manager.get_quantization_func(
-                  algorithm_name, op_key, qtyping.QuantizeMode.CALIBRATE
-              )
-              op_qsvs = calibrate_func(op, graph_info, self._tensor_content_map)
-              # Step3: Update tensor qsvs with the new values. Ignore the tensor
-              # names that are already updated in this round of calibration.
-              op_updated_tensor_name = self._update_qsvs(
-                  op_qsvs, updated_tensor_names
-              )
-              updated_tensor_names.update(op_updated_tensor_name)
-
-              # Step4: Invoke any subgraphs invoked as a side effect of the op.
-              subgraphs_inds.extend(
-                  tfl_flatbuffer_utils.get_op_side_effect_subgraphs(op)
-              )
-
-        # Reset interpreter after one round of calibration.
         self._tfl_interpreter.reset_all_variables()
 
   def get_model_qsvs(self) -> dict[str, qtyping.QSV]:
@@ -455,3 +395,163 @@ class Calibrator:
         self._model_qsvs[tensor_name] = updated_qsv
       updated_tensor_names.add(tensor_name)
     return updated_tensor_names
+
+  def _get_total_operations(self, calibration_dataset) -> int:
+    """Get the total number of OPs to go through while calibrating the model."""
+    data_sizes = {
+        key: len(list(dataset)) for key, dataset in calibration_dataset.items()
+    }
+    total_ops = 0
+    for key, value in data_sizes.items():
+      subgraph_idx = tfl_interpreter_utils.get_signature_main_subgraph_index(
+          self._tfl_interpreter, key
+      )
+      subgraph_inds = [subgraph_idx]
+      total_operators = 0
+      while subgraph_inds:
+        subgraph_idx = subgraph_inds.pop()
+        subgraph = self._flatbuffer_model.subgraphs[subgraph_idx]
+        subgraph_operators = subgraph.operators
+        if not any(
+            isinstance(op, qtyping.IOOperator) for op in subgraph.operators
+        ):
+          subgraph_operators += (
+              tfl_flatbuffer_utils.get_subgraph_input_output_operators(subgraph)
+          )
+        total_operators += len(subgraph_operators)
+        for op in subgraph_operators:
+          subgraph_inds.extend(
+              tfl_flatbuffer_utils.get_op_side_effect_subgraphs(op)
+          )
+      total_ops += value * total_operators
+    return total_ops
+
+
+class _InferenceOnlyCalibrator(Calibrator):
+  """Calibrator that only supports inference and not calibration."""
+
+  @override
+  def _create_interpreter(
+      self,
+      float_tflite: Union[str, bytes],
+      num_threads: int,
+  ) -> tfl.Interpreter:
+    return tfl_interpreter_utils.create_tfl_interpreter(
+        float_tflite,
+        use_xnnpack=True,
+        num_threads=num_threads,
+        preserve_all_tensors=False,
+    )
+
+  @override
+  def _calibrate_step(
+      self,
+      signature_key: str,
+      data: _SignatureInput,
+      model_recipe_manager: recipe_manager.RecipeManager,
+      cache_output: bool,
+      pbar: progress_utils.ProgressBar,
+  ) -> None:
+    raise NotImplementedError(
+        "InferenceOnlyCalibrator does not support calibration."
+    )
+
+
+class _PreserveAllTensorsCalibrator(Calibrator):
+  """Calibrator using the preserve_all_tensors interpreter mode."""
+
+  @override
+  def _create_interpreter(
+      self,
+      float_tflite: Union[str, bytes],
+      num_threads: int,
+  ) -> tfl.Interpreter:
+    return tfl_interpreter_utils.create_tfl_interpreter(
+        float_tflite,
+        use_xnnpack=True,
+        num_threads=num_threads,
+        preserve_all_tensors=True,
+    )
+
+  @override
+  def _calibrate_step(
+      self,
+      signature_key: str,
+      data: _SignatureInput,
+      model_recipe_manager: recipe_manager.RecipeManager,
+      cache_output: bool,
+      pbar: progress_utils.ProgressBar,
+  ) -> None:
+    op_codes = self._flatbuffer_model.operatorCodes
+    # Step0: get subgraph index.
+    subgraph_idx = tfl_interpreter_utils.get_signature_main_subgraph_index(
+        self._tfl_interpreter, signature_key
+    )
+    # Initialize tensor names updated in this round of calibration.
+    updated_tensor_names = set()
+
+    # Step1: run tfl interpreter on subgraph to get tensor content.
+    signature_output = tfl_interpreter_utils.invoke_interpreter_signature(
+        self._tfl_interpreter, data, signature_key
+    )
+    if cache_output:
+      self._cached_output.append(signature_output)
+
+    # Step2: go through each op in subgraph to update quantization
+    # statistic values.
+    subgraphs_inds = [subgraph_idx]
+    while subgraphs_inds:
+      subgraph_ind = subgraphs_inds.pop()
+      self._tensor_content_map.update(
+          tfl_interpreter_utils.get_tensor_name_to_content_map(
+              self._tfl_interpreter, subgraph_ind
+          )
+      )
+      subgraph = self._flatbuffer_model.subgraphs[subgraph_ind]
+      graph_info = qtyping.GraphInfo(
+          subgraph.tensors, self._flatbuffer_model.buffers
+      )
+      # Add input/output operators if they are not in the subgraph.
+      if not any(
+          isinstance(op, qtyping.IOOperator) for op in subgraph.operators
+      ):
+        subgraph.operators += (
+            tfl_flatbuffer_utils.get_subgraph_input_output_operators(subgraph)
+        )
+      for op in subgraph.operators:
+        pbar.update_single_step()
+        if isinstance(op, qtyping.IOOperator):
+          op_key = op.op_key
+        else:
+          op_code = op_codes[op.opcodeIndex].builtinCode
+          if op_code not in tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME:
+            continue
+          op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
+        # Step2.1: query the quantization_recipe to get op quantization
+        # settings.
+        op_scope = tfl_flatbuffer_utils.get_op_scope(op, subgraph.tensors)
+        algorithm_name, _ = model_recipe_manager.get_quantization_configs(
+            op_key, op_scope
+        )
+        if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
+          continue
+        if policy.is_non_quantizable_composite_op(op):
+          continue
+
+        # Step2.2: query algorithm_manager to get/call the related
+        # calibration function.
+        calibrate_func = algorithm_manager.get_quantization_func(
+            algorithm_name, op_key, qtyping.QuantizeMode.CALIBRATE
+        )
+        op_qsvs = calibrate_func(op, graph_info, self._tensor_content_map)
+        # Step3: Update tensor qsvs with the new values. Ignore the tensor
+        # names that are already updated in this round of calibration.
+        op_updated_tensor_name = self._update_qsvs(
+            op_qsvs, updated_tensor_names
+        )
+        updated_tensor_names.update(op_updated_tensor_name)
+
+        # Step4: Invoke any subgraphs invoked as a side effect of the op.
+        subgraphs_inds.extend(
+            tfl_flatbuffer_utils.get_op_side_effect_subgraphs(op)
+        )
