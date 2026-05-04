@@ -20,6 +20,7 @@ import dataclasses
 import functools
 from typing import Any, Optional
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.utils import qsv_utils
 
 
 @dataclasses.dataclass
@@ -30,6 +31,7 @@ class QuantizedOperationInfo:
   init_qsv_func: Callable[..., Any]
   calibration_func: Callable[..., Any]
   materialize_func: Callable[..., Any]
+  update_qsv_func: Callable[..., Any] = qsv_utils.moving_average_update
 
 
 @dataclasses.dataclass
@@ -64,6 +66,7 @@ class AlgorithmManagerApi:
       init_qsv_func: Callable[..., Any],
       calibration_func: Callable[..., Any],
       materialize_func: Callable[..., Any],
+      update_qsv_func: Callable[..., Any] = qsv_utils.moving_average_update,
   ):
     """Register functions to support a quantization operation.
 
@@ -78,6 +81,7 @@ class AlgorithmManagerApi:
       init_qsv_func: QSV init function to be called.
       calibration_func: Quantized operation to be called during calibration.
       materialize_func: Quantized operation to be called during materialization.
+      update_qsv_func: QSV update function to be called during calibration.
     """
     quantized_algorithm_info = self._algorithm_registry.setdefault(
         algorithm_key, QuantizationAlgorithmInfo(algorithm_key, dict())
@@ -89,6 +93,7 @@ class AlgorithmManagerApi:
             init_qsv_func,
             calibration_func,
             materialize_func,
+            update_qsv_func,
         )
     )
 
@@ -219,6 +224,23 @@ class AlgorithmManagerApi:
       )
 
     return quantized_func
+
+  def get_update_qsv_func(
+      self,
+      algorithm_key: str,
+      tfl_op_name: qtyping.TFLOperationName,
+  ) -> Callable[..., Any]:
+    """Gets the QSV update function for a given algorithm."""
+    quantized_algorithm_info = self._algorithm_registry[algorithm_key]
+    quantized_op_info = quantized_algorithm_info.quantized_ops
+    if update_qsv_func := quantized_op_info[tfl_op_name].update_qsv_func:
+      return update_qsv_func
+    else:
+      raise ValueError(
+          f"Unsupported operation {tfl_op_name} for Algorithm: {algorithm_key}."
+          f" Supported ops for algorithm {algorithm_key}:"
+          f" {self.get_supported_ops(algorithm_key)}"
+      )
 
   def get_init_qsv_func(
       self,

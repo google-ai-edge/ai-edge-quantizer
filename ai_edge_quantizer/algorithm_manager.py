@@ -42,6 +42,7 @@ _alg_manager_instance = algorithm_manager_api.AlgorithmManagerApi()
 # Expose instance functions.
 get_quantization_func = _alg_manager_instance.get_quantization_func
 get_supported_ops = _alg_manager_instance.get_supported_ops
+get_update_qsv_func = _alg_manager_instance.get_update_qsv_func
 get_init_qsv_func = _alg_manager_instance.get_init_qsv_func
 register_op_quant_config_validation_func = (
     _alg_manager_instance.register_op_quant_config_validation_func

@@ -15,13 +15,14 @@
 
 """Tests for algorithm_manager_api."""
 
-
 from absl.testing import absltest
 from absl.testing import parameterized
 
 from ai_edge_quantizer import algorithm_manager_api
 from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.utils import qsv_utils
+
 
 _TFLOpName = qtyping.TFLOperationName
 
@@ -37,6 +38,10 @@ def _sample_calibration_func(*_, **__):
 
 def _sample_materialize_func(*_, **__):
   return 3.0, dict()
+
+
+def _sample_update_qsv_func(*_, **__):
+  return 4.0, dict()
 
 
 def _sample_check_op_config_func(_, op_config):
@@ -213,6 +218,37 @@ class AlgorithmManagerApiTest(parameterized.TestCase):
     self.assertNotEmpty(default_policy.DEFAULT_CONFIG_CHECK_POLICY)
     for policy in default_policy.DEFAULT_CONFIG_CHECK_POLICY.values():
       self.assertNotEmpty(policy)
+
+  def test_get_update_qsv_func_default(self):
+    algorithm_key = "ptq"
+    tfl_op = _TFLOpName.FULLY_CONNECTED
+    self._alg_manager.register_quantized_op(
+        algorithm_key=algorithm_key,
+        tfl_op_name=tfl_op,
+        init_qsv_func=_sample_init_qsvs,
+        calibration_func=_sample_calibration_func,
+        materialize_func=_sample_materialize_func,
+    )
+    update_qsv_func = self._alg_manager.get_update_qsv_func(
+        algorithm_key, tfl_op
+    )
+    self.assertEqual(update_qsv_func, qsv_utils.moving_average_update)
+
+  def test_get_update_qsv_func_custom(self):
+    algorithm_key = "ptq"
+    tfl_op = _TFLOpName.FULLY_CONNECTED
+    self._alg_manager.register_quantized_op(
+        algorithm_key=algorithm_key,
+        tfl_op_name=tfl_op,
+        init_qsv_func=_sample_init_qsvs,
+        calibration_func=_sample_calibration_func,
+        materialize_func=_sample_materialize_func,
+        update_qsv_func=_sample_update_qsv_func,
+    )
+    update_qsv_func = self._alg_manager.get_update_qsv_func(
+        algorithm_key, tfl_op
+    )
+    self.assertEqual(update_qsv_func, _sample_update_qsv_func)
 
 
 if __name__ == "__main__":
