@@ -331,6 +331,16 @@ def uniform_quantize(
     # dimensions.
     output_shape = tensor_data.shape
     tensor_data = tensor_data.reshape([-1, output_shape[-1]])
+    # For N-D tensors (N>2), scales/zero_points must be flattened to 2D
+    # before broadcasting. Broadcast through the original leading dims
+    # first so each scale value is repeated across the correct rows.
+    if scales.ndim > 2:
+      scales = np.broadcast_to(
+          scales, output_shape[:-1] + (scales.shape[-1],)
+      ).reshape(-1, scales.shape[-1])
+      zero_points = np.broadcast_to(
+          zero_points, output_shape[:-1] + (zero_points.shape[-1],)
+      ).reshape(-1, zero_points.shape[-1])
     scales = np.broadcast_to(scales, tensor_data.shape)
     zero_points = np.broadcast_to(zero_points, tensor_data.shape)
     ret = np.zeros(shape=tensor_data.shape, dtype=_get_numpy_dtype(qtype))
