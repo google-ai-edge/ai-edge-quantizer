@@ -54,8 +54,9 @@ def _quantize_model(
 
 def quantize_litertlm(
     litertlm_path: str,
-    recipe_path: str,
-    output_dir: str,
+    litertlm_recipe_path: str | None = None,
+    default_recipe_path: str | None = None,
+    output_dir: str | None = None,
     overwrite_outputs: bool = False,
 ) -> int:
   """Quantizes a TFLite model using a recipe.
@@ -63,8 +64,12 @@ def quantize_litertlm(
   Args:
     litertlm_path: Path to the `.litertlm` file containing the models to be
       quantized.
-    recipe_path: Path to the .json file with the quantization recipe.
-    output_dir: Path to the directory to save the quantized model(s).
+    litertlm_recipe_path: Optional path to a .json file containing a mapping of
+      model_types to quantization recipes.
+    default_recipe_path: Optional recipe name or path to a .json file containing
+      a quantization recipe, to be used for all TFLite models in the file.
+    output_dir: Optional path to the directory to save the quantized model(s).
+      If `None`, the base directory of `litertlm_path` will be used.
     overwrite_outputs: Output files overwrite exisiting files without requiring
       user input.
 
@@ -72,21 +77,37 @@ def quantize_litertlm(
     `0` on success and a non-zero exit code otherwise.
   """
 
-  litertlm_basename = pathlib.Path(litertlm_path).stem
-  recipe_basename = pathlib.Path(recipe_path).stem
+  litertlm_path = pathlib.Path(litertlm_path)
+  litertlm_basename = litertlm_path.stem
 
   # Load the quantization recipe.
-  litertlm_recipe_map = recipe_utils.resolve_litertlm_recipe_mapping(
-      recipe_path
-  )
+  if litertlm_recipe_path:
+    litertlm_recipe_map = recipe_utils.resolve_litertlm_recipe_mapping(
+        litertlm_recipe_path
+    )
+    recipe_basename = pathlib.Path(litertlm_recipe_path).stem
+  elif not default_recipe_path:
+    logging.error(
+        "Either a `litertlm_recipe_path` or `recipe_path` must be provided."
+    )
+    return 1
+  else:
+    litertlm_recipe_map = {
+        "default": recipe_utils.resolve_recipe(default_recipe_path)
+    }
+    recipe_basename = pathlib.Path(default_recipe_path).stem
   default_recipe = litertlm_recipe_map.get("default")
 
   # Load the `.litertlm` file.
   litertlm_file = litertlm_utils.LiteRTLMFile(litertlm_path)
 
   # Create the output directory if it doesn't already exist.
-  if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
+  if not output_dir:
+    output_dir = litertlm_path.parent
+  else:
+    output_dir = pathlib.Path(output_dir)
+    if not os.path.exists(output_dir):
+      os.makedirs(output_dir)
 
   # Loop over the models selected for quantization and populate a dictionary
   # mapping section IDs to serialized quantized models.
@@ -121,7 +142,7 @@ def quantize_litertlm(
         f"{litertlm_basename}_{section_id:03d}_{model_type}_"
         f"{recipe_basename}.tflite"
     )
-    output_file_path = str(pathlib.Path(output_dir) / output_filename)
+    output_file_path = str(output_dir / output_filename)
     if not _verify_output_path(output_file_path, overwrite_outputs):
       logging.error("Aborting.")
       return 1
@@ -139,7 +160,7 @@ def quantize_litertlm(
 
   # Rebuild the LiteRT-LM file with the quantized models swapped in.
   output_filename = f"{litertlm_basename}_{recipe_basename}.litertlm"
-  output_file_path = str(pathlib.Path(output_dir) / output_filename)
+  output_file_path = str(output_dir / output_filename)
   if not _verify_output_path(output_file_path, overwrite_outputs):
     logging.error("Aborting.")
     return 1
@@ -151,7 +172,7 @@ def quantize_litertlm(
 def quantize_tflite(
     model_file: str,
     recipe_file: str,
-    output_dir: str,
+    output_dir: str | None = None,
     overwrite_outputs: bool = False,
 ) -> int:
   """Quantizes a TFLite model using a recipe.
@@ -159,19 +180,26 @@ def quantize_tflite(
   Args:
     model_file: Path to the .tflite file to be quantized.
     recipe_file: Path to the .json file with the quantization recipe.
-    output_dir: Path to the directory to save the quantized model(s).
+    output_dir: Optional path to the directory to save the quantized model(s).
+      If `None`, the base directory of `model_file` will be used.
     overwrite_outputs: Output files overwrite exisiting files without requiring
       user input.
 
   Returns:
     `0` on success and a non-zero exit code otherwise.
   """
-  model_basename = pathlib.Path(model_file).stem
+  model_file = pathlib.Path(model_file)
+  model_basename = model_file.stem
   recipe_basename = pathlib.Path(recipe_file).stem
   output_filename = f"{model_basename}_{recipe_basename}.tflite"
 
-  if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
+  # Create the output directory if it doesn't already exist.
+  if not output_dir:
+    output_dir = model_file.parent
+  else:
+    output_dir = pathlib.Path(output_dir)
+    if not os.path.exists(output_dir):
+      os.makedirs(output_dir)
 
   output_file_path = str(pathlib.Path(output_dir) / output_filename)
 
@@ -203,11 +231,13 @@ def parse_args(args: Sequence[str]) -> argparse.Namespace:
   )
   recipe_group = parser.add_mutually_exclusive_group(required=True)
   recipe_group.add_argument(
-      "--recipe_file",
-      help="Path to the .json file with the quantization recipe.",
+      "--recipe",
+      help=(
+          "Recipe name or path to the .json file with the quantization recipe."
+      ),
   )
   recipe_group.add_argument(
-      "--litertlm_recipe_file",
+      "--litertlm_recipe",
       help=(
           "Path to the .json file with the per-model quantization recipes for"
           " LiteRT-LM files."
@@ -215,8 +245,11 @@ def parse_args(args: Sequence[str]) -> argparse.Namespace:
   )
   parser.add_argument(
       "--output_dir",
-      required=True,
-      help="Path to the directory in which to save the quantized model(s).",
+      help=(
+          "Path to the directory in which to save the quantized model(s). If"
+          " not specified, the directory of the `model_file` argument will be"
+          " used."
+      ),
   )
   parser.add_argument(
       "--overwrite_outputs",
@@ -230,14 +263,15 @@ def main(parsed_args: argparse.Namespace) -> int:
   if parsed_args.model_file.endswith(".tflite"):
     return quantize_tflite(
         model_file=parsed_args.model_file,
-        recipe_file=parsed_args.recipe_file,
+        recipe_file=parsed_args.recipe,
         output_dir=parsed_args.output_dir,
         overwrite_outputs=parsed_args.overwrite_outputs,
     )
   elif parsed_args.model_file.endswith(".litertlm"):
     return quantize_litertlm(
         litertlm_path=parsed_args.model_file,
-        recipe_path=parsed_args.litertlm_recipe_file,
+        litertlm_recipe_path=getattr(parsed_args, "litertlm_recipe", None),
+        default_recipe_path=getattr(parsed_args, "recipe", None),
         output_dir=parsed_args.output_dir,
         overwrite_outputs=parsed_args.overwrite_outputs,
     )
