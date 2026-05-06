@@ -157,6 +157,8 @@ class Quantizer:
         model. This is useful for validating a quantized model without
         quantizing it again.
     """
+    self._model_name = float_model if isinstance(float_model, Path) else None
+
     # Load the `float_model` as a buffer.
     self._float_model_buffer = memoryview(
         tfl_flatbuffer_utils.get_model_content(float_model)
@@ -423,6 +425,7 @@ class Quantizer:
       calibration_result: Optional[_CalibrationResult] = None,
       serialize_to_path: qtyping.Path | None = None,
       enable_progress_bar: bool | None = None,
+      enable_progress_report: bool = True,
   ) -> QuantizationResult:
     """Quantizes the float model.
 
@@ -441,6 +444,7 @@ class Quantizer:
         path.
       enable_progress_bar: Whether to enable the progress bar. By default, it is
         disabled for smaller models and enabled for larger models.
+      enable_progress_report: Whether to generate a progress report.
 
     Returns:
       Quantization result.
@@ -455,8 +459,14 @@ class Quantizer:
     if not self.get_quantization_recipe():
       raise RuntimeError('Can not quantize without a quantization recipe.')
 
-    progress_report = progress_utils.ProgressReport()
-    progress_report.capture_progess_start()
+    if enable_progress_report:
+      progress_report = progress_utils.ProgressReport(
+          self._model_name or serialize_to_path
+      )
+      progress_report.capture_progess_start()
+    else:
+      progress_report = None
+
     quant_params = self._get_quantization_params(
         calibration_result, enable_progress_bar
     )
@@ -468,9 +478,12 @@ class Quantizer:
     self._result = QuantizationResult(
         self.get_quantization_recipe(), quantized_model
     )
-    progress_report.generate_progress_report(
-        len(self._float_model_buffer), quantized_model
-    )
+
+    if progress_report is not None:
+      progress_report.generate_progress_report(
+          len(self._float_model_buffer), len(quantized_model)
+      )
+
     return self._result
 
   def validate(

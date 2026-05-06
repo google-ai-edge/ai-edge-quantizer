@@ -15,13 +15,56 @@
 
 """Utility functions to display a progress bar and progress report."""
 
+from collections.abc import Sequence
 import logging
 import time
 import tracemalloc
+
 import tqdm
 
-from ai_edge_litert.tools import flatbuffer_utils
-from ai_edge_quantizer import qtyping
+
+def _format_base(
+    value: int | float, multiple: int | float, units: Sequence[str]
+) -> str:
+  """Converts `value` to a string using the given `units` per `multiple`.
+
+  Creates a `str` representation of `value / (multiple ** k)` with `units[k]`
+  appended, where `k` is the largest integer in the range `[0, len(units))`
+  such that `multiple ** k` is less than `value`, rounded to two decimal digits.
+
+  For all `value` in the range `[1, multiple**len(units))`, the represented
+  value will be in the range `[1, multiple)`.
+
+  E.g. if `multiple=10` and `units=['mm', 'cm', 'dm', 'm']`, the following
+  `value`s will generate the following outputs:
+  * `1`: `'1.00 mm'`,
+  * `9`: `'9.00 mm'`,
+  * `10`: `'1.00 cm'`,
+  * `110`: `'1.10 dm'`,
+  * `1002`: `'1.00 m'`.
+
+  Args:
+    value: The numerical value to convert to a `str`.
+    multiple: The multiple used for the `units`.
+    units: A sequence of unit names.
+
+  Returns:
+    A `str` representation of an appropriately scaled `value` with the given
+    `units` appended.
+  """
+  for unit in units[:-1]:
+    if abs(value) < multiple:
+      return f'{value:.2f} {unit}'
+    value /= multiple
+  return f'{value:.2f} {units[-1]}'
+
+
+def _format_bytes(value: int | float) -> str:
+  return _format_base(value, 1024, ['B', 'KiB', 'MiB', 'GiB'])
+
+
+def _format_ns(value: int | float) -> str:
+  return _format_base(value, 1000, ['ns', 'us', 'ms', 's'])
 
 
 class ProgressBar:
@@ -66,18 +109,19 @@ class ProgressBar:
 
 class ProgressReport:
   """A class to generate a progress report for the quantization process.
-  
+
   If initialized with `trace_memory=True`, it will also track the peak memory
   use using `tracemalloc`, which may hurt performance and interfere with other
   code using `tracemalloc` concurrently.
   """
-  _description: str
+
+  _model_name: str | None
   _trace_memory: bool
   _start_time: float | None = None
   _tracemalloc_started_by_me: bool = False
 
-  def __init__(self, description: str = '', trace_memory: bool = False):
-    self._description = description
+  def __init__(self, model_name: str | None = None, trace_memory: bool = False):
+    self._model_name = model_name
     self._trace_memory = trace_memory
 
   def capture_progess_start(self):
@@ -101,33 +145,24 @@ class ProgressReport:
         self._tracemalloc_started_by_me = False
       return mem_peak_bytes
 
-  def render_report(
-      self,
-      original_size: int,
-      quantized_size: int,
-      quantization_ratio: float,
-      total_time: float,
-      memory_peak: float | None,
+  def generate_progress_report(
+      self, original_model_size: int, quantized_model_size: int
   ):
     """Prints out the progress report."""
-    print(f'Original model size: {original_size/1024:.2f} KB')
-    print(f'Quantized model size: {quantized_size/1024:.2f} KB')
-    print(f'Quantization Ratio: {quantization_ratio:.2f}')
-    print(f'Total time: {total_time:.2f} seconds')
-    if memory_peak is not None:
-      print(f'Memory peak: {memory_peak/1024/1024:.2f} MB')
-
-  def generate_progress_report(
-      self, original_model_size: int, quantized_model: qtyping.BufferType
-  ):
-    quantized_size = len(quantized_model)
-    quantization_ratio = quantized_size / original_model_size
+    # Collect the metrics.
+    quantization_ratio = quantized_model_size / original_model_size
     total_time = time.time() - self._start_time
     mem_peak_bytes = self._capture_progress_end()
-    self.render_report(
-        original_model_size,
-        quantized_size,
-        quantization_ratio,
-        total_time,
-        mem_peak_bytes,
+
+    # Print out the progress report.
+    if self._model_name:
+      print(f'Model name: {self._model_name}')
+    print(f'Original model size: {_format_bytes(original_model_size)}')
+    print(f'Quantized model size: {_format_bytes(quantized_model_size)}')
+    print(
+        f'Quantization Ratio: {quantization_ratio:.2f}'
+        f' ({1/quantization_ratio:.1f}x smaller)'
     )
+    print(f'Total time: {_format_ns(total_time * 1e9)}')
+    if mem_peak_bytes is not None:
+      print(f'Memory peak: {_format_bytes(mem_peak_bytes)}')

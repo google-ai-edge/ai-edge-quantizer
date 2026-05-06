@@ -26,6 +26,7 @@ import io
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import litertlm_utils
+from ai_edge_quantizer.utils import progress_utils
 from ai_edge_quantizer.utils import recipe_utils
 
 
@@ -45,11 +46,15 @@ def _quantize_model(
     model: qtyping.Path | qtyping.BufferType,
     recipe: str | qtyping.ModelQuantizationRecipe,
     serialize_to_path: qtyping.Path | None = None,
+    enable_progress_report: bool = True,
 ) -> quantizer.QuantizationResult:
   """Quantizes the given model with the given recipe and maybe write it to disk."""
   qt = quantizer.Quantizer(model)
   qt.load_quantization_recipe(recipe)
-  return qt.quantize(serialize_to_path=serialize_to_path)
+  return qt.quantize(
+      serialize_to_path=serialize_to_path,
+      enable_progress_report=enable_progress_report,
+  )
 
 
 def quantize_litertlm(
@@ -87,6 +92,10 @@ def quantize_litertlm(
   # Create the output directory if it doesn't already exist.
   if not os.path.exists(output_dir):
     os.makedirs(output_dir)
+
+  # Track progress.
+  progress_report = progress_utils.ProgressReport(litertlm_path)
+  progress_report.capture_progess_start()
 
   # Loop over the models selected for quantization and populate a dictionary
   # mapping section IDs to serialized quantized models.
@@ -131,6 +140,7 @@ def quantize_litertlm(
         model=litertlm_file.get_section_buffer(section_id),
         recipe=model_recipe,
         serialize_to_path=output_file_path,
+        enable_progress_report=False,
     ).quantized_model
 
   if not quantized_sections:
@@ -143,7 +153,13 @@ def quantize_litertlm(
   if not _verify_output_path(output_file_path, overwrite_outputs):
     logging.error("Aborting.")
     return 1
-  litertlm_file.serialize(output_file_path, quantized_sections)
+  output_file_size = litertlm_file.serialize(
+      output_file_path, quantized_sections
+  )
+
+  progress_report.generate_progress_report(
+      os.path.getsize(litertlm_path), output_file_size
+  )
 
   return 0
 

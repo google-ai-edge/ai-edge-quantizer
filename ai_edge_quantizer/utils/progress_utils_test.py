@@ -25,7 +25,6 @@ import os
 import io
 from ai_edge_quantizer.utils import progress_utils
 from ai_edge_quantizer.utils import test_utils
-from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 
 class ProgressBarTest(absltest.TestCase):
@@ -115,20 +114,20 @@ class ProgressReportTest(parameterized.TestCase):
     mock_stdout = io.StringIO()
     with mock.patch.object(sys, 'stdout', mock_stdout):
       progress_report.generate_progress_report(
-          len(original_model_data), quantized_model
+          len(original_model_data), len(quantized_model)
       )
 
     output = mock_stdout.getvalue()
-    self.assertIn('Original model size: 200.23 KB', output)
-    self.assertIn('Quantized model size: 53.08 KB', output)
+    self.assertIn('Original model size: 200.23 KiB', output)
+    self.assertIn('Quantized model size: 53.08 KiB', output)
     self.assertIn('Quantization Ratio: 0.27', output)
-    self.assertIn('Total time: 5.50 seconds', output)
+    self.assertIn('Total time: 5.50 s', output)
 
     if trace_memory:
       self.mock_tracemalloc.is_tracing.assert_called_once_with()
       self.mock_tracemalloc.start.assert_called_once_with()
       self.mock_tracemalloc.stop.assert_called_once_with()
-      self.assertIn('Memory peak: 2.00 MB', output)
+      self.assertIn('Memory peak: 2.00 MiB', output)
 
 
 if __name__ == '__main__':
