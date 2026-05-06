@@ -15,8 +15,9 @@
 
 """Utilities to read named recipe files."""
 
-from collections.abc import Collection
+from collections.abc import Callable, Collection
 import copy
+import inspect
 import json
 import logging
 import pathlib
@@ -25,6 +26,7 @@ from typing import TypeGuard
 import os
 import io
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer import recipe as recipes
 
 UnresolvedQuantRecipeMapping = dict[str, qtyping.ModelQuantizationRecipe | str]
 QuantRecipeMapping = dict[str, qtyping.ModelQuantizationRecipe]
@@ -35,7 +37,8 @@ QuantRecipeFileContents = (
 
 # Create a mapping of recipe names to parsed JSON files.
 _RECIPE_REPO_PATH = pathlib.Path(__file__).parent / '../recipes'
-_NAMED_RECIPES: dict[str, QuantRecipeFileContents] | None = None
+# _NAMED_RECIPES: dict[str, QuantRecipeFileContents] | None = None
+_NAMED_RECIPES: dict[str, Callable[..., QuantRecipeFileContents]] | None = None
 
 
 def _get_recipe_from_path(
@@ -75,15 +78,26 @@ def _get_named_recipe(
 
   # Populate the named recipes if this has not been done yet.
   if _NAMED_RECIPES is None:
-    _NAMED_RECIPES = {}
+    # Initialize the named recipes with the functions in the `recipe` module.
+    _NAMED_RECIPES = dict(inspect.getmembers(recipes, inspect.isfunction))
+
+    # Look for additional named recipes in the `recipes/` directory.
     for recipe_path in _RECIPE_REPO_PATH.iterdir():
       if (recipe_name := recipe_path.name).endswith('.json'):
         recipe_name = recipe_name.removesuffix('.json')
         recipe_name = recipe_name.removesuffix('_recipe')
-        with open(recipe_path, 'r') as f:
-          _NAMED_RECIPES[recipe_name] = json.load(f)
+        if recipe_name not in _NAMED_RECIPES:
+          with open(recipe_path, 'r') as f:
+            recipe = json.load(f)
+          _NAMED_RECIPES[recipe_name] = lambda recipe=recipe: copy.deepcopy(
+              recipe
+          )
 
-  return copy.deepcopy(_NAMED_RECIPES.get(name, default))
+    logging.info('Loaded named recipes: %s', _NAMED_RECIPES.keys())
+
+  if recipe_fun := _NAMED_RECIPES.get(name):
+    return recipe_fun()
+  return default
 
 
 def resolve_recipe(
