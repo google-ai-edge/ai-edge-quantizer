@@ -202,7 +202,10 @@ class LiteRTLMFile:
     # Pack the modified metadata.
     metadata_builder = flatbuffers.Builder(1024)
     metadata_builder.Finish(metadata.Pack(metadata_builder))
-    assert metadata_builder.Offset() <= section_offsets[0]
+    assert (
+        litertlm_core.HEADER_BEGIN_BYTE_OFFSET + metadata_builder.Offset()
+        <= section_offsets[0]
+    )
 
     # Create a memory-mapped file in which we will pack the LiteRTLM file.
     if (
