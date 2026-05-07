@@ -18,6 +18,7 @@ import pathlib
 import tempfile
 
 from absl.testing import absltest
+from absl.testing import parameterized
 
 from ai_edge_litert.tools import mmap_utils
 from ai_edge_quantizer import aeq
@@ -29,9 +30,10 @@ from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile(".")
+RECIPE_PREFIX_PATH = pathlib.Path(TEST_DATA_PREFIX_PATH) / "recipes"
 
 
-class AeqTest(absltest.TestCase):
+class AeqTest(parameterized.TestCase):
 
   def _validate_quantized_model(
       self,
@@ -57,14 +59,17 @@ class AeqTest(absltest.TestCase):
     for mse in result.get_all_tensor_results().values():
       self.assertLess(mse, 1e-4)
 
-  def test_quantize_and_validate_single_tflite_file(self):
+  @parameterized.named_parameters(
+      (
+          "from_recipe_file",
+          str(RECIPE_PREFIX_PATH / "dynamic_wi8_afp32_recipe.json"),
+      ),
+      ("from_recipe_name", "dynamic_wi8_afp32"),
+  )
+  def test_quantize_and_validate_single_tflite_file(self, recipe_file: str):
     model_file = str(
         pathlib.Path(TEST_DATA_PREFIX_PATH)
         / "tests/models/conv_fc_mnist.tflite"
-    )
-    recipe_file = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH)
-        / "recipes/dynamic_wi8_afp32_recipe.json"
     )
 
     with tempfile.TemporaryDirectory() as output_dir:
@@ -72,7 +77,7 @@ class AeqTest(absltest.TestCase):
           aeq.main(
               argparse.Namespace(
                   model_file=model_file,
-                  recipe_file=recipe_file,
+                  recipe=recipe_file,
                   output_dir=output_dir,
                   overwrite_outputs=False,
               )
@@ -100,14 +105,24 @@ class AeqTest(absltest.TestCase):
           mmap_utils.get_file_contents(output_path),
       )
 
-  def test_quantize_and_validate_tflite_models_in_litertlm_file(self):
+  @parameterized.named_parameters(
+      (
+          "litertlm_recipe_file",
+          str(RECIPE_PREFIX_PATH / "dynamic_wi8_afp32_litertlm_recipe.json"),
+          None,
+      ),
+      (
+          "default_recipe_file",
+          None,
+          str(RECIPE_PREFIX_PATH / "dynamic_wi8_afp32_recipe.json"),
+      ),
+  )
+  def test_quantize_and_validate_tflite_models_in_litertlm_file(
+      self, litertlm_recipe_path: str | None, default_recipe_path: str | None
+  ):
     model_file = str(
         pathlib.Path(TEST_DATA_PREFIX_PATH)
         / "tests/models/conv_fc_mnist.litertlm"
-    )
-    recipe_file = str(
-        pathlib.Path(TEST_DATA_PREFIX_PATH)
-        / "recipes/dynamic_wi8_afp32_litertlm_recipe.json"
     )
 
     with tempfile.TemporaryDirectory() as output_dir:
@@ -115,7 +130,8 @@ class AeqTest(absltest.TestCase):
           aeq.main(
               argparse.Namespace(
                   model_file=model_file,
-                  litertlm_recipe_file=recipe_file,
+                  litertlm_recipe=litertlm_recipe_path,
+                  recipe=default_recipe_path,
                   output_dir=output_dir,
                   overwrite_outputs=False,
               )
@@ -124,7 +140,9 @@ class AeqTest(absltest.TestCase):
       )
 
       model_basename = pathlib.Path(model_file).stem
-      recipe_basename = pathlib.Path(recipe_file).stem
+      recipe_basename = pathlib.Path(
+          litertlm_recipe_path or default_recipe_path
+      ).stem
       output_filename = f"{model_basename}_{recipe_basename}.litertlm"
       output_path = str(pathlib.Path(output_dir) / output_filename)
 
