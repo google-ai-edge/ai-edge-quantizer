@@ -90,8 +90,6 @@ class CalibrationInterpreter:
         qsv_update_func=qsv_update_func,
     )
     self._mode = mode
-    self.qsv_update_func = self._calibrator.qsv_update_func
-    self.is_custom_qsv_update_func = self._calibrator.is_custom_qsv_update_func
 
   def get_signature_runner(self, signature_key: str | None = None):
     """Returns the signature runner."""
@@ -244,7 +242,7 @@ class Calibrator:
       qsv_update_func: Callable[
           [qtyping.QSV, qtyping.QSV],
           qtyping.QSV,
-      ] = qsv_utils.moving_average_update,
+      ] = _MISSING_FUNC,
   ):
     """Initializes the Calibrator. Check details in docstring of __new__."""
     del mode  # Used only in __new__ and passed to __init__ automatically.
@@ -253,11 +251,11 @@ class Calibrator:
     self._flatbuffer_model = tfl_flatbuffer_utils.read_model(float_tflite)
     self._tfl_interpreter = self._create_interpreter(float_tflite, num_threads)
     if qsv_update_func is _MISSING_FUNC:
-      self.qsv_update_func = qsv_utils.moving_average_update
-      self.is_custom_qsv_update_func = False
+      self._qsv_update_func = qsv_utils.moving_average_update
+      self._is_custom_qsv_update_func = False
     else:
-      self.qsv_update_func = qsv_update_func
-      self.is_custom_qsv_update_func = True
+      self._qsv_update_func = qsv_update_func
+      self._is_custom_qsv_update_func = True
     # Tensor name to tensor content.
     self._tensor_content_map: dict[str, Any] = {}
     # QSV of all the tensors in the model.
@@ -560,7 +558,7 @@ class _PreserveAllTensorsCalibrator(Calibrator):
         op_qsvs = calibrate_func(op, graph_info, self._tensor_content_map)
         # Step3: Update tensor qsvs with the new values. Ignore the tensor
         # names that are already updated in this round of calibration.
-        if not self.is_custom_qsv_update_func:
+        if not self._is_custom_qsv_update_func:
           qsvs_update_func = algorithm_manager.get_update_qsv_func(
               algorithm_name, op_key
           )
