@@ -27,13 +27,14 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-keywords = ["On-Device ML", "AI", "Google", "TFLite", "Quantization", "LLMs", "GenAI"]
+keywords = ["On-Device ML", "AI", "Google", "LiteRT", "TFLite", "Quantization", "LLMs", "GenAI"]
 dependencies = [
     "absl-py",
-    "immutabledict",
-    "numpy",
-    "ml_dtypes",
     "ai-edge-litert-nightly",
+    "immutabledict",
+    "litert-lm-nightly",
+    "ml_dtypes",
+    "numpy",
 ]
 
 [project.urls]
