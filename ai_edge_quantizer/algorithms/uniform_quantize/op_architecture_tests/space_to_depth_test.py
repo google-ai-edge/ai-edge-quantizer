@@ -57,7 +57,9 @@ class SpaceToDepthTest(op_test_utils.BaseQuantizeTest):
       # get_tensor_quant_params_func, activations_num_bits, symmetric
       (naive_min_max_quantize.get_tensor_quant_params, 8, True),
       (naive_min_max_quantize.get_tensor_quant_params, 8, False),
+      (naive_min_max_quantize.get_tensor_quant_params, 16, True),
       (octav.get_tensor_quant_params, 8, True),
+      (octav.get_tensor_quant_params, 16, True),
   )
   def test_materialize_space_to_depth_succeeds(
       self, get_tensor_quant_params_func, activations_num_bits, symmetric
