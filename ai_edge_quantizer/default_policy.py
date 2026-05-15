@@ -66,6 +66,26 @@ DEFAULT_JSON_POLICY = """
       "explicit_dequantize": false,
       "compute_precision": "INTEGER"
     },
+    "dynamic_wi2_afp32": {
+      "weight_tensor_config": {
+        "num_bits": 2,
+        "symmetric": [true],
+        "granularity": ["CHANNELWISE", "TENSORWISE"],
+        "dtype": "INT"
+      },
+      "explicit_dequantize": false,
+      "compute_precision": "INTEGER"
+    },
+    "dynamic_wi2_afp32_blockwise": {
+      "weight_tensor_config": {
+        "num_bits": 2,
+        "symmetric": [true],
+        "granularity": ["BLOCKWISE_32", "BLOCKWISE_64", "BLOCKWISE_128", "BLOCKWISE_256"],
+        "dtype": "INT"
+      },
+      "explicit_dequantize": false,
+      "compute_precision": "INTEGER"
+    },
     "static_wi8_ai16": {
       "activation_tensor_config": {
         "num_bits": 16,
@@ -265,6 +285,8 @@ DEFAULT_JSON_POLICY = """
     ],
     "dynamic_wi4_afp32": ["FULLY_CONNECTED", "EMBEDDING_LOOKUP", "CONV_2D"],
     "dynamic_wi4_afp32_blockwise": ["EMBEDDING_LOOKUP", "FULLY_CONNECTED"],
+    "dynamic_wi2_afp32": ["FULLY_CONNECTED", "EMBEDDING_LOOKUP", "CONV_2D"],
+    "dynamic_wi2_afp32_blockwise": ["EMBEDDING_LOOKUP", "FULLY_CONNECTED"],
     "weightonly_wi8_afp32": [
       "BATCH_MATMUL",
       "CONV_2D",

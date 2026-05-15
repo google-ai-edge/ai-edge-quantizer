@@ -15,6 +15,7 @@
 
 """test for quantize tensor."""
 
+import logging
 import pathlib
 
 from absl.testing import absltest
@@ -47,12 +48,12 @@ class QuantizeTensorTest(parameterized.TestCase):
     data = np.ones([1, 112, 112, 32], dtype=np.int8)
     ret = quantize_tensor.quantize_tensor(
         transformation_utils.TransformationInput(
-            7,
-            model,
-            subgraph,
-            -1,
-            [4],
-            qtyping.UniformQuantParams(
+            tensor_id=7,
+            model=model,
+            subgraph=subgraph,
+            producer=-1,
+            consumers=[4],
+            quant_params=qtyping.UniformQuantParams(
                 8, None, np.ones(1), np.ones(1), True, data
             ),
         )
@@ -75,12 +76,12 @@ class QuantizeTensorTest(parameterized.TestCase):
     model = self._model
     ret = quantize_tensor.quantize_tensor(
         transformation_utils.TransformationInput(
-            4,
-            model,
-            subgraph,
-            1,
-            [3],
-            qtyping.UniformQuantParams(
+            tensor_id=4,
+            model=model,
+            subgraph=subgraph,
+            producer=1,
+            consumers=[3],
+            quant_params=qtyping.UniformQuantParams(
                 8, None, np.array([22]), np.array([127])
             ),
         )
@@ -92,18 +93,103 @@ class QuantizeTensorTest(parameterized.TestCase):
     self.assertListEqual(np.array(quant_param.zeroPoint).tolist(), [127])
     self.assertEqual(quant_param.quantizedDimension, 0)
 
+  def test_duplicate_quantization_is_detected(self):
+    """test quantizing a constant tensor."""
+    subgraph = self._model.subgraphs[0]
+    model = self._model
+    data = np.ones([1, 112, 112, 32], dtype=np.int8)
+    buffer_id = subgraph.tensors[7].buffer
+    quant_params = qtyping.UniformQuantParams(
+        8, None, np.ones(1), np.ones(1), True, data
+    )
+    orig_buffer_data = model.buffers[buffer_id].data
+
+    # Buffer was written with the same quant params, don't overwrite.
+    buffer_origin = {buffer_id: quant_params}
+    ret = quantize_tensor.quantize_tensor(
+        transformation_utils.TransformationInput(
+            tensor_id=7,
+            model=model,
+            subgraph=subgraph,
+            producer=-1,
+            consumers=[4],
+            quant_params=quant_params,
+            buffer_origin=buffer_origin,
+        )
+    )
+
+    # Transformation is still correctly applied.
+    self.assertEqual(ret.op_id, 0)
+    self.assertEqual(ret.num_ops_added, 0)
+    tensor_quant_params = subgraph.tensors[7].quantization
+    self.assertListEqual(np.array(tensor_quant_params.scale).tolist(), [1])
+    self.assertEqual(np.array(tensor_quant_params.zeroPoint).tolist(), [1])
+    self.assertEqual(tensor_quant_params.quantizedDimension, 0)
+
+    # Quantized buffer was not packed.
+    self.assertIs(model.buffers[buffer_id].data, orig_buffer_data)
+
+  def test_overwriting_quantization_is_detected(self):
+    """test quantizing a constant tensor."""
+    subgraph = self._model.subgraphs[0]
+    model = self._model
+    data = np.ones([1, 112, 112, 32], dtype=np.int8)
+    buffer_id = subgraph.tensors[7].buffer
+    quant_params_4bit = qtyping.UniformQuantParams(
+        4, None, np.ones(1), np.ones(1), True, data
+    )
+    quant_params_8bit = qtyping.UniformQuantParams(
+        8, None, np.ones(1), np.ones(1), True, data
+    )
+    orig_buffer_data = model.buffers[buffer_id].data
+
+    # Buffer was already written but with different quant params, so it should
+    # be overwritten.
+    buffer_origin = {buffer_id: quant_params_4bit}
+    with self.assertLogs(level=logging.WARNING) as logs:
+      ret = quantize_tensor.quantize_tensor(
+          transformation_utils.TransformationInput(
+              tensor_id=7,
+              model=model,
+              subgraph=subgraph,
+              producer=-1,
+              consumers=[4],
+              quant_params=quant_params_8bit,
+              buffer_origin=buffer_origin,
+          )
+      )
+
+    # Make sure a warning was logged.
+    self.assertIn(
+        "overriding other previously quantized data", "\n".join(logs.output)
+    )
+
+    # Transformation is still correctly applied.
+    self.assertEqual(ret.op_id, 0)
+    self.assertEqual(ret.num_ops_added, 0)
+    tensor_quant_params = subgraph.tensors[7].quantization
+    self.assertListEqual(np.array(tensor_quant_params.scale).tolist(), [1])
+    self.assertEqual(np.array(tensor_quant_params.zeroPoint).tolist(), [1])
+    self.assertEqual(tensor_quant_params.quantizedDimension, 0)
+
+    # Quantized buffer was packed.
+    self.assertIsNot(model.buffers[buffer_id].data, orig_buffer_data)
+    self.assertIs(buffer_origin[buffer_id], quant_params_8bit)
+
   def test_quantize_tensor_with_per_channel_quantization(self):
     """test quantizing an activation tensor."""
     subgraph = self._model.subgraphs[0]
     model = self._model
     ret = quantize_tensor.quantize_tensor(
         transformation_utils.TransformationInput(
-            4,
-            model,
-            subgraph,
-            1,
-            [3],
-            qtyping.UniformQuantParams(8, 3, np.ones([22]), np.zeros([22])),
+            tensor_id=4,
+            model=model,
+            subgraph=subgraph,
+            producer=1,
+            consumers=[3],
+            quant_params=qtyping.UniformQuantParams(
+                8, 3, np.ones([22]), np.zeros([22])
+            ),
         )
     )
     self.assertEqual(ret.op_id, 0)
@@ -123,12 +209,12 @@ class QuantizeTensorTest(parameterized.TestCase):
     model = self._model
     quantize_tensor.quantize_tensor(
         transformation_utils.TransformationInput(
-            4,
-            model,
-            subgraph,
-            1,
-            [3],
-            qtyping.NonLinearQuantParams(16, None),
+            tensor_id=4,
+            model=model,
+            subgraph=subgraph,
+            producer=1,
+            consumers=[3],
+            quant_params=qtyping.NonLinearQuantParams(16, None),
         )
     )
     self.assertEqual(subgraph.tensors[4].type, qtyping.TensorType.FLOAT16)
@@ -168,6 +254,46 @@ class QuantizeTensorTest(parameterized.TestCase):
     self.assertEqual(quant_param.details.scales, 9)
     # So far we don't have zero point in blockwise quantization.
     self.assertEqual(quant_param.details.zeroPoints, -1)
+
+  def test_int2_constant_packed_correctly(self):
+    subgraph = self._model.subgraphs[0]
+    model = self._model
+    data = np.array(
+        [
+            0b00,  # First byte
+            0b01,
+            0b10,
+            0b11,
+            0b11,  # Second byte
+            0b10,
+            0b01,
+            0b00,
+            0b10,  # Third byte, four bits of padding will be added.
+            0b11,
+        ],
+        dtype=np.int8,
+    )
+    expected = np.array([0b11100100, 0b00011011, 0b00001110])
+    ret = quantize_tensor.quantize_tensor(
+        transformation_utils.TransformationInput(
+            tensor_id=7,
+            model=model,
+            subgraph=subgraph,
+            producer=-1,
+            consumers=[4],
+            quant_params=qtyping.UniformQuantParams(
+                2, None, np.ones(1), np.ones(1), True, data
+            ),
+        )
+    )
+    self.assertEqual(ret.op_id, 0)
+    self.assertEqual(ret.num_ops_added, 0)
+    buffer_id = subgraph.tensors[7].buffer
+    np.testing.assert_array_equal(model.buffers[buffer_id].data, expected)
+    quant_param = subgraph.tensors[7].quantization
+    np.testing.assert_array_equal(quant_param.scale, [1])
+    np.testing.assert_array_equal(quant_param.zeroPoint, [1])
+    self.assertEqual(quant_param.quantizedDimension, 0)
 
   def test_int4_constant_packed_correctly(self):
     subgraph = self._model.subgraphs[0]
@@ -220,8 +346,8 @@ class QuantizeTensorTest(parameterized.TestCase):
           num_bits=5,
       ),
       dict(
-          testcase_name="int2",
-          num_bits=2,
+          testcase_name="int3",
+          num_bits=3,
       ),
   )
   def test_int_constant_not_packed(self, num_bits):
