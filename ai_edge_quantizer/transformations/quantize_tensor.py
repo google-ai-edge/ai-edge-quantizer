@@ -15,6 +15,7 @@
 
 """quantize a given tensor."""
 
+import logging
 from typing import Optional
 
 import ml_dtypes
@@ -36,18 +37,21 @@ def quant_params_to_tflite_type(
   Returns:
     The corresponding TFLite tensor type.
   """
-  if bitwidth == 4:
-    return qtyping.TensorType.INT4
-  elif bitwidth <= 8:
-    return qtyping.TensorType.INT8
-  elif bitwidth <= 16:
-    return qtyping.TensorType.INT16
-  elif bitwidth <= 32:
-    return qtyping.TensorType.INT32
-  elif bitwidth <= 64:
-    return qtyping.TensorType.INT64
-  else:
-    raise ValueError(f"Unsupported quant params: {bitwidth}")
+  match bitwidth:
+    case 2:
+      return qtyping.TensorType.INT2
+    case 4:
+      return qtyping.TensorType.INT4
+    case bits if 1 < bits <= 8:
+      return qtyping.TensorType.INT8
+    case bits if 8 < bits <= 16:
+      return qtyping.TensorType.INT16
+    case bits if 16 < bits <= 32:
+      return qtyping.TensorType.INT32
+    case bits if 32 < bits <= 64:
+      return qtyping.TensorType.INT64
+    case _:
+      raise ValueError(f"Unsupported bitwidth {bitwidth}.I")
 
 
 def nonlinear_quant_params_to_tflite_type(
@@ -161,16 +165,36 @@ def quantize_tensor(
   tensor: qtyping.TensorT = transformation_input.subgraph.tensors[
       transformation_input.tensor_id
   ]
+  buffer_id = tensor.buffer
   # TODO: b/336385820 - Suppport quantize buffer directly when quantized_data
   # is not provided.
-  if tensor.buffer:
-    if transformation_input.quant_params.quantized_data is not None:
-      transformation_input.model.buffers[tensor.buffer].data = (
+  if (
+      buffer_id
+      and (quant_params := transformation_input.quant_params).quantized_data
+      is not None
+  ):
+    if (
+        origin := transformation_input.buffer_origin.get(buffer_id)
+    ) and origin is quant_params:
+      logging.debug(
+          "Quantized data for tensor %s has already been packed to buffer %s,"
+          " skipping packing",
+          tensor.name.decode(),
+          buffer_id,
+      )
+    else:
+      if origin is not None:
+        logging.warning(
+            "Quantized data for tensor %s is overriding other previously"
+            " quantized data in buffer %s.",
+            tensor.name.decode(),
+            buffer_id,
+        )
+      transformation_input.buffer_origin[buffer_id] = quant_params
+      transformation_input.model.buffers[buffer_id].data = (
           transformation_utils.pack_data(
-              transformation_input.quant_params.num_bits,
-              np.ravel(
-                  np.asarray(transformation_input.quant_params.quantized_data)
-              ).view(np.uint8),
+              quant_params.num_bits,
+              np.ravel(np.asarray(quant_params.quantized_data)).view(np.uint8),
           )
       )
 

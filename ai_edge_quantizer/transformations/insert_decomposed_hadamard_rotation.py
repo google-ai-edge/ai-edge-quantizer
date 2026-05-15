@@ -190,16 +190,16 @@ def insert_decomposed_hadamard_rotation(
   prerorate_reshape_op.outputs = [prerotate_reshape_output_tensor_id]
 
   # Generate hadamard_matrix(hadamard_size).
-  # We quantize the Hadamard matrix to INT4 for better memory efficiency, but
+  # We quantize the Hadamard matrix to INT2 for better memory efficiency, but
   # for large models the memory overhead is not significant, and floating point
   # computation does seem to result in better accuracy.
   hadamard_matrix = _make_hadamard_matrix(hadamard_size)
   hadamard_matrix_tensor_id = transformation_utils.add_new_constant_tensor(
       tensor_name=tensor.name + b'_hadamard_matrix',
       data=transformation_utils.pack_data(
-          bitwidth=4, flattened_data=np.ravel(hadamard_matrix)
+          bitwidth=2, flattened_data=np.ravel(hadamard_matrix)
       ),
-      tensor_type=qtyping.TensorType.INT4,
+      tensor_type=qtyping.TensorType.INT2,
       subgraph=transformation_input.subgraph,
       model=transformation_input.model,
       tensor_shape=hadamard_matrix.shape,

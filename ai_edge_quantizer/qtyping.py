@@ -20,8 +20,9 @@ from collections.abc import MutableMapping
 import copy
 import dataclasses
 import enum
-from typing import Any, Callable, Mapping, Optional, Union, TypeAlias
-from immutabledict import immutabledict
+from typing import Any, Callable, Mapping, Optional, TypeAlias, Union
+
+import immutabledict
 import numpy as np
 
 from ai_edge_litert.tools import flatbuffer_utils
@@ -367,13 +368,15 @@ class TensorQuantizationConfig:
   granularity: QuantGranularity = QuantGranularity.TENSORWISE
   dtype: TensorDataType = TensorDataType.INT
   algorithm_params: Mapping[str, Any] = dataclasses.field(
-      default_factory=immutabledict
+      default_factory=immutabledict.immutabledict
   )
 
   def __post_init__(self):
-    if not isinstance(self.algorithm_params, immutabledict):
+    if not isinstance(self.algorithm_params, immutabledict.immutabledict):
       object.__setattr__(
-          self, 'algorithm_params', immutabledict(self.algorithm_params)
+          self,
+          'algorithm_params',
+          immutabledict.immutabledict(self.algorithm_params),
       )
 
   def to_dict(self) -> dict[str, Any]:

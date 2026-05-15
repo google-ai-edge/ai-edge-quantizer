@@ -16,7 +16,6 @@
 """Python manager for transformations to be applied to TFlite models."""
 
 from collections.abc import Sequence
-from typing import Optional
 
 import numpy as np
 
@@ -106,6 +105,7 @@ class TransformationPerformer:
     )
     self._original_op_id_map = []
     self._added_op_id_map = []
+    self._buffer_origin = {}
 
   def _create_op_id_map(self, tflite_model: qtyping.ModelT):
     """init the original op_id to modified op_id map.
@@ -253,6 +253,7 @@ class TransformationPerformer:
             producer,
             consumers,
             instruction.parameters,
+            self._buffer_origin,
         )
     )
     self._update_instructions(
@@ -308,7 +309,7 @@ class TransformationPerformer:
       self,
       transformation_instructions: dict[str, qtyping.TensorTransformationInsts],
       tflite_model: qtyping.ModelT,
-      tensor_processing_order: Optional[Sequence[str]] = None,
+      tensor_processing_order: Sequence[str] | None = None,
       enable_progress_bar: bool | None = None,
   ) -> None:
     """Apply all transformations to the given tflite_model in place.
@@ -326,6 +327,7 @@ class TransformationPerformer:
     self._original_op_id_map = []
     self._added_op_id_map = []
     self._create_op_id_map(tflite_model)
+    self._buffer_origin = dict()
     if tensor_processing_order is None:
       tensor_processing_order = transformation_instructions.keys()
     with progress_utils.ProgressBar(

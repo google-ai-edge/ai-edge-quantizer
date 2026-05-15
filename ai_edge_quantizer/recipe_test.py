@@ -77,6 +77,15 @@ class RecipeTest(parameterized.TestCase):
         pathlib.Path(self._test_model_path).stat().st_size,
     )
 
+  def test_quantization_from_dynamic_wi2c_afp32_func_succeeds(self):
+    quant_result = self._quantize_with_recipe_func(
+        recipe.dynamic_wi2c_afp32, self._test_model_path
+    )
+    self.assertLess(
+        len(quant_result.quantized_model),
+        pathlib.Path(self._test_model_path).stat().st_size,
+    )
+
   @unittest.skip('skipping due to b/438971945')
   def test_quantization_from_weight_only_wi8_afp32_func_succeeds(self):
     quant_result = self._quantize_with_recipe_func(

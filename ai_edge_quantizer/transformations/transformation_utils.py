@@ -15,8 +15,9 @@
 
 """Utility functions for graph transformations."""
 
+from collections.abc import MutableMapping
 import dataclasses
-from typing import Optional, Union
+from typing import Optional
 
 import numpy as np
 
@@ -34,6 +35,9 @@ class TransformationInput:
     producer: op id for the producer of the tensor.
     consumers: op ids for consumers of the new dequant op.
     quant_params: quantization parameters to be applied on the orignal tensor
+    buffer_origin: A mapping of buffer indices to the quantization parameters
+      used to populate them, used to avoid duplicate (and detect conflicting)
+      writes.
   """
 
   tensor_id: int
@@ -41,7 +45,10 @@ class TransformationInput:
   subgraph: qtyping.SubGraphT
   producer: int
   consumers: list[int]
-  quant_params: Union[qtyping.UniformQuantParams, qtyping.NonLinearQuantParams]
+  quant_params: qtyping.UniformQuantParams | qtyping.NonLinearQuantParams
+  buffer_origin: MutableMapping[
+      int, qtyping.UniformQuantParams | qtyping.NonLinearQuantParams
+  ] = dataclasses.field(default_factory=dict)
 
 
 class HashableMemoryView:
@@ -248,8 +255,8 @@ def raise_deprecated_error(_: TransformationInput):
 def pack_data(bitwidth: int, flattened_data: np.ndarray) -> np.ndarray:
   """Pack the data to the corresponding bit width.
 
-  Currently only support 4 bits. If no packing is needed, the original data is
-  returned.
+  Currently only support 2 and 4 bits. If no packing is needed, the original
+  data is returned.
 
   Args:
     bitwidth: Bit width from NonLinearQuantParams.
@@ -258,15 +265,23 @@ def pack_data(bitwidth: int, flattened_data: np.ndarray) -> np.ndarray:
   Returns:
     Packed data.
   """
-  if bitwidth == 4:
-    flattened_data = np.bitwise_and(flattened_data.astype(np.uint8), 0x0F)
-    even_data = flattened_data[::2]
-    odd_data = np.left_shift(flattened_data[1::2], 4)
-    if odd_data.shape[0] == even_data.shape[0] - 1:
-      odd_data = np.pad(odd_data, (0, 1), constant_values=0)
-    return np.bitwise_or(even_data, odd_data)
-  else:
-    return flattened_data
+  match bitwidth:
+    case 2 | 4:
+      values_per_byte = 8 // bitwidth
+      flattened_data = flattened_data.astype(np.uint8)  # Makes a copy.
+      flattened_data &= (1 << bitwidth) - 1  # Mask values (in-place).
+      res, *buffers = [  # Generates views on `flatbuffer_data`.
+          flattened_data[offset::values_per_byte]
+          for offset in range(values_per_byte)
+      ]
+      for k, buffer in enumerate(buffers):
+        if len(buffer) - len(res):
+          buffer = np.pad(buffer, (0, 1), constant_values=0)
+        buffer <<= bitwidth * (k + 1)  # Shift values (in-place).
+        res |= buffer  # Merge with first bits (in-place).
+      return res
+    case _:
+      return flattened_data
 
 
 def get_producer_schema_op_id(
