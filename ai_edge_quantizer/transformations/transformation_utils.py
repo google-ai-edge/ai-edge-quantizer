@@ -252,28 +252,67 @@ def raise_deprecated_error(_: TransformationInput):
   )
 
 
-def pack_data(bitwidth: int, flattened_data: np.ndarray) -> np.ndarray:
+def pack_data(bitwidth: int, data: np.ndarray) -> np.ndarray:
   """Pack the data to the corresponding bit width.
 
-  Currently only support 4 bits. If no packing is needed, the original data is
-  returned.
+  Currently only support 2 and 4 bits. If no packing is needed, the original
+  data is returned.
 
   Args:
     bitwidth: Bit width from NonLinearQuantParams.
-    flattened_data: The data to be packed.
+    data: The data to be packed.
 
   Returns:
     Packed data.
   """
-  if bitwidth == 4:
-    flattened_data = np.bitwise_and(flattened_data.astype(np.uint8), 0x0F)
-    even_data = flattened_data[::2]
-    odd_data = np.left_shift(flattened_data[1::2], 4)
-    if odd_data.shape[0] == even_data.shape[0] - 1:
-      odd_data = np.pad(odd_data, (0, 1), constant_values=0)
-    return np.bitwise_or(even_data, odd_data)
+  # Flatten the data without copying it.
+  data = data.reshape(-1)
+  if bitwidth in(2, 4):
+    # Some useful constants.
+    values_per_byte = 8 // bitwidth
+    mask = (1 << bitwidth) - 1
+
+    # Slice the buffers into `values_per_bytes` interleaved views (no copies are
+    # made at this point).
+    *buffers, last = [
+        data[offset::values_per_byte]  # Creates a view, no copy.
+        for offset in range(values_per_byte)
+    ]
+
+    # Convert the last of the buffers to `np.uint8` making a copy of it. This
+    # is the buffer we will pack our data into.
+    last = last.astype(np.uint8)  # Makes a copy.
+    last &= mask  # Mask values (in-place).
+
+    # Loop over the remaining buffers in reverse order, i.e. last-1 to first.
+    # Note that since we only ever make a copy of the data in each `buffer`
+    # inside of this loop, only at most len(data) // values_per_byte * 2 bytes
+    # are allocated (`last` and `buffer`).
+    for buffer in reversed(buffers):
+      # Shift the values (in-place, no copy) to the left to make room for the
+      # next chunk of bits.
+      last <<= bitwidth
+
+      # Convert the buffer values to `np.uint8` (makes a copy) and mask out any
+      # extra bits.
+      buffer = buffer.astype(np.uint8)  # Makes a copy.
+      buffer &= mask  # Mask values (in-place).
+
+      # If `buffer` is larger than `last` (happens if `len(data)` is not an
+      # integer multiple of `values_per_buffer`), swap the buffers to pack the
+      # data into the larger of the two. This avoids explicitly padding
+      # `last`, which creates an extra copy.
+      if len(buffer) > len(last):
+        buffer, last = last, buffer
+
+      # Merge `last` and `buffer`, keeping in mind that `last` may be larger.
+      last[: len(buffer)] |= buffer  # Merge with previous bits (in-place).
+
+    return last
+
   else:
-    return flattened_data
+    # Nothing to pack.
+    return data
 
 
 def get_producer_schema_op_id(
