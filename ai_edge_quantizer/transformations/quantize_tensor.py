@@ -15,6 +15,7 @@
 
 """quantize a given tensor."""
 
+import logging
 from typing import Optional
 
 import ml_dtypes
@@ -161,16 +162,37 @@ def quantize_tensor(
   tensor: qtyping.TensorT = transformation_input.subgraph.tensors[
       transformation_input.tensor_id
   ]
+  buffer_id = tensor.buffer
   # TODO: b/336385820 - Suppport quantize buffer directly when quantized_data
   # is not provided.
-  if tensor.buffer:
-    if transformation_input.quant_params.quantized_data is not None:
-      transformation_input.model.buffers[tensor.buffer].data = (
+  if (
+      buffer_id
+      and (quant_params := transformation_input.quant_params).quantized_data
+      is not None
+  ):
+    if (
+        origin := transformation_input.buffer_origin.get(buffer_id)
+    ) and origin is quant_params:
+      logging.debug(
+          "Quantized data for tensor %s (%s bytes) has already been packed to"
+          " buffer %s, skipping packing",
+          tensor.name.decode(),
+          quant_params.quantized_data.size,
+          buffer_id,
+      )
+    else:
+      if origin is not None:
+        logging.warning(
+            "Quantized data for tensor %s is overriding other previously"
+            " quantized data in buffer %s.",
+            tensor.name.decode(),
+            buffer_id,
+        )
+      transformation_input.buffer_origin[buffer_id] = quant_params
+      transformation_input.model.buffers[buffer_id].data = (
           transformation_utils.pack_data(
-              transformation_input.quant_params.num_bits,
-              np.ravel(
-                  np.asarray(transformation_input.quant_params.quantized_data)
-              ).view(np.uint8),
+              quant_params.num_bits,
+              np.ravel(np.asarray(quant_params.quantized_data)).view(np.uint8),
           )
       )
 

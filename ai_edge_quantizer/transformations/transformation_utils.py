@@ -15,8 +15,9 @@
 
 """Utility functions for graph transformations."""
 
+from collections.abc import MutableMapping
 import dataclasses
-from typing import Optional, Union
+from typing import Optional
 
 import numpy as np
 
@@ -34,6 +35,9 @@ class TransformationInput:
     producer: op id for the producer of the tensor.
     consumers: op ids for consumers of the new dequant op.
     quant_params: quantization parameters to be applied on the orignal tensor
+    buffer_origin: A mapping of buffer indices to the quantization parameters
+      used to populate them, used to avoid duplicate (and detect conflicting)
+      writes.
   """
 
   tensor_id: int
@@ -41,7 +45,10 @@ class TransformationInput:
   subgraph: qtyping.SubGraphT
   producer: int
   consumers: list[int]
-  quant_params: Union[qtyping.UniformQuantParams, qtyping.NonLinearQuantParams]
+  quant_params: qtyping.UniformQuantParams | qtyping.NonLinearQuantParams
+  buffer_origin: MutableMapping[
+      int, qtyping.UniformQuantParams | qtyping.NonLinearQuantParams
+  ] = dataclasses.field(default_factory=dict)
 
 
 class HashableMemoryView:
