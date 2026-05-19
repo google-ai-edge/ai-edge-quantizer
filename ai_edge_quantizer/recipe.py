@@ -228,6 +228,7 @@ def dynamic_legacy_wi8_afp32():
 # weights and float32 activations.
 dynamic_wi8c_afp32 = lambda **kwargs: _dynamic_wix_afp32(num_bits=8, **kwargs)
 dynamic_wi4c_afp32 = lambda **kwargs: _dynamic_wix_afp32(num_bits=4, **kwargs)
+dynamic_wi2c_afp32 = lambda **kwargs: _dynamic_wix_afp32(num_bits=2, **kwargs)
 
 
 # Dynamic quantization recipe with 32/64-blockwisse quantized 8/4-bit int
@@ -238,11 +239,17 @@ dynamic_wi8b32_afp32 = lambda **kwargs: _dynamic_wix_afp32(
 dynamic_wi4b32_afp32 = lambda **kwargs: _dynamic_wix_afp32(
     num_bits=4, granularity=QuantGranularity.BLOCKWISE_32, **kwargs
 )
+dynamic_wi2b32_afp32 = lambda **kwargs: _dynamic_wix_afp32(
+    num_bits=2, granularity=QuantGranularity.BLOCKWISE_32, **kwargs
+)
 dynamic_wi8b64_afp32 = lambda **kwargs: _dynamic_wix_afp32(
     num_bits=8, granularity=QuantGranularity.BLOCKWISE_64, **kwargs
 )
 dynamic_wi4b64_afp32 = lambda **kwargs: _dynamic_wix_afp32(
     num_bits=4, granularity=QuantGranularity.BLOCKWISE_64, **kwargs
+)
+dynamic_wi2b64_afp32 = lambda **kwargs: _dynamic_wix_afp32(
+    num_bits=2, granularity=QuantGranularity.BLOCKWISE_64, **kwargs
 )
 
 # Dynamic quantization recipe with channelwise quantized 8/4-bit int
@@ -253,12 +260,15 @@ dynamic_wi8c_hr_afp32 = lambda **kwargs: dynamic_wi8c_afp32(
 dynamic_wi4c_hr_afp32 = lambda **kwargs: dynamic_wi4c_afp32(
     algorithm_key=AlgorithmName.DECOMPOSED_HADAMARD_ROTATION, **kwargs
 )
+dynamic_wi2c_hr_afp32 = lambda **kwargs: dynamic_wi2c_afp32(
+    algorithm_key=AlgorithmName.DECOMPOSED_HADAMARD_ROTATION, **kwargs
+)
 
 # LiteRT-LM Recipes for specific model families, build from the above recipes.
 
 # Gemma-4 mixed 4/8-bit channelwise quantization:
 gemma4_mixed48 = lambda: {
-    'tf_lite_embedder': dynamic_wi4c_afp32(
+    'tf_lite_embedder': dynamic_wi2c_afp32(
         operation_name=TFLOperationName.EMBEDDING_LOOKUP,
     ),
     'tf_lite_per_layer_embedder': dynamic_wi4c_afp32(
@@ -268,6 +278,11 @@ gemma4_mixed48 = lambda: {
         dynamic_wi4c_afp32(
             operation_name=TFLOperationName.FULLY_CONNECTED,
         )
+        # Decode-only MLP layers 15-34 are quantized to 2 bits.
+        # + dynamic_wi2c_afp32(
+        #     regex='[Ll]ayer_(1[56789]|[23][0-9]).*(mlp|MLP)',
+        #     operation_name=TFLOperationName.FULLY_CONNECTED,
+        # )
         # Per-layer embeddings need 8 bits.
         + dynamic_wi8c_afp32(
             regex='per_layer',
@@ -279,7 +294,7 @@ gemma4_mixed48 = lambda: {
 # Gemma-4 mixed 4/8-bit channelwise quantization with Hadamard rotations for the
 # 4-bit ops:
 gemma4_mixed48_hr = lambda: {
-    'tf_lite_embedder': dynamic_wi4c_hr_afp32(
+    'tf_lite_embedder': dynamic_wi2c_hr_afp32(
         operation_name=TFLOperationName.EMBEDDING_LOOKUP,
     ),
     'tf_lite_per_layer_embedder': dynamic_wi4c_hr_afp32(
@@ -289,6 +304,11 @@ gemma4_mixed48_hr = lambda: {
         dynamic_wi4c_hr_afp32(
             operation_name=TFLOperationName.FULLY_CONNECTED,
         )
+        # Decode-only MLP layers 15-34 are quantized to 2 bits.
+        # + dynamic_wi2c_hr_afp32(
+        #     regex='[Ll]ayer_(1[56789]|[23][0-9]).*(mlp|MLP)',
+        #     operation_name=TFLOperationName.FULLY_CONNECTED,
+        # )
         # Per-layer embeddings need 8 bits.
         + dynamic_wi8c_afp32(
             regex='per_layer',
@@ -299,7 +319,7 @@ gemma4_mixed48_hr = lambda: {
 
 # Gemma-4 mixed 4-bit blockwise quantization, using block sizes of 32 and 64.
 gemma4_mixed48_b32 = lambda: {
-    'tf_lite_embedder': dynamic_wi4b32_afp32(
+    'tf_lite_embedder': dynamic_wi2c_hr_afp32(
         operation_name=TFLOperationName.EMBEDDING_LOOKUP,
     ),
     'tf_lite_per_layer_embedder': dynamic_wi4b32_afp32(
@@ -309,6 +329,11 @@ gemma4_mixed48_b32 = lambda: {
         dynamic_wi4b32_afp32(
             operation_name=TFLOperationName.FULLY_CONNECTED,
         )
+        # Decode-only MLP layers 15-34 are quantized to 2 bits.
+        # + dynamic_wi2b32_afp32(
+        #     regex='[Ll]ayer_(1[56789]|[23][0-9]).*(mlp|MLP)',
+        #     operation_name=TFLOperationName.FULLY_CONNECTED,
+        # )
         # Per-layer embeddings need 8 bits.
         + dynamic_wi8c_afp32(
             regex='per_layer',
@@ -317,7 +342,7 @@ gemma4_mixed48_b32 = lambda: {
     ),
 }
 gemma4_mixed48_b64 = lambda: {
-    'tf_lite_embedder': dynamic_wi4b64_afp32(
+    'tf_lite_embedder': dynamic_wi2c_hr_afp32(
         operation_name=TFLOperationName.EMBEDDING_LOOKUP,
     ),
     'tf_lite_per_layer_embedder': dynamic_wi4b64_afp32(
@@ -327,6 +352,11 @@ gemma4_mixed48_b64 = lambda: {
         dynamic_wi4b64_afp32(
             operation_name=TFLOperationName.FULLY_CONNECTED,
         )
+        # Decode-only MLP layers 15-34 are quantized to 2 bits.
+        # + dynamic_wi2b64_afp32(
+        #     regex='[Ll]ayer_(1[56789]|[23][0-9]).*(mlp|MLP)',
+        #     operation_name=TFLOperationName.FULLY_CONNECTED,
+        # )
         # Per-layer embeddings need 8 bits.
         + dynamic_wi8c_afp32(
             regex='per_layer',

@@ -126,7 +126,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
 
   @parameterized.product(
       op_name=(_TFLOpName.FULLY_CONNECTED, _TFLOpName.CONV_2D),
-      weight_num_bits=(4, 8),
+      weight_num_bits=(2, 4, 8),
       granularity=(
           qtyping.QuantGranularity.TENSORWISE,
           qtyping.QuantGranularity.CHANNELWISE,
@@ -174,7 +174,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
   def test_check_drq_config_wrong_bits_raise_error(self, op_name):
     op_quant_config = _OpQuantConfig(
         weight_tensor_config=_TensorQuantConfig(
-            num_bits=2,
+            num_bits=3,
             granularity=qtyping.QuantGranularity.TENSORWISE,
         ),
         compute_precision=_ComputePrecision.INTEGER,  # DRQ.
@@ -348,7 +348,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             num_bits=16, symmetric=True
         ),
         weight_tensor_config=_TensorQuantConfig(
-            num_bits=2,
+            num_bits=3,
             granularity=qtyping.QuantGranularity.CHANNELWISE,
         ),
         compute_precision=_ComputePrecision.INTEGER,  # SRQ.
