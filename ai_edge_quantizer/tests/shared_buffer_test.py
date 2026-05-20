@@ -71,8 +71,8 @@ class SharedBufferTest(parameterized.TestCase):
           'dtype': 'INT',
       }
     return {
-        'regex': regex,
-        'operation': 'FULLY_CONNECTED',
+        'op_scope_regex': regex,
+        'operations': ['FULLY_CONNECTED'],
         'algorithm_key': 'min_max_uniform_quantize',
         'op_config': op_config,
     }

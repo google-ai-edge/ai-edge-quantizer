@@ -163,8 +163,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
     # Quantize all fully_connected.
     global_recipe = [
         {
-            'regex': '.*',
-            'operation': 'FULLY_CONNECTED',
+            'op_scope_regex': '.*',
+            'operations': ['FULLY_CONNECTED'],
             'algorithm_key': 'min_max_uniform_quantize',
             'op_config': {
                 'weight_tensor_config': {
@@ -305,8 +305,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
     # Choose scope regex using Model Explorer
     selective_quantization_recipe = [
         {
-            'regex': '.*/dense/.*',
-            'operation': 'FULLY_CONNECTED',
+            'op_scope_regex': '.*/dense/.*',
+            'operations': ['FULLY_CONNECTED'],
             'algorithm_key': 'min_max_uniform_quantize',
             'op_config': {
                 'weight_tensor_config': {
@@ -321,8 +321,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
             },
         },
         {
-            'regex': '.*/dense_1/.*',
-            'operation': 'FULLY_CONNECTED',
+            'op_scope_regex': '.*/dense_1/.*',
+            'operations': ['FULLY_CONNECTED'],
             'algorithm_key': 'min_max_uniform_quantize',
             'op_config': {
                 'weight_tensor_config': {
@@ -374,8 +374,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
     selective_quantization_recipe = [
         # Use the tensor name as scope directly.
         {
-            'regex': 'sequential/dense_1/MatMul',
-            'operation': 'FULLY_CONNECTED',
+            'op_scope_regex': 'sequential/dense_1/MatMul',
+            'operations': ['FULLY_CONNECTED'],
             'algorithm_key': 'min_max_uniform_quantize',
             'op_config': {
                 'weight_tensor_config': {
@@ -389,8 +389,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
         },
         # Scope that does not exist in the model.
         {
-            'regex': '.*/dense_3/.*',
-            'operation': 'FULLY_CONNECTED',
+            'op_scope_regex': '.*/dense_3/.*',
+            'operations': ['FULLY_CONNECTED'],
             'algorithm_key': 'min_max_uniform_quantize',
             'op_config': {
                 'weight_tensor_config': {
@@ -669,8 +669,8 @@ class ParamsGeneratorTest(parameterized.TestCase):
 
   def _get_fc_recipe_entry(self, regex: str, num_bits: int):
     return {
-        'regex': regex,
-        'operation': 'FULLY_CONNECTED',
+        'op_scope_regex': regex,
+        'operations': ['FULLY_CONNECTED'],
         'algorithm_key': 'min_max_uniform_quantize',
         'op_config': {
             'weight_tensor_config': {
@@ -715,7 +715,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
     )
     model = tfl_flatbuffer_utils.read_model(model_path)
     pg = params_generator.ParamsGenerator(model)
-    
+
     sig1_fc1_regex = 'BatchMatMulV3;'
     sig1_fc2_regex = 'PartitionedCall:0;'
     recipe = []
