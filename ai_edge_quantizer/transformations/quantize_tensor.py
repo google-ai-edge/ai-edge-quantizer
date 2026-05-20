@@ -37,18 +37,21 @@ def quant_params_to_tflite_type(
   Returns:
     The corresponding TFLite tensor type.
   """
-  if bitwidth == 4:
-    return qtyping.TensorType.INT4
-  elif bitwidth <= 8:
-    return qtyping.TensorType.INT8
-  elif bitwidth <= 16:
-    return qtyping.TensorType.INT16
-  elif bitwidth <= 32:
-    return qtyping.TensorType.INT32
-  elif bitwidth <= 64:
-    return qtyping.TensorType.INT64
-  else:
-    raise ValueError(f"Unsupported quant params: {bitwidth}")
+  match bitwidth:
+    case 2:
+      return qtyping.TensorType.INT2
+    case 4:
+      return qtyping.TensorType.INT4
+    case bits if 1 < bits <= 8:
+      return qtyping.TensorType.INT8
+    case bits if 8 < bits <= 16:
+      return qtyping.TensorType.INT16
+    case bits if 16 < bits <= 32:
+      return qtyping.TensorType.INT32
+    case bits if 32 < bits <= 64:
+      return qtyping.TensorType.INT64
+    case _:
+      raise ValueError(f"Unsupported bitwidth {bitwidth}.I")
 
 
 def nonlinear_quant_params_to_tflite_type(
