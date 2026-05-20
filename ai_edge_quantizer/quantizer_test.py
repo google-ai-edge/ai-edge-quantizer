@@ -22,18 +22,22 @@ import numpy as np
 import os
 import io
 from ai_edge_quantizer import algorithm_manager
+from ai_edge_quantizer import calibrator
 from ai_edge_quantizer import default_policy
+from ai_edge_quantizer import model_validator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import recipe_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
+from ai_edge_quantizer.utils import validation_utils
 
 _ComputePrecision = qtyping.ComputePrecision
 _TFLOpName = qtyping.TFLOperationName
 _TensorQuantConfig = qtyping.TensorQuantizationConfig
 _TensorDataType = qtyping.TensorDataType
 _AlgorithmName = quantizer.AlgorithmName
+_CalibrationMode = calibrator.CalibrationMode
 
 TEST_DATA_PREFIX_PATH = test_utils.get_path_to_datafile('')
 _MULTI_SIGNATURE_CALIBRATION_DATASET = {
@@ -196,29 +200,41 @@ class QuantizerTest(parameterized.TestCase):
     qt.load_quantization_recipe('dynamic_wi8_afp32')
     self.assertEqual(qt.get_quantization_recipe(), new_recipe)
 
-  @parameterized.parameters(
-      'default_a8w8',
-      'default_a16w8',
+  @parameterized.product(
+      recipe_name=[
+          'default_a8w8',
+          'default_a16w8',
+      ],
+      mode=[
+          _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+          _CalibrationMode.CALIBRATION_PROFILER_BASED,
+      ],
   )
-  def test_calibrate_required_recipe_succeeds(self, recipe_name):
+  def test_calibrate_required_recipe_succeeds(self, recipe_name, mode):
     self._quantizer.load_quantization_recipe(recipe_name)
     self.assertTrue(self._quantizer.need_calibration)
     # Calibrate with empty state.
     calib_data = _get_calibration_data()
-    calibration_result = self._quantizer.calibrate(calib_data)
+    calibration_result = self._quantizer.calibrate(calib_data, mode=mode)
     self.assertLen(calibration_result, 7)
 
-  @parameterized.parameters(
-      'default_a8w8',
-      'default_a16w8',
+  @parameterized.product(
+      recipe_name=[
+          'default_a8w8',
+          'default_a16w8',
+      ],
+      mode=[
+          _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+          _CalibrationMode.CALIBRATION_PROFILER_BASED,
+      ],
   )
-  def test_reloaded_calibration_succeeds(self, recipe_name):
+  def test_reloaded_calibration_succeeds(self, recipe_name, mode):
     self._quantizer.load_quantization_recipe(recipe_name)
     calib_data = _get_calibration_data()
-    calibration_result = self._quantizer.calibrate(calib_data)
+    calibration_result = self._quantizer.calibrate(calib_data, mode=mode)
     # Load and calibrate again.
     updated_calibration_result = self._quantizer.calibrate(
-        calib_data, previous_calibration_result=calibration_result
+        calib_data, previous_calibration_result=calibration_result, mode=mode
     )
     self.assertLen(updated_calibration_result, 7)
     self.assertNotEqual(
@@ -226,16 +242,33 @@ class QuantizerTest(parameterized.TestCase):
         updated_calibration_result['StatefulPartitionedCall:0'],
     )
 
-  @parameterized.parameters(
-      'dynamic_legacy_wi8_afp32',
-      'dynamic_wi8_afp32',
-      'default_af32w8float',
+  def test_calibrate_unsupported_mode_raises_error(self):
+    self._quantizer.load_quantization_recipe('default_a8w8')
+    with self.assertRaisesRegex(
+        ValueError, r'Unsupported calibration mode: .*INFERENCE'
+    ):
+      self._quantizer.calibrate(
+          _get_calibration_data(), mode=_CalibrationMode.INFERENCE
+      )
+
+  @parameterized.product(
+      recipe_name=[
+          'dynamic_legacy_wi8_afp32',
+          'dynamic_wi8_afp32',
+          'default_af32w8float',
+      ],
+      mode=[
+          _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+          _CalibrationMode.CALIBRATION_PROFILER_BASED,
+      ],
   )
-  def test_calibrate_nonrequired_recipe_succeeds(self, recipe_name):
+  def test_calibrate_nonrequired_recipe_succeeds(self, recipe_name, mode):
     self._quantizer.load_quantization_recipe(recipe_name)
     self.assertFalse(self._quantizer.need_calibration)
     # Empty calibration result if no calibration is required.
-    calibration_result = self._quantizer.calibrate(_get_calibration_data())
+    calibration_result = self._quantizer.calibrate(
+        _get_calibration_data(), mode=mode
+    )
     self.assertEmpty(calibration_result)
 
   def test_quantize_no_calibration_succeeds(self):
@@ -245,16 +278,24 @@ class QuantizerTest(parameterized.TestCase):
     self.assertEqual(quant_result.recipe, self._test_recipe)
     self.assertIsNotNone(quant_result.quantized_model)
 
-  @parameterized.parameters(
-      'default_a8w8',
-      'default_a16w8',
+  @parameterized.product(
+      recipe_name=[
+          'default_a8w8',
+          'default_a16w8',
+      ],
+      mode=[
+          _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+          _CalibrationMode.CALIBRATION_PROFILER_BASED,
+      ],
   )
-  def test_quantize_calibration_needed_succeeds(self, recipe_name):
+  def test_quantize_calibration_needed_succeeds(self, recipe_name, mode):
     recipe = recipe_utils.resolve_recipe(recipe_name)
 
     self._quantizer.load_quantization_recipe(recipe_name)
     self.assertTrue(self._quantizer.need_calibration)
-    calibration_result = self._quantizer.calibrate(_get_calibration_data())
+    calibration_result = self._quantizer.calibrate(
+        _get_calibration_data(), mode=mode
+    )
 
     self.assertIsNone(self._quantizer._result.quantized_model)
     quant_result = self._quantizer.quantize(calibration_result)
@@ -432,7 +473,11 @@ class QuantizerTest(parameterized.TestCase):
         default_policy.DEFAULT_CONFIG_CHECK_POLICY,
     )
 
-  def test_two_pass_quantization_with_conv_and_fc_succeeds(self):
+  @parameterized.parameters(
+      _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+      _CalibrationMode.CALIBRATION_PROFILER_BASED,
+  )
+  def test_two_pass_quantization_with_conv_and_fc_succeeds(self, mode):
     float_model_path = self._test_model_path
 
     drq_recipe_path = str(
@@ -455,7 +500,9 @@ class QuantizerTest(parameterized.TestCase):
             drq_model_path, num_samples=1
         )
     )
-    calibration_result = srq_quantizer.calibrate(representative_dataset)
+    calibration_result = srq_quantizer.calibrate(
+        representative_dataset, mode=mode
+    )
     srq_result = srq_quantizer.quantize(calibration_result)
     srq_model_path = str(pathlib.Path(self._tmp_save_path) / 'srq_model.tflite')
     srq_result.export_model(srq_model_path)
@@ -569,9 +616,13 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
     self.assertIn('Mul/y', mul_result.constant_tensors)
     self.assertEmpty(mul_result.intermediate_tensors)
 
-  def test_validate_quantize_after_calibration_succeeds(self):
+  @parameterized.parameters(
+      _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+      _CalibrationMode.CALIBRATION_PROFILER_BASED,
+  )
+  def test_validate_quantize_after_calibration_succeeds(self, mode):
     calib_result = self._quantizer.calibrate(
-        _MULTI_SIGNATURE_CALIBRATION_DATASET
+        _MULTI_SIGNATURE_CALIBRATION_DATASET, mode=mode
     )
     self._quantizer.quantize(calib_result)
     validation_result = self._quantizer.validate(
@@ -580,8 +631,12 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
     available_signatures = validation_result.available_signature_keys()
     self.assertLen(available_signatures, 2)
 
+  @parameterized.parameters(
+      _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+      _CalibrationMode.CALIBRATION_PROFILER_BASED,
+  )
   def test_constant_buffer_shared_by_tensors_with_different_quantization_params_succeeds(
-      self,
+      self, mode
   ):
     recipe = [
         dict({
@@ -608,15 +663,21 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
         })
     ]
     qt = quantizer.Quantizer(self._test_model_path, recipe)
-    calib_result = qt.calibrate(_MULTI_SIGNATURE_CALIBRATION_DATASET)
+    calib_result = qt.calibrate(_MULTI_SIGNATURE_CALIBRATION_DATASET, mode=mode)
     self.assertIsNotNone(qt.quantize(calib_result).quantized_model)
 
-  def test_quantization_with_insufficient_calibration(self):
+  @parameterized.parameters(
+      _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+      _CalibrationMode.CALIBRATION_PROFILER_BASED,
+  )
+  def test_quantization_with_insufficient_calibration(self, mode):
     # Run calibration for one signature only.
     scarce_calibration_dataset = {
         'add': [{'x': np.array([2.0], dtype=np.float32)}],
     }
-    calib_result = self._quantizer.calibrate(scarce_calibration_dataset)
+    calib_result = self._quantizer.calibrate(
+        scarce_calibration_dataset, mode=mode
+    )
 
     # Quantize and expect an error about missing signature in calibration data.
     error_message = 'MUL(index: 0) not found in tensor_name_to_qsv'
@@ -671,15 +732,23 @@ class QuantizerToyGemma2Test(parameterized.TestCase):
         algorithm_key=_AlgorithmName.NO_QUANTIZE,
     )
 
-  def test_toy_gemma2_quantization_succeeds(self):
+  @parameterized.parameters(
+      _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+      _CalibrationMode.CALIBRATION_PROFILER_BASED,
+  )
+  def test_toy_gemma2_quantization_succeeds(self, mode):
     calib_result = self._quantizer.calibrate(
-        self._toy_gemma2_calibration_dataset
+        self._toy_gemma2_calibration_dataset, mode=mode
     )
     self.assertIsNotNone(calib_result)
     self._quantizer.quantize(calib_result)
     self.assertIsNotNone(self._quantizer._result.quantized_model)
 
-  def test_toy_gemma2_update_signature_defs_succeeds(self):
+  @parameterized.parameters(
+      _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+      _CalibrationMode.CALIBRATION_PROFILER_BASED,
+  )
+  def test_toy_gemma2_update_signature_defs_succeeds(self, mode):
 
     self.assertTrue(
         _is_all_signature_defs_outputs_float(
@@ -687,7 +756,7 @@ class QuantizerToyGemma2Test(parameterized.TestCase):
         )
     )
     calib_result = self._quantizer.calibrate(
-        self._toy_gemma2_calibration_dataset
+        self._toy_gemma2_calibration_dataset, mode=mode
     )
     self.assertIsNotNone(calib_result)
     self._quantizer.quantize(calib_result)
@@ -725,17 +794,28 @@ class QuantizerFullyConnectedTest(parameterized.TestCase):
         algorithm_key=_AlgorithmName.NO_QUANTIZE,
     )
 
-  def test_fully_connected_quantization_succeeds(self):
+  @parameterized.parameters(
+      _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+      _CalibrationMode.CALIBRATION_PROFILER_BASED,
+  )
+  def test_fully_connected_quantization_succeeds(self, mode):
     calib_result = self._quantizer.calibrate(
         tfl_interpreter_utils.create_random_normal_input_data(
             self._test_model_path, num_samples=4
-        )
+        ),
+        mode=mode,
     )
     self.assertIsNotNone(calib_result)
     self._quantizer.quantize(calib_result)
     self.assertIsNotNone(self._quantizer._result.quantized_model)
 
-  def test_fully_connected_quantization_update_signature_defs_succeeds(self):
+  @parameterized.parameters(
+      _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+      _CalibrationMode.CALIBRATION_PROFILER_BASED,
+  )
+  def test_fully_connected_quantization_update_signature_defs_succeeds(
+      self, mode
+  ):
 
     model_content = open(self._test_model_path, 'rb').read()
     self.assertTrue(_is_all_signature_defs_inputs_float(model_content))
@@ -744,7 +824,8 @@ class QuantizerFullyConnectedTest(parameterized.TestCase):
     calib_result = self._quantizer.calibrate(
         tfl_interpreter_utils.create_random_normal_input_data(
             self._test_model_path, num_samples=4
-        )
+        ),
+        mode=mode,
     )
     self.assertIsNotNone(calib_result)
     quant_result = self._quantizer.quantize(calib_result)
@@ -756,6 +837,55 @@ class QuantizerFullyConnectedTest(parameterized.TestCase):
     self.assertTrue(
         _is_all_signature_defs_outputs_float(quant_result.quantized_model)
     )
+
+
+class CalibrationModesParityTest(parameterized.TestCase):
+
+  @parameterized.parameters(
+      'single_fc.tflite',
+      'conv_fc_mnist.tflite',
+      'two_signatures.tflite',
+  )
+  def test_parity_between_calibration_modes(self, model_name):
+    model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / 'tests/models' / model_name
+    )
+    input_data = tfl_interpreter_utils.create_random_normal_input_data(
+        model_path, random_seed=0
+    )
+    _test_recipe = recipe_utils.resolve_recipe('default_a8w8')
+    qt = quantizer.Quantizer(model_path, _test_recipe)
+    self.assertTrue(qt.need_calibration)
+
+    # 1. Run CALIBRATION_PRESERVE_ALL_TENSORS
+    calib_preserve = qt.calibrate(
+        input_data, mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS
+    )
+    model_preserve = qt.quantize(calib_preserve).quantized_model
+
+    # 2. Run CALIBRATION_PROFILER_BASED
+    calib_profiler = qt.calibrate(
+        input_data, mode=_CalibrationMode.CALIBRATION_PROFILER_BASED
+    )
+    model_profiler = qt.quantize(calib_profiler).quantized_model
+
+    # 3. Compare models by running inference. Note that quantized models
+    # might be binary different due to slight floating point differences in
+    # QSVs.
+    validation_result = model_validator.compare_model(
+        model_preserve,
+        model_profiler,
+        input_data,
+        error_metric='mse',
+        compare_fn=validation_utils.get_validation_func('mse'),
+    )
+
+    for sig_key in validation_result.available_signature_keys():
+      sig_result = validation_result.get_signature_comparison_result(sig_key)
+      for output_name, error in sig_result.output_tensors.items():
+        self.assertLess(
+            error, 1e-10, f'Output mismatch for {sig_key}:{output_name}'
+        )
 
 
 if __name__ == '__main__':

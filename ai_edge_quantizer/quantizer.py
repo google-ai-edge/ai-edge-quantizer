@@ -50,6 +50,7 @@ _TensorQuantizationConfig = qtyping.TensorQuantizationConfig
 _TensorTransformationParams = dict[str, qtyping.TensorTransformationParams]
 _SignatureInput = dict[str, Any]  # input_argument_name -> tensor_value.
 _CalibrationResult = dict[str, qtyping.QSV]
+_CalibrationMode = calibrator.CalibrationMode
 
 
 @dataclasses.dataclass(frozen=True)
@@ -368,6 +369,7 @@ class Quantizer:
       calibration_data: dict[str, Iterable[_SignatureInput]],
       previous_calibration_result: Optional[_CalibrationResult] = None,
       num_threads: int = 16,
+      mode: _CalibrationMode = _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
   ) -> _CalibrationResult:
     """Calibrates the float model (required by static range quantization).
 
@@ -376,6 +378,8 @@ class Quantizer:
       previous_calibration_result: Previous calibration result to be loaded. The
         calibration process will be resumed from the previous result.
       num_threads: Number of threads to use for calibration.
+      mode: Calibration mode to use for calibration. Supported modes are
+        `CALIBRATION_PRESERVE_ALL_TENSORS` and `CALIBRATION_PROFILER_BASED`.
 
     Returns:
       Calibration result ({tensor_name: tensor QSVs (e.g.,min/max)}).
@@ -386,8 +390,20 @@ class Quantizer:
     if not self.need_calibration:
       return {}
 
+    if mode not in [
+        _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        _CalibrationMode.CALIBRATION_PROFILER_BASED,
+    ]:
+      raise ValueError(
+          f'Unsupported calibration mode: {mode}. Supported modes are'
+          ' CALIBRATION_PRESERVE_ALL_TENSORS and'
+          ' CALIBRATION_PROFILER_BASED.'
+      )
+
     calib = calibrator.Calibrator(
-        self._float_model_buffer, num_threads=num_threads
+        self._float_model_buffer,
+        num_threads=num_threads,
+        mode=mode,
     )
     if previous_calibration_result is not None:
       calib.load_model_qsvs(previous_calibration_result)
