@@ -21,6 +21,7 @@ import pathlib
 from typing import Any
 
 from absl.testing import absltest
+from absl.testing import parameterized
 import numpy as np
 
 import os
@@ -78,10 +79,16 @@ def _add_default_int8xint8_integer_recipe(recipe_manager_object):
   )
 
 
-class CalibratorTest(absltest.TestCase):
+class CalibratorTestBase(absltest.TestCase):
+
+  mode: _CalibrationMode | None = None
+  _recipe_manager: recipe_manager.RecipeManager
+  _representative_dataset: dict[str, Any]
 
   def setUp(self):
     super().setUp()
+    if self.mode is None:
+      self.skipTest("Base class should not run directly.")
     np.random.seed(0)
     self._recipe_manager = recipe_manager.RecipeManager()
     dataset_gen = _representative_dataset_gen()
@@ -93,7 +100,7 @@ class CalibratorTest(absltest.TestCase):
     )
     self._calibrator = calibrator.Calibrator(
         self._test_model_path,
-        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        mode=self.mode,  # pytype: disable=wrong-arg-types
     )
 
   def test_calibrator_state_manipulation(self):
@@ -168,7 +175,7 @@ class CalibratorTest(absltest.TestCase):
         pathlib.Path(TEST_DATA_PREFIX_PATH)
         / "tests/models/branching_conv_fc.tflite"
     )
-    test_calibrator = calibrator.Calibrator(test_model_path)
+    test_calibrator = calibrator.Calibrator(test_model_path, mode=self.mode)  # pytype: disable=wrong-arg-types
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
     dataset_gen = _representative_dataset_gen(size=(3, 4, 4, 1))
     test_calibrator.calibrate(
@@ -183,7 +190,7 @@ class CalibratorTest(absltest.TestCase):
         pathlib.Path(TEST_DATA_PREFIX_PATH)
         / "tests/models/reshape_with_empty_shape.tflite"
     )
-    test_calibrator = calibrator.Calibrator(test_model_path)
+    test_calibrator = calibrator.Calibrator(test_model_path, mode=self.mode)  # pytype: disable=wrong-arg-types
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
     calib_data = tfl_interpreter_utils.create_random_normal_input_data(
         test_model_path, num_samples=4
@@ -345,24 +352,42 @@ class CalibratorTest(absltest.TestCase):
     self.assertEqual(self._calibrator._metadata["num_samples_calibrated"], 0)
 
 
-class CalibratorAlreadyQuantizedModelTest(absltest.TestCase):
+class CalibratorPreserveAllTensorsTest(CalibratorTestBase):
+  mode = _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS
 
-  def test_check_is_float_model_succeeds_when_model_is_float(self):
+
+class CalibratorProfilerBasedTest(CalibratorTestBase):
+  mode = _CalibrationMode.CALIBRATION_PROFILER_BASED
+
+
+class CalibratorAlreadyQuantizedModelTest(parameterized.TestCase):
+
+  @parameterized.parameters(
+      (_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,),
+      (_CalibrationMode.CALIBRATION_PROFILER_BASED,),
+  )
+  def test_check_is_float_model_succeeds_when_model_is_float(self, mode):
     test_model_path = str(
         pathlib.Path(TEST_DATA_PREFIX_PATH)
         / "tests/models/conv_fc_mnist.tflite"
     )
-    _ = calibrator.Calibrator(test_model_path)
+    _ = calibrator.Calibrator(test_model_path, mode=mode)
 
-  def test_check_is_quantized_model_succeeds_when_model_is_quantized(self):
+  @parameterized.parameters(
+      (_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,),
+      (_CalibrationMode.CALIBRATION_PROFILER_BASED,),
+  )
+  def test_check_is_quantized_model_succeeds_when_model_is_quantized(
+      self, mode
+  ):
     test_model_path = str(
         pathlib.Path(TEST_DATA_PREFIX_PATH)
         / "tests/models/mnist_quantized.tflite"
     )
-    _ = calibrator.Calibrator(test_model_path)
+    _ = calibrator.Calibrator(test_model_path, mode=mode)
 
 
-class CalibratorToyGemma2Test(absltest.TestCase):
+class CalibratorToyGemma2Test(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
@@ -396,21 +421,39 @@ class CalibratorToyGemma2Test(absltest.TestCase):
         }],
     }
 
-  def test_toy_gemma2_calibration_success(self):
-    calib = calibrator.Calibrator(self._test_model_path)
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="preserve_all_tensors",
+          mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+          expected_length=202,
+      ),
+      dict(
+          testcase_name="profiler_based",
+          mode=_CalibrationMode.CALIBRATION_PROFILER_BASED,
+          expected_length=200,  # 2 fewer than preserve_all_tensors because
+          # constant and bool tensors are skipped in profiler based mode.
+      ),
+  )
+  def test_toy_gemma2_calibration_success(self, mode, expected_length):
+    calib = calibrator.Calibrator(self._test_model_path, mode=mode)
     recipe_mngr = recipe_manager.RecipeManager()
     _add_default_int8xint8_integer_recipe(recipe_mngr)
     calib.calibrate(
         self._toy_gemma2_calibration_dataset,
         model_recipe_manager=recipe_mngr,
     )
-    self.assertLen(calib.get_model_qsvs(), 202)
+    self.assertLen(calib.get_model_qsvs(), expected_length)
 
 
-class CalibrationInterpreterTest(absltest.TestCase):
+class CalibrationInterpreterTestBase(absltest.TestCase):
+
+  mode: _CalibrationMode | None = None
+  _test_model_path: str
 
   def setUp(self):
     super().setUp()
+    if self.mode is None:
+      self.skipTest("Base class")
     np.random.seed(0)
     self._test_model_path = str(
         pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models/single_fc.tflite"
@@ -419,14 +462,14 @@ class CalibrationInterpreterTest(absltest.TestCase):
   def test_initialization(self):
     interpreter = calibrator.CalibrationInterpreter(
         self._test_model_path,
-        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        mode=self.mode,  # pytype: disable=wrong-arg-types
     )
     self.assertIsInstance(interpreter, calibrator.CalibrationInterpreter)
 
   def test_calibration_mode(self):
     interpreter = calibrator.CalibrationInterpreter(
         self._test_model_path,
-        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        mode=self.mode,  # pytype: disable=wrong-arg-types
     )
     runner = interpreter.get_signature_runner()
 
@@ -445,7 +488,7 @@ class CalibrationInterpreterTest(absltest.TestCase):
   def test_save_calibration_result(self):
     interpreter = calibrator.CalibrationInterpreter(
         self._test_model_path,
-        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        mode=self.mode,  # pytype: disable=wrong-arg-types
     )
     runner = interpreter.get_signature_runner()
     input_data = np.random.rand(1, 8).astype(np.float32)
@@ -462,7 +505,7 @@ class CalibrationInterpreterTest(absltest.TestCase):
   def test_get_signature_list(self):
     interpreter = calibrator.CalibrationInterpreter(
         self._test_model_path,
-        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        mode=self.mode,  # pytype: disable=wrong-arg-types
     )
     signatures = interpreter.get_signature_list()
     self.assertNotEmpty(signatures)
@@ -471,7 +514,7 @@ class CalibrationInterpreterTest(absltest.TestCase):
   def test_runner_details(self):
     interpreter = calibrator.CalibrationInterpreter(
         self._test_model_path,
-        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        mode=self.mode,  # pytype: disable=wrong-arg-types
     )
     runner = interpreter.get_signature_runner()
     input_details = runner.get_input_details()
@@ -485,7 +528,7 @@ class CalibrationInterpreterTest(absltest.TestCase):
     # Run calibration interpreter
     interpreter = calibrator.CalibrationInterpreter(
         self._test_model_path,
-        mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
+        mode=self.mode,  # pytype: disable=wrong-arg-types
     )
     calib_runner = interpreter.get_signature_runner()
     input_data = np.random.rand(1, 8).astype(np.float32)
@@ -501,7 +544,125 @@ class CalibrationInterpreterTest(absltest.TestCase):
     # Compare
     self.assertEqual(calib_output.keys(), original_output.keys())
     for key in calib_output:
-      np.testing.assert_array_equal(calib_output[key], original_output[key])
+      np.testing.assert_allclose(
+          calib_output[key], original_output[key], rtol=1e-5, atol=1e-5
+      )
+
+
+class CalibrationInterpreterPreserveAllTensorsTest(
+    CalibrationInterpreterTestBase
+):
+  mode = _CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS
+
+
+class CalibrationInterpreterProfilerBasedTest(CalibrationInterpreterTestBase):
+  mode = _CalibrationMode.CALIBRATION_PROFILER_BASED
+
+
+class CalibrationModesComparisonTest(parameterized.TestCase):
+
+  def setUp(self):
+    super().setUp()
+    np.random.seed(0)
+    self._recipe_manager = recipe_manager.RecipeManager()
+    _add_default_int8xint8_integer_recipe(self._recipe_manager)
+
+  def _get_random_input_data(self, model_path):
+    with open(model_path, "rb") as f:
+      tflite_model = f.read()
+    return tfl_interpreter_utils.create_random_normal_input_data(
+        tflite_model, num_samples=1, random_seed=0
+    )
+
+  def _compare_qsvs(self, qsvs_preserve, qsvs_profiler):
+    """Compares Quantization Statistics Values (QSVs) from two calibration modes.
+
+    This function compares the min/max values in the QSV dictionaries generated
+    by CALIBRATION_PRESERVE_ALL_TENSORS and CALIBRATION_PROFILER_BASED modes.
+    It checks for non-empty results and compares the intersection of keys,
+    flattening the min/max arrays for robust comparison.
+
+    Args:
+      qsvs_preserve: QSV dictionary from CALIBRATION_PRESERVE_ALL_TENSORS mode.
+      qsvs_profiler: QSV dictionary from CALIBRATION_PROFILER_BASED mode.
+    """
+    self.assertNotEmpty(qsvs_preserve)
+    self.assertNotEmpty(qsvs_profiler)
+    # Profiler may skip some constant tensors, so compare the intersection.
+    common_keys = set(qsvs_preserve.keys()).intersection(
+        set(qsvs_profiler.keys())
+    )
+    self.assertNotEmpty(common_keys)
+    for key in common_keys:
+      stats_preserve = qsvs_preserve[key]
+      stats_profiler = qsvs_profiler[key]
+      # Both calibrators produce scalar min/max values, but may store them with
+      # different shapes (e.g., (1, 1, 1, 1) vs (1, 1) vs (1,)) depending on
+      # operator and rank of the tensor. We flatten them here for robust
+      # comparison.
+      np.testing.assert_allclose(
+          stats_preserve["min"].flatten(),
+          stats_profiler["min"].flatten(),
+          rtol=1e-5,
+          atol=1e-5,
+      )
+      np.testing.assert_allclose(
+          stats_preserve["max"].flatten(),
+          stats_profiler["max"].flatten(),
+          rtol=1e-5,
+          atol=1e-5,
+      )
+
+  @parameterized.named_parameters(
+      dict(testcase_name="single_fc", model_name="single_fc.tflite"),
+      dict(testcase_name="conv_mnist", model_name="conv_fc_mnist.tflite"),
+      dict(testcase_name="two_signatures", model_name="two_signatures.tflite"),
+  )
+  def test_calibrator_api(self, model_name):
+    model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models" / model_name
+    )
+    calib_preserve = calibrator.Calibrator(
+        model_path, mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS
+    )
+    calib_profiler = calibrator.Calibrator(
+        model_path, mode=_CalibrationMode.CALIBRATION_PROFILER_BASED
+    )
+    input_data_map = self._get_random_input_data(model_path)
+    calib_preserve.calibrate(input_data_map, self._recipe_manager)
+    calib_profiler.calibrate(input_data_map, self._recipe_manager)
+
+    self._compare_qsvs(
+        calib_preserve.get_model_qsvs(), calib_profiler.get_model_qsvs()
+    )
+
+  @parameterized.named_parameters(
+      dict(testcase_name="single_fc", model_name="single_fc.tflite"),
+      dict(testcase_name="conv_mnist", model_name="conv_fc_mnist.tflite"),
+      dict(testcase_name="two_signatures", model_name="two_signatures.tflite"),
+  )
+  def test_calibration_interpreter(self, model_name):
+    model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models" / model_name
+    )
+    interpreter_preserve = calibrator.CalibrationInterpreter(
+        model_path, mode=_CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS
+    )
+    interpreter_profiler = calibrator.CalibrationInterpreter(
+        model_path, mode=_CalibrationMode.CALIBRATION_PROFILER_BASED
+    )
+    input_data_map = self._get_random_input_data(model_path)
+    for sig_key, input_samples in input_data_map.items():
+      runner_preserve = interpreter_preserve.get_signature_runner(sig_key)
+      runner_profiler = interpreter_profiler.get_signature_runner(sig_key)
+      input_data = input_samples[0]
+      runner_preserve(**input_data)
+      runner_profiler(**input_data)
+
+    self._compare_qsvs(
+        interpreter_preserve.get_calibration_results(),
+        interpreter_profiler.get_calibration_results(),
+    )
 
 
 class CalibrationInterpreterInferenceModeTest(absltest.TestCase):

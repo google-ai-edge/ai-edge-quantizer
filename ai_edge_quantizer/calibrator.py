@@ -19,7 +19,7 @@ from collections.abc import Iterable, Mapping
 import copy
 import enum
 import json
-from typing import Any, Callable, cast, Union
+from typing import Any, Callable, cast
 
 import numpy as np
 from typing_extensions import override
@@ -36,6 +36,7 @@ from ai_edge_quantizer.utils import progress_utils
 from ai_edge_quantizer.utils import qsv_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
+from ai_edge_litert import _pywrap_tfl_calibration  # pylint: disable=g-direct-tensorflow-import
 from ai_edge_litert import interpreter as tfl  # pylint: disable=g-direct-tensorflow-import
 
 
@@ -45,6 +46,7 @@ class CalibrationMode(enum.Enum):
   # preserves all intermediate tensors.
   CALIBRATION = 2  # Keeping this for backward compatibility. Please use
   # CALIBRATION_PRESERVE_ALL_TENSORS instead of this.
+  CALIBRATION_PROFILER_BASED = 3
 
 
 _SignatureInput = dict[str, Any]  # input_argument_name -> tensor_value.
@@ -196,7 +198,7 @@ class Calibrator:
 
   def __new__(
       cls,
-      float_tflite: Union[str, bytes],
+      float_tflite: str | bytes,
       num_threads: int = 16,
       mode: CalibrationMode = CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
       qsv_update_func: Callable[
@@ -231,12 +233,14 @@ class Calibrator:
       return super().__new__(_InferenceOnlyCalibrator)
     elif mode == CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS:
       return super().__new__(_PreserveAllTensorsCalibrator)
+    elif mode == CalibrationMode.CALIBRATION_PROFILER_BASED:
+      return super().__new__(_ProfilerBasedCalibrator)
     else:
       raise ValueError(f"Unsupported calibration mode: {mode}")
 
   def __init__(
       self,
-      float_tflite: Union[str, bytes],
+      float_tflite: str | bytes,
       num_threads: int = 16,
       mode: CalibrationMode = CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS,
       qsv_update_func: Callable[
@@ -266,7 +270,7 @@ class Calibrator:
 
   def _create_interpreter(
       self,
-      float_tflite: Union[str, bytes],
+      float_tflite: str | bytes,
       num_threads: int,
   ) -> tfl.Interpreter:
     """Creates the TFLite interpreter."""
@@ -276,7 +280,7 @@ class Calibrator:
 
   def _calibrate_step(
       self,
-      signature_key: str,
+      signature_key: str | None,
       data: _SignatureInput,
       model_recipe_manager: recipe_manager.RecipeManager,
       cache_output: bool,
@@ -336,9 +340,7 @@ class Calibrator:
     self._model_qsvs = {}
     self._metadata = {"num_samples_calibrated": 0}
 
-  def load_model_qsvs(
-      self, model_qsvs: Union[str, dict[str, qtyping.QSV]]
-  ) -> None:
+  def load_model_qsvs(self, model_qsvs: str | dict[str, qtyping.QSV]) -> None:
     """Load the model qsvs.
 
     Args:
@@ -444,7 +446,7 @@ class _InferenceOnlyCalibrator(Calibrator):
   @override
   def _create_interpreter(
       self,
-      float_tflite: Union[str, bytes],
+      float_tflite: str | bytes,
       num_threads: int,
   ) -> tfl.Interpreter:
     return tfl_interpreter_utils.create_tfl_interpreter(
@@ -457,7 +459,7 @@ class _InferenceOnlyCalibrator(Calibrator):
   @override
   def _calibrate_step(
       self,
-      signature_key: str,
+      signature_key: str | None,
       data: _SignatureInput,
       model_recipe_manager: recipe_manager.RecipeManager,
       cache_output: bool,
@@ -474,7 +476,7 @@ class _PreserveAllTensorsCalibrator(Calibrator):
   @override
   def _create_interpreter(
       self,
-      float_tflite: Union[str, bytes],
+      float_tflite: str | bytes,
       num_threads: int,
   ) -> tfl.Interpreter:
     return tfl_interpreter_utils.create_tfl_interpreter(
@@ -487,7 +489,7 @@ class _PreserveAllTensorsCalibrator(Calibrator):
   @override
   def _calibrate_step(
       self,
-      signature_key: str,
+      signature_key: str | None,
       data: _SignatureInput,
       model_recipe_manager: recipe_manager.RecipeManager,
       cache_output: bool,
@@ -572,3 +574,91 @@ class _PreserveAllTensorsCalibrator(Calibrator):
         subgraphs_inds.extend(
             tfl_flatbuffer_utils.get_op_side_effect_subgraphs(op)
         )
+
+
+class _ProfilerBasedCalibrator(Calibrator):
+  """Calibrator using the profiler-based calibration mode."""
+
+  @override
+  def _create_interpreter(
+      self,
+      float_tflite: str | bytes,
+      num_threads: int,
+  ) -> tfl.Interpreter:
+    return tfl_interpreter_utils.create_tfl_interpreter(
+        float_tflite,
+        use_xnnpack=False,
+        num_threads=num_threads,
+        preserve_all_tensors=False,
+    )
+
+  @override
+  def _calibrate_step(
+      self,
+      signature_key: str | None,
+      data: _SignatureInput,
+      model_recipe_manager: recipe_manager.RecipeManager,
+      cache_output: bool,
+      pbar: progress_utils.ProgressBar,
+  ) -> None:
+    del model_recipe_manager  # Unused.
+    del pbar  # Can't do per-op progress bar in this mode.
+
+    signature_defs = self._tfl_interpreter._get_full_signature_list()  # pylint: disable=protected-access
+    if signature_key is None:
+      if not signature_defs:
+        raise ValueError(
+            "No signature key provided and no signature list found."
+        )
+      # Using the default signature.
+      signature_key = next(iter(signature_defs))
+
+    cpp_interpreter = self._tfl_interpreter._interpreter  # pylint: disable=protected-access
+    subgraph_index = cpp_interpreter.GetSubgraphIndexFromSignature(
+        signature_key
+    )
+    signature_def = signature_defs[signature_key]
+    inputs = signature_def["inputs"]
+    outputs = signature_def["outputs"]
+
+    # Resize and allocate input tensors.
+    for input_name, value in data.items():
+      input_tensor_index = inputs.get(input_name)
+      if input_tensor_index is None:
+        raise ValueError(f"Invalid Input name ({input_name}) for SignatureDef")
+      cpp_interpreter.ResizeInputTensor(
+          input_tensor_index,
+          np.array(value.shape, dtype=np.int32),
+          strict=False,
+          subgraph_index=subgraph_index,
+      )
+    cpp_interpreter.AllocateTensors(subgraph_index)
+    for input_name, value in data.items():
+      cpp_interpreter.SetTensor(inputs[input_name], value, subgraph_index)
+
+    # Invoke the interpreter with calibration.
+    tensor_stats = _pywrap_tfl_calibration.InvokeWithCalibration(
+        self._tfl_interpreter._native_handle(),  # pylint: disable=protected-access
+        subgraph_index,
+    )
+
+    # Get inference result.
+    inference_result = {
+        output_name: cpp_interpreter.GetTensor(output_index, subgraph_index)
+        for output_name, output_index in outputs.items()
+    }
+    if cache_output:
+      self._cached_output.append(inference_result)
+
+    # Update model QSVs with tensor_stats.
+    for tensor_name, stats in tensor_stats.items():
+      # Wrap scalar values in numpy arrays to support .shape attribute.
+      qsv = {
+          "min": np.array([stats.min]),
+          "max": np.array([stats.max]),
+      }
+      existing_qsv = self._model_qsvs.get(tensor_name)
+      if existing_qsv is None:
+        self._model_qsvs[tensor_name] = qsv
+      else:
+        self._model_qsvs[tensor_name] = self._qsv_update_func(existing_qsv, qsv)
