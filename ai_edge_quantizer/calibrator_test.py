@@ -15,7 +15,7 @@
 
 """Tests for calibrator."""
 
-from collections.abc import Generator
+from collections.abc import Generator, Mapping
 import json
 import pathlib
 from typing import Any
@@ -564,23 +564,32 @@ class CalibrationModesComparisonTest(parameterized.TestCase):
   def setUp(self):
     super().setUp()
     np.random.seed(0)
-    self._recipe_manager = recipe_manager.RecipeManager()
+    self._recipe_manager: recipe_manager.RecipeManager = (
+        recipe_manager.RecipeManager()
+    )
     _add_default_int8xint8_integer_recipe(self._recipe_manager)
 
-  def _get_random_input_data(self, model_path):
+  def _get_random_input_data(
+      self, model_path: str
+  ) -> dict[str, list[dict[str, np.ndarray]]]:
     with open(model_path, "rb") as f:
       tflite_model = f.read()
     return tfl_interpreter_utils.create_random_normal_input_data(
         tflite_model, num_samples=1, random_seed=0
     )
 
-  def _compare_qsvs(self, qsvs_preserve, qsvs_profiler):
+  def _compare_qsvs(
+      self,
+      qsvs_preserve: Mapping[str, qtyping.QSV],
+      qsvs_profiler: Mapping[str, qtyping.QSV],
+  ) -> None:
     """Compares Quantization Statistics Values (QSVs) from two calibration modes.
 
     This function compares the min/max values in the QSV dictionaries generated
     by CALIBRATION_PRESERVE_ALL_TENSORS and CALIBRATION_PROFILER_BASED modes.
-    It checks for non-empty results and compares the intersection of keys,
-    flattening the min/max arrays for robust comparison.
+    It checks for non-empty results and asserts that the keys of the QSV
+    dictionaries match exactly, flattening the min/max arrays for robust
+    comparison.
 
     Args:
       qsvs_preserve: QSV dictionary from CALIBRATION_PRESERVE_ALL_TENSORS mode.
@@ -588,14 +597,10 @@ class CalibrationModesComparisonTest(parameterized.TestCase):
     """
     self.assertNotEmpty(qsvs_preserve)
     self.assertNotEmpty(qsvs_profiler)
-    # Profiler may skip some constant tensors, so compare the intersection.
-    common_keys = set(qsvs_preserve.keys()).intersection(
-        set(qsvs_profiler.keys())
-    )
-    self.assertNotEmpty(common_keys)
-    for key in common_keys:
-      stats_preserve = qsvs_preserve[key]
-      stats_profiler = qsvs_profiler[key]
+    self.assertCountEqual(qsvs_preserve, qsvs_profiler)
+    for tensor_name in qsvs_preserve.keys():
+      stats_preserve = qsvs_preserve[tensor_name]
+      stats_profiler = qsvs_profiler[tensor_name]
       # Both calibrators produce scalar min/max values, but may store them with
       # different shapes (e.g., (1, 1, 1, 1) vs (1, 1) vs (1,)) depending on
       # operator and rank of the tensor. We flatten them here for robust
@@ -618,7 +623,9 @@ class CalibrationModesComparisonTest(parameterized.TestCase):
       dict(testcase_name="conv_mnist", model_name="conv_fc_mnist.tflite"),
       dict(testcase_name="two_signatures", model_name="two_signatures.tflite"),
   )
-  def test_calibrator_api(self, model_name):
+  def test_modes_results_match_with_calibrator_api(
+      self, model_name: str
+  ) -> None:
     model_path = str(
         pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models" / model_name
     )
@@ -641,7 +648,9 @@ class CalibrationModesComparisonTest(parameterized.TestCase):
       dict(testcase_name="conv_mnist", model_name="conv_fc_mnist.tflite"),
       dict(testcase_name="two_signatures", model_name="two_signatures.tflite"),
   )
-  def test_calibration_interpreter(self, model_name):
+  def test_modes_results_match_with_calibration_interpreter_api(
+      self, model_name: str
+  ) -> None:
     model_path = str(
         pathlib.Path(TEST_DATA_PREFIX_PATH) / "tests/models" / model_name
     )
