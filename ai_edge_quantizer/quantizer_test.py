@@ -680,9 +680,9 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
     )
 
     # Quantize and expect an error about missing signature in calibration data.
-    error_message = 'MUL(index: 0) not found in tensor_name_to_qsv'
-    with self.assertRaisesWithPredicateMatch(
-        ValueError, lambda err: error_message in str(err)
+    with self.assertRaisesRegex(
+        ValueError,
+        r'[A-Z_]+\(index: -?\d+\) not found in' ' tensor_name_to_qsv',
     ):
       self._quantizer.quantize(calib_result)
 
