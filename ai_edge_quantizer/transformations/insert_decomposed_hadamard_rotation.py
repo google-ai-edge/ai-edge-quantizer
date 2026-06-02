@@ -269,6 +269,11 @@ def insert_decomposed_hadamard_rotation(
     _update_embedding_lookup_consumers(
         transformation_input, post_reshape_output_tensor_id
     )
+    # For embedding_lookup, the newly created tensor is the un-rotated result,
+    # so if it is a graph output, we need to output the new tensor.
+    for i, output in enumerate(transformation_input.subgraph.outputs):
+      if output == transformation_input.tensor_id:
+        transformation_input.subgraph.outputs[i] = post_reshape_output_tensor_id
   elif not _update_fully_connected_consumers(
       transformation_input, post_reshape_output_tensor_id
   ):
@@ -276,12 +281,6 @@ def insert_decomposed_hadamard_rotation(
         'The Hadamard rotation op supports embedding lookup and fully connected'
         ' ops only, but no such ops were found.'
     )
-
-  # If the tensor is a graph output, we need to replace the tensor with the
-  # new tensor.
-  for i, output in enumerate(transformation_input.subgraph.outputs):
-    if output == transformation_input.tensor_id:
-      transformation_input.subgraph.outputs[i] = post_reshape_output_tensor_id
 
   # Find the actual insertion point. The insertion point should be after the
   # producer op and before the first consumer op. The max() operation ensures
