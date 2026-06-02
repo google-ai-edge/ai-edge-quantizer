@@ -32,6 +32,7 @@ dependencies = [
     "absl-py",
     "immutabledict",
     "numpy",
+    "scipy",
     "ml_dtypes",
     "ai-edge-litert-nightly",
 ]
