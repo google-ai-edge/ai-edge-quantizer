@@ -13,7 +13,23 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Implements the Hadamard Rotation quantization."""
+"""Implements the Hadamard Rotation quantization.
+
+Hadamard rotation mitigates the quantization loss caused by the large
+eigenvalues of the weight matrix (outliers) by rotating the weights with a
+Hadamard matrix (H). The rotation distributes the larger eigenvalues more evenly
+across the Hadamard transformed weight matrix. In other words, it "smears" the
+outliers across the entire tensor, making the distribution more uniform.
+
+Matrix H is a square matrix with entries +1 or -1 and orthogonal rows and cols
+(H * H^T = n * I, where n is the dimension). The rotation is often performed
+using a normalized Hadamard matrix (1/sqrt(n) * H), which is orthogonal.
+
+A fully connected linear layer with weight W and input X can be written as:
+Y = X * W^T = (X * H) * (W * H)^T
+- The input X is rotated by H (updated online during inference)
+- The weight W is rotated by H (updated offline during quantization, with OCTAV)
+"""
 
 from typing import Any, Optional
 import numpy as np
@@ -31,6 +47,12 @@ _HADAMARD_MATRIX_CACHE = {}
 
 def _make_hadamard_matrix(size: int) -> np.ndarray:
   """Generates a Hadamard matrix of the given size.
+
+  Hadamard matrices are square matrices with entries +1 or -1 and orthogonal
+  rows and columns. They are defined recursively:
+
+    H_1 = [[1]]
+    H_{2n} = [[H_n, H_n], [H_n, -H_n]]
 
   Args:
     size: The size of the Hadamard matrix. Must be a power of 2. This represents

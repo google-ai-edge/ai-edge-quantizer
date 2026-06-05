@@ -277,8 +277,7 @@ class RecipeManager:
     explicit_dequantize=False.
 
     The model quality may suffer due to the on-the-fly quantization. If quality
-    is a concern, consider using weight-only
-    quantization.
+    is a concern, consider using weight-only quantization.
 
     Args:
       regex: Regular expression for layer name matching.

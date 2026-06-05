@@ -123,14 +123,18 @@ class TFLOperationName(str, enum.Enum):
 
 
 class QuantizeMode(enum.Enum):
+  """The mode of quantization, determining which stage is executed."""
+
+  # Gathering information from calibration data (e.g., min/max).
   CALIBRATE = 2
+  # Executing the quantization process using parameters from calibration data.
   MATERIALIZE = 3
 
 
 class OpExecutionMode(str, enum.Enum):
   """How to execute the op."""
 
-  WEIGHT_ONLY = 'WEIGHT_ONLY'
+  WEIGHT_ONLY = 'WEIGHT_ONLY'  # Weight-only quantization.
   DRQ = 'DRQ'  # Dynamic range quantization.
   SRQ = 'SRQ'  # Static range quantization.
 
@@ -195,7 +199,11 @@ class UniformQuantParams:
     quantized_data: The quantized data.
     block_size: The block size for blockwise quantization, block_size=0 meaning
       no blockwise quantization.
-    hadamard: The Hadamard rotation parameters, if set.
+    hadamard: The Hadamard rotation parameters, if set. Hadamard rotation
+      mitigates quantization loss caused by outliers by rotating (or
+      distributing) weights and activations into a more uniform distribution.
+      This is particularly useful for low bits quantization. More technical
+      details can be found in algorithms/uniform_quantize/hadamard_rotation.py.
   """
 
   class HadamardRotationParams:

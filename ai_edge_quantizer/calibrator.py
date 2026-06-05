@@ -41,11 +41,22 @@ from ai_edge_litert import interpreter as tfl  # pylint: disable=g-direct-tensor
 
 
 class CalibrationMode(enum.Enum):
-  INFERENCE = 1  # Inference only mode. No calibration is performed.
-  CALIBRATION_PRESERVE_ALL_TENSORS = 2  # Calibration with XNNPACK enabled that
-  # preserves all intermediate tensors.
-  CALIBRATION = 2  # Keeping this for backward compatibility. Please use
-  # CALIBRATION_PRESERVE_ALL_TENSORS instead of this.
+  """Calibration modes for the Calibrator.
+
+  Attributes:
+    INFERENCE: Inference only mode. No calibration is performed.
+    CALIBRATION_PRESERVE_ALL_TENSORS: (Default) Calibration with XNNPACK enabled
+      that preserves all intermediate tensors, allowing Python to inspect their
+      values.
+    CALIBRATION: Keeping this for backward compatibility. Please use
+      CALIBRATION_PRESERVE_ALL_TENSORS instead of this.
+    CALIBRATION_PROFILER_BASED: Use TFLite's internal C++ profiler-based
+      calibration. It is faster than CALIBRATION_PRESERVE_ALL_TENSORS but offers
+      less flexibility in terms of what statistics can be collected.
+  """
+  INFERENCE = 1
+  CALIBRATION_PRESERVE_ALL_TENSORS = 2
+  CALIBRATION = 2
   CALIBRATION_PROFILER_BASED = 3
 
 
@@ -577,7 +588,15 @@ class _PreserveAllTensorsCalibrator(Calibrator):
 
 
 class _ProfilerBasedCalibrator(Calibrator):
-  """Calibrator using the profiler-based calibration mode."""
+  """Calibrator using the profiler-based calibration mode.
+
+  1. It runs the model using _pywrap_tfl_calibration.InvokeWithCalibration()
+  2. The C++ engine tracks the min/max values internally during execution.
+  3. After execution, the python wrapper retrieves the statistics (tensor_stats)
+  and updates self._model_qsvs.
+  4. This mode only supports min/max tracking and cannot be used for algorithms
+  that require custom statistics.
+  """
 
   @override
   def _create_interpreter(

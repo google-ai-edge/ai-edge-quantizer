@@ -13,7 +13,31 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Implements the GPTQ quantization."""
+"""Implements the GPTQ quantization.
+
+GPTQ (Generalized Post-Training Quantization) is a quantization method that
+minimizes the quantization error by considering the Hessian of the loss
+function with respect to the weights. More specifically, GPTQ quantizes weights
+one by one (or in columns). When a weight is quantized (introducing quantization
+error), GPTQ uses the Hessian to propagate the error to the remaining
+unquantized weights through the Optimal Brain Surgeon (OBS) update rule.
+
+The algorithm:
+1. Hessian calculation: during calibration, the quantizer collects input
+activation samples X and computes the Hessian matrix H
+2. Damping and Inversion of H: damping factor is added to the diagonal of H to
+avoid ill-conditioned matrix, then the inverse of H is computed by its Cholesky
+decomposition: H = L @ L.T
+3. Lazy Block-wise execution: partitioning the weight columns into blocks for
+more efficient computation. There are 2 ways:
+  3.1 Intra-block update (Iterative): for each column i in the current block,
+  - Calculate the raw quantization error
+  - Normalize it by the diagonal of H^{-1}
+  - Update only the remaining unquantized columns within the current block.
+  3.2 Inter-block update: once all columns in the current block are quantized,
+  the accumulated normalized errors are used to update all remaining columns
+  in the subsequent blocks simultaneously via matrix multiplication.
+"""
 
 from collections.abc import Mapping, MutableMapping, Sequence
 import dataclasses

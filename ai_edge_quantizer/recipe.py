@@ -196,7 +196,10 @@ def dynamic_legacy_wi8_afp32():
   """Returns a dynamic quantization legacy recipe with int8 weights and float32 activation.
 
   The difference between this and dynamic_wi8_afp32 is that this recipe sets
-  min_weight_elements to 1024 to match the old quantizer behavior.
+  min_weight_elements to 1024 to match the old quantizer behavior. Only layers
+  with at least 1024 weight elements will be quantized. This 'legacy' recipe is
+  intended for models that were quantized with older versions of TFLite
+  quantization tools.
   """
   return [
       dict({
@@ -220,9 +223,21 @@ def dynamic_legacy_wi8_afp32():
   ]
 
 
-# Recipe aliases, i.e. basic recipes only, to bue used as building blocks for
+# Recipe aliases, i.e. basic recipes only, to be used as building blocks for
 # more complex recipes.
 
+# Naming convention decoder for aliases:
+# - 'dynamic': dynamic range quantization (weights quantized statically,
+#   activations dynamically at runtime)
+# - 'wi[N]': weight integer N-bit (e.g., wi8: 8-bit weights)
+# - 'c' or 'b[M]': Granularity. 'c' for channelwise, 'b[M]' for blockwise with
+#   block size M (e.g., b32: 32-blockwise).
+# - 'hr' (optional): Hadamard rotations are used for the quantization
+#   parameters estimation. (typically for better quality at lower bits, see
+#   algorithms/uniform_quantize/hadamard_rotation.py).
+# - 'afp32': activations remain float32 in the model (may be dynamically
+#   quantized at runtime by setting compute_precision=INTEGER,
+#   explicit_dequantize=False).
 
 # Dynamic quantization recipe with channelwise quantized 8/4-bit int
 # weights and float32 activations.
@@ -265,6 +280,11 @@ dynamic_wi2c_hr_afp32 = lambda **kwargs: dynamic_wi2c_afp32(
 )
 
 # LiteRT-LM Recipes for specific model families, build from the above recipes.
+#
+# These recipes typically define mixed-precision configurations. For example,
+# using lower precision (4-bit) for most weights to save space, but keeping
+# sensitive layers (like embeddings, projections, etc) at higher precision
+# (8-bit) to preserve model quality.
 
 # Gemma-4 mixed 4/8-bit channelwise quantization:
 gemma4_mixed48 = lambda: {
