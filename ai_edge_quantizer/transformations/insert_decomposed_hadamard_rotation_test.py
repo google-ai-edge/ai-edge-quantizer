@@ -150,6 +150,7 @@ class InsertDecomposedHadamardRotationFullyConnectedTest(absltest.TestCase):
     )
     self.assertEqual(fc_op.inputs[0], 5)  # Reshape output
     self.assertEqual(fc_op.inputs[1], 6)  # Hadamard matrix tensor
+    self.assertEqual(subgraph.tensors[6].type, qtyping.TensorType.FLOAT32)
     self.assertEqual(fc_op.outputs[0], 7)  # FC output
 
     # Op 2: RESHAPE (post)
@@ -224,6 +225,7 @@ class InsertDecomposedHadamardRotationEmbeddingLookupTest(absltest.TestCase):
     fc_op = subgraph.operators[2]
     self.assertEqual(fc_op.inputs[0], 4)
     self.assertEqual(fc_op.inputs[1], 5)  # Hadamard matrix
+    self.assertEqual(subgraph.tensors[5].type, qtyping.TensorType.FLOAT32)
     self.assertEqual(fc_op.outputs[0], 6)
 
     # Op 3: RESHAPE (post)
