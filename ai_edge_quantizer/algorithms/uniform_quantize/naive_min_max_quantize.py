@@ -48,7 +48,8 @@ def get_tensor_quant_params(
     The quantization parameters for the tensor.
   """
   # Get quant params.
-  if tensor_qsv is None:
+  # Use tensor_content if QSV lacks min/max (e.g., including GPTQ case).
+  if tensor_qsv is None or "min" not in tensor_qsv:
     if tensor_content is not None:
       # We need min/max to calculate quantization parameters, which
       # should be collected during the calibration process. However,

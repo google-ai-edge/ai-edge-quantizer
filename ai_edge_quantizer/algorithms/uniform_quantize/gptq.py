@@ -265,7 +265,6 @@ def get_tensor_quant_params(
     tensor_quant_config: qtyping.TensorQuantizationConfig,
     tensor_content: np.ndarray | None = None,
     tensor_qsv: Mapping[str, Any] | None = None,
-    activation_tensor_qsv: Mapping[str, Any] | None = None,
 ) -> qtyping.UniformQuantParams:
   """Get the quantization parameters for a tensor.
 
@@ -273,16 +272,19 @@ def get_tensor_quant_params(
     op_info: Aggregated information about the op (e.g., quantization config).
     tensor_quant_config: The quantization config for the tensor.
     tensor_content: The content of the tensor.
-    tensor_qsv: A dictionary containingthe min/max of the tensor.
-    activation_tensor_qsv: A dictionary containing the min/max and hessian of
-      the activation tensor. This will be only used for GPTQ when tensor_content
-      is weight tensor.
+    tensor_qsv: A dictionary containingthe min/max of the tensor. It may
+      contain 'activation_tensor_qsv' which contains min/max and hessian of the
+      activation tensor. This will be only used for GPTQ when tensor_content is
+      weight tensor.
 
   Returns:
     The quantization parameters for the tensor.
   """
+  activation_tensor_qsv = (
+      tensor_qsv.get("activation_tensor_qsv") if tensor_qsv else None
+  )
   # Get quant params.
-  if tensor_qsv is None:
+  if tensor_qsv is None or "min" not in tensor_qsv:
     if tensor_content is not None:
       # We need min/max to calculate quantization parameters, which
       # should be collected during the calibration process. However,

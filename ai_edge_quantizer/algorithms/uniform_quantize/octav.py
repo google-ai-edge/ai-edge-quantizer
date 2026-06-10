@@ -146,7 +146,8 @@ def get_tensor_quant_params(
         " supports symmetric quantization only for now."
     )
 
-  if not tensor_qsv:
+  # Use tensor_content if QSV lacks min/max (e.g., including GPTQ case).
+  if not tensor_qsv or "min" not in tensor_qsv:
     # We need min/max to calculate quantization parameters, which
     # should be collected during the calibration process. However,
     # weight-only and DRQ do not require calibration, thus it is

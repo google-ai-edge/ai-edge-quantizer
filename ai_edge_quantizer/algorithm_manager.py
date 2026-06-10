@@ -29,6 +29,8 @@ from ai_edge_quantizer.algorithms.uniform_quantize import hadamard_rotation
 from ai_edge_quantizer.algorithms.uniform_quantize import mse
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import octav
+from ai_edge_quantizer.utils import qsv_utils
+
 
 immutabledict = immutabledict.immutabledict
 
@@ -412,4 +414,36 @@ for (
           materialize_func,
           mse.get_tensor_quant_params,
       ),
+  )
+
+# Register the GPTQ algorithm.
+register_op_quant_config_validation_func(
+    AlgorithmName.GPTQ,
+    common_quantize.check_op_quantization_config,
+)
+
+# Register a config check policy for the GPTQ algorithm.
+register_config_check_policy_func(
+    AlgorithmName.GPTQ,
+    default_policy.DEFAULT_CONFIG_CHECK_POLICY,
+)
+
+# Register specialized GPTQ materialize functions.
+_GPTQ_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
+    _TFLOpName.FULLY_CONNECTED: common_quantize.materialize_fc_conv,
+})
+for (
+    op_name,
+    materialize_func,
+) in _GPTQ_OP_NAME_MATERIALIZE_FUNC_DICT.items():
+  register_quantized_op(
+      AlgorithmName.GPTQ,
+      op_name,
+      naive_min_max_quantize.init_qsvs,
+      calibration_func=gptq.calibrate,
+      materialize_func=functools.partial(
+          materialize_func,
+          gptq.get_tensor_quant_params,
+      ),
+      update_qsv_func=qsv_utils.gptq_and_moving_average_update,
   )

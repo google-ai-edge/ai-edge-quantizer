@@ -179,6 +179,43 @@ class OpQuantConstraint(enum.Enum):
   FIXED_OUTPUT_SCALE = 3
 
 
+def _get_tensor_qsv_val(
+    tensor_name: str,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+) -> dict[str, Any] | None:
+  """Retrieves the QSV value for a tensor.
+
+  If there is an activation tensor associated with the op, its QSV value
+  will also be nested under the "activation_tensor_qsv" key in the returned
+  dictionary.
+
+  Args:
+    tensor_name: Name of the tensor.
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_name_to_qsv: A map of tensor name to quantization parameters.
+
+  Returns:
+    A dictionary of quantization parameters (QSV) for the tensor if found,
+    potentially containing the activation tensor QSV.
+  """
+  tensor_qsv_val = tensor_name_to_qsv.get(tensor_name)
+  if op_info.op.inputs:
+    activation_tensor_name = tfl_flatbuffer_utils.get_tensor_name(
+        graph_info.subgraph_tensors[op_info.op.inputs[0]]
+    )
+    activation_tensor_qsv = tensor_name_to_qsv.get(activation_tensor_name)
+    if activation_tensor_qsv is not None:
+      if tensor_qsv_val is None:
+        tensor_qsv_val = {"activation_tensor_qsv": activation_tensor_qsv}
+      else:
+        tensor_qsv_val = dict(tensor_qsv_val)
+        tensor_qsv_val["activation_tensor_qsv"] = activation_tensor_qsv
+  return tensor_qsv_val
+
+
 def _get_tensor_transformation_params_wrapper(
     tensor: Any,
     is_inbounding_tensor: bool,
@@ -225,11 +262,14 @@ def _get_tensor_transformation_params_wrapper(
             tensor.buffer, tensor_quant_config
         )
     ):
+      tensor_qsv_val = _get_tensor_qsv_val(
+          tensor_name, op_info, graph_info, tensor_name_to_qsv
+      )
       quant_params = get_tensor_quant_params_fn(
           op_info,
           tensor_quant_config,
           tensor_data,
-          tensor_name_to_qsv.get(tensor_name),
+          tensor_qsv_val,
       )
       # Update the cache if we have a key.
       if is_constant:
@@ -471,9 +511,9 @@ def _materialize_standard_op_with_same_as_input_scale(
     min_val, max_val = _get_min_max_from_quant_params(input_quant_params)
     input_tensor_qsv = {"min": min_val, "max": max_val}
   for output_tensor in output_tensors:
-    tensor_name_to_qsv[
-        tfl_flatbuffer_utils.get_tensor_name(output_tensor)
-    ] = input_tensor_qsv
+    tensor_name_to_qsv[tfl_flatbuffer_utils.get_tensor_name(output_tensor)] = (
+        input_tensor_qsv
+    )
 
   return op_tensor_params
 

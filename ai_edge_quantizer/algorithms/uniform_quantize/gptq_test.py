@@ -234,12 +234,12 @@ class GptqTest(parameterized.TestCase):
         ),
         "num_samples": 1,
     }
+    tensor_qsv["activation_tensor_qsv"] = activation_tensor_qsv
     quant_params = gptq.get_tensor_quant_params(
         op_info,
         tensor_quant_config,
         tensor_content,
         tensor_qsv,
-        activation_tensor_qsv,
     )
     self.assertIsNotNone(quant_params.quantized_data)
     self.assertEqual(quant_params.quantized_data.shape, tensor_content.shape)  # pytype: disable=attribute-error
@@ -279,12 +279,12 @@ class GptqTest(parameterized.TestCase):
         ),
         "num_samples": 1,
     }
+    tensor_qsv = {"activation_tensor_qsv": activation_tensor_qsv}
     quant_params = gptq.get_tensor_quant_params(
         op_info,
         tensor_quant_config,
         tensor_content,
-        tensor_qsv=None,
-        activation_tensor_qsv=activation_tensor_qsv,
+        tensor_qsv=tensor_qsv,
     )
     self.assertIsNotNone(quant_params.quantized_data)
     self.assertEqual(quant_params.quantized_data.shape, tensor_content.shape)  # pytype: disable=attribute-error
@@ -318,7 +318,6 @@ class GptqTest(parameterized.TestCase):
         tensor_quant_config,
         tensor_content=None,
         tensor_qsv=tensor_qsv,
-        activation_tensor_qsv=None,
     )
     self.assertIsNone(quant_params.quantized_data)
     np.testing.assert_allclose(quant_params.scale, np.array([[2.2 / 127]]))
@@ -360,12 +359,12 @@ class GptqTest(parameterized.TestCase):
         "hessian": np.eye(4, dtype=np.float32),
         "num_samples": 1,
     }
+    tensor_qsv["activation_tensor_qsv"] = activation_tensor_qsv
     quant_params = gptq.get_tensor_quant_params(
         op_info,
         tensor_quant_config,
         tensor_content,
         tensor_qsv,
-        activation_tensor_qsv,
     )
 
     self.assertIsNotNone(quant_params.quantized_data)
