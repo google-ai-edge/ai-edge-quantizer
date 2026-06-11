@@ -19,7 +19,6 @@ from unittest import mock
 from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
-
 from ai_edge_quantizer import default_policy
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.utils import common_utils
@@ -616,6 +615,53 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         mock.ANY,  # tensor_data
         expected_tensor_qsv,  # tensor_qsv
     )
+
+
+class CommonUtilsTest(parameterized.TestCase):
+
+  def test_reshape_to_blocks_symmetric_2d(self):
+    # Shape (2, 6), quantized_dimension=1, block_size=3.
+    # Result shape should be (4, 3).
+    tensor = np.arange(12, dtype=np.float32).reshape(2, 6)
+    expected = np.array(
+        [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]], dtype=np.float32
+    )
+    actual = common_utils.reshape_to_blocks(
+        tensor, quantized_dimension=1, block_size=3
+    )
+    np.testing.assert_array_equal(actual, expected)
+
+  def test_reshape_to_blocks_transposed_2d(self):
+    # Shape (6, 2), quantized_dimension=0, block_size=3.
+    # Result shape should be (4, 3).
+    tensor = np.arange(12, dtype=np.float32).reshape(6, 2)
+    expected = np.array(
+        [[0, 2, 4], [1, 3, 5], [6, 8, 10], [7, 9, 11]], dtype=np.float32
+    )
+    actual = common_utils.reshape_to_blocks(
+        tensor, quantized_dimension=0, block_size=3
+    )
+    np.testing.assert_array_equal(actual, expected)
+
+  def test_reshape_to_blocks_3d(self):
+    # Shape (2, 2, 4), quantized_dimension=2, block_size=2.
+    # Result shape should be (8, 2).
+    tensor = np.arange(16, dtype=np.float32).reshape(2, 2, 4)
+    expected = np.array(
+        [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11], [12, 13], [14, 15]],
+        dtype=np.float32,
+    )
+    actual = common_utils.reshape_to_blocks(
+        tensor, quantized_dimension=2, block_size=2
+    )
+    np.testing.assert_array_equal(actual, expected)
+
+  def test_reshape_to_blocks_not_divisible_raises_error(self):
+    tensor = np.arange(10, dtype=np.float32).reshape(2, 5)
+    with self.assertRaisesRegex(ValueError, "is not divisible by block size"):
+      common_utils.reshape_to_blocks(
+          tensor, quantized_dimension=1, block_size=3
+      )
 
 
 if __name__ == "__main__":

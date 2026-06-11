@@ -202,7 +202,7 @@ def _get_tensor_qsv_val(
     potentially containing the activation tensor QSV.
   """
   tensor_qsv_val = tensor_name_to_qsv.get(tensor_name)
-  if op_info.op.inputs:
+  if op_info.op and op_info.op.inputs:
     activation_tensor_name = tfl_flatbuffer_utils.get_tensor_name(
         graph_info.subgraph_tensors[op_info.op.inputs[0]]
     )
@@ -262,15 +262,21 @@ def _get_tensor_transformation_params_wrapper(
             tensor.buffer, tensor_quant_config
         )
     ):
-      tensor_qsv_val = _get_tensor_qsv_val(
-          tensor_name, op_info, graph_info, tensor_name_to_qsv
-      )
-      quant_params = get_tensor_quant_params_fn(
-          op_info,
-          tensor_quant_config,
-          tensor_data,
-          tensor_qsv_val,
-      )
+      try:
+        tensor_qsv_val = _get_tensor_qsv_val(
+            tensor_name, op_info, graph_info, tensor_name_to_qsv
+        )
+        quant_params = get_tensor_quant_params_fn(
+            op_info,
+            tensor_quant_config,
+            tensor_data,
+            tensor_qsv_val,
+        )
+      except Exception as e:
+        raise ValueError(
+            f"Failed to get quantization parameters for tensor: {tensor_name}."
+            f" Error: {e}"
+        ) from e
       # Update the cache if we have a key.
       if is_constant:
         tensor_quant_params_cache.insert(
@@ -1210,3 +1216,76 @@ def get_bmm_weight_quantized_dim(
   if adj_y:
     return rank - 2
   return rank - 1
+
+
+def get_blockwise_shape(
+    shape: Sequence[int], quantized_dimension: int, block_size: int
+) -> tuple[int, ...]:
+  """Gets the shape of the scale/zero_point tensor for blockwise quantization.
+
+  Args:
+    shape: The shape of the original tensor.
+    quantized_dimension: The dimension along which blockwise quantization is
+      performed.
+    block_size: The size of each block.
+
+  Returns:
+    The shape of the scale/zero_point tensor.
+
+  Raises:
+    ValueError: If the dimension along quantized_dimension is not divisible by
+      block_size.
+  """
+  target_shape = list(shape)
+  dim = target_shape[quantized_dimension]
+  if dim % block_size != 0:
+    raise ValueError(
+        f"Dimension {dim} along axis {quantized_dimension} is not"
+        f" divisible by block size {block_size}"
+    )
+  target_shape[quantized_dimension] //= block_size
+  return tuple(target_shape)
+
+
+def reshape_to_blocks(
+    tensor: np.ndarray, quantized_dimension: int | None, block_size: int
+) -> np.ndarray:
+  """Reshapes a tensor to 2D where each row corresponds to a block.
+
+  The block dimension (inserted at quantized_dimension + 1) is moved to the end
+  so that it remains contiguous when the other dimensions are flattened.
+
+  Args:
+    tensor: The input tensor.
+    quantized_dimension: The dimension along which blockwise quantization is
+      performed. Must not be None.
+    block_size: The size of each block.
+
+  Returns:
+    A 2D tensor of shape (NumBlocks, block_size).
+
+  Raises:
+    ValueError: If quantized_dimension is None or the dimension is not divisible
+      by block_size.
+  """
+  if quantized_dimension is None:
+    raise ValueError(
+        "quantized_dimension must be specified for blockwise quantization."
+    )
+  # Validate shape and divisibility.
+  _ = get_blockwise_shape(tensor.shape, quantized_dimension, block_size)
+
+  expanded_shape = []
+  for i, dim in enumerate(tensor.shape):
+    if i == quantized_dimension:
+      expanded_shape.append(dim // block_size)
+      expanded_shape.append(block_size)
+    else:
+      expanded_shape.append(dim)
+  reshaped_vals = tensor.reshape(expanded_shape)
+  ndim = tensor.ndim
+  perm = [i for i in range(ndim + 1) if i != quantized_dimension + 1] + [
+      quantized_dimension + 1
+  ]
+  transposed_vals = np.transpose(reshaped_vals, perm)
+  return transposed_vals.reshape(-1, block_size)

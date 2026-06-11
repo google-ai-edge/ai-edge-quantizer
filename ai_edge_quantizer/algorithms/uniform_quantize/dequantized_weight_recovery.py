@@ -34,7 +34,7 @@ _IntType = uniform_quantize_tensor.IntType
 def _validate_recovered_weights(
     original_vals: np.ndarray,
     quant_vals: np.ndarray,
-    scale: np.ndarray,
+    quant_params: qtyping.UniformQuantParams,
     tol: float = 1e-4,
 ):
   """Validates if requantized weights are close enough to the original ones.
@@ -42,7 +42,7 @@ def _validate_recovered_weights(
   Args:
     original_vals: Original values before quantization.
     quant_vals: Quantized values.
-    scale: Scale used for quantization.
+    quant_params: Quantization parameters.
     tol: Tolerance for the difference between original and recovered values.
 
   Raises:
@@ -50,13 +50,16 @@ def _validate_recovered_weights(
     values exceeds the tolerance.
   """
 
-  recovered_vals = quant_vals * scale
+  recovered_vals = uniform_quantize_tensor.uniform_dequantize(
+      quant_vals, quant_params
+  )
   diff = np.ravel(np.abs(recovered_vals - original_vals))
   max_diff = diff.max()
   if max_diff > tol:
     raise RuntimeError(
         "Failed to recover the original quantized values from dequantized"
         f" values. Max diff between recovered and original values: {max_diff}"
+        f" (tolerance: {tol})"
     )
 
 
@@ -69,29 +72,84 @@ def _get_scale(arr: np.ndarray, min_scale: float) -> float:
     diffs = np.diff(unique_vals)
     return float(
         np.maximum(np.min(diffs), min_scale)
-    )  # Cast to float to ensure return type consistency
+    )  # Cast to float to ensure return type consistency.
   return min_scale
+
+
+def _check_unique_values(
+    tensor_content: np.ndarray,
+    quantized_dimension: int | None,
+    *,
+    block_size: int,
+    num_bits: int,
+) -> tuple[int, int]:
+  """Checks if the number of unique values in any quantization group exceeds the limit.
+
+  Args:
+    tensor_content: The tensor content to check.
+    quantized_dimension: The dimension along which the tensor is quantized.
+    block_size: The block size for blockwise quantization.
+    num_bits: The number of bits for quantization.
+
+  Returns:
+    A tuple (max_found, limit) where:
+      max_found: The maximum number of unique values found in any group (may
+        stop early if limit is exceeded).
+      limit: The maximum allowed number of unique values (2^num_bits).
+  """
+  # The maximum number of unique values representable by the target bit width.
+  limit = 1 << num_bits
+
+  if block_size > 0:
+    reshaped_2d = common_utils.reshape_to_blocks(
+        tensor_content, quantized_dimension, block_size
+    )
+
+    max_found = 0
+    for row in reshaped_2d:
+      num_unique = np.unique(row).size
+      max_found = max(max_found, num_unique)
+      if max_found > limit:
+        break
+    return max_found, limit
+
+  if quantized_dimension is not None:
+    max_found = 0
+    for i in range(tensor_content.shape[quantized_dimension]):
+      slices = [slice(None)] * tensor_content.ndim
+      slices[quantized_dimension] = i
+      vec = tensor_content[tuple(slices)]
+      num_unique = np.unique(vec).size
+      max_found = max(max_found, num_unique)
+      if max_found > limit:
+        break
+    return max_found, limit
+
+  num_unique = np.unique(tensor_content).size
+  return num_unique, limit
 
 
 def get_zp_scale_from_dequantized_symmetric_weights(
     dequant_vals: np.ndarray,
     quantized_dimension: Optional[int] = None,
+    block_size: int = 0,
     min_scale: float = 1e-9,
 ) -> tuple[np.ndarray, np.ndarray]:
   """Calculates scale and zero point from dequantized and symmetric weights.
 
-  Handles both per-tensor and per-channel (axis) quantization.
+  Handles per-tensor, per-channel (axis), and blockwise quantization.
 
   Args:
       dequant_vals: The dequantized weight values (numpy array).
       quantized_dimension:  The dimension along which quantization was performed
         (0 or 1), or None for per-tensor quantization.
+      block_size: The block size for blockwise quantization.
       min_scale: The minimum allowed scale value.
 
   Returns:
       A tuple containing:
           - zero_points: Zero points (all zeros for symmetric quantization).
-          - scales: Scales (scalar for per-tensor, array for per-channel).
+          - scales: Scales.
 
   Raises:
       ValueError: If `quantized_dimension` is not 0, 1, or None.
@@ -100,6 +158,29 @@ def get_zp_scale_from_dequantized_symmetric_weights(
   if quantized_dimension not in (0, 1, None):
     raise ValueError(
         f"quantized_dimension must be 0, 1, or None. Got {quantized_dimension}"
+    )
+
+  if block_size > 0:
+    if quantized_dimension is None:
+      raise ValueError(
+          "quantized_dimension must be specified for blockwise quantization."
+      )
+
+    reshaped_2d = common_utils.reshape_to_blocks(
+        dequant_vals, quantized_dimension, block_size
+    )
+
+    zp_2d, scale_2d = get_zp_scale_from_dequantized_symmetric_weights(
+        reshaped_2d, quantized_dimension=0, min_scale=min_scale
+    )
+
+    target_shape = common_utils.get_blockwise_shape(
+        dequant_vals.shape, quantized_dimension, block_size
+    )
+
+    return (
+        zp_2d.reshape(target_shape),
+        scale_2d.reshape(target_shape),
     )
 
   # Use absolute values for symmetric quantization.
@@ -150,8 +231,7 @@ def get_tensor_quant_params(
     The quantization parameters for the tensor.
 
   Raises:
-    ValueError: If the quantization granularity is blockwise, or if the tensor
-    is not a symmetric weight tensor.
+    ValueError: If the tensor is not a symmetric weight tensor.
   """
   # Fallback to naive_min_max_quantize.py for non-weight tensors.
   if tensor_content is None:
@@ -159,11 +239,15 @@ def get_tensor_quant_params(
         op_info, tensor_quant_config, tensor_content, tensor_qsv
     )
 
-  if uniform_quantize_tensor.is_blockwise(tensor_quant_config.granularity):
-    raise ValueError(
-        "Blockwise quantization is not supported for dequantized weight"
-        " recovery."
+  is_blockwise = uniform_quantize_tensor.is_blockwise(
+      tensor_quant_config.granularity
+  )
+  block_size = 0
+  if is_blockwise:
+    block_size = uniform_quantize_tensor.extract_block_size_from_granularity(
+        tensor_quant_config.granularity
     )
+
   if not tensor_quant_config.symmetric:
     raise ValueError(
         "Only symmetric weights are supported for dequantized weight recovery."
@@ -176,6 +260,7 @@ def get_tensor_quant_params(
   zp, scale = get_zp_scale_from_dequantized_symmetric_weights(
       dequant_vals=tensor_content,
       quantized_dimension=quantized_dim,
+      block_size=block_size,
   )
   quant_params = qtyping.UniformQuantParams(
       scale=scale,
@@ -183,11 +268,37 @@ def get_tensor_quant_params(
       num_bits=tensor_quant_config.num_bits,
       symmetric=tensor_quant_config.symmetric,
       quantized_dimension=quantized_dim,
+      block_size=block_size,
   )
   quantized_vars = uniform_quantize_tensor.uniform_quantize(
-      tensor_content, quant_params
+      tensor_content, quant_params, is_blockwise_quant=is_blockwise
   )
-  _validate_recovered_weights(tensor_content, quantized_vars, scale)
+  try:
+    _validate_recovered_weights(tensor_content, quantized_vars, quant_params)
+  except RuntimeError as e:
+    max_found, limit = _check_unique_values(
+        tensor_content,
+        quantized_dim,
+        block_size=block_size,
+        num_bits=tensor_quant_config.num_bits,
+    )
+    extra_msg = (
+        (
+            f"Detected a quantization group with {max_found} unique values, "
+            f"which exceeds the limit of {limit} for"
+            f" {tensor_quant_config.num_bits}-bit quantization. This suggests"
+            " the input tensor is NOT dequantized (fake-quantized) weights."
+            " Please verify if you are using a QAT checkpoint."
+        )
+        if max_found > limit
+        else (
+            f"Max unique values in any group is {max_found} (limit: {limit})."
+            " The recovery failed despite reasonable unique value count. Check"
+            " if the weights are symmetric or if tolerance is too tight."
+        )
+    )
+    msg = f"Failed to recover weights. Original error: {e}. {extra_msg}"
+    raise RuntimeError(msg) from e
   return dataclasses.replace(quant_params, quantized_data=quantized_vars)
 
 
@@ -239,7 +350,7 @@ def init_qsvs(
     QSVs.
   """
   # Reuse the min/max calibration algorithm from naive_min_max_quantize.py since
-  # only weights need to be handeled differently.
+  # only weights need to be handled differently.
   return naive_min_max_quantize.init_qsvs(
       op_info, graph_info, inputs_to_ignore, outputs_to_ignore
   )
