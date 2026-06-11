@@ -103,12 +103,12 @@ class EmbeddingLookupTest(test_utils.BaseOpTestCase):
     self.assertLess(len(quant_result.quantized_model), 2000)
 
     # TODO: b/364405203 - Enable after 0 signature works.
-    # comparion_result = self._quantizer.validate(
-    #     error_metrics='mse',
+    # comparison_result = self._quantizer.validate(
+    #     error_metrics=[quantizer.ValidationErrorMetric.MSE],
     #     signature_test_data=_get_test_data(),
     # )
-    # self._check_comparion_result(
-    #     comparion_result,
+    # self._check_comparison_result(
+    #     comparison_result,
     #     weight_tolerance=1e-5,
     #     output_tolerance=1e-5,
     # )
@@ -143,7 +143,7 @@ class EmbeddingLookupTest(test_utils.BaseOpTestCase):
                 {'lookup': np.random.randint(0, 15, size=(1,), dtype=np.int32)}
             ],
         },
-        error_metrics='mse',
+        error_metrics=[quantizer.ValidationErrorMetric.MSE],
     )
     with self.subTest(name='OutputErrors'):
       self.assert_output_errors_below_tolerance(validation_result, 1e-5)

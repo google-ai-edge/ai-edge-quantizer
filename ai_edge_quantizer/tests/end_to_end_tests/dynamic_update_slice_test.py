@@ -96,7 +96,8 @@ class DynamicUpdateSliceTest(parameterized.TestCase):
     self.assertEqual(output_tensor.type, tensor_type)
 
     comparison_result = self._quantizer.validate(
-        error_metrics='mse', test_data=_get_test_data(num_samples=1)
+        error_metrics=[quantizer.ValidationErrorMetric.MSE],
+        test_data=_get_test_data(num_samples=1),
     )
     self._check_comparison_result(
         comparison_result,
@@ -110,10 +111,15 @@ class DynamicUpdateSliceTest(parameterized.TestCase):
       output_tolerance,
   ):
     # TODO: b/357959309 - Use comparison result directly for testing.
-    comparison_result = comparison_result.get_all_tensor_results()
-    # Check final output.
-    output_mse = comparison_result['Identity_1']
-    self.assertLess(output_mse, output_tolerance)
+    _all_results = comparison_result.get_all_tensor_results()
+    metric = 'mean_squared_difference'
+    with self.subTest(error_metric=metric):
+      comparison_result = {
+          k: v.get(metric, 0.0) for k, v in _all_results.items()
+      }
+      # Check final output.
+      output_mse = comparison_result['Identity_1']
+      self.assertLess(output_mse, output_tolerance)
 
 
 if __name__ == '__main__':

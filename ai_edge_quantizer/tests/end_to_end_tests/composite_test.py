@@ -100,10 +100,15 @@ class CompositeTest(parameterized.TestCase):
         self.assertIsNotNone(tensor.quantization)
 
     test_data = _get_calibration_data(f_model, 'arg')
-    comparison = qt.validate(error_metrics='mse', test_data=test_data)
-    comparison = comparison.get_all_tensor_results()
-    output_mse = comparison['output']
-    self.assertLess(output_mse, self.output_tolerance)
+    comparison = qt.validate(
+        error_metrics=[quantizer.ValidationErrorMetric.MSE], test_data=test_data
+    )
+    _all_results = comparison.get_all_tensor_results()
+    metric = 'mean_squared_difference'
+    with self.subTest(error_metric=metric):
+      results = {k: v.get(metric, 0.0) for k, v in _all_results.items()}
+      output_mse = results['output']
+      self.assertLess(output_mse, self.output_tolerance)
 
   @parameterized.parameters(
       'default_a8w8',

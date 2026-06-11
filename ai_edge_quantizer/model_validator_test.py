@@ -67,8 +67,11 @@ class ComparisonResultTest(absltest.TestCase):
   def test_add_new_signature_results_succeeds(self):
     for signature_key, test_result in self.test_data.items():
       self.comparison_result.add_new_signature_results(
-          'mean_squared_difference',
-          test_result,
+          [validation_utils.ValidationErrorMetric.MSE],
+          {
+              k: {validation_utils.ValidationErrorMetric.MSE.value: v}
+              for k, v in test_result.items()
+          },
           signature_key,
       )
     self.assertLen(
@@ -91,8 +94,11 @@ class ComparisonResultTest(absltest.TestCase):
 
   def test_add_new_signature_results_fails_same_signature_key(self):
     self.comparison_result.add_new_signature_results(
-        'mean_squared_difference',
-        self.test_data['add'],
+        [validation_utils.ValidationErrorMetric.MSE],
+        {
+            k: {validation_utils.ValidationErrorMetric.MSE.value: v}
+            for k, v in self.test_data['add'].items()
+        },
         'add',
     )
     error_message = 'add is already in the comparison_results.'
@@ -100,8 +106,11 @@ class ComparisonResultTest(absltest.TestCase):
         ValueError, lambda err: error_message in str(err)
     ):
       self.comparison_result.add_new_signature_results(
-          'mean_squared_difference',
-          self.test_data['add'],
+          [validation_utils.ValidationErrorMetric.MSE],
+          {
+              k: {validation_utils.ValidationErrorMetric.MSE.value: v}
+              for k, v in self.test_data['add'].items()
+          },
           'add',
       )
 
@@ -109,8 +118,11 @@ class ComparisonResultTest(absltest.TestCase):
       self,
   ):
     self.comparison_result.add_new_signature_results(
-        'mean_squared_difference',
-        self.test_data['add'],
+        [validation_utils.ValidationErrorMetric.MSE],
+        {
+            k: {validation_utils.ValidationErrorMetric.MSE.value: v}
+            for k, v in self.test_data['add'].items()
+        },
         'add',
     )
     error_message = 'multiply is not in the comparison_results.'
@@ -122,8 +134,11 @@ class ComparisonResultTest(absltest.TestCase):
   def test_get_all_tensor_results_succeeds(self):
     for signature_key, test_result in self.test_data.items():
       self.comparison_result.add_new_signature_results(
-          'mean_squared_difference',
-          test_result,
+          [validation_utils.ValidationErrorMetric.MSE],
+          {
+              k: {validation_utils.ValidationErrorMetric.MSE.value: v}
+              for k, v in test_result.items()
+          },
           signature_key,
       )
     all_tensor_results = self.comparison_result.get_all_tensor_results()
@@ -138,8 +153,11 @@ class ComparisonResultTest(absltest.TestCase):
   def test_save_comparison_result_succeeds(self):
     for signature_key, test_result in self.test_data.items():
       self.comparison_result.add_new_signature_results(
-          'mean_squared_difference',
-          test_result,
+          [validation_utils.ValidationErrorMetric.MSE],
+          {
+              k: {validation_utils.ValidationErrorMetric.MSE.value: v}
+              for k, v in test_result.items()
+          },
           signature_key,
       )
     model_name = 'test_model'
@@ -168,23 +186,24 @@ class ComparisonResultTest(absltest.TestCase):
     for signature_key in self.test_data:
       self.assertIn(signature_key, json_dict)
       signature_result = json_dict[signature_key]
-      self.assertIn('error_metric', signature_result)
-      self.assertEqual(
-          signature_result['error_metric'], 'mean_squared_difference'
-      )
       self.assertIn('constant_tensors', signature_result)
       if signature_key == 'add':
         self.assertIn('Add/y', signature_result['constant_tensors'])
+        self.assertIn('mse', signature_result['constant_tensors']['Add/y'])
         self.assertNotIn('Mul/y', signature_result['constant_tensors'])
       elif signature_key == 'multiply':
         self.assertIn('Mul/y', signature_result['constant_tensors'])
+        self.assertIn('mse', signature_result['constant_tensors']['Mul/y'])
         self.assertNotIn('Add/y', signature_result['constant_tensors'])
 
   def test_add_new_signature_results_validate_output_tensors_only(self):
     for signature_key, test_result in self.test_data.items():
       self.comparison_result.add_new_signature_results(
-          'mean_squared_difference',
-          test_result,
+          [validation_utils.ValidationErrorMetric.MSE],
+          {
+              k: {validation_utils.ValidationErrorMetric.MSE.value: v}
+              for k, v in test_result.items()
+          },
           signature_key,
           validate_output_tensors_only=True,
       )
@@ -234,18 +253,20 @@ class ModelValidatorCompareTest(absltest.TestCase):
     self.test_dir = self.create_tempdir()
 
   def test_model_validator_compare(self):
-    error_metric = 'mean_squared_difference'
+    error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     comparison_result = model_validator.compare_model(
         self.reference_model,
         self.target_model,
         self.test_data,
-        error_metric,
-        validation_utils.mean_squared_difference,
+        error_metrics=error_metrics,
+        compare_fns=[validation_utils.mean_squared_difference],
     )
     result = comparison_result.get_signature_comparison_result(
         self.signature_key
     )
-    self.assertEqual(result.error_metric, 'mean_squared_difference')
+    self.assertIn(
+        validation_utils.ValidationErrorMetric.MSE, result.error_metrics
+    )
     input_tensors = result.input_tensors
     output_tensors = result.output_tensors
     constant_tensors = result.constant_tensors
@@ -256,24 +277,26 @@ class ModelValidatorCompareTest(absltest.TestCase):
     self.assertLen(constant_tensors, 2)
     self.assertEmpty(intermediate_tensors)
 
-    self.assertAlmostEqual(input_tensors['serving_default_input_2:0'], 0)
-    self.assertAlmostEqual(constant_tensors['arith.constant1'], 0)
-    self.assertLess(output_tensors['StatefulPartitionedCall:0'], 1e-5)
+    self.assertAlmostEqual(input_tensors['serving_default_input_2:0']['mse'], 0)
+    self.assertAlmostEqual(constant_tensors['arith.constant1']['mse'], 0)
+    self.assertLess(output_tensors['StatefulPartitionedCall:0']['mse'], 1e-5)
 
   def test_model_validator_compare_validate_output_tensors_only(self):
-    error_metric = 'mean_squared_difference'
+    error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     comparison_result = model_validator.compare_model(
         self.reference_model,
         self.target_model,
         self.test_data,
-        error_metric,
-        validation_utils.mean_squared_difference,
+        error_metrics=error_metrics,
+        compare_fns=[validation_utils.mean_squared_difference],
         validate_output_tensors_only=True,
     )
     result = comparison_result.get_signature_comparison_result(
         self.signature_key
     )
-    self.assertEqual(result.error_metric, 'mean_squared_difference')
+    self.assertIn(
+        validation_utils.ValidationErrorMetric.MSE, result.error_metrics
+    )
     input_tensors = result.input_tensors
     output_tensors = result.output_tensors
     constant_tensors = result.constant_tensors
@@ -284,19 +307,19 @@ class ModelValidatorCompareTest(absltest.TestCase):
     self.assertEmpty(constant_tensors)
     self.assertEmpty(intermediate_tensors)
 
-    self.assertLess(output_tensors['StatefulPartitionedCall:0'], 1e-5)
+    self.assertLess(output_tensors['StatefulPartitionedCall:0']['mse'], 1e-5)
 
   def test_create_json_for_model_explorer(self):
-    error_metric = 'mean_squared_difference'
+    error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     comparison_result = model_validator.compare_model(
         self.reference_model,
         self.target_model,
         self.test_data,
-        error_metric,
-        validation_utils.mean_squared_difference,
+        error_metrics=error_metrics,
+        compare_fns=[validation_utils.mean_squared_difference],
     )
     mv_json = model_validator.create_json_for_model_explorer(
-        comparison_result, [0, 1, 2, 3]
+        comparison_result, error_metrics[0], [0, 1, 2, 3]
     )
     self.assertContainsSubset(
         '"thresholds": [{"value": 0, "bgColor": "rgb(200, 0, 0)"}, {"value":'
@@ -306,16 +329,16 @@ class ModelValidatorCompareTest(absltest.TestCase):
     )
 
   def test_create_json_for_model_explorer_no_thresholds(self):
-    error_metric = 'mean_squared_difference'
+    error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     comparison_result = model_validator.compare_model(
         self.reference_model,
         self.target_model,
         self.test_data,
-        error_metric,
-        validation_utils.mean_squared_difference,
+        error_metrics=error_metrics,
+        compare_fns=[validation_utils.mean_squared_difference],
     )
     mv_json = model_validator.create_json_for_model_explorer(
-        comparison_result, []
+        comparison_result, error_metrics[0], []
     )
     self.assertContainsSubset('"thresholds": []', mv_json)
 
@@ -347,13 +370,13 @@ class ModelValidatorMultiSignatureModelTest(absltest.TestCase):
     self.test_dir = self.create_tempdir()
 
   def test_model_validator_compare_succeeds(self):
-    error_metric = 'mean_squared_difference'
+    error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     result = model_validator.compare_model(
         self.reference_model,
         self.target_model,
         self.test_data,
-        error_metric,
-        validation_utils.mean_squared_difference,
+        error_metrics=error_metrics,
+        compare_fns=[validation_utils.mean_squared_difference],
     )
     for signature_key in self.test_data:
       signature_result = result.get_signature_comparison_result(signature_key)
@@ -368,26 +391,26 @@ class ModelValidatorMultiSignatureModelTest(absltest.TestCase):
       self.assertEmpty(intermediate_tensors)
 
       if signature_key == 'add':
-        self.assertLess(input_tensors['add_x:0'], 1e-3)
-        self.assertAlmostEqual(constant_tensors['Add/y'], 0)
-        self.assertLess(output_tensors['PartitionedCall:0'], 1e-3)
+        self.assertLess(input_tensors['add_x:0']['mse'], 1e-3)
+        self.assertAlmostEqual(constant_tensors['Add/y']['mse'], 0)
+        self.assertLess(output_tensors['PartitionedCall:0']['mse'], 1e-3)
       elif signature_key == 'multiply':
-        self.assertLess(input_tensors['multiply_x:0'], 1e-3)
-        self.assertAlmostEqual(constant_tensors['Mul/y'], 0)
-        self.assertLess(output_tensors['PartitionedCall_1:0'], 1e-2)
+        self.assertLess(input_tensors['multiply_x:0']['mse'], 1e-3)
+        self.assertAlmostEqual(constant_tensors['Mul/y']['mse'], 0)
+        self.assertLess(output_tensors['PartitionedCall_1:0']['mse'], 1e-2)
 
   def test_create_json_for_model_explorer(self):
-    error_metric = 'mean_squared_difference'
+    error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     comparison_result = model_validator.compare_model(
         self.reference_model,
         self.target_model,
         self.test_data,
-        error_metric,
-        validation_utils.mean_squared_difference,
+        error_metrics=error_metrics,
+        compare_fns=[validation_utils.mean_squared_difference],
     )
     thresholds = [0, 1, 2, 3]
     mv_json = model_validator.create_json_for_model_explorer(
-        comparison_result, thresholds
+        comparison_result, error_metrics[0], thresholds
     )
     self.assertContainsSubset(
         '"thresholds": [{"value": 0, "bgColor": "rgb(200, 0, 0)"}, {"value":'
@@ -397,16 +420,16 @@ class ModelValidatorMultiSignatureModelTest(absltest.TestCase):
     )
 
   def test_create_json_for_model_explorer_no_thresholds(self):
-    error_metric = 'mean_squared_difference'
+    error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     comparison_result = model_validator.compare_model(
         self.reference_model,
         self.target_model,
         self.test_data,
-        error_metric,
-        validation_utils.mean_squared_difference,
+        error_metrics=error_metrics,
+        compare_fns=[validation_utils.mean_squared_difference],
     )
     mv_json = model_validator.create_json_for_model_explorer(
-        comparison_result, []
+        comparison_result, error_metrics[0], []
     )
     self.assertContainsSubset('"thresholds": []', mv_json)
 

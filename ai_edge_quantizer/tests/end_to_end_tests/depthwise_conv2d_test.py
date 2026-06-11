@@ -89,9 +89,11 @@ class DepthwiseConv2dTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(quant_result.quantized_model), 10000)
 
-    comparion_result = self._quantizer.validate(error_metrics='mse')
-    self._check_comparion_result(
-        comparion_result,
+    comparison_result = self._quantizer.validate(
+        error_metrics=[quantizer.ValidationErrorMetric.MSE]
+    )
+    self._check_comparison_result(
+        comparison_result,
         weight_tolerance=1e-2 if channel_wise_weight else 1e-1,
         output_tolerance=1e-4 if channel_wise_weight else 1e-2,
     )
@@ -108,9 +110,11 @@ class DepthwiseConv2dTest(parameterized.TestCase):
     quant_result = self._quantizer.quantize()
     self.assertLess(len(quant_result.quantized_model), 10000)
 
-    comparion_result = self._quantizer.validate(error_metrics='mse')
-    self._check_comparion_result(
-        comparion_result,
+    comparison_result = self._quantizer.validate(
+        error_metrics=[quantizer.ValidationErrorMetric.MSE]
+    )
+    self._check_comparison_result(
+        comparison_result,
         weight_tolerance=1e-2,
         output_tolerance=1e-4,
     )
@@ -128,11 +132,12 @@ class DepthwiseConv2dTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(quant_result.quantized_model), 10000)
 
-    comparion_result = self._quantizer.validate(
-        error_metrics='mse', test_data=_get_test_data()
+    comparison_result = self._quantizer.validate(
+        error_metrics=[quantizer.ValidationErrorMetric.MSE],
+        test_data=_get_test_data(),
     )
-    self._check_comparion_result(
-        comparion_result,
+    self._check_comparison_result(
+        comparison_result,
         weight_tolerance=1e-2,
         output_tolerance=1e-4,
     )
@@ -154,32 +159,39 @@ class DepthwiseConv2dTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(quant_result.quantized_model), 10000)
 
-    comparion_result = self._quantizer.validate(error_metrics='mse')
-    self._check_comparion_result(
-        comparion_result,
+    comparison_result = self._quantizer.validate(
+        error_metrics=[quantizer.ValidationErrorMetric.MSE]
+    )
+    self._check_comparison_result(
+        comparison_result,
         weight_tolerance=1e-5,
         output_tolerance=1e-5,
     )
 
   # TODO: b/345503484 - Check weight tensor type of the quantized model.
-  def _check_comparion_result(
+  def _check_comparison_result(
       self,
-      comparion_result,
+      comparison_result,
       weight_tolerance,
       output_tolerance,
   ):
     # TODO: b/357959309 - Use comparison result directly for testing.
-    comparion_result = comparion_result.get_all_tensor_results()
-    # Check weight tensors.
-    weight_mse = comparion_result['sequential/depthwise_conv2d/depthwise']
-    self.assertLess(weight_mse, weight_tolerance)
-    bias_mse = comparion_result[
-        'sequential/depthwise_conv2d/BiasAdd;sequential/depthwise_conv2d/depthwise;sequential/depthwise_conv2d/BiasAdd/ReadVariableOp'
-    ]
-    self.assertLess(bias_mse, weight_tolerance)
-    # Check final output.
-    output_mse = comparion_result['StatefulPartitionedCall:0']
-    self.assertLess(output_mse, output_tolerance)
+    _all_results = comparison_result.get_all_tensor_results()
+    metric = 'mean_squared_difference'
+    with self.subTest(error_metric=metric):
+      comparison_result = {
+          k: v.get(metric, 0.0) for k, v in _all_results.items()
+      }
+      # Check weight tensors.
+      weight_mse = comparison_result['sequential/depthwise_conv2d/depthwise']
+      self.assertLess(weight_mse, weight_tolerance)
+      bias_mse = comparison_result[
+          'sequential/depthwise_conv2d/BiasAdd;sequential/depthwise_conv2d/depthwise;sequential/depthwise_conv2d/BiasAdd/ReadVariableOp'
+      ]
+      self.assertLess(bias_mse, weight_tolerance)
+      # Check final output.
+      output_mse = comparison_result['StatefulPartitionedCall:0']
+      self.assertLess(output_mse, output_tolerance)
 
 
 if __name__ == '__main__':

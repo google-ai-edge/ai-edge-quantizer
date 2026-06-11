@@ -82,25 +82,31 @@ class BatchMatmulTest(parameterized.TestCase):
         len(quant_result.quantized_model), len(float_model_bytearray)
     )
 
-    comparion_result = self._quantizer.validate(
-        error_metrics='mse', test_data=_get_test_data(num_inputs=1)
+    comparison_result = self._quantizer.validate(
+        error_metrics=[quantizer.ValidationErrorMetric.MSE],
+        test_data=_get_test_data(num_inputs=1),
     )
-    self._check_comparion_result(
-        comparion_result,
+    self._check_comparison_result(
+        comparison_result,
         output_tolerance=output_tol,
     )
 
   # TODO: b/345503484 - Check weight tensor type of the quantized model.
-  def _check_comparion_result(
+  def _check_comparison_result(
       self,
-      comparion_result,
+      comparison_result,
       output_tolerance,
   ):
     # TODO: b/357959309 - Use comparison result directly for testing.
-    comparion_result = comparion_result.get_all_tensor_results()
-    # Check final output.
-    output_mse = comparion_result['PartitionedCall:0']
-    self.assertLess(output_mse, output_tolerance)
+    _all_results = comparison_result.get_all_tensor_results()
+    metric = 'mean_squared_difference'
+    with self.subTest(error_metric=metric):
+      comparison_result = {
+          k: v.get(metric, 0.0) for k, v in _all_results.items()
+      }
+      # Check final output.
+      output_mse = comparison_result['PartitionedCall:0']
+      self.assertLess(output_mse, output_tolerance)
 
 
 if __name__ == '__main__':

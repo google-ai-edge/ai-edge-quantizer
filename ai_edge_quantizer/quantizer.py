@@ -15,7 +15,7 @@
 
 """AI Edge Quantizer API."""
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 import dataclasses
 import json
 import logging
@@ -39,9 +39,11 @@ from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 from ai_edge_quantizer.utils import validation_utils
 
+
 Path = str | pathlib.Path
-# Expose algorithm names to users.
+# Expose algorithm names and error metrics to users.
 AlgorithmName = algorithm_manager.AlgorithmName
+ValidationErrorMetric = validation_utils.ValidationErrorMetric
 
 _QuantRecipe = qtyping.ModelQuantizationRecipe
 _TFLOpName = qtyping.TFLOperationName
@@ -505,10 +507,14 @@ class Quantizer:
   def validate(
       self,
       test_data: Optional[dict[str, Iterable[_SignatureInput]]] = None,
-      error_metrics: str = 'mse',
+      error_metrics: Optional[
+          Sequence[validation_utils.ValidationErrorMetric]
+      ] = None,
       use_xnnpack: bool = True,
       num_threads: int = 16,
       validate_output_tensors_only: bool = False,
+      save_folder: Optional[str] = None,
+      model_name: Optional[str] = None,
   ) -> model_validator.ComparisonResult:
     """Numerical validation of the quantized model for a model signature.
 
@@ -518,20 +524,26 @@ class Quantizer:
     to be SANITY check for the quality of the quantized model. End to end task
     specific test should be performed as the golden standard of the quantized
     model quality. The comparison result will be saved in json format if
-    json_save_path is provided.
+    save_folder is provided.
 
     Args:
-      test_data: A dictionary of signature key and its correspending test input
+      test_data: A dictionary of signature key and its corresponding test input
         data that will be used for validation. If set to None, random normal
         distributed data will be used for all signatures in the model.
-      error_metrics: Error metrics to be used for comparison.
+      error_metrics: A list of error metrics used for comparison (e.g.
+        [ValidationErrorMetric.MSE, ValidationErrorMetric.SNR]). If None,
+        defaults to evaluating [ValidationErrorMetric.MSE].
       use_xnnpack: Whether to use the xnnpack library for validation.
       num_threads: Number of threads to use for validation.
       validate_output_tensors_only: If True, only compare output tensors.
         Otherwise, compare all tensors.
+      save_folder: Optional path to save the validation results in json format.
+      model_name: Name of the model, used in the output json file name. If None,
+        it will be inferred from the original float model path or default to
+        'model' if unavailable.
 
     Returns:
-      The comparison result.
+      A ComparisonResult object containing the combined comparison results.
     """
     if test_data is None:
       # Create test data for all signatures in the model.
@@ -545,16 +557,23 @@ class Quantizer:
 
     if quantized_model is None:
       raise ValueError('No quantized model available to validate.')
-    return model_validator.compare_model(
+    results = model_validator.compare_model(
         self._float_model_buffer,
         quantized_model,
         test_data,
         error_metrics,
-        validation_utils.get_validation_func(error_metrics),
+        compare_fns=None,
         use_xnnpack=use_xnnpack,
         num_threads=num_threads,
         validate_output_tensors_only=validate_output_tensors_only,
     )
+    if save_folder:
+      if model_name is None:
+        model_name = (
+            pathlib.Path(self._model_name).stem if self._model_name else 'model'
+        )
+      results.save(save_folder, model_name=model_name)
+    return results
 
   def _get_quantization_params(
       self,
