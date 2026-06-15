@@ -163,6 +163,43 @@ class SharedBufferTest(parameterized.TestCase):
         output_tolerance=output_tolerance,
     )
 
+  def test_decomposed_hadamard_matrices_share_buffer(self):
+    qt = quantizer.Quantizer(self.float_model_path)
+    recipe = [
+        {
+            'regex': '.*',
+            'operation': 'FULLY_CONNECTED',
+            'algorithm_key': 'DECOMPOSED_HADAMARD_ROTATION',
+            'op_config': {
+                'weight_tensor_config': {
+                    'num_bits': 8,
+                    'symmetric': True,
+                    'granularity': 'CHANNELWISE',
+                    'dtype': 'INT',
+                },
+                'compute_precision': 'INTEGER',
+                'explicit_dequantize': False,
+                'skip_checks': False,
+                'min_weight_elements': 0,
+            },
+        }
+    ]
+    qt.load_quantization_recipe(recipe)
+    quantized_model_bytes = qt.quantize().quantized_model
+    self.assertIsNotNone(quantized_model_bytes)
+
+    model = qtyping.Model.GetRootAsModel(quantized_model_bytes, 0)
+    subgraph = model.Subgraphs(0)
+
+    hadamard_buffers = []
+    for i in range(subgraph.TensorsLength()):
+      tensor = subgraph.Tensors(i)
+      if b'_hadamard_matrix' in tensor.Name():
+        hadamard_buffers.append(tensor.Buffer())
+
+    self.assertGreaterEqual(len(hadamard_buffers), 2)
+    self.assertLen(set(hadamard_buffers), 1)
+
   @parameterized.named_parameters(
       dict(
           testcase_name='fc1_quant_fc2_no_quant',
