@@ -191,14 +191,23 @@ class SharedBufferTest(parameterized.TestCase):
     model = qtyping.Model.GetRootAsModel(quantized_model_bytes, 0)
     subgraph = model.Subgraphs(0)
 
-    hadamard_buffers = []
-    for i in range(subgraph.TensorsLength()):
-      tensor = subgraph.Tensors(i)
-      if b'_hadamard_matrix' in tensor.Name():
-        hadamard_buffers.append(tensor.Buffer())
+    hadamard_tensor_ids = []
+    for i in range(subgraph.OperatorsLength()):
+      op = subgraph.Operators(i)
+      if (
+          model.OperatorCodes(op.OpcodeIndex()).BuiltinCode()
+          == qtyping.BuiltinOperator.FULLY_CONNECTED
+      ):
+        # Weight tensor is input at index 1
+        weight_tensor_id = op.Inputs(1)
+        weight_tensor = subgraph.Tensors(weight_tensor_id)
+        if b'_hadamard_matrix' in weight_tensor.Name():
+          hadamard_tensor_ids.append(weight_tensor_id)
 
-    self.assertGreaterEqual(len(hadamard_buffers), 2)
-    self.assertLen(set(hadamard_buffers), 1)
+    # We expect that there are multiple Hadamard FC operations inserted.
+    self.assertGreaterEqual(len(hadamard_tensor_ids), 2)
+    # Verify that all of these Hadamard FC ops point to the same tensor ID!
+    self.assertLen(set(hadamard_tensor_ids), 1)
 
   @parameterized.named_parameters(
       dict(

@@ -200,6 +200,7 @@ def insert_decomposed_hadamard_rotation(
       tensor_type=qtyping.TensorType.FLOAT32,
       subgraph=transformation_input.subgraph,
       model=transformation_input.model,
+      allow_tensor_sharing=True,
   )
 
   # Insert x' = tfl.fully_connected(x', hadamard_matrix)

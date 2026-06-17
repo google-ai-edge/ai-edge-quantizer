@@ -173,6 +173,7 @@ def add_new_constant_tensor(
     tensor_shape: Optional[list[int]] = None,
     force_duplicate_buffer: bool = False,
     quantization: qtyping.QuantizationParametersT | None = None,
+    allow_tensor_sharing: bool = False,
 ) -> int:
   """Add a new constant tensor to the model.
 
@@ -188,11 +189,40 @@ def add_new_constant_tensor(
       already exists.
     quantization: Optional `QuantizationParametersT` describing the quantization
       of this tensor.
+    allow_tensor_sharing: Whether to allow sharing an existing tensor with the
+      same data, shape, type, and quantization.
 
   Returns:
     The index of the new tensor in the subgraph.
   """
   new_buffer_id = get_constant_buffer(data, model, force_duplicate_buffer)
+
+  if allow_tensor_sharing and not force_duplicate_buffer:
+    expected_shape = (
+        list(tensor_shape) if tensor_shape is not None else list(data.shape)
+    )
+
+    # To avoid O(N) linear scans when adding many shared constant tensors
+    # (e.g. identical Hadamard matrices), we lazily initialize an O(1)
+    # lookup cache on the subgraph.
+    # The cache mapping is:
+    #   Key: (buffer_id, shape_tuple, tensor_type, has_quantization)
+    #   Value: tensor_index in the subgraph
+    if not (tensor_lookup := getattr(subgraph, '_tensor_lookup', None)):
+      tensor_lookup = {}
+      for i, t in enumerate(subgraph.tensors):
+        key = (t.buffer, tuple(t.shape), t.type, t.quantization is not None)
+        tensor_lookup[key] = i
+      subgraph._tensor_lookup = tensor_lookup
+
+    key = (
+        new_buffer_id,
+        tuple(expected_shape),
+        tensor_type,
+        quantization is not None,
+    )
+    if (existing_idx := tensor_lookup.get(key)) is not None:
+      return existing_idx
 
   new_tensor = qtyping.TensorT()
   if tensor_shape is None:
@@ -204,6 +234,14 @@ def add_new_constant_tensor(
   new_tensor.quantization = quantization
   new_tensor_id = len(subgraph.tensors)
   subgraph.tensors.append(new_tensor)
+  if (tensor_lookup := getattr(subgraph, '_tensor_lookup', None)) is not None:
+    key = (
+        new_buffer_id,
+        tuple(new_tensor.shape),
+        new_tensor.type,
+        new_tensor.quantization is not None,
+    )
+    tensor_lookup[key] = new_tensor_id
   return new_tensor_id
 
 
