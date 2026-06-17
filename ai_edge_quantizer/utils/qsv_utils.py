@@ -20,6 +20,7 @@ from typing import Any, Union
 import numpy as np
 
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.utils import histogram_utils
 
 
 def _update_moving_average(
@@ -120,3 +121,24 @@ def min_max_update(qsv: qtyping.QSV, new_qsv: qtyping.QSV) -> qtyping.QSV:
   updated_qsv["min"] = np.minimum(qsv["min"], new_qsv["min"])
   updated_qsv["max"] = np.maximum(qsv["max"], new_qsv["max"])
   return updated_qsv
+
+
+def histogram_merge(qsv: qtyping.QSV, new_qsv: qtyping.QSV) -> qtyping.QSV:
+  """Merges two histogram QSVs.
+
+  Args:
+    qsv: The current QSV (histogram).
+    new_qsv: The new QSV (histogram) to merge.
+
+  Returns:
+    The merged QSV (histogram).
+  """
+  if not qsv:
+    return new_qsv
+  if not new_qsv:
+    return qsv
+
+  hist = histogram_utils.DynamicHistogram.from_dict(qsv)
+  new_hist = histogram_utils.DynamicHistogram.from_dict(new_qsv)
+  hist.merge(new_hist)
+  return hist.to_dict()

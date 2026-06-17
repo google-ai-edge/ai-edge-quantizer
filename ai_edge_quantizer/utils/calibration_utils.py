@@ -19,6 +19,7 @@ import copy
 import json
 from typing import Any
 
+from absl import logging
 import numpy as np
 
 import os
@@ -27,6 +28,7 @@ from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import constrained_ops_utils
+from ai_edge_quantizer.utils import histogram_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 
@@ -48,6 +50,25 @@ class NumpyEncoder(json.JSONEncoder):
     elif isinstance(o, np.ndarray):
       return o.tolist()
     return super().default(o)
+
+
+def _convert_to_arrays(qsv: dict[str, Any]) -> None:
+  """Helper to convert lists to numpy arrays in QSV dict."""
+  if "min" in qsv:
+    qsv["min"] = np.array(qsv["min"])
+  if "max" in qsv:
+    qsv["max"] = np.array(qsv["max"])
+
+  if "channels" in qsv:
+    for channel_qsv in qsv["channels"]:
+      if "hist_counts" in channel_qsv:
+        channel_qsv["hist_counts"] = np.array(channel_qsv["hist_counts"])
+      if "bin_edges" in channel_qsv:
+        channel_qsv["bin_edges"] = np.array(channel_qsv["bin_edges"])
+      if "min" in channel_qsv:
+        channel_qsv["min"] = np.array(channel_qsv["min"])
+      if "max" in channel_qsv:
+        channel_qsv["max"] = np.array(channel_qsv["max"])
 
 
 def load_calibration_results(
@@ -73,10 +94,7 @@ def load_calibration_results(
 
   # Convert lists back to numpy arrays
   for _, qsv in model_qsvs.items():
-    if "min" in qsv:
-      qsv["min"] = np.array(qsv["min"])
-    if "max" in qsv:
-      qsv["max"] = np.array(qsv["max"])
+    _convert_to_arrays(qsv)
 
   return model_qsvs, metadata
 
@@ -97,8 +115,9 @@ def _find_overall_min_max(
   min_value = np.inf
   max_value = -np.inf
   for tensor_name in tensor_names:
-    min_value = min(min_value, qsv[tensor_name]["min"])
-    max_value = max(max_value, qsv[tensor_name]["max"])
+    # Use np.min/np.max to handle potential per-channel arrays
+    min_value = min(min_value, np.min(qsv[tensor_name]["min"]))
+    max_value = max(max_value, np.max(qsv[tensor_name]["max"]))
   return min_value, max_value
 
 
@@ -370,3 +389,81 @@ class CalibrationQsvAlignmentUtils:
     for tensor_name in tensor_names:
       qsv[tensor_name]["min"] = min_value
       qsv[tensor_name]["max"] = max_value
+
+
+def merge_qsvs(
+    qsvs1: dict[str, qtyping.QSV], qsvs2: dict[str, qtyping.QSV]
+) -> dict[str, qtyping.QSV]:
+  """Merges two QSV dictionaries."""
+  merged_qsvs = {}
+  all_tensors = set(qsvs1.keys()) | set(qsvs2.keys())
+
+  for tensor_name in all_tensors:
+    if tensor_name not in qsvs1:
+      merged_qsvs[tensor_name] = copy.deepcopy(qsvs2[tensor_name])
+      continue
+    if tensor_name not in qsvs2:
+      merged_qsvs[tensor_name] = copy.deepcopy(qsvs1[tensor_name])
+      continue
+
+    qsv1 = qsvs1[tensor_name]
+    qsv2 = qsvs2[tensor_name]
+
+    # Check if both have histograms (unified format has 'channels')
+    has_hist1 = "channels" in qsv1
+    has_hist2 = "channels" in qsv2
+
+    if has_hist1 and has_hist2:
+      hist1 = histogram_utils.DynamicHistogram.from_dict(qsv1)
+      hist2 = histogram_utils.DynamicHistogram.from_dict(qsv2)
+      hist1.merge(hist2)
+      merged_qsv = hist1.to_dict()
+    else:
+      if has_hist1 or has_hist2:
+        logging.warning(
+            "Only one QSV has histogram for tensor %s. Falling back to"
+            " min/max.",
+            tensor_name,
+        )
+      min1 = np.atleast_1d(qsv1["min"])
+      min2 = np.atleast_1d(qsv2["min"])
+      max1 = np.atleast_1d(qsv1["max"])
+      max2 = np.atleast_1d(qsv2["max"])
+      merged_qsv = {
+          "min": np.minimum(min1, min2),
+          "max": np.maximum(max1, max2),
+      }
+
+    merged_qsvs[tensor_name] = merged_qsv
+
+  return merged_qsvs
+
+
+def merge_calibration_results(
+    results1: tuple[dict[str, qtyping.QSV], dict[str, Any]],
+    results2: tuple[dict[str, qtyping.QSV], dict[str, Any]],
+) -> tuple[dict[str, qtyping.QSV], dict[str, Any]]:
+  """Merges two calibration results (qsvs and metadata)."""
+  qsvs1, meta1 = results1
+  qsvs2, meta2 = results2
+
+  merged_qsvs = merge_qsvs(qsvs1, qsvs2)
+
+  merged_meta = {}
+  num_samples1 = meta1.get("num_samples_calibrated", 0)
+  num_samples2 = meta2.get("num_samples_calibrated", 0)
+  if num_samples1 or num_samples2:
+    merged_meta["num_samples_calibrated"] = num_samples1 + num_samples2
+
+  for k, v in meta1.items():
+    if k != "num_samples_calibrated":
+      merged_meta[k] = v
+  for k, v in meta2.items():
+    if k != "num_samples_calibrated":
+      if k in merged_meta and merged_meta[k] != v:
+        logging.warning(
+            "Overwriting metadata key %s: '%s' with '%s'", k, merged_meta[k], v
+        )
+      merged_meta[k] = v
+
+  return merged_qsvs, merged_meta
