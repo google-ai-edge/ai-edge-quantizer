@@ -209,6 +209,47 @@ class SharedBufferTest(parameterized.TestCase):
     # Verify that all of these Hadamard FC ops point to the same tensor ID!
     self.assertLen(set(hadamard_tensor_ids), 1)
 
+  def test_decomposed_hadamard_with_max_size(self):
+    qt = quantizer.Quantizer(self.float_model_path)
+    recipe = [
+        {
+            'regex': '.*',
+            'operation': 'FULLY_CONNECTED',
+            'algorithm_key': 'DECOMPOSED_HADAMARD_ROTATION',
+            'op_config': {
+                'weight_tensor_config': {
+                    'num_bits': 8,
+                    'symmetric': True,
+                    'granularity': 'CHANNELWISE',
+                    'dtype': 'INT',
+                    'algorithm_params': {
+                        'max_hadamard_size': 2,
+                    },
+                },
+                'compute_precision': 'INTEGER',
+                'explicit_dequantize': False,
+                'skip_checks': False,
+                'min_weight_elements': 0,
+            },
+        }
+    ]
+    qt.load_quantization_recipe(recipe)
+    quantized_model_bytes = qt.quantize().quantized_model
+    self.assertIsNotNone(quantized_model_bytes)
+
+    model = qtyping.Model.GetRootAsModel(quantized_model_bytes, 0)
+    subgraph = model.Subgraphs(0)
+
+    hadamard_sizes = []
+    for i in range(subgraph.TensorsLength()):
+      tensor = subgraph.Tensors(i)
+      if b'_hadamard_matrix' in tensor.Name():
+        hadamard_sizes.append(list(tensor.ShapeAsNumpy()))
+
+    self.assertNotEmpty(hadamard_sizes)
+    for shape in hadamard_sizes:
+      self.assertEqual(shape, [2, 2])
+
   @parameterized.named_parameters(
       dict(
           testcase_name='fc1_quant_fc2_no_quant',
