@@ -114,7 +114,7 @@ class QuantizerTest(parameterized.TestCase):
     self.assertLen(updated_recipe, 2)
 
     added_config = updated_recipe[-1]
-    self.assertEqual(added_config['regex'], scope_regex)
+    self.assertEqual(added_config['op_scope_regex'], scope_regex)
     self.assertEqual(
         added_config['op_config']['compute_precision'],
         new_op_config.compute_precision,
@@ -132,7 +132,7 @@ class QuantizerTest(parameterized.TestCase):
     self.assertLen(updated_recipe, 2)
 
     added_config = updated_recipe[-1]
-    self.assertEqual(added_config['regex'], scope_regex)
+    self.assertEqual(added_config['op_scope_regex'], scope_regex)
     self.assertEqual(
         added_config['op_config']['compute_precision'],
         qtyping.ComputePrecision.INTEGER,
@@ -154,7 +154,7 @@ class QuantizerTest(parameterized.TestCase):
     self.assertLen(updated_recipe, 2)
 
     added_config = updated_recipe[-1]
-    self.assertEqual(added_config['regex'], scope_regex)
+    self.assertEqual(added_config['op_scope_regex'], scope_regex)
     self.assertEqual(
         added_config['op_config']['compute_precision'],
         qtyping.ComputePrecision.FLOAT,
@@ -177,7 +177,7 @@ class QuantizerTest(parameterized.TestCase):
     self.assertLen(updated_recipe, 2)
 
     added_config = updated_recipe[-1]
-    self.assertEqual(added_config['regex'], scope_regex)
+    self.assertEqual(added_config['op_scope_regex'], scope_regex)
     self.assertEqual(
         added_config['op_config']['compute_precision'],
         qtyping.ComputePrecision.INTEGER,
@@ -640,8 +640,8 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
   ):
     recipe = [
         dict({
-            'regex': '.*',
-            'operation': 'ADD',
+            'op_scope_regex': '.*',
+            'operations': ['ADD'],
             'algorithm_key': 'min_max_uniform_quantize',
             'op_config': {
                 'activation_tensor_config': {
