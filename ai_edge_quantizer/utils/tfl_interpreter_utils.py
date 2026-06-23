@@ -36,6 +36,8 @@ def create_tfl_interpreter(
     use_xnnpack: bool = True,
     num_threads: int = 16,
     preserve_all_tensors: bool = True,
+    disable_delegate_node_fusion: bool = False,
+    force_delegate_node_profiling: bool = False,
 ) -> tfl.Interpreter:
   """Creates a TFLite interpreter from a model file.
 
@@ -46,6 +48,8 @@ def create_tfl_interpreter(
     num_threads: The number of threads to use for the interpreter.
     preserve_all_tensors: Whether to preserve all tensors. If False, only input
       and output tensors are preserved.
+    disable_delegate_node_fusion: Whether to disable delegate node fusion.
+    force_delegate_node_profiling: Whether to force profiling for delegate ops.
 
   Returns:
     A TFLite interpreter.
@@ -62,6 +66,8 @@ def create_tfl_interpreter(
       num_threads=num_threads,
       experimental_op_resolver_type=op_resolver,
       experimental_preserve_all_tensors=preserve_all_tensors,
+      experimental_disable_delegate_node_fusion=disable_delegate_node_fusion,
+      experimental_force_delegate_node_profiling=force_delegate_node_profiling,
   )
   if allocate_tensors:
     tflite_interpreter.allocate_tensors()
