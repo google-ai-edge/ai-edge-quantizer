@@ -72,7 +72,7 @@ class AeqTest(parameterized.TestCase):
         / "tests/models/conv_fc_mnist.tflite"
     )
 
-    with tempfile.TemporaryDirectory() as output_dir:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as output_dir:
       self.assertEqual(
           aeq.main(
               argparse.Namespace(
@@ -124,7 +124,7 @@ class AeqTest(parameterized.TestCase):
         / "tests/models/conv_fc_mnist.litertlm"
     )
 
-    with tempfile.TemporaryDirectory() as output_dir:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as output_dir:
       self.assertEqual(
           aeq.main(
               argparse.Namespace(
