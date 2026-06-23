@@ -606,9 +606,11 @@ class _ProfilerBasedCalibrator(Calibrator):
   ) -> tfl.Interpreter:
     return tfl_interpreter_utils.create_tfl_interpreter(
         float_tflite,
-        use_xnnpack=False,
+        use_xnnpack=True,
         num_threads=num_threads,
         preserve_all_tensors=False,
+        disable_delegate_node_fusion=True,
+        force_delegate_node_profiling=True,
     )
 
   @override
