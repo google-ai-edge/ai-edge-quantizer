@@ -93,6 +93,31 @@ class FullyConnectedTest(test_utils.BaseOpTestCase):
         output_tolerance,
     )
 
+  def test_blockwise_dequantized_weight_recovery_accuracy_and_size(self):
+    model = 'blockwise_i4rangedvalues_fc.tflite'
+    model_path = pathlib.Path(_TEST_MODEL_FOLDER) / model
+    op_config = _OpQuantConfig(
+        weight_tensor_config=_TensorQuantConfig(
+            num_bits=4,
+            symmetric=True,
+            granularity=qtyping.QuantGranularity.BLOCKWISE_32,
+        ),
+        compute_precision=_ComputePrecision.INTEGER,
+        explicit_dequantize=False,
+    )
+    weight_tolerance = 1e-4
+    output_tolerance = 1.5e-1
+    expected_model_size_reduction = 75
+    self.assert_quantization_accuracy_and_size(
+        _AlgorithmName.DEQUANTIZED_WEIGHT_RECOVERY,
+        model_path,
+        self._op_name,
+        op_config,
+        expected_model_size_reduction,
+        weight_tolerance,
+        output_tolerance,
+    )
+
   @parameterized.product(
       algorithms=[
           _AlgorithmName.MIN_MAX_UNIFORM_QUANT,
