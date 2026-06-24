@@ -13,7 +13,38 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Quantization recipe module."""
+"""Quantization recipe module.
+
+Existing recipes include:
+
+  1. Dynamic quantization recipes:
+    - dynamic_wi8_afp32
+    - dynamic_wi4_afp32
+  2. Weight-only quantization recipes:
+    - weight_only_wi8_afp32
+    - weight_only_wi4_afp32
+  3. Static quantization recipes:
+    - static_wi8_ai8
+    - static_wi8_ai16
+  4. LiteRT-LM recipes:
+    - gemma4_mixed48
+    - gemma4_mixed48_hr
+    - gemma4_mixed48_b32
+    - gemma4_mixed48_b64
+
+Naming convention decoder for recipes:
+  - 'dynamic': dynamic range quantization (weights quantized statically,
+    activations dynamically at runtime).
+  - 'wi[N]': weight integer N-bit (e.g., wi8: 8-bit weights).
+  - 'c' or 'b[M]': Granularity. 'c' for channelwise, 'b[M]' for blockwise with
+    block size M (e.g., b32: 32-blockwise).
+  - 'hr' (optional): Hadamard rotations are used for the quantization
+    parameters estimation. (typically for better quality at lower bits, see
+    algorithms/uniform_quantize/hadamard_rotation.py).
+  - 'afp32': activations remain float32 in the model (may be dynamically
+    quantized at runtime by setting compute_precision=INTEGER,
+    explicit_dequantize=False).
+"""
 
 from ai_edge_quantizer import algorithm_manager
 from ai_edge_quantizer import qtyping

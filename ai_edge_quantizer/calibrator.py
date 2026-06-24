@@ -311,7 +311,7 @@ class Calibrator:
 
   def calibrate(
       self,
-      calibration_dataset: dict[str, Iterable[_SignatureInput]],
+      calibration_dataset: Mapping[str, Iterable[_SignatureInput]],
       model_recipe_manager: recipe_manager.RecipeManager,
       cache_output: bool = False,
   ) -> None:
