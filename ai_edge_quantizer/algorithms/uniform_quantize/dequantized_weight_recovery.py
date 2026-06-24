@@ -160,29 +160,6 @@ def get_zp_scale_from_dequantized_symmetric_weights(
         f"quantized_dimension must be 0, 1, or None. Got {quantized_dimension}"
     )
 
-  if block_size > 0:
-    if quantized_dimension is None:
-      raise ValueError(
-          "quantized_dimension must be specified for blockwise quantization."
-      )
-
-    reshaped_2d = common_utils.reshape_to_blocks(
-        dequant_vals, quantized_dimension, block_size
-    )
-
-    zp_2d, scale_2d = get_zp_scale_from_dequantized_symmetric_weights(
-        reshaped_2d, quantized_dimension=0, min_scale=min_scale
-    )
-
-    target_shape = common_utils.get_blockwise_shape(
-        dequant_vals.shape, quantized_dimension, block_size
-    )
-
-    return (
-        zp_2d.reshape(target_shape),
-        scale_2d.reshape(target_shape),
-    )
-
   # Use absolute values for symmetric quantization.
   dequant_vals = np.abs(dequant_vals)
 
@@ -191,23 +168,50 @@ def get_zp_scale_from_dequantized_symmetric_weights(
     scales = _get_scale(np.ravel(dequant_vals), min_scale)
     scales = np.array([[scales]])
   else:
-    # Per-channel quantization: A scale for each slice along the dimension.
-    # Create a broadcasted array for per-channel scales. It should have the same
-    # number of dimensions as the input, with 1 in all dimensions except for the
-    # quantized dimension, which retains its original size.
-    scales = np.empty(
-        tuple([
-            1
-            if i != quantized_dimension
-            else dequant_vals.shape[quantized_dimension]
-            for i in range(dequant_vals.ndim)
-        ])
-    )
-    for i in range(dequant_vals.shape[quantized_dimension]):
-      slices = [slice(None)] * dequant_vals.ndim
-      slices[quantized_dimension] = i
-      vec = dequant_vals[tuple(slices)]
-      scales[tuple(slices)] = _get_scale(vec, min_scale)
+    # Per-channel or Blockwise quantization.
+    if block_size > 0:
+      reshaped_2d = common_utils.reshape_to_blocks(
+          dequant_vals, quantized_dimension, block_size
+      )
+      target_shape = common_utils.get_blockwise_shape(
+          dequant_vals.shape, quantized_dimension, block_size
+      )
+    else:
+      # Per-channel: Move quantized_dimension to axis 0.
+      perm = [quantized_dimension] + [
+          i for i in range(dequant_vals.ndim) if i != quantized_dimension
+      ]
+      transposed = np.transpose(dequant_vals, perm)
+      # Flatten all other dimensions.
+      reshaped_2d = transposed.reshape(
+          dequant_vals.shape[quantized_dimension], -1
+      )
+      target_shape = [1] * dequant_vals.ndim
+      target_shape[quantized_dimension] = dequant_vals.shape[
+          quantized_dimension
+      ]
+      target_shape = tuple(target_shape)
+
+    # Append 0 to each row to handle symmetric quantization.
+    zeros = np.zeros((reshaped_2d.shape[0], 1), dtype=reshaped_2d.dtype)
+    reshaped_2d = np.hstack([reshaped_2d, zeros])
+
+    # Sort each row.
+    sorted_2d = np.sort(reshaped_2d, axis=1)
+
+    # Diff each row.
+    diffs = np.diff(sorted_2d, axis=1)
+
+    # Find min non-zero diff.
+    tolerance = 1e-9
+    masked_diffs = np.where(diffs > tolerance, diffs, np.inf)
+    min_diffs = np.min(masked_diffs, axis=1)
+
+    # Apply min_scale and handle np.inf (all values were same).
+    scales_1d = np.maximum(min_diffs, min_scale)
+    scales_1d[scales_1d == np.inf] = min_scale
+
+    scales = scales_1d.reshape(target_shape)
 
   zero_points = np.zeros_like(scales, dtype=np.int32)
   return zero_points, scales
