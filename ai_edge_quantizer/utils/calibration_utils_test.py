@@ -19,6 +19,7 @@ import numpy as np
 
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import calibration_utils
+from ai_edge_quantizer.utils import histogram_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
 
@@ -98,6 +99,31 @@ class CalibrationQsvAlignmentUtilsTest(parameterized.TestCase):
     self.assertSequenceAlmostEqual(results["tensor1"]["min"], [-1.0])
     self.assertSequenceAlmostEqual(results["tensor1"]["max"], [1.0])
     self.assertEmpty(metadata)
+
+  def test_load_calibration_results_with_histogram(self):
+    temp_file = self.create_tempfile()
+    temp_file.write_text(
+        '{"model_qsvs": {"tensor1": {"min": [-1.0], "max": [1.0], "axis": null,'
+        ' "channels": [{"hist_counts": [1, 2, 3], "bin_edges": [0.0, 0.5,'
+        ' 1.0]}]}}, "metadata": {}}'
+    )
+    results, _ = calibration_utils.load_calibration_results(temp_file.full_path)
+    self.assertIn("tensor1", results)
+    self.assertIsInstance(results["tensor1"]["min"], np.ndarray)
+    self.assertIsInstance(results["tensor1"]["max"], np.ndarray)
+    self.assertIsInstance(
+        results["tensor1"]["channels"][0]["hist_counts"], np.ndarray
+    )
+    self.assertIsInstance(
+        results["tensor1"]["channels"][0]["bin_edges"], np.ndarray
+    )
+    np.testing.assert_array_equal(
+        results["tensor1"]["channels"][0]["hist_counts"], np.array([1, 2, 3])
+    )
+    np.testing.assert_array_equal(
+        results["tensor1"]["channels"][0]["bin_edges"],
+        np.array([0.0, 0.5, 1.0]),
+    )
 
   def test_calibration_utils_init_fails(self):
     model_path = "non_existent_model.tflite"
@@ -212,6 +238,73 @@ class CalibrationQsvAlignmentUtilsTest(parameterized.TestCase):
     self.assertTrue(
         all(x == quant_params[0] for x in quant_params)
     )  # equal quantization params.
+
+
+class CalibrationUtilsMergeTest(parameterized.TestCase):
+
+  def test_merge_qsvs_min_max_only(self):
+    qsvs1 = {
+        "tensor1": {"min": np.array([-1.0]), "max": np.array([1.0])},
+        "tensor2": {"min": np.array([-2.0]), "max": np.array([2.0])},
+    }
+    qsvs2 = {
+        "tensor1": {"min": np.array([-0.5]), "max": np.array([1.5])},
+        "tensor3": {"min": np.array([-3.0]), "max": np.array([3.0])},
+    }
+
+    merged = calibration_utils.merge_qsvs(qsvs1, qsvs2)
+
+    self.assertLen(merged, 3)
+    np.testing.assert_array_equal(merged["tensor1"]["min"], np.array([-1.0]))
+    np.testing.assert_array_equal(merged["tensor1"]["max"], np.array([1.5]))
+    np.testing.assert_array_equal(merged["tensor2"]["min"], np.array([-2.0]))
+    np.testing.assert_array_equal(merged["tensor2"]["max"], np.array([2.0]))
+    np.testing.assert_array_equal(merged["tensor3"]["min"], np.array([-3.0]))
+    np.testing.assert_array_equal(merged["tensor3"]["max"], np.array([3.0]))
+
+  def test_merge_qsvs_with_histograms(self):
+    hist1 = histogram_utils.DynamicHistogram(
+        initial_bin_width=1.0, max_tensor_bins=10
+    )
+    hist1.add(np.array([0.0, 1.5]))
+    qsv1 = hist1.to_dict()
+
+    hist2 = histogram_utils.DynamicHistogram(
+        initial_bin_width=1.0, max_tensor_bins=10
+    )
+    hist2.add(np.array([0.1, 1.6]))
+    qsv2 = hist2.to_dict()
+
+    qsvs1 = {"tensor1": qsv1}
+    qsvs2 = {"tensor1": qsv2}
+
+    merged = calibration_utils.merge_qsvs(qsvs1, qsvs2)
+
+    self.assertIn("tensor1", merged)
+    np.testing.assert_array_equal(
+        merged["tensor1"]["channels"][0]["hist_counts"], [2, 2, 0]
+    )
+    self.assertEqual(merged["tensor1"]["channels"][0]["lower_bound"], 0.0)
+
+  def test_merge_calibration_results(self):
+    qsvs1 = {"tensor1": {"min": np.array([-1.0]), "max": np.array([1.0])}}
+    meta1 = {"num_samples_calibrated": 10, "other_key": "val1"}
+
+    qsvs2 = {"tensor1": {"min": np.array([-0.5]), "max": np.array([1.5])}}
+    meta2 = {"num_samples_calibrated": 20, "other_key": "val2"}
+
+    merged_qsvs, merged_meta = calibration_utils.merge_calibration_results(
+        (qsvs1, meta1), (qsvs2, meta2)
+    )
+
+    np.testing.assert_array_equal(
+        merged_qsvs["tensor1"]["min"], np.array([-1.0])
+    )
+    np.testing.assert_array_equal(
+        merged_qsvs["tensor1"]["max"], np.array([1.5])
+    )
+    self.assertEqual(merged_meta["num_samples_calibrated"], 30)
+    self.assertEqual(merged_meta["other_key"], "val2")
 
 
 if __name__ == "__main__":
