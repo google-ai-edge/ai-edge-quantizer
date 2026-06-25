@@ -25,11 +25,11 @@ import flatbuffers
 
 import os
 import io
-from ai_edge_litert.internal import litertlm_builder
-from ai_edge_litert.internal import litertlm_core
-from ai_edge_litert.internal import litertlm_header_schema_py_generated as schema
 from ai_edge_litert.tools import flatbuffer_utils
 from ai_edge_litert.tools import mmap_utils
+from litert_lm_builder import litertlm_builder
+from litert_lm_builder import litertlm_core
+from litert_lm_builder import litertlm_header_schema_py_generated as schema
 from ai_edge_quantizer import qtyping
 
 # Exported types.
@@ -48,6 +48,22 @@ schema.VDataCreator = schema.VdataCreator
 def _bytes_to_str(val: bytes | T) -> str | T:
   """Converts the input to `str` if it is `bytes`."""
   return str(val, encoding='utf-8') if isinstance(val, bytes) else val
+
+
+def _from_key_value_pair(kvp: Any) -> litertlm_builder.Metadata:
+  """Helper to construct Metadata from key-value pair with fallback."""
+  if hasattr(litertlm_builder.Metadata, 'from_key_value_pair'):
+    return litertlm_builder.Metadata.from_key_value_pair(kvp)
+  key = kvp.key.decode('utf-8') if isinstance(kvp.key, bytes) else kvp.key
+  val_obj = kvp.value
+  if hasattr(val_obj, 'value'):
+    val_obj = val_obj.value
+  value = val_obj.decode('utf-8') if isinstance(val_obj, bytes) else val_obj
+  if hasattr(litertlm_builder, 'DType'):
+    return litertlm_builder.Metadata(
+        key=key, value=value, dtype=getattr(litertlm_builder, 'DType').STRING
+    )
+  return litertlm_builder.Metadata(key=key, value=value)
 
 
 class LiteRTLMFile:
@@ -206,10 +222,9 @@ class LiteRTLMFile:
     system_metadata = metadata.systemMetadata
     system_metadata.entries = [
         m.to_key_value_pair()
-        for m in litertlm_builder.populate_system_metadata([
-            litertlm_builder.Metadata.from_key_value_pair(kvp)
-            for kvp in system_metadata.entries
-        ])
+        for m in litertlm_builder.populate_system_metadata(
+            [_from_key_value_pair(kvp) for kvp in system_metadata.entries]
+        )
     ]
 
     # Pack the modified metadata.

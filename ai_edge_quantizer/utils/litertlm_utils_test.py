@@ -20,7 +20,7 @@ import random
 
 from absl.testing import absltest
 
-from ai_edge_litert.internal import litertlm_core
+from litert_lm_builder import litertlm_core
 from ai_edge_quantizer.utils import litertlm_utils
 from ai_edge_quantizer.utils import test_utils
 

@@ -35,6 +35,7 @@ dependencies = [
     "scipy",
     "ml_dtypes",
     "ai-edge-litert-nightly",
+    "litert-lm-builder",
 ]
 
 [project.urls]
