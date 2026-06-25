@@ -280,6 +280,9 @@ def get_tensor_quant_params(
   Returns:
     The quantization parameters for the tensor.
   """
+  if tensor_quant_config.dtype == qtyping.TensorDataType.UINT:
+    raise ValueError("Unsigned quantization is not supported by GPTQ.")
+
   activation_tensor_qsv = (
       tensor_qsv.get("activation_tensor_qsv") if tensor_qsv else None
   )

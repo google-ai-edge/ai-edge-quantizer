@@ -158,6 +158,7 @@ def fix_quantization_params_rank(
       quantized_dimension=quantization_params.quantized_dimension,
       quantized_data=quantization_params.quantized_data,
       block_size=quantization_params.block_size,
+      signed=quantization_params.signed,
   )
 
 
@@ -267,6 +268,7 @@ def _broadcast_scale_zp_for_blockwise(
       symmetric=quant_params.symmetric,
       quantized_dimension=quantized_dim,
       block_size=quant_params.block_size,
+      signed=quant_params.signed,
   )
 
 
@@ -302,8 +304,10 @@ def uniform_quantize(
       quantization_params.scale,
       quantization_params.zero_point,
   )
-  # TODO: b/332574603 - support unsigned data type.
-  qtype = IntType(quantization_params.num_bits, signed=True)
+  qtype = IntType(
+      quantization_params.num_bits,
+      signed=quantization_params.signed,
+  )
   # For quantization with more than 8 bits, symmetric narrow-range quantization
   # is required due to assumptions made by legacy TFLite kernels. However, this
   # method is not ideal for low-bit quantization (e.g., 2-bit quantization,
@@ -313,11 +317,13 @@ def uniform_quantize(
   narrow_range = (
       quantization_params.symmetric and quantization_params.num_bits >= 8
   )
-  required_dtype = np.signedinteger if qtype.signed else np.unsignedinteger
-  if not np.issubdtype(zero_points.dtype, required_dtype):
+  if not np.issubdtype(zero_points.dtype, np.integer):
+    raise ValueError(f"zero_points need to be integer. Got {zero_points.dtype}")
+  qmin, qmax = get_quantized_range(qtype)
+  if np.any(zero_points < qmin) or np.any(zero_points > qmax):
     raise ValueError(
-        f"zero_points need to be {required_dtype}."
-        f" But the actual type is {zero_points.dtype}."
+        f"zero_points values must be within [{qmin}, {qmax}]."
+        f" But got zero_points: {zero_points}"
     )
 
   # For large tensors, quantize the data in chunks of the leading dimension to
@@ -496,6 +502,7 @@ def tensor_zp_scale_from_min_max(
     symmetric: bool,
     granularity: qtyping.QuantGranularity,
     clipping_values: Optional[np.ndarray] = None,
+    signed: bool = True,
 ):
   """Get zero point and scale from min and max value.
 
@@ -511,15 +518,15 @@ def tensor_zp_scale_from_min_max(
       clip the tensors to the range [-clipping_values, clipping_values]. This
       should be the same shape as min_value and max_value. If None, no clipping
       will be applied.
+    signed: Whether the tensor is signed.
 
   Returns:
     The zero point and scale of the tensor.
   """
 
-  # TODO: b/332574603 - support unsigned data type.
   qtype = IntType(
       num_bits,
-      signed=True,
+      signed=signed,
   )
   qmin, qmax = get_quantized_range(qtype)
   min_bound = 1e-9  # Avoid zero scale.

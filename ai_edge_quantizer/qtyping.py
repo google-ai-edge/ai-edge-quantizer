@@ -160,6 +160,7 @@ class ComputePrecision(str, enum.Enum):
 
 class TensorDataType(str, enum.Enum):
   INT = 'INT'
+  UINT = 'UINT'
   FLOAT = 'FLOAT'
 
 
@@ -216,6 +217,7 @@ class UniformQuantParams:
       distributing) weights and activations into a more uniform distribution.
       This is particularly useful for low bits quantization. More technical
       details can be found in algorithms/uniform_quantize/hadamard_rotation.py.
+    signed: Whether the quantization is signed.
   """
 
   class HadamardRotationParams:
@@ -252,6 +254,7 @@ class UniformQuantParams:
   quantized_data: Optional[np.ndarray] = None
   block_size: int = 0
   hadamard: Optional[HadamardRotationParams] = None
+  signed: bool = True
 
   @classmethod
   def from_tfl_tensor_details(cls, tensor_detail) -> 'UniformQuantParams':
@@ -267,18 +270,25 @@ class UniformQuantParams:
     data_type = tensor_detail['dtype']
     if data_type == np.int8:
       num_bits = 8
+      signed = True
+    elif data_type == np.uint8:
+      num_bits = 8
+      signed = False
     elif data_type == np.int16:
       num_bits = 16
+      signed = True
     elif data_type == np.int32:
       num_bits = 32
+      signed = True
     elif data_type == np.int64:
       num_bits = 64
+      signed = True
     else:
       raise ValueError(
           f'Unsupported data type: {data_type}. Supported types are np.int8,'
-          ' np.int16, np.int32, np.int64.'
+          ' np.uint8, np.int16, np.int32, np.int64.'
       )
-    symmetric = sum(abs(quant_params['zero_points'])) == 0
+    symmetric = signed and sum(abs(quant_params['zero_points'])) == 0
     return cls(
         quantized_dimension=quant_params['quantized_dimension'],
         num_bits=num_bits,
@@ -286,6 +296,7 @@ class UniformQuantParams:
         zero_point=quant_params['zero_points'],
         symmetric=symmetric,
         block_size=quant_params['block_size'],
+        signed=signed,
     )
 
   def __eq__(self, other):
@@ -300,6 +311,7 @@ class UniformQuantParams:
         and _compare_array_or_none(self.quantized_data, other.quantized_data)
         and self.block_size == other.block_size
         and self.hadamard == other.hadamard
+        and self.signed == other.signed
     )
 
 

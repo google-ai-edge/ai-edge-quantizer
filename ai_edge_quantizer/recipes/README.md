@@ -22,7 +22,7 @@ order:
 
 `a<type>` means that the activation tensors are to be quantized to `type`. If
 `type` is not prefixed by some letter, it indicates an integer type. E.g. `a8` =
-int8 activation and `af32` = float32 activation.
+int8 activation, `au8` = uint8 activation, and `af32` = float32 activation.
 
 `w<type>` means that the weight tensors are to be quantized to `type`. If `type`
 is not prefixed by some letter, it indicates an integer type. E.g. `a8` = int8
@@ -63,3 +63,28 @@ This sample demonstrates:
 
 *   Selective quantization (opt out a specific node by specifying its output
     tensor name with `"algorithm_key": "no_quantize"`)
+
+## Customizing Input/Output Precision
+
+If your hardware requires a specific data type (e.g., `uint8`, `int16`) for
+model inputs/outputs, you can override the recipe after loading it using the
+Python API. For example, to configure model inputs and outputs to use `uint8`:
+
+```python
+from ai_edge_quantizer import qtyping
+
+# Configure both INPUT and OUTPUT to use a specific type (UINT8 in this example)
+for op in [qtyping.TFLOperationName.INPUT, qtyping.TFLOperationName.OUTPUT]:
+  qt.update_quantization_recipe(
+      regex='.*',
+      operation_name=op,
+      op_config=qtyping.OpQuantizationConfig(
+          activation_tensor_config=qtyping.TensorQuantizationConfig(
+              num_bits=8,  # Adjust bit width accordingly (e.g., 16 for INT16)
+              symmetric=False,  # Adjust symmetric accordingly (e.g., True for INT16)
+              granularity=qtyping.QuantGranularity.TENSORWISE,
+              dtype=qtyping.TensorDataType.UINT,  # Change to your target type (e.g., TensorDataType.INT)
+          )
+      )
+  )
+```
