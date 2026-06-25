@@ -134,6 +134,22 @@ DEFAULT_JSON_POLICY = """
       "explicit_dequantize": false,
       "compute_precision": "INTEGER"
     },
+    "static_wi8_au8": {
+      "activation_tensor_config": {
+        "num_bits": 8,
+        "symmetric": [false],
+        "granularity": ["TENSORWISE"],
+        "dtype": "UINT"
+      },
+      "weight_tensor_config": {
+        "num_bits": 8,
+        "symmetric": [true],
+        "granularity": ["CHANNELWISE", "TENSORWISE"],
+        "dtype": "INT"
+      },
+      "explicit_dequantize": false,
+      "compute_precision": "INTEGER"
+    },
     "static_wi4_ai8": {
       "activation_tensor_config": {
         "num_bits": 8,
@@ -274,6 +290,7 @@ DEFAULT_JSON_POLICY = """
       "RELU"
     ],
     "static_wi4_ai8": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT"],
+    "static_wi8_au8": ["INPUT", "OUTPUT"],
     "static_wi4_ai16": ["FULLY_CONNECTED", "CONV_2D", "INPUT", "OUTPUT"],
     "dynamic_wi8_afp32": [
       "BATCH_MATMUL",
