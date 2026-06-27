@@ -18,7 +18,6 @@ from collections.abc import Sequence
 from absl.testing import absltest
 from absl.testing import parameterized
 
-from ai_edge_quantizer import model_validator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import test_utils
@@ -80,15 +79,18 @@ class SharedBufferTest(parameterized.TestCase):
   def _check_comparison_result(
       self,
       output_tensor_names: Sequence[str],
-      comparison_result: model_validator.ComparisonResult,
+      comparison_result,
       output_tolerance: float,
   ):
-    tensors_results = comparison_result.get_all_tensor_results()
-    for output_tensor_name in output_tensor_names:
-      self.assertLess(
-          tensors_results[output_tensor_name],
-          output_tolerance,
-      )
+    _all_results = comparison_result.get_all_tensor_results()
+    metric = 'mean_squared_difference'
+    with self.subTest(error_metric=metric):
+      tensors_results = {k: v.get(metric, 0.0) for k, v in _all_results.items()}
+      for output_tensor_name in output_tensor_names:
+        self.assertLess(
+            tensors_results[output_tensor_name],
+            output_tolerance,
+        )
 
   @parameterized.named_parameters(
       dict(
@@ -153,7 +155,9 @@ class SharedBufferTest(parameterized.TestCase):
     test_data = tfl_interpreter_utils.create_random_normal_input_data(
         quantized_model, num_samples=4
     )
-    comparison_result = qt.validate(error_metrics='mse', test_data=test_data)
+    comparison_result = qt.validate(
+        error_metrics=[quantizer.ValidationErrorMetric.MSE], test_data=test_data
+    )
     self._check_comparison_result(
         output_tensor_names=[
             self.sig1_output_tensor_name,
@@ -426,7 +430,9 @@ class SharedBufferTest(parameterized.TestCase):
     test_data = tfl_interpreter_utils.create_random_normal_input_data(
         quantized_model, num_samples=4
     )
-    comparison_result = qt.validate(error_metrics='mse', test_data=test_data)
+    comparison_result = qt.validate(
+        error_metrics=[quantizer.ValidationErrorMetric.MSE], test_data=test_data
+    )
     self._check_comparison_result(
         output_tensor_names=[
             self.sig1_output_tensor_name,

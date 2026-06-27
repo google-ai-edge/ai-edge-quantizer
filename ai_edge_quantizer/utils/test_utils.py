@@ -15,6 +15,7 @@
 
 """Utils for tests."""
 
+from collections.abc import Sequence
 import inspect as _inspect
 import pathlib as _pathlib
 import sys as _sys
@@ -26,6 +27,7 @@ from ai_edge_quantizer import model_validator
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import tfl_interpreter_utils
+from ai_edge_quantizer.utils import validation_utils
 
 _ComputePrecision = qtyping.ComputePrecision
 _OpName = qtyping.TFLOperationName
@@ -98,7 +100,9 @@ class BaseOpTestCase(parameterized.TestCase):
       op_config: _OpQuantConfig,
       num_validation_samples: int = 4,
       num_calibration_samples: Optional[int] = None,
-      error_metric: str = 'mse',
+      error_metrics: Optional[
+          Sequence[validation_utils.ValidationErrorMetric]
+      ] = None,
       min_max_range: Optional[tuple[_Numeric, _Numeric]] = None,
   ) -> model_validator.ComparisonResult:
     """Quantizes and validates the given model with the given configurations.
@@ -111,11 +115,11 @@ class BaseOpTestCase(parameterized.TestCase):
       num_validation_samples: The number of samples to use for validation.
       num_calibration_samples: The number of samples to use for calibration. If
         None then it will be set to num_validation_samples * 8.
-      error_metric: The error error_metric to use for validation.
+      error_metrics: The error metrics to use for validation.
       min_max_range: The min and max of the input range.
 
     Returns:
-      The comparison result of the validation.
+      A ComparisonResult object containing the combined comparison results.
     """
     quantizer_instance = quantizer.Quantizer(model_path)
     quantizer_instance.update_quantization_recipe(
@@ -141,7 +145,7 @@ class BaseOpTestCase(parameterized.TestCase):
         num_samples=num_validation_samples,
         min_max_range=min_max_range,
     )
-    return quantizer_instance.validate(test_data, error_metric)
+    return quantizer_instance.validate(test_data, error_metrics=error_metrics)
 
   def assert_model_size_reduction_above_min_pct(
       self,
@@ -157,14 +161,17 @@ class BaseOpTestCase(parameterized.TestCase):
       validation_result: model_validator.ComparisonResult,
       weight_tolerance: float,
   ):
-    """Checks the weight tensors' numerical behavior against the given tolerance."""
+    """Checks the weight tensor numerical behavior against the given tolerance."""
     self.assertNotEmpty(validation_result.available_signature_keys())
     for signature_key in validation_result.available_signature_keys():
       signature_result = validation_result.get_signature_comparison_result(
           signature_key
       )
-      for result in signature_result.constant_tensors.values():
-        self.assertLess(result, weight_tolerance)
+      for tensor_metrics in signature_result.constant_tensors.values():
+        for metric_name, result in tensor_metrics.items():
+          self.assertLess(
+              result, weight_tolerance, f'Metric {metric_name} failed.'
+          )
 
   def assert_output_errors_below_tolerance(
       self,
@@ -177,8 +184,11 @@ class BaseOpTestCase(parameterized.TestCase):
       signature_result = validation_result.get_signature_comparison_result(
           signature_key
       )
-      for result in signature_result.output_tensors.values():
-        self.assertLess(result, output_tolerance)
+      for tensor_metrics in signature_result.output_tensors.values():
+        for metric_name, result in tensor_metrics.items():
+          self.assertLess(
+              result, output_tolerance, f'Metric {metric_name} failed.'
+          )
 
   def assert_quantization_accuracy_and_size(
       self,
@@ -192,7 +202,7 @@ class BaseOpTestCase(parameterized.TestCase):
       min_max_range: Optional[tuple[_Numeric, _Numeric]] = None,
   ):
     """Check if the quantization is successful and the result is valid."""
-    validation_result = self.quantize_and_validate(
+    validation_results = self.quantize_and_validate(
         model_path=model_path,
         algorithm_key=algorithm_key,
         op_name=op_name,
@@ -201,15 +211,15 @@ class BaseOpTestCase(parameterized.TestCase):
     )
     with self.subTest(name='ModelSizeReduction'):
       self.assert_model_size_reduction_above_min_pct(
-          validation_result, expected_model_size_reduction
+          validation_results, expected_model_size_reduction
       )
     with self.subTest(name='WeightsErrors'):
       self.assert_weights_errors_below_tolerance(
-          validation_result, weight_tolerance
+          validation_results, weight_tolerance
       )
     with self.subTest(name='OutputErrors'):
       self.assert_output_errors_below_tolerance(
-          validation_result, output_tolerance
+          validation_results, output_tolerance
       )
 
   def assert_quantization_accuracy(
@@ -224,7 +234,7 @@ class BaseOpTestCase(parameterized.TestCase):
       min_max_range: Optional[tuple[_Numeric, _Numeric]] = None,
   ):
     """Checks if the output errors after quantization are within the tolerance."""
-    validation_result = self.quantize_and_validate(
+    validation_results = self.quantize_and_validate(
         model_path=model_path,
         algorithm_key=algorithm_key,
         num_validation_samples=num_validation_samples,
@@ -234,5 +244,5 @@ class BaseOpTestCase(parameterized.TestCase):
         min_max_range=min_max_range,
     )
     self.assert_output_errors_below_tolerance(
-        validation_result, output_tolerance
+        validation_results, output_tolerance
     )

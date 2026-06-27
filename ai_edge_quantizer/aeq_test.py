@@ -50,14 +50,14 @@ class AeqTest(parameterized.TestCase):
         float_model_buffer,
         quantized_model_buffer,
         test_data,
-        error_metric="mse",
-        compare_fn=validation_utils.get_validation_func("mse"),
         validate_output_tensors_only=True,
     )
 
     # Verify that the results are indeed reasonable.
-    for mse in result.get_all_tensor_results().values():
-      self.assertLess(mse, 1e-4)
+    for errors in result.get_all_tensor_results().values():
+      self.assertLess(
+          errors[validation_utils.ValidationErrorMetric.MSE.value], 1e-4
+      )
 
   @parameterized.named_parameters(
       (

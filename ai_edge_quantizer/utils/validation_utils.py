@@ -15,39 +15,51 @@
 
 """A library of comparator function to be used by validation function."""
 
-from collections.abc import Callable
-from typing import Any, Tuple
+
+import enum
+from typing import Any, Callable, Protocol, Tuple
+
 import numpy as np
 
 
+class ValidationFuncType(Protocol):
+  """Type hint and documentation for validation functions."""
+
+  def __call__(
+      self, data1: np._typing.ArrayLike, data2: np._typing.ArrayLike
+  ) -> float:
+    ...
+
+
+class ValidationErrorMetric(enum.Enum):
+  MSE = "mse"
+  MEDIAN_DIFF_RATIO = "median_diff_ratio"
+  COSINE_SIMILARITY = "cosine_similarity"
+  KL_DIVERGENCE = "kl_divergence"
+  SNR = "snr"
+
+
+VALIDATION_FUNCS: dict[ValidationErrorMetric, ValidationFuncType] = {}
+
+
+def _register_validation_func(metric_name: ValidationErrorMetric):
+  def decorator(func: ValidationFuncType):
+    VALIDATION_FUNCS[metric_name] = func
+    return func
+
+  return decorator
+
+
 def get_validation_func(
-    func_name: str,
+    func_name: ValidationErrorMetric,
 ) -> Callable[[np._typing.ArrayLike, np._typing.ArrayLike], Any]:
-  """Returns a validation function based on the function name.
-
-  Args:
-    func_name: name of the validation function
-
-  Returns:
-    a validation function
-
-  Raises:
-    ValueError: if the function name is not supported
-  """
-  if func_name == "mse":
-    return mean_squared_difference
-  elif func_name == "median_diff_ratio":
-    return median_diff_ratio
-  elif func_name == "cosine_similarity":
-    return cosine_similarity
-  elif func_name == "kl_divergence":
-    return kl_divergence
-  elif func_name == "snr":
-    return signal_to_noise_ratio
-  else:
-    raise ValueError(f"Validation function {func_name} not supported")
+  """Returns a validation function based on the metric type."""
+  if func_name not in VALIDATION_FUNCS:
+    raise ValueError(f"Validation function {func_name} not supported.")
+  return VALIDATION_FUNCS[func_name]
 
 
+@_register_validation_func(ValidationErrorMetric.MSE)
 def mean_squared_difference(
     data1: np._typing.ArrayLike, data2: np._typing.ArrayLike
 ) -> float:
@@ -73,6 +85,7 @@ def mean_squared_difference(
   return float(np.square(np.subtract(data1, data2)).mean())
 
 
+@_register_validation_func(ValidationErrorMetric.MEDIAN_DIFF_RATIO)
 def median_diff_ratio(
     data1: np._typing.ArrayLike,
     data2: np._typing.ArrayLike,
@@ -105,6 +118,7 @@ def median_diff_ratio(
   return median_ratio
 
 
+@_register_validation_func(ValidationErrorMetric.COSINE_SIMILARITY)
 def cosine_similarity(
     data1: np._typing.ArrayLike,
     data2: np._typing.ArrayLike,
@@ -138,6 +152,7 @@ def cosine_similarity(
   return np.dot(data1, data2) / (norm_data1 * norm_data2)
 
 
+@_register_validation_func(ValidationErrorMetric.KL_DIVERGENCE)
 def kl_divergence(
     data1: np._typing.ArrayLike,
     data2: np._typing.ArrayLike,
@@ -175,6 +190,7 @@ def kl_divergence(
   return float(np.sum(p * np.log((p + epsilon) / (q + epsilon))))
 
 
+@_register_validation_func(ValidationErrorMetric.SNR)
 def signal_to_noise_ratio(
     noisy_signal: np._typing.ArrayLike,
     signal: np._typing.ArrayLike,

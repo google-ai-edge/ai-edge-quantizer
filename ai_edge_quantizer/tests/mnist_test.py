@@ -122,7 +122,9 @@ class MNISTTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(self._quantizer._result.quantized_model), 55000)
 
-    comparison_result = self._quantizer.validate(error_metrics='mse')
+    comparison_result = self._quantizer.validate(
+        error_metrics=[quantizer.ValidationErrorMetric.MSE]
+    )
     self._check_comparison_result(
         comparison_result,
         weight_tolerance=1e-2
@@ -169,7 +171,9 @@ class MNISTTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(self._quantizer._result.quantized_model), 30000)
 
-    comparison_result = self._quantizer.validate(error_metrics='mse')
+    comparison_result = self._quantizer.validate(
+        error_metrics=[quantizer.ValidationErrorMetric.MSE]
+    )
     self._check_comparison_result(
         comparison_result,
         weight_tolerance=1e-3,
@@ -193,7 +197,9 @@ class MNISTTest(parameterized.TestCase):
     # Check model size.
     self.assertLess(len(self._quantizer._result.quantized_model), 105000)
 
-    comparison_result = self._quantizer.validate(error_metrics='mse')
+    comparison_result = self._quantizer.validate(
+        error_metrics=[quantizer.ValidationErrorMetric.MSE]
+    )
     self._check_comparison_result(
         comparison_result,
         weight_tolerance=1e-5,
@@ -215,7 +221,8 @@ class MNISTTest(parameterized.TestCase):
     self.assertLess(len(quant_result.quantized_model), 55000)
 
     comparison_result = self._quantizer.validate(
-        error_metrics='mse', test_data=_get_test_data()
+        error_metrics=[quantizer.ValidationErrorMetric.MSE],
+        test_data=_get_test_data(),
     )
     self._check_comparison_result(
         comparison_result,
@@ -233,20 +240,23 @@ class MNISTTest(parameterized.TestCase):
       output_tolerance,
   ):
     # TODO: b/357959309 - Use comparison result directly for testing.
-    comparison_result = comparison_result.get_all_tensor_results()
-    # Check weight tensors.
-    conv_weight_mse = comparison_result['sequential/conv2d/Conv2D']
-    self.assertLess(conv_weight_mse, weight_tolerance)
-    fc1_weight_mse = comparison_result['arith.constant1']
-    self.assertLess(fc1_weight_mse, weight_tolerance)
-    fc2_weight_mse = comparison_result['arith.constant']
-    self.assertLess(fc2_weight_mse, weight_tolerance)
-    # check logits.
-    logits_mse = comparison_result['sequential/dense_1/MatMul']
-    self.assertLess(logits_mse, logits_tolerance)
-    # check final output.
-    output_mse = comparison_result['StatefulPartitionedCall:0']
-    self.assertLess(output_mse, output_tolerance)
+    _all_results = comparison_result.get_all_tensor_results()
+    metric = 'mean_squared_difference'
+    with self.subTest(error_metric=metric):
+      tensors_results = {k: v.get(metric, 0.0) for k, v in _all_results.items()}
+      # Check weight tensors.
+      conv_weight_mse = tensors_results['sequential/conv2d/Conv2D']
+      self.assertLess(conv_weight_mse, weight_tolerance)
+      fc1_weight_mse = tensors_results['arith.constant1']
+      self.assertLess(fc1_weight_mse, weight_tolerance)
+      fc2_weight_mse = tensors_results['arith.constant']
+      self.assertLess(fc2_weight_mse, weight_tolerance)
+      # Check logits.
+      logits_mse = tensors_results['sequential/dense_1/MatMul']
+      self.assertLess(logits_mse, logits_tolerance)
+      # Check final output.
+      output_mse = tensors_results['StatefulPartitionedCall:0']
+      self.assertLess(output_mse, output_tolerance)
 
   @parameterized.parameters(
       '../recipes/default_a8w8_recipe.json',

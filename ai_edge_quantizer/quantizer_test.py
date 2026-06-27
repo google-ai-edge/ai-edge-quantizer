@@ -30,7 +30,6 @@ from ai_edge_quantizer import quantizer
 from ai_edge_quantizer.utils import recipe_utils
 from ai_edge_quantizer.utils import test_utils
 from ai_edge_quantizer.utils import tfl_interpreter_utils
-from ai_edge_quantizer.utils import validation_utils
 
 _ComputePrecision = qtyping.ComputePrecision
 _TFLOpName = qtyping.TFLOperationName
@@ -575,14 +574,14 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
     self.assertLen(available_signatures, 2)
 
     add_result = validation_result.get_signature_comparison_result('add')
-    self.assertEqual('mse', add_result.error_metric)
+    self.assertIn(quantizer.ValidationErrorMetric.MSE, add_result.error_metrics)
     self.assertIn('add_x:0', add_result.input_tensors)
     self.assertIn('PartitionedCall:0', add_result.output_tensors)
     self.assertIn('Add/y', add_result.constant_tensors)
     self.assertEmpty(add_result.intermediate_tensors)
 
     mul_result = validation_result.get_signature_comparison_result('multiply')
-    self.assertEqual('mse', mul_result.error_metric)
+    self.assertIn(quantizer.ValidationErrorMetric.MSE, mul_result.error_metrics)
     self.assertIn('multiply_x:0', mul_result.input_tensors)
     self.assertIn('PartitionedCall_1:0', mul_result.output_tensors)
     self.assertIn('Mul/y', mul_result.constant_tensors)
@@ -596,7 +595,7 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
     self.assertLen(available_signatures, 1)
     self.assertIn('add', available_signatures)
     add_result = validation_result.get_signature_comparison_result('add')
-    self.assertEqual('mse', add_result.error_metric)
+    self.assertIn(quantizer.ValidationErrorMetric.MSE, add_result.error_metrics)
     self.assertIn('add_x:0', add_result.input_tensors)
     self.assertIn('PartitionedCall:0', add_result.output_tensors)
     self.assertIn('Add/y', add_result.constant_tensors)
@@ -610,7 +609,7 @@ class QuantizerMultiSignatureModelTest(parameterized.TestCase):
     self.assertLen(available_signatures, 1)
     self.assertIn('multiply', available_signatures)
     mul_result = validation_result.get_signature_comparison_result('multiply')
-    self.assertEqual('mse', mul_result.error_metric)
+    self.assertIn(quantizer.ValidationErrorMetric.MSE, mul_result.error_metrics)
     self.assertIn('multiply_x:0', mul_result.input_tensors)
     self.assertIn('PartitionedCall_1:0', mul_result.output_tensors)
     self.assertIn('Mul/y', mul_result.constant_tensors)
@@ -876,15 +875,16 @@ class CalibrationModesParityTest(parameterized.TestCase):
         model_preserve,
         model_profiler,
         input_data,
-        error_metric='mse',
-        compare_fn=validation_utils.get_validation_func('mse'),
+        error_metrics=[quantizer.ValidationErrorMetric.MSE],
     )
 
     for sig_key in validation_result.available_signature_keys():
       sig_result = validation_result.get_signature_comparison_result(sig_key)
-      for output_name, error in sig_result.output_tensors.items():
+      for output_name, errors in sig_result.output_tensors.items():
         self.assertLess(
-            error, 1e-10, f'Output mismatch for {sig_key}:{output_name}'
+            errors[quantizer.ValidationErrorMetric.MSE.value],
+            1e-10,
+            f'Output mismatch for {sig_key}:{output_name}',
         )
 
 

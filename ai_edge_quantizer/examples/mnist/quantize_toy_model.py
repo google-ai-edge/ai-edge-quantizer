@@ -129,14 +129,25 @@ def _quantize_validate_save_and_return(
   """Quantize, validate, save the model artifact, and return bytes.
 
   Demonstrates calling qt.validate() to perform side-by-side numerical
-  comparison (e.g., measuring MSE) between the quantized and float models.
+  comparison between the quantized and float models.
   If test_data is None, qt.validate() generates random normal inputs.
+
+  The `error_metrics` argument supports:
+  - `None` (default) to evaluate `quantizer.ValidationErrorMetric.MSE` and
+    return it in a dictionary.
+  - A list of `quantizer.ValidationErrorMetric` enums (e.g.
+    `[quantizer.ValidationErrorMetric.MSE,
+    quantizer.ValidationErrorMetric.SNR]`) to evaluate the specified metrics and
+    return a dictionary mapping metric names to their ComparisonResult objects.
+
   Currently supported error metrics include:
-  1. 'mse': Mean Squared Error.
-  2. 'median_diff_ratio': Median Absolute Difference Ratio.
-  3. 'cosine_similarity': Cosine Similarity.
-  4. 'kl_divergence': Kullback-Leibler divergence.
-  5. 'snr': Signal-to-noise ratio.
+  1. `quantizer.ValidationErrorMetric.MSE`: Mean Squared Error.
+  2. `quantizer.ValidationErrorMetric.MEDIAN_DIFF_RATIO`: Median Absolute
+  Difference Ratio.
+  3. `quantizer.ValidationErrorMetric.COSINE_SIMILARITY`: Cosine Similarity.
+  4. `quantizer.ValidationErrorMetric.KL_DIVERGENCE`: Kullback-Leibler
+  divergence.
+  5. `quantizer.ValidationErrorMetric.SNR`: Signal-to-noise ratio.
   More details on these metrics (definitions and implementations) can be
   found in `utils/validation_utils.py`.
 
@@ -152,11 +163,45 @@ def _quantize_validate_save_and_return(
       satisfy strict C++ type-checking in the TFLite Python Interpreter).
   """
   quant_result = qt.quantize(calibration_result)
-  validation_result = qt.validate(error_metrics='mse')
-  sig_result = validation_result.get_signature_comparison_result()
-  print(f'\n--- Numerical Validation Results ({model_name}) ---')
-  for tensor_name, mse_value in sig_result.output_tensors.items():
-    print(f'Output Tensor: {tensor_name}, MSE: {mse_value:.6f}')
+
+  # Calling validate() without arguments runs the default metric (MSE)
+  # and returns a ComparisonResult object.
+  validation_results = qt.validate(
+      save_folder=output_dir, model_name=model_name
+  )
+  print(
+      f'\n--- Numerical Validation Results with default metric ({model_name})'
+      ' ---'
+  )
+  sig_result = validation_results.get_signature_comparison_result()
+  for tensor_name, error_vals in sig_result.output_tensors.items():
+    for metric_name, error_val in error_vals.items():
+      print(
+          f'  Output Tensor: {tensor_name}, Metric: {metric_name}, Value:'
+          f' {error_val:.6f}'
+      )
+  print('------------------------------------------\n')
+
+  # 2) Calling validate() with a list of metrics runs those selected metrics
+  # and likewise returns a ComparisonResult object containing all of them.
+  multi_validation_results = qt.validate(
+      error_metrics=[
+          quantizer.ValidationErrorMetric.MSE,
+          quantizer.ValidationErrorMetric.SNR,
+      ],
+      save_folder=output_dir,
+      model_name=model_name,
+  )
+  print(
+      f'\n--- Numerical Validation Results Multiple Metrics ({model_name}) ---'
+  )
+  sig_result = multi_validation_results.get_signature_comparison_result()
+  for tensor_name, error_vals in sig_result.output_tensors.items():
+    for metric_name, error_val in error_vals.items():
+      print(
+          f'  Output Tensor: {tensor_name}, Metric: {metric_name}, Value:'
+          f' {error_val:.6f}'
+      )
   print('------------------------------------------\n')
 
   quant_result.save(output_dir, model_name=model_name, overwrite=True)

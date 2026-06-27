@@ -108,16 +108,21 @@ class SumTest(parameterized.TestCase):
     self.assertEqual(output_tensor.type, tensor_type)
 
     comparison_result = self._quantizer.validate(
-        error_metrics='mse',
+        error_metrics=[quantizer.ValidationErrorMetric.MSE],
         test_data=_get_test_data(num_samples=1),
     )
     self._check_comparison_result(comparison_result, output_tolerance=tol)
 
   def _check_comparison_result(self, comparison_result, output_tolerance):
     # TODO: b/357959309 - Use comparison result directly for testing.
-    comparison_result = comparison_result.get_all_tensor_results()
-    output_mse = comparison_result['PartitionedCall:0']
-    self.assertLess(output_mse, output_tolerance)
+    _all_results = comparison_result.get_all_tensor_results()
+    metric = 'mean_squared_difference'
+    with self.subTest(error_metric=metric):
+      comparison_result = {
+          k: v.get(metric, 0.0) for k, v in _all_results.items()
+      }
+      output_mse = comparison_result['PartitionedCall:0']
+      self.assertLess(output_mse, output_tolerance)
 
 
 if __name__ == '__main__':

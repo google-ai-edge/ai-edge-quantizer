@@ -133,7 +133,9 @@ class ValidationUtilTest(absltest.TestCase):
     self.assertEqual(result, 0)
 
   def test_get_validation_func_kl_divergence(self):
-    func = validation_utils.get_validation_func("kl_divergence")
+    func = validation_utils.get_validation_func(
+        validation_utils.ValidationErrorMetric.KL_DIVERGENCE
+    )
     self.assertEqual(func, validation_utils.kl_divergence)
 
   def test_signal_to_noise_ratio_0d(self):
@@ -161,7 +163,9 @@ class ValidationUtilTest(absltest.TestCase):
     self.assertAlmostEqual(result, 1.0, places=5)
 
   def test_get_validation_func_snr(self):
-    func = validation_utils.get_validation_func("snr")
+    func = validation_utils.get_validation_func(
+        validation_utils.ValidationErrorMetric.SNR
+    )
     self.assertEqual(func, validation_utils.signal_to_noise_ratio)
 
 
