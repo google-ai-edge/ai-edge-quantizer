@@ -24,31 +24,19 @@ jobs:
         with:
             python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Run Colab Notebooks
         run: |
-          # Run everything in a custom environment (required by tensorflow).
-          python3 -m venv colabs_env
-          source colabs_env/bin/activate
-
-          # Install the required packages.
-          python -m pip install --upgrade pip
-          python -m pip install \
-            --index-url https://download.pytorch.org/whl/cpu \
-            torch \
-            torchvision
-          python -m pip install \
-            tensorflow-cpu \
-            papermill \
-            jupyter \
-            matplotlib \
-            scikit-image
-
-      - name: Run Colab notebooks
-        run: |
-          source colabs_env/bin/activate
-          papermill colabs/torch_convert_and_quantize.ipynb /tmp/out -k python3 -p visualize_model 0
-          papermill colabs/getting_started.ipynb /tmp/out -k python3 -p visualize_model 0
-          papermill colabs/selective_quantization_isnet.ipynb /tmp/out -k python3 -p visualize_model 0
+          # Run each notebook in a fresh environment to prevent pip installs from one notebook corrupting the next
+          for nb in colabs/torch_convert_and_quantize.ipynb colabs/getting_started.ipynb colabs/selective_quantization_isnet.ipynb; do
+            python3 -m venv test_env
+            source test_env/bin/activate
+            python -m pip install --upgrade pip
+            python -m pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
+            python -m pip install tensorflow-cpu papermill jupyter matplotlib scikit-image
+            papermill $nb /tmp/out -k python3 -p visualize_model 0
+            deactivate
+            rm -rf test_env
+          done
 
 
       - name: Create Issue on Failure
