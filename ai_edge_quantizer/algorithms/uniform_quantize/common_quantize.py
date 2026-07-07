@@ -60,17 +60,18 @@ def check_op_quantization_config(
   Raises:
     ValueError: If the op quantization config is invalid.
   """
-  if op_quant_config.weight_tensor_config is None:
-    raise ValueError(
-        "Weight tensor quantization is required for min/max uniform"
-        " quantization."
-    )
-  if op_quant_config.weight_tensor_config.dtype != qtyping.TensorDataType.INT:
-    raise ValueError(
-        "Weights need to have integer type for min/max uniform quantization. If"
-        " you wish to perform float casting quantization (e.g., fp16 weight"
-        " only), please set algorithm key as 'float_casting'."
-    )
+  if op_name in common_utils.DRQ_OR_WEIGHT_ONLY_OPS:
+    if op_quant_config.weight_tensor_config is None:
+      raise ValueError(
+          "Weight tensor quantization is required for min/max uniform"
+          " quantization."
+      )
+    if op_quant_config.weight_tensor_config.dtype != qtyping.TensorDataType.INT:
+      raise ValueError(
+          "Weights need to have integer type for min/max uniform quantization."
+          " If you wish to perform float casting quantization (e.g., fp16"
+          " weight only), please set algorithm key as 'float_casting'."
+      )
 
   if op_quant_config.min_weight_elements < 0:
     raise ValueError(
@@ -1314,6 +1315,7 @@ def broadcast_scale_zp_for_blockwise(
       symmetric=quant_params.symmetric,
       quantized_dimension=quantized_dim,
       block_size=quant_params.block_size,
+      signed=quant_params.signed,
   )
 
 
