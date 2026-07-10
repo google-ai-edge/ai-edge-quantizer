@@ -76,6 +76,7 @@ def get_tensor_quant_params(
         " the ParamsGenerator."
     )
   clipping_values = None
+  signed = tensor_quant_config.dtype != qtyping.TensorDataType.UINT
   zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
       tensor_min_max["min"],
       tensor_min_max["max"],
@@ -83,6 +84,7 @@ def get_tensor_quant_params(
       tensor_quant_config.symmetric,
       tensor_quant_config.granularity,
       clipping_values,
+      signed=signed,
   )
   quantized_dim = common_utils.get_weight_quantized_dim(
       op_info, tensor_content, tensor_quant_config.granularity
@@ -96,6 +98,7 @@ def get_tensor_quant_params(
       block_size=uniform_quantize_tensor.extract_block_size_from_granularity(
           tensor_quant_config.granularity
       ),
+      signed=signed,
   )
   if tensor_content is None:
     return quant_params

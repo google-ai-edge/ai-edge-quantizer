@@ -30,7 +30,7 @@ _IntType = uniform_quantize_tensor.IntType
 TensorQuantParamsCacheKey = tuple[Any, qtyping.TensorQuantizationConfig]
 
 
-_DRQ_OR_WEIGHT_ONLY_OPS = frozenset([
+DRQ_OR_WEIGHT_ONLY_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
     _TFLOpName.CONV_2D,
     _TFLOpName.BATCH_MATMUL,
@@ -149,7 +149,25 @@ def check_if_valid_op_config(
           ),
       )
 
-    if op_quant_config_to_check not in config_check_policy[op_name]:
+    match_found = False
+    for policy_config in config_check_policy[op_name]:
+      if op_name not in DRQ_OR_WEIGHT_ONLY_OPS:
+        # Ignore weight config for comparison if op doesn't support weights
+        cfg_to_compare = dataclasses.replace(
+            op_quant_config_to_check, weight_tensor_config=None
+        )
+        policy_cfg_to_compare = dataclasses.replace(
+            policy_config, weight_tensor_config=None
+        )
+      else:
+        cfg_to_compare = op_quant_config_to_check
+        policy_cfg_to_compare = policy_config
+
+      if cfg_to_compare == policy_cfg_to_compare:
+        match_found = True
+        break
+
+    if not match_found:
       error_msg = (
           f"Quantization config for op: {op_name} with config:"
           f" {op_quant_config!r} was not found in the policy."
@@ -252,7 +270,7 @@ def _get_tensor_transformation_params_wrapper(
   tensor_quant_config = op_info.op_quant_config.activation_tensor_config
   is_constant = tensor_data is not None
   # Use weight configuration if it is supported.
-  if is_constant and op_info.op_name in _DRQ_OR_WEIGHT_ONLY_OPS:
+  if is_constant and op_info.op_name in DRQ_OR_WEIGHT_ONLY_OPS:
     tensor_quant_config = op_info.op_quant_config.weight_tensor_config
   # Get quant params.
   if quant_params is None and tensor_quant_config is not None:

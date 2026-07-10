@@ -97,6 +97,30 @@ class QtypingTest(absltest.TestCase):
         ),
     )
     self.assertNotEqual(quant_params, other)
+    other = dataclasses.replace(quant_params, signed=False)
+    self.assertNotEqual(quant_params, other)
+
+  def test_from_tfl_tensor_details_uint8(self):
+    tensor_detail = {
+        'dtype': np.uint8,
+        'quantization_parameters': {
+            'quantized_dimension': 0,
+            'scales': np.array([0.1], dtype=np.float32),
+            'zero_points': np.array([128], dtype=np.int64),
+            'block_size': 0,
+        },
+    }
+    params = qtyping.UniformQuantParams.from_tfl_tensor_details(tensor_detail)
+    self.assertEqual(params.num_bits, 8)
+    self.assertFalse(params.signed)
+    self.assertFalse(params.symmetric)
+    self.assertEqual(params.block_size, 0)
+    self.assertTrue(
+        np.array_equal(params.scale, np.array([0.1], dtype=np.float32))
+    )
+    self.assertTrue(
+        np.array_equal(params.zero_point, np.array([128], dtype=np.int64))
+    )
 
   def test_non_linear_quant_params_eq(self):
     # Create some random params.
