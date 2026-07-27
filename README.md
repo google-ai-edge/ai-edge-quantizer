@@ -16,9 +16,10 @@ Nightly Colab      | [![Nightly Colab Status Badge](https://github.com/google-ai
 
 ### Requirements and Dependencies
 
- * Python versions: 3.10, 3.11, 3.12, 3.13
- * Operating system: Linux, MacOS
- * TensorFlow: [![tf-nightly](https://img.shields.io/badge/tf--nightly-latest-blue)](https://pypi.org/project/tf-nightly/)
+*   Python versions: 3.10, 3.11, 3.12, 3.13
+*   Operating system: Linux, MacOS
+*   TensorFlow:
+    [![tf-nightly](https://img.shields.io/badge/tf--nightly-latest-blue)](https://pypi.org/project/tf-nightly/)
 
 ### Install
 
@@ -63,7 +64,10 @@ simplest quick start guide on those 3 steps, and the [selective quantization col
 
 #### LiteRT Model
 
-Please refer to the [LiteRT documentation](https://ai.google.dev/edge/litert) for ways to generate LiteRT models from Jax, PyTorch and TensorFlow. The input source model should be an FP32 (unquantized) model in the FlatBuffer format with `.tflite` extension.
+Please refer to the [LiteRT documentation](https://ai.google.dev/edge/litert)
+for ways to generate LiteRT models from Jax, PyTorch and TensorFlow. The input
+source model should be an FP32 (unquantized) model in the FlatBuffer format with
+`.tflite` extension.
 
 #### Quantization Recipe
 
@@ -83,7 +87,11 @@ For example:
 _\"**Uniformly quantize** the **FullyConnected op** under scope **'dense1/'**
 with **INT8 symmetric with Dynamic Quantization**"._
 
-All the unspecified ops will be kept as FP32 (unquantized). The scope of an operator in TFLite is defined as the output tensor name of the op, which preserves the hierarchical model information from the source model (e.g., scope in TF). The best way to obtain scope name is by visualizing the model with [Model Explorer](https://ai.google.dev/edge/model-explorer).
+All the unspecified ops will be kept as FP32 (unquantized). The scope of an
+operator in TFLite is defined as the output tensor name of the op, which
+preserves the hierarchical model information from the source model (e.g., scope
+in TF). The best way to obtain scope name is by visualizing the model with
+[Model Explorer](https://ai.google.dev/edge/model-explorer).
 
 Currently, there are three ways to quantize an operator:
 
@@ -165,11 +173,16 @@ model_explorer --models \
 ```
 
 #### Deployment
-Please refer to the [LiteRT deployment documentation](https://ai.google.dev/edge/litert/inference) for ways to deploy a quantized LiteRT model.
+
+Please refer to the
+[LiteRT deployment documentation](https://ai.google.dev/edge/litert/inference)
+for ways to deploy a quantized LiteRT model.
 
 ### Advanced Recipes
 
-There are many ways the user can configure and customize the quantization recipe beyond using a template in [recipe.py](ai_edge_quantizer/recipe.py). For example, the user can configure the recipe to achieve these features:
+There are many ways the user can configure and customize the quantization recipe
+beyond using a template in [recipe.py](ai_edge_quantizer/recipe.py). For
+example, the user can configure the recipe to achieve these features:
 
 * Selective quantization (exclude selected ops from being quantized)
 * Flexible mixed scheme quantization (mixture of different precision, compute
@@ -211,51 +224,51 @@ The table below outlines the allowed configurations for available recipes.
 
 **Operators Supporting Quantization**
 
-|     |     |     |     |     |     |    |    |    |
-| --- | --- | --- | --- | --- | --- |--- |--- |--- |
-| **Config** | DYNAMIC_WI8_AFP32 | DYNAMIC_WI4_AFP32 | STATIC_WI8_AI16 | STATIC_WI4_AI16 | STATIC_WI8_AI8 | STATIC_WI4_AI8 | WEIGHTONLY_WI8_AFP32 | WEIGHTONLY_WI4_AFP32 |
-|FULLY_CONNECTED  |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|
-|CONV_2D          |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|    |
-|BATCH_MATMUL     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |<div align="center"> &check; </div>|    |
-|EMBEDDING_LOOKUP |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|    |
-|DEPTHWISE_CONV_2D|<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |<div align="center"> &check; </div>|    |
-|AVERAGE_POOL_2D  |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|RESHAPE          |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|SOFTMAX          |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|TANH             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|TRANSPOSE        |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|GELU             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|ADD              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|CONV_2D_TRANSPOSE|<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|SUB              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|MUL              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|MEAN             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|RSQRT            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|CONCATENATION    |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|STRIDED_SLICE    |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|SPLIT            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|LOGISTIC         |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|SLICE            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|SELECT           |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|SELECT_V2        |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|SUM              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|PAD              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|PADV2            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|MIRROR_PAD       |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|SQUARED_DIFFERENCE |     |     |     |     |<div align="center"> &check; </div>|    |    |    |
-|MAX_POOL_2D      |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|RESIZE_BILINEAR  |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|RESIZE_NEAREST_NEIGHBOR|     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|GATHER_ND        |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|PACK             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|UNPACK           |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|DIV              |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|SQRT             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|GATHER           |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|HARD_SWISH       |     |     |    |     |<div align="center"> &check; </div>|    |    |    |
-|MAXIMUM          |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|REDUCE_MIN       |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|EQUAL            |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|NOT_EQUAL        |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
-|SPACE_TO_DEPTH   |     |     |     |     |<div align="center"> &check; </div>|    |    |    |
-|RELU             |     |     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|    |    |    |
+                        |                                     |                                     |                                     |                                     |                                     |                                     |                                     |     |
+----------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ---
+**Config**              | DYNAMIC_WI8_AFP32                   | DYNAMIC_WI4_AFP32                   | STATIC_WI8_AI16                     | STATIC_WI4_AI16                     | STATIC_WI8_AI8                      | STATIC_WI4_AI8                      | WEIGHTONLY_WI8_AFP32                | WEIGHTONLY_WI4_AFP32
+FULLY_CONNECTED         | <div align="center"> &check; </div> | <div align="center"> &check; </div> | <div align="center"> &check; </div> | <div align="center"> &check; </div> | <div align="center"> &check; </div> | <div align="center"> &check; </div> | <div align="center"> &check; </div> | <div align="center"> &check; </div>
+CONV_2D                 | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> | <div align="center"> &check; </div> | <div align="center"> &check; </div> | <div align="center"> &check; </div> | <div align="center"> &check; </div> |
+BATCH_MATMUL            | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |
+EMBEDDING_LOOKUP        | <div align="center"> &check; </div> | <div align="center"> &check; </div> | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> | <div align="center"> &check; </div> | <div align="center"> &check; </div> |
+DEPTHWISE_CONV_2D       | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |
+AVERAGE_POOL_2D         |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+RESHAPE                 |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+SOFTMAX                 |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+TANH                    |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+TRANSPOSE               |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+GELU                    |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+ADD                     |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+CONV_2D_TRANSPOSE       | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+SUB                     |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+MUL                     |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+MEAN                    |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+RSQRT                   |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+CONCATENATION           |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+STRIDED_SLICE           |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+SPLIT                   |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+LOGISTIC                |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+SLICE                   |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+SELECT                  |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+SELECT_V2               |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+SUM                     |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+PAD                     |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+PADV2                   |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+MIRROR_PAD              |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+SQUARED_DIFFERENCE      |                                     |                                     |                                     |                                     | <div align="center"> &check; </div> |                                     |                                     |
+MAX_POOL_2D             |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+RESIZE_BILINEAR         |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+RESIZE_NEAREST_NEIGHBOR |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+GATHER_ND               |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+PACK                    |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+UNPACK                  |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+DIV                     |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+SQRT                    |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+GATHER                  |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+HARD_SWISH              |                                     |                                     |                                     |                                     | <div align="center"> &check; </div> |                                     |                                     |
+MAXIMUM                 |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+REDUCE_MIN              |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+EQUAL                   |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+NOT_EQUAL               |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
+SPACE_TO_DEPTH          |                                     |                                     |                                     |                                     | <div align="center"> &check; </div> |                                     |                                     |
+RELU                    |                                     |                                     | <div align="center"> &check; </div> |                                     | <div align="center"> &check; </div> |                                     |                                     |
