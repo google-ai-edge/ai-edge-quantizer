@@ -1,10 +1,11 @@
-<!-- disableFinding(LINE_OVER_80) -->
-
---------------------------------------------------------------------------------
-
-name: error-metric-selection description: >-
-
-## Guides the agent to dynamically select, apply, and interpret the correct validation error metrics (MSE, SNR, Cosine Similarity, KL Divergence, Median Difference Ratio) for sensitivity sweeps and quantization validation based on the task description and model modality.
+---
+name: error-metric-selection
+description: >-
+  Guides the agent to dynamically select, apply, and interpret the correct
+  validation error metrics (MSE, SNR, Cosine Similarity, KL Divergence, Median
+  Difference Ratio) for sensitivity sweeps and quantization validation based on
+  the task description and model modality.
+---
 
 # Error Metrics Registry and Selection Guide
 
@@ -94,20 +95,57 @@ Modality / Task                               | Primary Metric                  
 
 ## 3. Sensitivity Decisions & Threshold Rules
 
-When analyzing validation score lists, flag tensors for protection based on
-these guideline values:
+**The Golden Rule of Thresholding: relative distribution over fixed scalars.**
+No metric has a universally correct threshold — acceptable values shift with
+architecture, bit-width, and tensor role. For EVERY metric, the primary
+detection mechanism is the *relative distribution* across the model. The
+recommended detection routine is the **trimmed z-score on adjacent-layer
+differences** described in `kurtosis_screening.md` §3 (build the
+difference/ratio series across the layer order, compute 5%-trimmed mean and
+std, flag `z > 3`, keep top-m); a simpler fallback is flagging tensors beyond
+`median ± 3 * IQR` or in the worst 5% tail.
 
-*   **Cosine Similarity**: Any tensor falling below `0.99` (or `0.995` for
-    embedding models) points to vector rotation. Skip or pin to INT8.
-*   **KL Divergence**: Monitor standard outliers. If mean KL stays below `0.01`
-    but certain tensors spike to `0.5+`, target those spikes immediately using
-    `regex` overrides.
+The fixed values below are **starting defaults only**, useful for the very
+first sweep before you have a distribution to compare against. You MUST
+re-derive model-specific thresholds from the observed distribution and record
+the derived thresholds in your report:
+
+*   **Cosine Similarity**: Starting default: flag tensors below `0.99` (or
+    `0.995` for embedding models) as pointing to vector rotation. Skip or pin
+    to INT8.
+*   **KL Divergence**: Monitor distribution outliers. If mean KL stays low but
+    certain tensors spike orders of magnitude above the median, target those
+    spikes immediately using `regex` overrides. Starting default: investigate
+    any tensor whose KL exceeds `50x` the model median.
 *   **SNR (dB)**: SNR does *not* have a stable fixed threshold; acceptable SNR
-    scales based on model architecture and bit-width. **Do not use hardcoded
-    decibel thresholds.** Instead, evaluate the *relative distribution*. If the
-    model's median SNR is high, but a few outlier layers plunge significantly
-    below the median, those relative outliers are your highly degraded tensors
-    requiring fallback configurations.
-*   **Median Difference Ratio**: Tensors exceeding a ratio of `0.05` (5% typical
-    relative median change) represent substantial local drift.
+    scales with model architecture and bit-width. **Do not use hardcoded
+    decibel thresholds.** Evaluate the *relative distribution*: if the model's
+    median SNR is high but a few outlier layers plunge significantly below the
+    median, those relative outliers are your highly degraded tensors requiring
+    fallback configurations.
+*   **Median Difference Ratio**: Starting default: tensors exceeding a ratio of
+    `0.05` (5% typical relative median change) represent substantial local
+    drift. Adjust relative to the model-wide distribution.
 
+--------------------------------------------------------------------------------
+
+## 4. Stopping Metric per Modality
+
+Sensitivity *search* uses per-tensor metrics; the loop's *stopping criterion*
+uses a single scalar computed on the model's raw output tensor(s). Do NOT
+default to output MSE for every modality — pick the stopping metric that
+matches how the output is consumed:
+
+Modality / Task                        | Stopping Metric (on output tensor)
+:------------------------------------- | :---------------------------------
+Vision (segmentation, detection)       | `MSE`
+Regression (depth, keypoints)          | `MSE` or `MEDIAN_DIFF_RATIO`
+Audio / speech synthesis               | `MSE` (waveform) / `SNR` in dB
+Generative LLMs / text generation      | `KL_DIVERGENCE` on output logits
+Classification                         | `KL_DIVERGENCE` on output logits
+Embedding generation                   | `COSINE_SIMILARITY`
+
+Derive the tolerance bound dynamically relative to the best configuration
+found in Phase 1 (e.g., "stopping metric must stay within `1.5x` of the
+Phase 1 result"), never as a hardcoded scalar assumption — end-to-end metrics
+can output naturally large arbitrary values.

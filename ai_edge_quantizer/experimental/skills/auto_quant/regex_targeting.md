@@ -92,3 +92,34 @@ sensitive tensor paths:
     #    and target the subsequent meaningful sub-module block afterward.
     ```
 
+--------------------------------------------------------------------------------
+
+## 3. Hazard: Fused-Name Cross-Capture (Empirically Verified)
+
+Converters such as `ai-edge-torch` FUSE tensor names from multiple module
+scopes into one op name, joined with `;`. AEQ matches a rule's regex anywhere
+in that fused string. Two consequences:
+
+1.  **Sibling-name shadowing**: a bare block name like `encoder_stage1` also
+    matches `encoder_stage1d`. Always terminate block regexes with a
+    boundary, e.g. `re.escape(block) + r"([/;]|$)"`.
+2.  **Cross-capture through fusion**: even WITH the boundary, a rule for
+    block `X` can capture ops of a different block `Y` whose fused name
+    references `X` (observed in a U-Net-style search: an encoder-stage INT4
+    rule also captured the corresponding decoder stage's convs, because the
+    decoder ops' fused names embedded encoder-stage scopes). This
+    over-matching only ever WIDENS a rule's coverage, so a correctly gated
+    search remains valid — but your committed per-block accounting becomes
+    unreliable.
+
+Required mitigations in the search loop:
+
+*   Gate every commit on the measured stopping metric of the actual exported
+    model, never on the assumption that a rule touched only its named block.
+*   Detect **no-op commits**: if a newly committed rule changes neither the
+    exported byte size nor the stopping metric versus the previous committed
+    step, the block was already covered by an earlier rule. Log it as a
+    no-op and exclude it from per-block claims in the report.
+*   Treat the exported recipe `.json` files as the single source of truth
+    for what each model contains, not the loop's committed-block list.
+

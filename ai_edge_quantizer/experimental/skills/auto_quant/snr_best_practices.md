@@ -30,18 +30,23 @@ on static numbers, use RELATIVE DISTRIBUTION and general baselines:
     it is a prime candidate for protection (upgrading to a higher precision or
     bypassing via `no_quantize`).
 
-## 2. The Golden Rule: SNR for Search, Output MSE for Stopping
+## 2. The Golden Rule: Per-Tensor Metrics for Search, Output Metric for Stopping
 
 When conducting selective quantization sweeps (like mixed precision), do not
 waste time evaluating end-to-end task metrics (like mIoU, BLEU score, or
 post-processed masks) at every iteration.
 
-*   **Internal Tensor Search (Fast)**: Rely on standard internal tensor SNR to
-    rapidly rank and identify the most mathematically sensitive internal layers.
-*   **Stopping Criteria (Efficient)**: Use the **Output Tensor MSE** (the MSE of
-    the model's raw final output tensor, retrievable via
-    `ValidationErrorMetric.MSE`) to determine if your loop iterations satisfy
-    the overall degradation bounds and to stop the search.
+*   **Internal Tensor Search (Fast)**: Rely on standard internal per-tensor
+    metrics (SNR in these examples) to rapidly rank and identify the most
+    mathematically sensitive internal layers.
+*   **Stopping Criteria (Efficient)**: Use the **modality-appropriate stopping
+    metric on the model's raw final output tensor** (see the "Stopping Metric
+    per Modality" table in `error_metric_selection.md`) to determine if your
+    loop iterations satisfy the overall degradation bounds and to stop the
+    search. For dense vision and regression outputs this is Output Tensor MSE
+    (`ValidationErrorMetric.MSE`); for logit-producing models (LLMs,
+    classifiers) use output `KL_DIVERGENCE`; for embedding models use output
+    `COSINE_SIMILARITY`.
 *   **End-to-End Metrics (For Illustration Only)**: True Task Metrics should
     only be computed at the very end of an experiment for reporting and
     illustration purposes (e.g. visualizing a segmentation mask or checking

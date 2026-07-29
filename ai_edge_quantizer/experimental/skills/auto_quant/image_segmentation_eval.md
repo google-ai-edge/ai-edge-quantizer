@@ -1,5 +1,11 @@
 # Image Segmentation Evaluation
 
+> [!NOTE] This is one member of the **pluggable task evaluation family**
+> (`image_segmentation_eval.md`, `llm_eval.md`, `classification_eval.md`).
+> Only read and apply this file if the target model performs image
+> segmentation or detection. For other modalities, use the matching sibling
+> skill instead.
+
 When utilizing the AI Edge Quantizer (AEQ) to compress models executing image
 segmentation, agents must rigorously evaluate the final quantized model against
 the float reference model using End-to-End semantic segmentation metrics.
