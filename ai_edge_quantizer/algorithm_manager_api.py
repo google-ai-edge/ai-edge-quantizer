@@ -101,7 +101,7 @@ class CalibrationFunc(Protocol):
       self,
       tfl_op: qtyping.OperatorT,
       graph_info: qtyping.GraphInfo,
-      tensor_name_to_qsv: MutableMapping[str, np.ndarray],
+      tensor_content_map: MutableMapping[str, np.ndarray],
       inputs_to_ignore: Sequence[int] | None = None,
       outputs_to_ignore: Sequence[int] | None = None,
       **kwargs,
@@ -111,7 +111,7 @@ class CalibrationFunc(Protocol):
     Args:
       tfl_op: The tfl operation.
       graph_info: Graph information needed to perform quantization for the op.
-      tensor_name_to_qsv: A map of tensor name to tensor content.
+      tensor_content_map: A map of tensor name to tensor content.
       inputs_to_ignore: Input tensor indices to ignore.
       outputs_to_ignore: Output tensor indices to ignore.
       **kwargs: Optional algorithm-specific keyword parameters.

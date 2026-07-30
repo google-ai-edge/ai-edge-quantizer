@@ -15,6 +15,7 @@
 
 """Performs naive min/max uniform quantization."""
 
+from collections.abc import MutableMapping, Sequence
 import dataclasses
 from typing import Any, Optional
 import numpy as np
@@ -120,8 +121,9 @@ def check_if_quantized(tensor: Any) -> bool:
 def init_qsvs(
     op_info: qtyping.OpInfo,
     graph_info: qtyping.GraphInfo,
-    inputs_to_ignore: Optional[list[int]] = None,
-    outputs_to_ignore: Optional[list[int]] = None,
+    inputs_to_ignore: Sequence[int] | None = None,
+    outputs_to_ignore: Sequence[int] | None = None,
+    **kwargs,
 ) -> qtyping.QSV:
   """Initialize the QSVs.
 
@@ -130,23 +132,29 @@ def init_qsvs(
     graph_info: Graph information needed to perform quantization for the op.
     inputs_to_ignore: Operand indices to ignore.
     outputs_to_ignore: Result indices to ignore.
+    **kwargs: Optional algorithm-specific keyword parameters.
 
   Returns:
     QSVs.
   """
+  del kwargs
   op_qsvs = {}
 
-  inputs_to_ignore = inputs_to_ignore or []
+  inputs_to_ignore_list = (
+      list(inputs_to_ignore) if inputs_to_ignore is not None else []
+  )
   quantized_inputs_to_ignore = [
       opr_idx
       for opr_idx, tensor_idx in enumerate(op_info.op.inputs)
       if check_if_quantized(graph_info.subgraph_tensors[tensor_idx])
   ]
-  inputs_to_ignore.extend(quantized_inputs_to_ignore)
+  inputs_to_ignore_list.extend(quantized_inputs_to_ignore)
 
-  outputs_to_ignore = outputs_to_ignore or []
+  outputs_to_ignore_list = (
+      list(outputs_to_ignore) if outputs_to_ignore is not None else []
+  )
   for opr_idx, tensor_idx in enumerate(op_info.op.inputs):
-    if tensor_idx != -1 and opr_idx not in inputs_to_ignore:
+    if tensor_idx != -1 and opr_idx not in inputs_to_ignore_list:
       tensor = graph_info.subgraph_tensors[tensor_idx]
       tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
       tensor_data = tfl_flatbuffer_utils.get_tensor_data(
@@ -157,7 +165,7 @@ def init_qsvs(
           op_info,
       )
   for res_idx, tensor_idx in enumerate(op_info.op.outputs):
-    if tensor_idx != -1 and res_idx not in outputs_to_ignore:
+    if tensor_idx != -1 and res_idx not in outputs_to_ignore_list:
       tensor = graph_info.subgraph_tensors[tensor_idx]
       tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
       tensor_data = tfl_flatbuffer_utils.get_tensor_data(
@@ -171,12 +179,13 @@ def init_qsvs(
 
 
 def min_max_calibrate(
-    tfl_op: Any,
+    tfl_op: qtyping.OperatorT,
     graph_info: qtyping.GraphInfo,
-    tensor_content_map: dict[str, np.ndarray],
-    inputs_to_ignore: Optional[list[int]] = None,
-    outputs_to_ignore: Optional[list[int]] = None,
+    tensor_content_map: MutableMapping[str, np.ndarray],
+    inputs_to_ignore: Sequence[int] | None = None,
+    outputs_to_ignore: Sequence[int] | None = None,
     valid_range: tuple[float, float] = (-3e38, 3e38),
+    **kwargs,
 ) -> dict[str, qtyping.QSV]:
   """Collect quantization statistics variable (QSV, e.g., min/max) for the op.
 
@@ -221,19 +230,23 @@ def min_max_calibrate(
         "max": np.max(tensor_content, axis=None).reshape(qsv_shape),
     }
 
-  inputs_to_ignore = inputs_to_ignore or []
+  inputs_to_ignore_list = (
+      list(inputs_to_ignore) if inputs_to_ignore is not None else []
+  )
   quantized_inputs_to_ignore = [
       opr_idx
       for opr_idx, tensor_idx in enumerate(tfl_op.inputs)
       if check_if_quantized(graph_info.subgraph_tensors[tensor_idx])
   ]
-  inputs_to_ignore.extend(quantized_inputs_to_ignore)
-  outputs_to_ignore = outputs_to_ignore or []
+  inputs_to_ignore_list.extend(quantized_inputs_to_ignore)
+  outputs_to_ignore_list = (
+      list(outputs_to_ignore) if outputs_to_ignore is not None else []
+  )
   for i, tensor_idx in enumerate(tfl_op.inputs):
-    if tensor_idx != -1 and i not in inputs_to_ignore:
+    if tensor_idx != -1 and i not in inputs_to_ignore_list:
       _collect_activation_tensor_min_max(tensor_idx)
   for i, tensor_idx in enumerate(tfl_op.outputs):
-    if tensor_idx != -1 and i not in outputs_to_ignore:
+    if tensor_idx != -1 and i not in outputs_to_ignore_list:
       _collect_activation_tensor_min_max(tensor_idx)
 
   return op_qsvs
