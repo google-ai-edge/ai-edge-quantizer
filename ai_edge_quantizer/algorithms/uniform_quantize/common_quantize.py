@@ -505,22 +505,12 @@ def materialize_sum(
     tensor_quant_params_cache: _TensorQuantParamsCache,
 ) -> list[_TensorTransformationParams]:
   """Materialize tensors in tfl.sum."""
-  # For 8 bits the reference kernel calls a function without input/output
-  # constraints. For all others it calls a function that enforces input/output
-  # scale/zero point checks. See:
-  # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/kernels/reduce.cc#L909
-  activation_config = op_info.op_quant_config.activation_tensor_config
-  if activation_config is not None and activation_config.num_bits == 8:
-    constraint = _OpQuantConstraint.NO_CONSTRAIN
-  else:
-    constraint = _OpQuantConstraint.SAME_AS_INPUT_SCALE
   return common_utils.materialize_standard_op(
       op_info,
       graph_info,
       tensor_name_to_qsv,
       get_tensor_quant_params_fn,
       tensor_quant_params_cache=tensor_quant_params_cache,
-      constraint=constraint,
       inputs_to_ignore=[1],  # Axis index does not need to be quantized.
   )
 
