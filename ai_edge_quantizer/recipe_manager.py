@@ -257,7 +257,10 @@ class RecipeManager:
           and 'activation_tensor_config' in op_quant_config['op_config']
       ):
         return True
-      if op_quant_config['algorithm_key'] == AlgorithmName.GPTQ:
+      if op_quant_config['algorithm_key'] in (
+          AlgorithmName.GPTQ,
+          AlgorithmName.OSCAR,
+      ):
         return True
     return False
 
