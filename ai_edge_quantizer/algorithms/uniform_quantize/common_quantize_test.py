@@ -96,6 +96,26 @@ class CommonQuantizeTest(parameterized.TestCase):
     self.assertEqual(new_tensor_data.shape, (24, 4, 32))
     self.assertEqual(reduce_dim, 2)
 
+  def test_get_activation_min_max_float(self):
+    tensor_content = np.array(
+        [-np.inf, np.inf, 1.0, 2.0, -10.0, 10.0], dtype=np.float32
+    )
+    qsv = common_quantize.get_activation_min_max(
+        tensor_content,
+        valid_float_range_min=-1000.0,
+        valid_float_range_max=1000.0,
+    )
+    self.assertEqual(qsv["min"].item(), -10.0)
+    self.assertEqual(qsv["max"].item(), 10.0)
+
+  def test_get_activation_min_max_int(self):
+    tensor_content = np.array([1, 2, -10, 10], dtype=np.int32)
+    qsv = common_quantize.get_activation_min_max(
+        tensor_content,
+    )
+    self.assertEqual(qsv["min"].item(), -10)
+    self.assertEqual(qsv["max"].item(), 10)
+
 
 if __name__ == "__main__":
   absltest.main()
