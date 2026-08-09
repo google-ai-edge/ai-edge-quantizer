@@ -23,6 +23,7 @@ to implement the get_tensor_quant_params_fn with the
 qtyping.GetTensorQuantParamsFuncSignature signature.
 """
 
+from collections.abc import MutableMapping
 from typing import Any, Optional, Sequence
 import numpy as np
 from ai_edge_quantizer import qtyping
@@ -1356,3 +1357,139 @@ def init_tensor_min_max(
         "min": np.min(tensor_data, axis=reduce_dims, keepdims=keep_dims),
         "max": np.max(tensor_data, axis=reduce_dims, keepdims=keep_dims),
     }
+
+
+def get_activation_min_max(
+    tensor_content: np.ndarray,
+    valid_float_range_min: float | None = None,
+    valid_float_range_max: float | None = None,
+) -> dict[str, np.ndarray]:
+  """Gets activation QSV (min and max boundaries) for the tensor.
+
+  Args:
+    tensor_content: The Numpy array containing the activation tensor values.
+    valid_float_range_min: The minimum valid boundary for floating point data.
+      Values below this are ignored for min computation unless all are below.
+    valid_float_range_max: The maximum valid boundary for floating point data.
+      Values above this are ignored for max computation unless all are above.
+
+  Returns:
+    A dictionary containing 'min' and 'max' QSV numpy arrays with the
+    boundaries.
+  """
+  qsv_shape = (1,) * tensor_content.ndim
+
+  if np.issubdtype(tensor_content.dtype, np.integer):
+    t_min = np.min(tensor_content)
+    t_max = np.max(tensor_content)
+  else:
+    if valid_float_range_min is not None:
+      t_min = np.min(
+          tensor_content,
+          where=tensor_content > valid_float_range_min,
+          initial=np.inf,
+          axis=None,
+      )
+      if t_min == np.inf:
+        t_min = np.min(tensor_content)
+    else:
+      t_min = np.min(tensor_content)
+
+    if valid_float_range_max is not None:
+      t_max = np.max(
+          tensor_content,
+          where=tensor_content < valid_float_range_max,
+          initial=-np.inf,
+          axis=None,
+      )
+      if t_max == -np.inf:
+        t_max = np.max(tensor_content)
+    else:
+      t_max = np.max(tensor_content)
+
+  return {
+      "min": np.reshape(t_min, qsv_shape),
+      "max": np.reshape(t_max, qsv_shape),
+  }
+
+
+def collect_activation_tensor_statistics(
+    tensor_idx: int,
+    graph_info: qtyping.GraphInfo,
+    tensor_content_map: MutableMapping[str, np.ndarray],
+    valid_float_range_min: float | None = None,
+    valid_float_range_max: float | None = None,
+) -> tuple[str, np.ndarray, dict[str, np.ndarray]] | None:
+  """Collects activation statistics (QSV) for the specified tensor.
+
+  Collected statistics include: `min`, `max`, and `num_samples`.
+
+  Args:
+    tensor_idx: The index of the tensor to evaluate.
+    graph_info: Graph information holding the tensors sequence.
+    tensor_content_map: Map from tensor name to numeric np.ndarray content.
+    valid_float_range_min: The valid minimum bound float threshold.
+    valid_float_range_max: The valid maximum bound float threshold.
+
+  Returns:
+    A tuple of (tensor_name, tensor_content_array, qsv) or None if the tensor
+    is a constant and should be ignored.
+  """
+  tensor = graph_info.subgraph_tensors[tensor_idx]
+  tensor_data = tfl_flatbuffer_utils.get_tensor_data(
+      tensor, graph_info.buffers
+  )
+  # Skip constant tensors.
+  if tensor_data is not None:
+    return None
+
+  tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
+  tensor_content = tensor_content_map[tensor_name]
+  qsv = get_activation_min_max(
+      tensor_content,
+      valid_float_range_min=valid_float_range_min,
+      valid_float_range_max=valid_float_range_max,
+  )
+  qsv["num_samples"] = np.array(
+      tensor_content.shape[0] if tensor_content.ndim > 0 else 1
+  )
+  return tensor_name, tensor_content, qsv
+
+
+def get_tensor_indices_requiring_calibration(
+    tfl_op: qtyping.OperatorT,
+    graph_info: qtyping.GraphInfo,
+    inputs_to_ignore: Sequence[int] | None = None,
+    outputs_to_ignore: Sequence[int] | None = None,
+) -> list[int]:
+  """Gets tensor indices that require calibration statistics collection.
+
+  Args:
+    tfl_op: The TFLite operator being processed.
+    graph_info: The model's graph information holding the tensors list.
+    inputs_to_ignore: A sequence of input tensor positional indices to skip.
+    outputs_to_ignore: A sequence of output tensor positional indices to skip.
+
+  Returns:
+    A list of global tensor indices within the graph that require calibration
+    logic.
+  """
+  inputs_to_ignore_set = set(inputs_to_ignore or [])
+  # Ignore any already quantized inputs.
+  inputs_to_ignore_set.update(
+      opr_idx
+      for opr_idx, tensor_idx in enumerate(tfl_op.inputs)
+      if check_if_quantized(graph_info.subgraph_tensors[tensor_idx])
+  )
+  outputs_to_ignore_set = set(outputs_to_ignore or [])
+
+  tensor_ids = [
+      tid
+      for k, tid in enumerate(tfl_op.inputs)
+      if k not in inputs_to_ignore_set and tid != -1
+  ] + [
+      tid
+      for k, tid in enumerate(tfl_op.outputs)
+      if k not in outputs_to_ignore_set and tid != -1
+  ]
+  return tensor_ids

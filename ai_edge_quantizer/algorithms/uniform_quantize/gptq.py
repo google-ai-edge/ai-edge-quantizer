@@ -48,7 +48,6 @@ from ai_edge_quantizer import qtyping
 from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from ai_edge_quantizer.algorithms.utils import common_utils
-from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 ALGORITHM_KEY = "GPTQ"
 
@@ -83,72 +82,29 @@ def calibrate(
   op_qsvs = {}
   min_val, max_val = valid_range
 
-  def _collect_activation_tensor_statistics(tensor_idx):
-    tensor = graph_info.subgraph_tensors[tensor_idx]
-    tensor_data = tfl_flatbuffer_utils.get_tensor_data(
-        tensor, graph_info.buffers
+  tensor_ids = common_quantize.get_tensor_indices_requiring_calibration(
+      tfl_op, graph_info, inputs_to_ignore, outputs_to_ignore
+  )
+  for tensor_idx in tensor_ids:
+    result = common_quantize.collect_activation_tensor_statistics(
+        tensor_idx,
+        graph_info,
+        tensor_content_map,
+        valid_float_range_min=min_val,
+        valid_float_range_max=max_val,
     )
-    # Skip constant tensors.
-    if tensor_data is not None:
-      return
-    tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
-    tensor_content = tensor_content_map[tensor_name]
-    num_samples = tensor_content.shape[0]
+    if result is None:
+      continue
+    tensor_name, tensor_content, tensor_qsvs = result
 
     x = tensor_content.reshape([-1, tensor_content.shape[-1]])
 
-    qsv_shape = (1,) * tensor_content.ndim
-
-    t_min = np.min(
-        tensor_content,
-        where=tensor_content > min_val,
-        initial=np.inf,
-        axis=None,
-    )
-    if t_min == np.inf:
-      t_min = np.min(tensor_content)
-
-    t_max = np.max(
-        tensor_content,
-        where=tensor_content < max_val,
-        initial=-np.inf,
-        axis=None,
-    )
-    if t_max == -np.inf:
-      t_max = np.max(tensor_content)
-
-    op_qsvs[tensor_name] = {
-        "min": np.reshape(t_min, qsv_shape),
-        "max": np.reshape(t_max, qsv_shape),
-    }
     # Currently, GPTQ is only supported for Fully Connected layer, which means
     # the last dimension of the tensor is the channel dimension.
     # Hessian calculation : 2 / num_samples * (X.T @ X)
-    op_qsvs[tensor_name]["hessian"] = (2.0 / num_samples) * x.T.dot(x)
-    op_qsvs[tensor_name]["num_samples"] = num_samples
-
-  inputs_to_ignore = set(inputs_to_ignore or [])
-  # Ignore any quantized inputs.
-  inputs_to_ignore.update(
-      opr_idx
-      for opr_idx, tensor_idx in enumerate(tfl_op.inputs)
-      if common_quantize.check_if_quantized(
-          graph_info.subgraph_tensors[tensor_idx]
-      )
-  )
-  outputs_to_ignore = set(outputs_to_ignore or [])
-  # If gptq, we need to collect the Hessian value from inputs.
-  tensor_ids = [
-      tid
-      for k, tid in enumerate(tfl_op.inputs)
-      if k not in inputs_to_ignore and tid != -1
-  ] + [
-      tid
-      for k, tid in enumerate(tfl_op.outputs)
-      if k not in outputs_to_ignore and tid != -1
-  ]
-  for tensor_idx in tensor_ids:
-    _collect_activation_tensor_statistics(tensor_idx)
+    num_samples = tensor_qsvs["num_samples"]
+    tensor_qsvs["hessian"] = (2.0 / num_samples) * x.T.dot(x)
+    op_qsvs[tensor_name] = tensor_qsvs
   return op_qsvs
 
 

@@ -14,6 +14,7 @@
 # ==============================================================================
 
 import pathlib
+from unittest import mock
 
 from absl.testing import absltest
 from absl.testing import parameterized
@@ -95,6 +96,90 @@ class CommonQuantizeTest(parameterized.TestCase):
     )
     self.assertEqual(new_tensor_data.shape, (24, 4, 32))
     self.assertEqual(reduce_dim, 2)
+
+  def test_get_activation_min_max_float(self):
+    tensor_content = np.array(
+        [-np.inf, np.inf, 1.0, 2.0, -10.0, 10.0], dtype=np.float32
+    )
+    qsv = common_quantize.get_activation_min_max(
+        tensor_content,
+        valid_float_range_min=-1000.0,
+        valid_float_range_max=1000.0,
+    )
+    self.assertEqual(qsv["min"].item(), -10.0)
+    self.assertEqual(qsv["max"].item(), 10.0)
+
+  def test_get_activation_min_max_int(self):
+    tensor_content = np.array([1, 2, -10, 10], dtype=np.int32)
+    qsv = common_quantize.get_activation_min_max(
+        tensor_content,
+    )
+    self.assertEqual(qsv["min"].item(), -10)
+    self.assertEqual(qsv["max"].item(), 10)
+
+  def test_collect_activation_tensor_statistics_returns_none_for_constant(self):
+    with mock.patch.object(
+        tfl_flatbuffer_utils,
+        "get_tensor_data",
+        return_value=np.array([1]),
+        autospec=True,
+        spec_set=True,
+    ):
+      res = common_quantize.collect_activation_tensor_statistics(
+          0, self._graph_info, {}
+      )
+      self.assertIsNone(res)
+
+  def test_collect_activation_tensor_statistics_returns_qsv(self):
+    # Mocking to return None (meaning it's an activation)
+    self.enter_context(
+        mock.patch.object(
+            tfl_flatbuffer_utils,
+            "get_tensor_data",
+            return_value=None,
+            autospec=True,
+            spec_set=True,
+        )
+    )
+    self.enter_context(
+        mock.patch.object(
+            tfl_flatbuffer_utils,
+            "get_tensor_name",
+            return_value="my_tensor",
+            autospec=True,
+            spec_set=True,
+        )
+    )
+    tensor_content_map = {
+        "my_tensor": np.array([1.0, 2.0, 3.0], dtype=np.float32)
+    }
+    res = common_quantize.collect_activation_tensor_statistics(
+        0, self._graph_info, tensor_content_map
+    )
+    self.assertIsNotNone(res)
+    tensor_name, _, qsv = res
+    self.assertEqual(tensor_name, "my_tensor")
+    self.assertEqual(qsv["min"].item(), 1.0)
+    self.assertEqual(qsv["max"].item(), 3.0)
+    self.assertEqual(qsv["num_samples"].item(), 3)
+
+  def test_get_tensor_indices_requiring_calibration(self):
+    # Create a mock tfl_op with inputs and outputs
+    mock_op = mock.create_autospec(
+        qtyping.OperatorT(), instance=True, spec_set=True
+    )
+    mock_op.inputs = [0, 1, 2, -1]  # -1 is optional tensor
+    mock_op.outputs = [3, 4, -1]
+
+    with mock.patch.object(
+        common_quantize, "check_if_quantized", return_value=False
+    ):
+      # Ignore input at pos 1, output at pos 0 (which is tensor 3)
+      res = common_quantize.get_tensor_indices_requiring_calibration(
+          mock_op, self._graph_info, inputs_to_ignore=[1], outputs_to_ignore=[0]
+      )
+      # Should include inputs 0 and 2. Should include output 4.
+      self.assertEqual(res, [0, 2, 4])
 
 
 if __name__ == "__main__":
