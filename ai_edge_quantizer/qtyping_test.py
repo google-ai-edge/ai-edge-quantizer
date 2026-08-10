@@ -209,6 +209,56 @@ class QtypingTest(absltest.TestCase):
     )
     self.assertNotEqual(quant_params, other)
 
+  def test_tensor_quantization_config_converts_list_to_tuple(self):
+    config = qtyping.TensorQuantizationConfig(
+        num_bits=4,
+        granularity=qtyping.QuantGranularity.CHANNELWISE,
+        quantized_dimensions=[0, 1],
+    )
+    self.assertIsInstance(config.quantized_dimensions, tuple)
+    self.assertEqual(config.quantized_dimensions, (0, 1))
+
+  def test_uniform_quant_params_converts_list_to_tuple(self):
+    params = _create_dummy_uniform_quant_params(quantized_dimensions=[0, 1])
+    self.assertIsInstance(params.quantized_dimensions, tuple)
+    self.assertEqual(params.quantized_dimensions, (0, 1))
+
+  def test_uniform_quant_params_eq_when_same_quantized_dimensions_is_equal(
+      self,
+  ):
+    params = _create_dummy_uniform_quant_params(quantized_dimensions=(0, 1))
+    self.assertEqual(params, copy.deepcopy(params))
+
+  def test_uniform_quant_params_eq_when_different_quantized_dimensions_is_not_equal(
+      self,
+  ):
+    params1 = _create_dummy_uniform_quant_params(quantized_dimensions=(0, 1))
+    params2 = _create_dummy_uniform_quant_params(quantized_dimensions=(0, 2))
+    self.assertNotEqual(params1, params2)
+
+  def test_uniform_quant_params_eq_when_one_quantized_dimensions_none_is_not_equal(
+      self,
+  ):
+    params1 = _create_dummy_uniform_quant_params(quantized_dimensions=(0, 1))
+    params_none = _create_dummy_uniform_quant_params(quantized_dimensions=None)
+    self.assertNotEqual(params1, params_none)
+
+  def test_uniform_quant_params_from_tfl_tensor_details_with_quantized_dimensions(
+      self,
+  ):
+    tensor_detail = {
+        "dtype": np.int8,
+        "quantization_parameters": {
+            "quantized_dimension": 0,
+            "quantized_dimensions": (0, 1),
+            "scales": np.array([1.0], dtype=np.float32),
+            "zero_points": np.array([0], dtype=np.int64),
+            "block_size": 0,
+        },
+    }
+    params = qtyping.UniformQuantParams.from_tfl_tensor_details(tensor_detail)
+    self.assertEqual(params.quantized_dimensions, (0, 1))
+
 
 if __name__ == "__main__":
   absltest.main()
