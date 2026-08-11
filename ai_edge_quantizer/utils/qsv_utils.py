@@ -120,3 +120,39 @@ def min_max_update(qsv: qtyping.QSV, new_qsv: qtyping.QSV) -> qtyping.QSV:
   updated_qsv["min"] = np.minimum(qsv["min"], new_qsv["min"])
   updated_qsv["max"] = np.maximum(qsv["max"], new_qsv["max"])
   return updated_qsv
+
+
+def _oscar_merge_mu2(
+    qsv: qtyping.QSV, new_qsv: qtyping.QSV
+) -> tuple[Any, int]:
+  """Merges mu2 and num_samples from qsv and new_qsv for OSCAR."""
+  if "mu2" not in qsv:
+    return new_qsv.get("mu2"), new_qsv.get("num_samples", 0)
+  curr_avg_mu2 = qsv["mu2"]
+  new_avg_mu2 = new_qsv["mu2"]
+  curr_samples = qsv.get("num_samples", 0)
+  new_samples = new_qsv.get("num_samples", 0)
+  total_samples = curr_samples + new_samples
+
+  if total_samples == 0:
+    return new_avg_mu2, 0
+
+  merged_mu2 = (
+      curr_avg_mu2 * curr_samples + new_avg_mu2 * new_samples
+  ) / total_samples
+
+  return merged_mu2, total_samples
+
+
+def oscar_and_moving_average_update(
+    qsv: qtyping.QSV, new_qsv: qtyping.QSV
+) -> qtyping.QSV:
+  """Update the QSV with OSCAR logic and moving average logic."""
+  if not qsv:
+    return new_qsv
+  updated_qsv = moving_average_update(qsv, new_qsv)
+
+  merged_mu2, total_samples = _oscar_merge_mu2(qsv, new_qsv)
+  updated_qsv["mu2"] = merged_mu2
+  updated_qsv["num_samples"] = total_samples
+  return updated_qsv
