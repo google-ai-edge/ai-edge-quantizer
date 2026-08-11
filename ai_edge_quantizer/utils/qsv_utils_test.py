@@ -180,6 +180,25 @@ class QsvUtilsTest(parameterized.TestCase):
     np.testing.assert_array_almost_equal(updated_qsv["hessian"], expected_h)
     self.assertEqual(updated_qsv["num_samples"], expected_ns)
 
+  def test_oscar_and_moving_average_update(self):
+    old_qsv = {
+        "min": np.array([-1.0]),
+        "max": np.array([2.0]),
+        "mu2": np.array([2.0, 4.0]),
+        "num_samples": 10,
+    }
+    new_qsv = {
+        "min": np.array([-2.0]),
+        "max": np.array([3.0]),
+        "mu2": np.array([4.0, 8.0]),
+        "num_samples": 10,
+    }
+    updated = qsv_utils.oscar_and_moving_average_update(old_qsv, new_qsv)
+    np.testing.assert_array_almost_equal(
+        updated["mu2"], np.array([3.0, 6.0])
+    )
+    self.assertEqual(updated["num_samples"], 20)
+
 
 if __name__ == "__main__":
   absltest.main()
