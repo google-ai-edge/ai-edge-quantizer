@@ -119,8 +119,8 @@ class EmbeddingLookupTest(test_utils.BaseOpTestCase):
   ):
     self._quantizer.load_quantization_recipe([
         {
-            'regex': '.*',
-            'operation': qtyping.TFLOperationName.EMBEDDING_LOOKUP,
+            'op_scope_regex': '.*',
+            'operations': [qtyping.TFLOperationName.EMBEDDING_LOOKUP],
             'algorithm_key': quantizer.AlgorithmName.HADAMARD_ROTATION,
             'op_config': {
                 'weight_tensor_config': {

@@ -231,7 +231,7 @@ class Quantizer:
   def update_quantization_recipe(
       self,
       regex: str,
-      operation_name: _TFLOpName,
+      operation_name: list[_TFLOpName] | _TFLOpName,
       op_config: Optional[_OpQuantizationConfig] = None,
       algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
   ):
@@ -247,8 +247,8 @@ class Quantizer:
 
     Args:
       regex: Regular expression for layer name matching.
-      operation_name: Target TFLite operation. * for all supported TFLite
-        operation.
+      operation_name: List of, or single, target TFL operation types. Use an
+        empty list or `'*'` for any supported TFLite operation.
       op_config: Quantization configuration which will be used to update the
         default configuration. None or empty dict means the default
         configuration will be used.
@@ -261,7 +261,7 @@ class Quantizer:
   def add_dynamic_config(
       self,
       regex: str,
-      operation_name: _TFLOpName,
+      operation_name: list[_TFLOpName] | _TFLOpName,
       num_bits: int,
       granularity: qtyping.QuantGranularity = qtyping.QuantGranularity.CHANNELWISE,
       algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
@@ -280,7 +280,8 @@ class Quantizer:
     Args:
       regex: Regular expression for layer name (op's output tensor name)
         matching.
-      operation_name: Target TFLite operation.
+      operation_name: List of, or single, target TFL operation types. Use an
+        empty list or `'*'` for any supported TFLite operation.
       num_bits: Number of bits for quantization.
       granularity: Granularity of quantization.
       algorithm_key: Algorithm key to be applied.
@@ -292,7 +293,7 @@ class Quantizer:
   def add_weight_only_config(
       self,
       regex: str,
-      operation_name: _TFLOpName,
+      operation_name: list[_TFLOpName] | _TFLOpName,
       num_bits: int,
       granularity: qtyping.QuantGranularity = qtyping.QuantGranularity.CHANNELWISE,
       algorithm_key: str = algorithm_manager.AlgorithmName.MIN_MAX_UNIFORM_QUANT,
@@ -314,7 +315,8 @@ class Quantizer:
 
     Args:
       regex: Regular expression for layer name matching.
-      operation_name: Target TFLite operation.
+      operation_name: List of, or single, target TFL operation types. Use an
+        empty list or `'*'` for any supported TFLite operation.
       num_bits: Number of bits for quantization.
       granularity: Granularity of quantization.
       algorithm_key: Algorithm key to be applied.
@@ -326,7 +328,7 @@ class Quantizer:
   def add_static_config(
       self,
       regex: str,
-      operation_name: _TFLOpName,
+      operation_name: list[_TFLOpName] | _TFLOpName,
       activation_num_bits: int,
       weight_num_bits: int,
       weight_granularity: qtyping.QuantGranularity = qtyping.QuantGranularity.CHANNELWISE,
@@ -346,7 +348,8 @@ class Quantizer:
 
     Args:
       regex: Regular expression for layer name matching.
-      operation_name: Target TFLite operation.
+      operation_name: List of, or single, target TFL operation types. Use an
+        empty list or `'*'` for any supported TFLite operation.
       activation_num_bits: Number of bits for activation quantization.
       weight_num_bits: Number of bits for weight quantization.
       weight_granularity: Granularity of weight quantization.
