@@ -17,7 +17,7 @@
 
 
 import enum
-from typing import Any, Callable, Protocol, Tuple
+from typing import Protocol, Tuple
 
 import numpy as np
 
@@ -26,7 +26,9 @@ class ValidationFuncType(Protocol):
   """Type hint and documentation for validation functions."""
 
   def __call__(
-      self, data1: np._typing.ArrayLike, data2: np._typing.ArrayLike
+      self,
+      data1: np.typing.ArrayLike,
+      data2: np.typing.ArrayLike,
   ) -> float:
     ...
 
@@ -52,7 +54,7 @@ def _register_validation_func(metric_name: ValidationErrorMetric):
 
 def get_validation_func(
     func_name: ValidationErrorMetric,
-) -> Callable[[np._typing.ArrayLike, np._typing.ArrayLike], Any]:
+) -> ValidationFuncType:
   """Returns a validation function based on the metric type."""
   if func_name not in VALIDATION_FUNCS:
     raise ValueError(f"Validation function {func_name} not supported.")
@@ -61,7 +63,8 @@ def get_validation_func(
 
 @_register_validation_func(ValidationErrorMetric.MSE)
 def mean_squared_difference(
-    data1: np._typing.ArrayLike, data2: np._typing.ArrayLike
+    data1: np.typing.ArrayLike,
+    data2: np.typing.ArrayLike,
 ) -> float:
   """Calculates the mean squared difference between data1 & data2.
 
@@ -87,8 +90,8 @@ def mean_squared_difference(
 
 @_register_validation_func(ValidationErrorMetric.MEDIAN_DIFF_RATIO)
 def median_diff_ratio(
-    data1: np._typing.ArrayLike,
-    data2: np._typing.ArrayLike,
+    data1: np.typing.ArrayLike,
+    data2: np.typing.ArrayLike,
     tolerance_threshold=1e-6,
 ) -> float:
   """Calculates the median absolute diff ratio between data1 & data2.
@@ -120,8 +123,8 @@ def median_diff_ratio(
 
 @_register_validation_func(ValidationErrorMetric.COSINE_SIMILARITY)
 def cosine_similarity(
-    data1: np._typing.ArrayLike,
-    data2: np._typing.ArrayLike,
+    data1: np.typing.ArrayLike,
+    data2: np.typing.ArrayLike,
 ) -> float:
   """Calculates the cosine similarity between data1 & data2.
 
@@ -154,8 +157,8 @@ def cosine_similarity(
 
 @_register_validation_func(ValidationErrorMetric.KL_DIVERGENCE)
 def kl_divergence(
-    data1: np._typing.ArrayLike,
-    data2: np._typing.ArrayLike,
+    data1: np.typing.ArrayLike,
+    data2: np.typing.ArrayLike,
     epsilon: float = 1e-9,
 ) -> float:
   """Calculates the KL divergence between data1 & data2.
@@ -192,8 +195,8 @@ def kl_divergence(
 
 @_register_validation_func(ValidationErrorMetric.SNR)
 def signal_to_noise_ratio(
-    noisy_signal: np._typing.ArrayLike,
-    signal: np._typing.ArrayLike,
+    noisy_signal: np.typing.ArrayLike,
+    signal: np.typing.ArrayLike,
     epsilon: float = 1e-9,
 ) -> float:
   """Calculates the signal to noise ratio between noisy_signal & signal.
@@ -226,7 +229,8 @@ def signal_to_noise_ratio(
 
 
 def _preprocess_same_size_arrays(
-    data1: np._typing.ArrayLike, data2: np._typing.ArrayLike
+    data1: np.typing.ArrayLike,
+    data2: np.typing.ArrayLike,
 ) -> Tuple[np.ndarray, np.ndarray]:
   """Flattens and removes the nan, inf, and -inf values from the input data.
 
