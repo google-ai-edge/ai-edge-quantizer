@@ -201,8 +201,8 @@ class Quantizer:
       recipe: Quantization recipe in json format.
     """
     if isinstance(recipe, (str, pathlib.Path)):
-      recipe = recipe_utils.resolve_recipe(recipe)
-    self._recipe_manager.load_quantization_recipe(recipe)
+      recipe = recipe_utils.resolve_recipe(recipe)  # pyrefly: ignore[bad-assignment]
+    self._recipe_manager.load_quantization_recipe(recipe)  # pyrefly: ignore[bad-argument-type]
 
   def load_config_policy(self, filename: Path) -> None:
     """Loads a JSON policy.
@@ -403,7 +403,7 @@ class Quantizer:
       )
 
     calib = calibrator.Calibrator(
-        self._float_model_buffer,
+        self._float_model_buffer,  # pyrefly: ignore[bad-argument-type]
         num_threads=num_threads,
         mode=mode,
     )
@@ -422,7 +422,7 @@ class Quantizer:
 
     # Go over every signature and check if empty entry tensor belongs to it.
     tfl_interpreter = tfl_interpreter_utils.create_tfl_interpreter(
-        self._float_model_buffer
+        self._float_model_buffer  # pyrefly: ignore[bad-argument-type]
     )
     for signature_key in tfl_interpreter.get_signature_list():
       subgraph_idx = tfl_interpreter_utils.get_signature_main_subgraph_index(
@@ -479,7 +479,7 @@ class Quantizer:
 
     if enable_progress_report:
       progress_report = progress_utils.ProgressReport(
-          self._model_name or serialize_to_path
+          self._model_name or serialize_to_path  # pyrefly: ignore[bad-argument-type]
       )
       progress_report.capture_progess_start()
     else:
@@ -494,7 +494,7 @@ class Quantizer:
     )
 
     self._result = QuantizationResult(
-        self.get_quantization_recipe(), quantized_model
+        self.get_quantization_recipe(), quantized_model  # pyrefly: ignore[bad-argument-type]
     )
 
     if progress_report is not None:
@@ -547,8 +547,8 @@ class Quantizer:
     """
     if test_data is None:
       # Create test data for all signatures in the model.
-      test_data = tfl_interpreter_utils.create_random_normal_input_data(
-          self._float_model_buffer, num_samples=1
+      test_data = tfl_interpreter_utils.create_random_normal_input_data(  # pyrefly: ignore[bad-assignment]
+          self._float_model_buffer, num_samples=1  # pyrefly: ignore[bad-argument-type]
       )
     if self._quantize_called:
       quantized_model = self._result.quantized_model
@@ -558,9 +558,9 @@ class Quantizer:
     if quantized_model is None:
       raise ValueError('No quantized model available to validate.')
     results = model_validator.compare_model(
-        self._float_model_buffer,
-        quantized_model,
-        test_data,
+        self._float_model_buffer,  # pyrefly: ignore[bad-argument-type]
+        quantized_model,  # pyrefly: ignore[bad-argument-type]
+        test_data,  # pyrefly: ignore[bad-argument-type]
         error_metrics,
         compare_fns=None,
         use_xnnpack=use_xnnpack,

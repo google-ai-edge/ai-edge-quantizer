@@ -114,7 +114,7 @@ class QuantizeTensorTest(parameterized.TestCase):
             producer=-1,
             consumers=[4],
             quant_params=quant_params,
-            buffer_origin=buffer_origin,
+            buffer_origin=buffer_origin,  # pyrefly: ignore[bad-argument-type]
         )
     )
 
@@ -155,7 +155,7 @@ class QuantizeTensorTest(parameterized.TestCase):
               producer=-1,
               consumers=[4],
               quant_params=quant_params_8bit,
-              buffer_origin=buffer_origin,
+              buffer_origin=buffer_origin,  # pyrefly: ignore[bad-argument-type]
           )
       )
 

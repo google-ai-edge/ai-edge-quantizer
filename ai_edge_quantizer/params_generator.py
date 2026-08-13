@@ -310,7 +310,7 @@ class ParamsGenerator:
     for buffer_idx in buffers_to_duplicate:
       for tensor in self.buffer_to_tensors[buffer_idx][:-1]:
         tensor_name = tfl_flatbuffer_utils.get_tensor_name(tensor)
-        for consumer_params in self.model_quant_results[tensor_name].consumers:
+        for consumer_params in self.model_quant_results[tensor_name].consumers:  # pyrefly: ignore[not-iterable]
           consumer_params.transformations.insert(
               0, _QuantTrans.DUPLICATE_BUFFER
           )
@@ -329,7 +329,7 @@ class ParamsGenerator:
       tensor_names_to_duplicate: Names of tensors to duplicate.
     """
     for tensor_name in tensor_names_to_duplicate:
-      for consumer_params in self.model_quant_results[tensor_name].consumers:
+      for consumer_params in self.model_quant_results[tensor_name].consumers:  # pyrefly: ignore[not-iterable]
         consumer_params.transformations.insert(0, _QuantTrans.DUPLICATE_TENSOR)
 
   def _check_buffer_sharing_for_tensor(self, tensor: Any) -> bool:

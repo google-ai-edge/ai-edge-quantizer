@@ -202,7 +202,7 @@ class ComparisonResult:
     for signature, comparison_result in self._comparison_results.items():
       for metric in comparison_result.error_metrics:
         error_metrics_seen.add(metric)
-      result[str(signature)] = {
+      result[str(signature)] = {  # pyrefly: ignore[unsupported-operation]
           'input_tensors': comparison_result.input_tensors,
           'output_tensors': comparison_result.output_tensors,
           'constant_tensors': comparison_result.constant_tensors,

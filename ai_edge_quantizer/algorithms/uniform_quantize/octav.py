@@ -53,9 +53,9 @@ def _guess_clipping_with_octav(
     A tensor of shape [num_channels] with clipping constant guesses.
   """
   if axis is not None:
-    axis = (axis,) if isinstance(axis, int) else axis
-    shape_reduced = tuple(1 if k in axis else d for k, d in enumerate(x.shape))
-    count = np.prod([x.shape[d] for d in axis])
+    axis = (axis,) if isinstance(axis, int) else axis  # pyrefly: ignore[bad-assignment]
+    shape_reduced = tuple(1 if k in axis else d for k, d in enumerate(x.shape))  # pyrefly: ignore[not-iterable]
+    count = np.prod([x.shape[d] for d in axis])  # pyrefly: ignore[not-iterable]
   else:
     shape_reduced = (1,)
     count = x.size
@@ -186,7 +186,7 @@ def get_tensor_quant_params(
   clipping_constants = _guess_clipping_with_octav(
       reshaped_data,
       tensor_quant_config.num_bits,
-      reduce_dims,
+      reduce_dims,  # pyrefly: ignore[bad-argument-type]
       max_iterations=10,
       exponent_divisor=3.0 if tensor_quant_config.symmetric else 12.0,
   )

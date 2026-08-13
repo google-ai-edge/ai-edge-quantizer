@@ -99,7 +99,7 @@ def _find_overall_min_max(
   for tensor_name in tensor_names:
     min_value = min(min_value, qsv[tensor_name]["min"])
     max_value = max(max_value, qsv[tensor_name]["max"])
-  return min_value, max_value
+  return min_value, max_value  # pyrefly: ignore[bad-return]
 
 
 class CalibrationQsvAlignmentUtils:

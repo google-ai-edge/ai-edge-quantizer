@@ -344,10 +344,10 @@ def _materialize_bias_for_fc_conv_ops(
           graph_info.buffers,
       )
       input_consumer_params = (
-          op_tensor_params[op_input_index].consumers[0].parameters
+          op_tensor_params[op_input_index].consumers[0].parameters  # pyrefly: ignore[unsupported-operation]
       )
       weight_consumer_params = (
-          op_tensor_params[op_weight_index].consumers[0].parameters
+          op_tensor_params[op_weight_index].consumers[0].parameters  # pyrefly: ignore[unsupported-operation]
       )
       if weight_consumer_params is None and check_if_quantized(weight_tensor):
         quant_params = weight_tensor.quantization
@@ -368,9 +368,9 @@ def _materialize_bias_for_fc_conv_ops(
         # the quantization error in bias quantization.
         bias_quant_params = (
             uniform_quantize_tensor.symmetric_quantize_bias_tensor(
-                bias_content,
-                input_consumer_params,
-                weight_consumer_params,
+                bias_content,  # pyrefly: ignore[bad-argument-type]
+                input_consumer_params,  # pyrefly: ignore[bad-argument-type]
+                weight_consumer_params,  # pyrefly: ignore[bad-argument-type]
             )
         )
       except ValueError as e:

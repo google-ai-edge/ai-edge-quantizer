@@ -82,11 +82,11 @@ _OUTPUT_DIR = flags.DEFINE_string(
 
 def _check_user_inputs() -> None:
   """Check if the user input paths exist and create the save path if necessary."""
-  if not os.path.exists(_FLOAT_MODEL_PATH.value):
+  if not os.path.exists(_FLOAT_MODEL_PATH.value):  # pyrefly: ignore[bad-argument-type]
     raise ValueError(
         'Model file does not exist. Please check the .tflite model path.'
     )
-  if not os.path.exists(_IMG_PATH.value):
+  if not os.path.exists(_IMG_PATH.value):  # pyrefly: ignore[bad-argument-type]
     raise ValueError('Image file does not exist. Please check the image path.')
 
   os.makedirs(_OUTPUT_DIR.value)
@@ -314,7 +314,7 @@ def quantize_with_static_range(
   # Calibration_data is structured as a dictionary mapping signature keys
   # (e.g., DEFAULT_SIGNATURE_KEY) to lists of input sample dicts.
   calibration_data = _get_calibration_data(num_samples=256)
-  calibration_result = qt.calibrate(calibration_data)
+  calibration_result = qt.calibrate(calibration_data)  # pyrefly: ignore[bad-argument-type]
 
   return _quantize_validate_save_and_return(
       qt,
@@ -457,7 +457,7 @@ def quantize_with_recipe_json(
   #    modes that involve integer computation. `qt.need_calibration` can be used
   #    to check if the quantization recipe needs calibration.
   calibration_result = (
-      qt.calibrate(_get_calibration_data()) if qt.need_calibration else None
+      qt.calibrate(_get_calibration_data()) if qt.need_calibration else None  # pyrefly: ignore[bad-argument-type]
   )
 
   # 4) Quantize, validate, save, and return the model.
@@ -539,40 +539,40 @@ def main(argv: Sequence[str]) -> None:
   )
   print('1. Quantizing with programmatic recipe (from recipe.py)...')
   quantized_model_prog = quantize_with_programmatic_recipe(
-      float_model_path=_FLOAT_MODEL_PATH.value,
+      float_model_path=_FLOAT_MODEL_PATH.value,  # pyrefly: ignore[bad-argument-type]
       output_dir=_OUTPUT_DIR.value,
   )
-  inference(quantized_tflite=quantized_model_prog, image_path=_IMG_PATH.value)
+  inference(quantized_tflite=quantized_model_prog, image_path=_IMG_PATH.value)  # pyrefly: ignore[bad-argument-type]
 
   print(
       '\n===================================================================='
   )
   print('2. Quantizing with advanced PTQ (mixed precision & selective)...')
   quantized_model_adv = quantize_with_advanced_ptq(
-      float_model_path=_FLOAT_MODEL_PATH.value,
+      float_model_path=_FLOAT_MODEL_PATH.value,  # pyrefly: ignore[bad-argument-type]
       output_dir=_OUTPUT_DIR.value,
   )
-  inference(quantized_tflite=quantized_model_adv, image_path=_IMG_PATH.value)
+  inference(quantized_tflite=quantized_model_adv, image_path=_IMG_PATH.value)  # pyrefly: ignore[bad-argument-type]
 
   print(
       '\n===================================================================='
   )
   print('3. Quantizing with static range (requires calibration)...')
   quantized_model_static = quantize_with_static_range(
-      float_model_path=_FLOAT_MODEL_PATH.value,
+      float_model_path=_FLOAT_MODEL_PATH.value,  # pyrefly: ignore[bad-argument-type]
       output_dir=_OUTPUT_DIR.value,
   )
-  inference(quantized_tflite=quantized_model_static, image_path=_IMG_PATH.value)
+  inference(quantized_tflite=quantized_model_static, image_path=_IMG_PATH.value)  # pyrefly: ignore[bad-argument-type]
 
   print(
       '\n===================================================================='
   )
   print('4. Quantizing with blockwise granularity (sub-channel)...')
   quantized_model_block = quantize_with_blockwise(
-      float_model_path=_FLOAT_MODEL_PATH.value,
+      float_model_path=_FLOAT_MODEL_PATH.value,  # pyrefly: ignore[bad-argument-type]
       output_dir=_OUTPUT_DIR.value,
   )
-  inference(quantized_tflite=quantized_model_block, image_path=_IMG_PATH.value)
+  inference(quantized_tflite=quantized_model_block, image_path=_IMG_PATH.value)  # pyrefly: ignore[bad-argument-type]
 
   print(
       '\n===================================================================='
@@ -582,11 +582,11 @@ def main(argv: Sequence[str]) -> None:
       ' bits)...'
   )
   quantized_model_hadamard = quantize_with_hadamard(
-      float_model_path=_FLOAT_MODEL_PATH.value,
+      float_model_path=_FLOAT_MODEL_PATH.value,  # pyrefly: ignore[bad-argument-type]
       output_dir=_OUTPUT_DIR.value,
   )
   inference(
-      quantized_tflite=quantized_model_hadamard, image_path=_IMG_PATH.value
+      quantized_tflite=quantized_model_hadamard, image_path=_IMG_PATH.value  # pyrefly: ignore[bad-argument-type]
   )
 
   print(
@@ -598,11 +598,11 @@ def main(argv: Sequence[str]) -> None:
       _OUTPUT_DIR.value, 'mnist_prog_recipe_recipe.json'
   )
   quantized_model_json = quantize_with_recipe_json(
-      float_model_path=_FLOAT_MODEL_PATH.value,
+      float_model_path=_FLOAT_MODEL_PATH.value,  # pyrefly: ignore[bad-argument-type]
       recipe_json_path=saved_recipe_path,
       output_dir=_OUTPUT_DIR.value,
   )
-  inference(quantized_tflite=quantized_model_json, image_path=_IMG_PATH.value)
+  inference(quantized_tflite=quantized_model_json, image_path=_IMG_PATH.value)  # pyrefly: ignore[bad-argument-type]
   print(
       '\n===================================================================='
   )

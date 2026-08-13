@@ -107,7 +107,7 @@ class CalibratorTestBase(absltest.TestCase):
     self._single_fc_model_init()
     # load/get qsvs
     sample_qsv = {"serving_default_input_1:0": {"min": -10, "max": 8}}
-    self._calibrator.load_model_qsvs(sample_qsv)
+    self._calibrator.load_model_qsvs(sample_qsv)  # pyrefly: ignore[bad-argument-type]
     model_tensor_qsvs = self._calibrator.get_model_qsvs()
     self.assertLen(model_tensor_qsvs, 1)
     self.assertIn("serving_default_input_1:0", model_tensor_qsvs)  # input
@@ -207,7 +207,7 @@ class CalibratorTestBase(absltest.TestCase):
             "max": np.array([8.0]),
         }
     }
-    self._calibrator.load_model_qsvs(sample_qsv)
+    self._calibrator.load_model_qsvs(sample_qsv)  # pyrefly: ignore[bad-argument-type]
 
     # Save
     temp_file = self.create_tempfile().full_path
@@ -247,7 +247,7 @@ class CalibratorTestBase(absltest.TestCase):
             "max": np.array([8.0]),
         }
     }
-    self._calibrator.load_model_qsvs(sample_qsv)
+    self._calibrator.load_model_qsvs(sample_qsv)  # pyrefly: ignore[bad-argument-type]
     self._calibrator._metadata["num_samples_calibrated"] = 123
 
     # Save

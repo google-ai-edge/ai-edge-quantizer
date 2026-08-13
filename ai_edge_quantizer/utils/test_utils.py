@@ -132,20 +132,20 @@ class BaseOpTestCase(parameterized.TestCase):
       if num_calibration_samples is None:
         num_calibration_samples = num_validation_samples * 8
       calibration_data = tfl_interpreter_utils.create_random_normal_input_data(
-          quantizer_instance._float_model_buffer,  # pylint: disable=protected-access
+          quantizer_instance._float_model_buffer,  # pylint: disable=protected-access  # pyrefly: ignore[bad-argument-type]
           num_samples=num_calibration_samples,
           min_max_range=min_max_range,
       )
-      calibration_result = quantizer_instance.calibrate(calibration_data)
+      calibration_result = quantizer_instance.calibrate(calibration_data)  # pyrefly: ignore[bad-argument-type]
       quantization_result = quantizer_instance.quantize(calibration_result)
     else:
       quantization_result = quantizer_instance.quantize()
     test_data = tfl_interpreter_utils.create_random_normal_input_data(
-        quantization_result.quantized_model,
+        quantization_result.quantized_model,  # pyrefly: ignore[bad-argument-type]
         num_samples=num_validation_samples,
         min_max_range=min_max_range,
     )
-    return quantizer_instance.validate(test_data, error_metrics=error_metrics)
+    return quantizer_instance.validate(test_data, error_metrics=error_metrics)  # pyrefly: ignore[bad-argument-type]
 
   def assert_model_size_reduction_above_min_pct(
       self,

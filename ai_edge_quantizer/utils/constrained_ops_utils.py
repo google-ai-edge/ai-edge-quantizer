@@ -93,10 +93,10 @@ def get_constrained_op_list(
         op_quant_config=qtyping.OpQuantizationConfig(),
     )
     materialize_fn(
-        get_tensor_quant_params_fn=None,
+        get_tensor_quant_params_fn=None,  # pyrefly: ignore[bad-argument-type]
         op_info=op_info,
-        graph_info=None,
-        tensor_name_to_qsv=None,
+        graph_info=None,  # pyrefly: ignore[bad-argument-type]
+        tensor_name_to_qsv=None,  # pyrefly: ignore[bad-argument-type]
         tensor_quant_params_cache=tensor_quant_params_cache,
     )
 

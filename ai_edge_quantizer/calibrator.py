@@ -170,7 +170,7 @@ class CalibrationSignatureRunner:
     if self._mode == CalibrationMode.INFERENCE:
       return self._signature_runner(**kwargs)
     self._calibrator.calibrate(
-        calibration_dataset={self._signature_key: [kwargs]},
+        calibration_dataset={self._signature_key: [kwargs]},  # pyrefly: ignore[bad-argument-type]
         model_recipe_manager=self._recipe_manager,
         cache_output=True,
     )
@@ -241,11 +241,11 @@ class Calibrator:
     del float_tflite, num_threads, qsv_update_func
 
     if mode == CalibrationMode.INFERENCE:
-      return super().__new__(_InferenceOnlyCalibrator)
+      return super().__new__(_InferenceOnlyCalibrator)  # pyrefly: ignore[bad-argument-type]
     elif mode == CalibrationMode.CALIBRATION_PRESERVE_ALL_TENSORS:
-      return super().__new__(_PreserveAllTensorsCalibrator)
+      return super().__new__(_PreserveAllTensorsCalibrator)  # pyrefly: ignore[bad-argument-type]
     elif mode == CalibrationMode.CALIBRATION_PROFILER_BASED:
-      return super().__new__(_ProfilerBasedCalibrator)
+      return super().__new__(_ProfilerBasedCalibrator)  # pyrefly: ignore[bad-argument-type]
     else:
       raise ValueError(f"Unsupported calibration mode: {mode}")
 

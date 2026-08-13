@@ -95,16 +95,16 @@ class AlgorithmManagerApiTest(parameterized.TestCase):
     self._alg_manager.register_quantized_op(
         algorithm_key="ptq",
         tfl_op_name=_TFLOpName.FULLY_CONNECTED,
-        init_qsv_func=_sample_init_qsv,
-        calibration_func=_sample_calibration_func,
-        materialize_func=_sample_materialize_func,
+        init_qsv_func=_sample_init_qsv,  # pyrefly: ignore[bad-argument-type]
+        calibration_func=_sample_calibration_func,  # pyrefly: ignore[bad-argument-type]
+        materialize_func=_sample_materialize_func,  # pyrefly: ignore[bad-argument-type]
     )
     self._alg_manager.register_quantized_op(
         algorithm_key="gptq",
         tfl_op_name=_TFLOpName.CONV_2D,
-        init_qsv_func=_sample_init_qsv,
-        calibration_func=_sample_calibration_func,
-        materialize_func=_sample_materialize_func,
+        init_qsv_func=_sample_init_qsv,  # pyrefly: ignore[bad-argument-type]
+        calibration_func=_sample_calibration_func,  # pyrefly: ignore[bad-argument-type]
+        materialize_func=_sample_materialize_func,  # pyrefly: ignore[bad-argument-type]
     )
     self.assertTrue(self._alg_manager.is_algorithm_registered("ptq"))
     self.assertTrue(self._alg_manager.is_algorithm_registered("gptq"))
@@ -123,16 +123,16 @@ class AlgorithmManagerApiTest(parameterized.TestCase):
     self._alg_manager.register_quantized_op(
         algorithm_key=algorithm_key,
         tfl_op_name=_TFLOpName.FULLY_CONNECTED,
-        init_qsv_func=_sample_init_qsv,
-        calibration_func=_sample_calibration_func,
-        materialize_func=_sample_materialize_func,
+        init_qsv_func=_sample_init_qsv,  # pyrefly: ignore[bad-argument-type]
+        calibration_func=_sample_calibration_func,  # pyrefly: ignore[bad-argument-type]
+        materialize_func=_sample_materialize_func,  # pyrefly: ignore[bad-argument-type]
     )
     self._alg_manager.register_quantized_op(
         algorithm_key=algorithm_key,
         tfl_op_name=_TFLOpName.CONV_2D,
-        init_qsv_func=_sample_init_qsv,
-        calibration_func=_sample_calibration_func,
-        materialize_func=_sample_materialize_func,
+        init_qsv_func=_sample_init_qsv,  # pyrefly: ignore[bad-argument-type]
+        calibration_func=_sample_calibration_func,  # pyrefly: ignore[bad-argument-type]
+        materialize_func=_sample_materialize_func,  # pyrefly: ignore[bad-argument-type]
     )
     supported_ops = self._alg_manager.get_supported_ops(algorithm_key)
     self.assertIn(_TFLOpName.CONV_2D, supported_ops)
@@ -145,9 +145,9 @@ class AlgorithmManagerApiTest(parameterized.TestCase):
     self._alg_manager.register_quantized_op(
         algorithm_key=algorithm_key,
         tfl_op_name=tfl_op,
-        init_qsv_func=_sample_init_qsv,
-        calibration_func=_sample_calibration_func,
-        materialize_func=_sample_materialize_func,
+        init_qsv_func=_sample_init_qsv,  # pyrefly: ignore[bad-argument-type]
+        calibration_func=_sample_calibration_func,  # pyrefly: ignore[bad-argument-type]
+        materialize_func=_sample_materialize_func,  # pyrefly: ignore[bad-argument-type]
     )
     materialize_func = self._alg_manager.get_quantization_func(
         algorithm_key,
@@ -190,9 +190,9 @@ class AlgorithmManagerApiTest(parameterized.TestCase):
     self._alg_manager.register_quantized_op(
         algorithm_key=algorithm_key,
         tfl_op_name=tfl_op,
-        init_qsv_func=_sample_init_qsv,
-        calibration_func=_sample_calibration_func,
-        materialize_func=_sample_materialize_func,
+        init_qsv_func=_sample_init_qsv,  # pyrefly: ignore[bad-argument-type]
+        calibration_func=_sample_calibration_func,  # pyrefly: ignore[bad-argument-type]
+        materialize_func=_sample_materialize_func,  # pyrefly: ignore[bad-argument-type]
     )
     init_qsv_func = self._alg_manager.get_init_qsv_func(algorithm_key, tfl_op)
     self.assertIs(_sample_init_qsv, init_qsv_func)
@@ -220,7 +220,7 @@ class AlgorithmManagerApiTest(parameterized.TestCase):
   def test_register_config_check_policy_succeeds(self):
     self.assertEmpty(self._alg_manager._config_check_policy_registry)
     test_algorithm_name = "test_algorithm"
-    test_config_check_policy = qtyping.ConfigCheckPolicyDict({
+    test_config_check_policy = qtyping.ConfigCheckPolicyDict({  # pyrefly: ignore[no-matching-overload]
         _TFLOpName.FULLY_CONNECTED: {
             qtyping.OpQuantizationConfig(
                 weight_tensor_config=qtyping.TensorQuantizationConfig(
@@ -251,9 +251,9 @@ class AlgorithmManagerApiTest(parameterized.TestCase):
     self._alg_manager.register_quantized_op(
         algorithm_key=algorithm_key,
         tfl_op_name=tfl_op,
-        init_qsv_func=_sample_init_qsv,
-        calibration_func=_sample_calibration_func,
-        materialize_func=_sample_materialize_func,
+        init_qsv_func=_sample_init_qsv,  # pyrefly: ignore[bad-argument-type]
+        calibration_func=_sample_calibration_func,  # pyrefly: ignore[bad-argument-type]
+        materialize_func=_sample_materialize_func,  # pyrefly: ignore[bad-argument-type]
     )
     update_qsv_func = self._alg_manager.get_update_qsv_func(
         algorithm_key, tfl_op
@@ -266,10 +266,10 @@ class AlgorithmManagerApiTest(parameterized.TestCase):
     self._alg_manager.register_quantized_op(
         algorithm_key=algorithm_key,
         tfl_op_name=tfl_op,
-        init_qsv_func=_sample_init_qsv,
-        calibration_func=_sample_calibration_func,
-        materialize_func=_sample_materialize_func,
-        update_qsv_func=_sample_update_qsv_func,
+        init_qsv_func=_sample_init_qsv,  # pyrefly: ignore[bad-argument-type]
+        calibration_func=_sample_calibration_func,  # pyrefly: ignore[bad-argument-type]
+        materialize_func=_sample_materialize_func,  # pyrefly: ignore[bad-argument-type]
+        update_qsv_func=_sample_update_qsv_func,  # pyrefly: ignore[bad-argument-type]
     )
     update_qsv_func = self._alg_manager.get_update_qsv_func(
         algorithm_key, tfl_op

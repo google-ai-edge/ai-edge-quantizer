@@ -275,7 +275,7 @@ def get_tensor_quant_params(
       None,
   )
   quantized_dim = common_utils.get_weight_quantized_dim(
-      op_info, tensor_content, tensor_quant_config.granularity
+      op_info, tensor_content, tensor_quant_config.granularity  # pyrefly: ignore[bad-argument-type]
   )
   quant_params = qtyping.UniformQuantParams(
       scale=scale,

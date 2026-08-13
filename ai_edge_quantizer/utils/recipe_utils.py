@@ -136,7 +136,7 @@ def resolve_recipe(
     ValueError if the recipe name or path could not be resolved.
   """
   # Check whether this is a named recipe.
-  if recipe := _get_named_recipe(recipe_name_or_path):
+  if recipe := _get_named_recipe(recipe_name_or_path):  # pyrefly: ignore[bad-argument-type]
     logging.info(
         'Loading named recipe "%s" from %s.',
         recipe_name_or_path,
@@ -215,13 +215,13 @@ def resolve_litertlm_recipe_or_mapping(
   )
 
   # If we got a quant recipe, then return a mapping with it set as the default.
-  if recipe := _as_quant_recipe_or_none(recipe_or_mapping):
+  if recipe := _as_quant_recipe_or_none(recipe_or_mapping):  # pyrefly: ignore[bad-assignment]
     logging.info(
         'Using recipe "%s" as the default recipe for all models in the'
         ' LiteRT-LM file.',
         recipe_name_or_path,
     )
-    return {'default': recipe}
+    return {'default': recipe}  # pyrefly: ignore[bad-return]
 
   if not _is_unresolved_recipe_mapping(recipe_or_mapping):
     raise ValueError(
@@ -233,9 +233,9 @@ def resolve_litertlm_recipe_or_mapping(
   extra_dirs = [pathlib.Path(recipe_name_or_path).parent]
   recipe_mapping: QuantRecipeMapping = {}
   for model_type, recipe_or_path in recipe_or_mapping.items():
-    if (recipe := _as_quant_recipe_or_none(recipe_or_path)) is None:
+    if (recipe := _as_quant_recipe_or_none(recipe_or_path)) is None:  # pyrefly: ignore[bad-argument-type, bad-assignment]
       recipe: QuantRecipeFileContents = resolve_recipe(
-          recipe_or_path, extra_dirs
+          recipe_or_path, extra_dirs  # pyrefly: ignore[bad-argument-type]
       )
       if not _is_quant_recipe(recipe):
         raise ValueError(
@@ -243,6 +243,6 @@ def resolve_litertlm_recipe_or_mapping(
             f' recipe name or recipe file path for model_type {model_type}, but'
             f' got object of type {type(recipe)} instead.'
         )
-    recipe_mapping[model_type] = recipe
+    recipe_mapping[model_type] = recipe  # pyrefly: ignore[unsupported-operation]
 
   return recipe_mapping

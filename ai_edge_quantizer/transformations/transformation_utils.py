@@ -137,7 +137,7 @@ def get_constant_buffer(
     data = np.ravel(data.view(np.uint8))
 
   # Check if the model has a buffer lookup mapping, and if not, add one.
-  if not (id_for_buffer_data := getattr(model, '_id_for_buffer_data', None)):
+  if not (id_for_buffer_data := getattr(model, '_id_for_buffer_data', None)):  # pyrefly: ignore[bad-assignment]
     id_for_buffer_data: dict[HashableMemoryView, int] = {}
     for buffer_id, buffer in enumerate(model.buffers):
       if (buffer_data := buffer.data) is not None:
@@ -226,7 +226,7 @@ def add_new_constant_tensor(
 
   new_tensor = qtyping.TensorT()
   if tensor_shape is None:
-    tensor_shape = data.shape
+    tensor_shape = data.shape  # pyrefly: ignore[bad-assignment]
   new_tensor.shape = tensor_shape
   new_tensor.buffer = new_buffer_id
   new_tensor.type = tensor_type
@@ -237,7 +237,7 @@ def add_new_constant_tensor(
   if (tensor_lookup := getattr(subgraph, '_tensor_lookup', None)) is not None:
     key = (
         new_buffer_id,
-        tuple(new_tensor.shape),
+        tuple(new_tensor.shape),  # pyrefly: ignore[bad-argument-type]
         new_tensor.type,
         new_tensor.quantization is not None,
     )

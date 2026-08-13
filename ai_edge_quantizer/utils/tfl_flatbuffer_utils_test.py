@@ -70,7 +70,7 @@ class FlatbufferUtilsTest(absltest.TestCase):
     )
     self.assertEqual(tuple(inputs.shape), (1, 28, 28, 1))
     self.assertEqual(tuple(weight.shape), (8, 3, 3, 1))
-    self.assertEqual(tuple(bias.shape), (8,))
+    self.assertEqual(tuple(bias.shape), (8,))  # pyrefly: ignore[missing-attribute]
     self.assertEqual(tuple(output.shape), (1, 28, 28, 8))
 
     fc_with_bias = subgraph0.operators[3]
@@ -82,7 +82,7 @@ class FlatbufferUtilsTest(absltest.TestCase):
     )
     self.assertEqual(tuple(inputs.shape), (1, 1568))
     self.assertEqual(tuple(weight.shape), (32, 1568))
-    self.assertEqual(tuple(bias.shape), (32,))
+    self.assertEqual(tuple(bias.shape), (32,))  # pyrefly: ignore[missing-attribute]
     self.assertEqual(tuple(output.shape), (1, 32))
 
     fc_no_bias = subgraph0.operators[4]
@@ -154,7 +154,7 @@ class FlatbufferUtilsTest(absltest.TestCase):
     self.assertEqual(
         tuple(weight_tensor.shape), tuple(weight_tensor_data.shape)  # pytype: disable=attribute-error
     )
-    self.assertAlmostEqual(weight_tensor_data[0][0][0][0], -0.12941549718379974)
+    self.assertAlmostEqual(weight_tensor_data[0][0][0][0], -0.12941549718379974)  # pyrefly: ignore[unsupported-operation]
 
     # Check tensor with no data
     input_tensor = subgraph_tensors[conv2d_op.inputs[0]]

@@ -374,7 +374,7 @@ class Fp16QuantizeTest(parameterized.TestCase):
 
     # Transformation should be NO_QUANTIZE since we mocked get_tensor_data to
     # None.
-    op_params = weight_params.consumers[0]
+    op_params = weight_params.consumers[0]  # pyrefly: ignore[unsupported-operation]
     self.assertSequenceEqual(
         op_params.transformations, [_QuantTransformation.NO_QUANTIZE]
     )
@@ -571,7 +571,7 @@ class Fp16QuantizeTest(parameterized.TestCase):
 
     # Transformation should be NO_QUANTIZE since we mocked get_tensor_data to
     # None.
-    op_params = weight_params.consumers[0]
+    op_params = weight_params.consumers[0]  # pyrefly: ignore[unsupported-operation]
     self.assertSequenceEqual(
         op_params.transformations, [_QuantTransformation.NO_QUANTIZE]
     )

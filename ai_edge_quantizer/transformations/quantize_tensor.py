@@ -180,7 +180,7 @@ def quantize_tensor(
           "Quantized data for tensor %s (%s bytes) has already been packed to"
           " buffer %s, skipping packing",
           tensor.name.decode(),
-          quant_params.quantized_data.size,
+          quant_params.quantized_data.size,  # pyrefly: ignore[missing-attribute]
           buffer_id,
       )
     else:

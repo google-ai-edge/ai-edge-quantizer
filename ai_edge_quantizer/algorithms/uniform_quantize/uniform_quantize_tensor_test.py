@@ -381,7 +381,7 @@ class TensorUtilsTest(parameterized.TestCase):
 
     # Check quantized content
     dequantized_bias = uniform_quantize_tensor.uniform_dequantize(
-        bias_quant_config.quantized_data, bias_quant_config
+        bias_quant_config.quantized_data, bias_quant_config  # pyrefly: ignore[bad-argument-type]
     )
     self.assertSequenceAlmostEqual(
         list(dequantized_bias.flatten()), list(bias_tensor_data), places=5

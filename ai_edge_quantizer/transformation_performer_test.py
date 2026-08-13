@@ -134,7 +134,7 @@ class TransformationPerformerTest(parameterized.TestCase):
         ),
     )
     producer = self._transformation_performer._get_updated_producer_id(
-        instruction.producer, 0
+        instruction.producer, 0  # pyrefly: ignore[bad-argument-type]
     )
     consumers = self._transformation_performer._get_updated_consumer_ids(
         instruction.consumers, 0

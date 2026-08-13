@@ -80,8 +80,8 @@ def quantize_litertlm(
     `0` on success and a non-zero exit code otherwise.
   """
 
-  litertlm_path = pathlib.Path(litertlm_path)
-  litertlm_basename = litertlm_path.stem
+  litertlm_path = pathlib.Path(litertlm_path)  # pyrefly: ignore[bad-assignment]
+  litertlm_basename = litertlm_path.stem  # pyrefly: ignore[missing-attribute]
 
   # Load the quantization recipe.
   recipe_map = recipe_utils.resolve_litertlm_recipe_or_mapping(recipe)
@@ -93,11 +93,11 @@ def quantize_litertlm(
 
   # Create the output directory if it doesn't already exist.
   if not output_dir:
-    output_dir = litertlm_path.parent
+    output_dir = litertlm_path.parent  # pyrefly: ignore[missing-attribute]
   else:
-    output_dir = pathlib.Path(output_dir)
-    if not os.path.exists(output_dir):
-      os.makedirs(output_dir)
+    output_dir = pathlib.Path(output_dir)  # pyrefly: ignore[bad-assignment]
+    if not os.path.exists(output_dir):  # pyrefly: ignore[bad-argument-type]
+      os.makedirs(output_dir)  # pyrefly: ignore[bad-argument-type]
 
   # Create temporary files for the `mmap`ed converted TFLite models and clean
   # them up when we're done.
@@ -105,7 +105,7 @@ def quantize_litertlm(
   temp_files: list[pathlib.Path] = []
 
   # Track progress.
-  progress_report = progress_utils.ProgressReport(litertlm_path.name)
+  progress_report = progress_utils.ProgressReport(litertlm_path.name)  # pyrefly: ignore[missing-attribute]
   progress_report.capture_progess_start()
 
   # Loop over the models selected for quantization and populate a dictionary
@@ -147,8 +147,8 @@ def quantize_litertlm(
       return 1
 
     # Quantize the TFLite model and write it to disk.
-    quantized_sections[section_id] = _quantize_model(
-        model=litertlm_file.get_section_buffer(section_id),
+    quantized_sections[section_id] = _quantize_model(  # pyrefly: ignore[unsupported-operation]
+        model=litertlm_file.get_section_buffer(section_id),  # pyrefly: ignore[bad-argument-type]
         recipe=model_recipe,
         serialize_to_path=output_file_path,
         enable_progress_report=False,
@@ -160,7 +160,7 @@ def quantize_litertlm(
 
   # Rebuild the LiteRT-LM file with the quantized models swapped in.
   output_filename = f"{litertlm_basename}_{recipe_basename}.litertlm"
-  output_file_path = output_dir / output_filename
+  output_file_path = output_dir / output_filename  # pyrefly: ignore[unsupported-operation]
   if not _verify_output_path(output_file_path, overwrite_outputs):
     logging.error("Aborting.")
     return 1
@@ -200,20 +200,20 @@ def quantize_tflite(
   Returns:
     `0` on success and a non-zero exit code otherwise.
   """
-  model_file = pathlib.Path(model_file)
-  model_basename = model_file.stem
+  model_file = pathlib.Path(model_file)  # pyrefly: ignore[bad-assignment]
+  model_basename = model_file.stem  # pyrefly: ignore[missing-attribute]
   recipe_basename = pathlib.Path(recipe_file).stem
   output_filename = f"{model_basename}_{recipe_basename}.tflite"
 
   # Create the output directory if it doesn't already exist.
   if not output_dir:
-    output_dir = model_file.parent
+    output_dir = model_file.parent  # pyrefly: ignore[missing-attribute]
   else:
-    output_dir = pathlib.Path(output_dir)
-    if not os.path.exists(output_dir):
-      os.makedirs(output_dir)
+    output_dir = pathlib.Path(output_dir)  # pyrefly: ignore[bad-assignment]
+    if not os.path.exists(output_dir):  # pyrefly: ignore[bad-argument-type]
+      os.makedirs(output_dir)  # pyrefly: ignore[bad-argument-type]
 
-  output_file_path = str(output_dir / output_filename)
+  output_file_path = str(output_dir / output_filename)  # pyrefly: ignore[unsupported-operation]
 
   if not _verify_output_path(output_file_path, overwrite_outputs):
     logging.error("Aborting.")

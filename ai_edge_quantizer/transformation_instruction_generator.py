@@ -346,14 +346,14 @@ class TransformationInstructionsGenerator:
         op_list = list(group)
         op_idx_list = []
         for index in op_list:
-          op_idx_list.append(param.consumers[index].subgraph_op_id)
+          op_idx_list.append(param.consumers[index].subgraph_op_id)  # pyrefly: ignore[unsupported-operation]
         transformations_available_for_vertical_optimization.append(
             qtyping.TransformationInst(
-                param.consumers[op_list[0]].transformations[0],
+                param.consumers[op_list[0]].transformations[0],  # pyrefly: ignore[unsupported-operation]
                 tensor_info.tensor_id,
                 tensor_info.producer,
                 op_idx_list,
-                param.consumers[op_list[0]].parameters,
+                param.consumers[op_list[0]].parameters,  # pyrefly: ignore[unsupported-operation]
             )
         )
     return transformations_available_for_vertical_optimization
@@ -385,21 +385,21 @@ class TransformationInstructionsGenerator:
         op_list = list(group)
         op_idx_list = []
         if (
-            len(param.consumers[op_list[0]].transformations)
+            len(param.consumers[op_list[0]].transformations)  # pyrefly: ignore[unsupported-operation]
             <= transformation_idx - 1
         ):
           continue
         for index in op_list:
-          op_idx_list.append(param.consumers[index].subgraph_op_id)
+          op_idx_list.append(param.consumers[index].subgraph_op_id)  # pyrefly: ignore[unsupported-operation]
         other_consumer_transformations.append(
             qtyping.TransformationInst(
-                param.consumers[op_list[0]].transformations[
+                param.consumers[op_list[0]].transformations[  # pyrefly: ignore[unsupported-operation]
                     transformation_idx - 1
                 ],
                 tensor_info.tensor_id,
                 tensor_info.producer,
                 op_idx_list,
-                param.consumers[op_list[0]].parameters,
+                param.consumers[op_list[0]].parameters,  # pyrefly: ignore[unsupported-operation]
             )
         )
     return other_consumer_transformations
@@ -606,7 +606,7 @@ class TransformationInstructionsGenerator:
         # Can't apply fusion to tensors with a constrained producer since that
         # will break the constraint.
         or self._is_op_constrained(
-            tensor_trans_insts.subgraph_id, producer_op_index
+            tensor_trans_insts.subgraph_id, producer_op_index  # pyrefly: ignore[bad-argument-type]
         )
     ):
       return
@@ -754,7 +754,7 @@ class TransformationInstructionsGenerator:
     original_tensor_subset_idx = 0
     instruction_subsets = [[]]
     consumer_to_subset_idx = {}
-    for instruction in instructions.instructions:
+    for instruction in instructions.instructions:  # pyrefly: ignore[not-iterable]
       if instruction.transformation == _QuantTransformation.DUPLICATE_TENSOR:
         instruction_subsets.append([instruction])
         subset_idx = len(instruction_subsets) - 1
@@ -792,7 +792,7 @@ class TransformationInstructionsGenerator:
     """
     is_tensor_unquantized = False
     is_tensor_quantized = False
-    for instruction in instructions:
+    for instruction in instructions:  # pyrefly: ignore[not-iterable]
       transform_type = instruction.transformation
       if transform_type == qtyping.QuantTransformation.NO_QUANTIZE:
         is_tensor_unquantized = True

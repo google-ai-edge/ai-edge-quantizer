@@ -203,15 +203,15 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
 
     self.assertLen(params, 4)
     self.assertEqual(
-        fc_input.consumers[0].transformations,
+        fc_input.consumers[0].transformations,  # pyrefly: ignore[unsupported-operation]
         [qtyping.QuantTransformation.INSERT_DECOMPOSED_HADAMARD_ROTATION],
     )
     self.assertEqual(
-        weight.consumers[0].transformations,
+        weight.consumers[0].transformations,  # pyrefly: ignore[unsupported-operation]
         [qtyping.QuantTransformation.QUANTIZE_TENSOR],
     )
     self.assertEqual(
-        bias.consumers[0].transformations,
+        bias.consumers[0].transformations,  # pyrefly: ignore[unsupported-operation]
         [qtyping.QuantTransformation.NO_QUANTIZE],
     )
     if output.producer is not None:
@@ -228,7 +228,7 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
     )
     qparams = hadamard_rotation.get_tensor_quant_params(
         self._op_info,
-        self._op_info.op_quant_config.weight_tensor_config,
+        self._op_info.op_quant_config.weight_tensor_config,  # pyrefly: ignore[bad-argument-type]
         np_buffer,
         self._tensor_name_to_qsv,
     )
@@ -264,7 +264,7 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
     )
     qparams = hadamard_rotation.get_tensor_quant_params(
         self._op_info,
-        self._op_info.op_quant_config.weight_tensor_config,
+        self._op_info.op_quant_config.weight_tensor_config,  # pyrefly: ignore[bad-argument-type]
         np_buffer,
         self._tensor_name_to_qsv,
     )
@@ -283,7 +283,7 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
     expected = np.tile([127, 0], [6, 3])
     qparams = hadamard_rotation.get_tensor_quant_params(
         self._op_info,
-        self._op_info.op_quant_config.weight_tensor_config,
+        self._op_info.op_quant_config.weight_tensor_config,  # pyrefly: ignore[bad-argument-type]
         test_data,
         self._tensor_name_to_qsv,
     )
@@ -311,7 +311,7 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
     expected = np.tile([[127, -42], [127, -18]], [3, 3])
     qparams = hadamard_rotation.get_tensor_quant_params(
         self._op_info,
-        self._op_info.op_quant_config.weight_tensor_config,
+        self._op_info.op_quant_config.weight_tensor_config,  # pyrefly: ignore[bad-argument-type]
         test_data,
         self._tensor_name_to_qsv,
     )
@@ -341,7 +341,7 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
     expected = np.reshape(expected, (2, 3, 6))
     qparams = hadamard_rotation.get_tensor_quant_params(
         self._op_info,
-        self._op_info.op_quant_config.weight_tensor_config,
+        self._op_info.op_quant_config.weight_tensor_config,  # pyrefly: ignore[bad-argument-type]
         test_data,
         self._tensor_name_to_qsv,
     )
@@ -356,7 +356,7 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
     ):
       hadamard_rotation.get_tensor_quant_params(
           self._op_info,
-          self._op_info.op_quant_config.weight_tensor_config,
+          self._op_info.op_quant_config.weight_tensor_config,  # pyrefly: ignore[bad-argument-type]
           None,
           self._tensor_name_to_qsv,
       )
@@ -367,7 +367,7 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
     ):
       hadamard_rotation.get_tensor_quant_params(
           self._op_info,
-          self._op_info.op_quant_config.weight_tensor_config,
+          self._op_info.op_quant_config.weight_tensor_config,  # pyrefly: ignore[bad-argument-type]
           self._graph_info.buffers[self._fc_buffer_id],
           self._graph_info.buffers[self._fc_buffer_id],
       )
@@ -378,7 +378,7 @@ class HadamardRotationFullyConnectedTest(parameterized.TestCase):
     ):
       hadamard_rotation.get_tensor_quant_params(
           self._op_info,
-          self._op_info.op_quant_config.weight_tensor_config,
+          self._op_info.op_quant_config.weight_tensor_config,  # pyrefly: ignore[bad-argument-type]
           np.array([1.0, 2.0, 3.0]),
           self._tensor_name_to_qsv,
       )
@@ -472,11 +472,11 @@ class HadamardRotationEmbeddingLookupTest(parameterized.TestCase):
     value = params[1]
     output = params[2]
     self.assertEqual(
-        lookup.consumers[0].transformations,
+        lookup.consumers[0].transformations,  # pyrefly: ignore[unsupported-operation]
         [qtyping.QuantTransformation.NO_QUANTIZE],
     )
     self.assertEqual(
-        value.consumers[0].transformations,
+        value.consumers[0].transformations,  # pyrefly: ignore[unsupported-operation]
         [qtyping.QuantTransformation.QUANTIZE_TENSOR],
     )
     if output.producer is not None:

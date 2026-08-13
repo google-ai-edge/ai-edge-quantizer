@@ -46,7 +46,7 @@ class BaseModelModifierTest(parameterized.TestCase):
 
   def setUp(self):
     super().setUp()
-    self._model_content: bytes = tfl_flatbuffer_utils.get_model_content(
+    self._model_content: bytes = tfl_flatbuffer_utils.get_model_content(  # pyrefly: ignore[bad-assignment]
         self._model_path
     )
     self._model = tfl_flatbuffer_utils.read_model(self._model_content)

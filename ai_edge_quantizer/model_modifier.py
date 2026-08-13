@@ -89,7 +89,7 @@ def _copy_with_views(value: T) -> T:
   if isinstance(value, np.ndarray):
     return value.view()
   if isinstance(value, list):
-    return [_copy_with_views(v) for v in value]
+    return [_copy_with_views(v) for v in value]  # pyrefly: ignore[bad-return]
   if hasattr(value, "__dict__"):
     return type(value)(**{
         k: _copy_with_views(v)
@@ -277,7 +277,7 @@ class ModelModifier:
   ) -> bool:
     """Check if the model has transformation insert to output."""
     for tensor_name, tensor_trans_insts in instructions.items():
-      for instr in tensor_trans_insts.instructions:
+      for instr in tensor_trans_insts.instructions:  # pyrefly: ignore[not-iterable]
         if transformation == instr.transformation and instr.consumers == [-1]:
           logging.info(
               "Found %s insert to output for tensor: %s",

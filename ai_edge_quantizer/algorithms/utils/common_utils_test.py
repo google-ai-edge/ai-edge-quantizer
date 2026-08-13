@@ -525,7 +525,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
           graph_info=qtyping.GraphInfo([], []),
           tensor_name_to_qsv={},
           output_activation_constraints={},
-          get_tensor_quant_params_fn=lambda *args: [],
+          get_tensor_quant_params_fn=lambda *args: [],  # pyrefly: ignore[bad-argument-type]
           tensor_quant_params_cache=common_utils.TensorQuantParamsCache(),
       )
 
@@ -606,7 +606,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
     )
 
     expected_tensor_qsv = dict(tensor_name_to_qsv["weight"])
-    expected_tensor_qsv["activation_tensor_qsv"] = tensor_name_to_qsv[
+    expected_tensor_qsv["activation_tensor_qsv"] = tensor_name_to_qsv[  # pyrefly: ignore[unsupported-operation]
         "activation"
     ]
     mock_get_tensor_params_fn.assert_called_once_with(

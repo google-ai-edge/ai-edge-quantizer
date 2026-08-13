@@ -61,7 +61,7 @@ class ComparisonResultTest(absltest.TestCase):
     }
     self.test_dir = self.create_tempdir()
     self.comparison_result = model_validator.ComparisonResult(
-        self.test_model, self.test_quantized_model
+        self.test_model, self.test_quantized_model  # pyrefly: ignore[bad-argument-type]
     )
 
   def test_add_new_signature_results_succeeds(self):
@@ -255,9 +255,9 @@ class ModelValidatorCompareTest(absltest.TestCase):
   def test_model_validator_compare(self):
     error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     comparison_result = model_validator.compare_model(
-        self.reference_model,
-        self.target_model,
-        self.test_data,
+        self.reference_model,  # pyrefly: ignore[bad-argument-type]
+        self.target_model,  # pyrefly: ignore[bad-argument-type]
+        self.test_data,  # pyrefly: ignore[bad-argument-type]
         error_metrics=error_metrics,
         compare_fns=[validation_utils.mean_squared_difference],
     )
@@ -284,9 +284,9 @@ class ModelValidatorCompareTest(absltest.TestCase):
   def test_model_validator_compare_validate_output_tensors_only(self):
     error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     comparison_result = model_validator.compare_model(
-        self.reference_model,
-        self.target_model,
-        self.test_data,
+        self.reference_model,  # pyrefly: ignore[bad-argument-type]
+        self.target_model,  # pyrefly: ignore[bad-argument-type]
+        self.test_data,  # pyrefly: ignore[bad-argument-type]
         error_metrics=error_metrics,
         compare_fns=[validation_utils.mean_squared_difference],
         validate_output_tensors_only=True,
@@ -312,9 +312,9 @@ class ModelValidatorCompareTest(absltest.TestCase):
   def test_create_json_for_model_explorer(self):
     error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     comparison_result = model_validator.compare_model(
-        self.reference_model,
-        self.target_model,
-        self.test_data,
+        self.reference_model,  # pyrefly: ignore[bad-argument-type]
+        self.target_model,  # pyrefly: ignore[bad-argument-type]
+        self.test_data,  # pyrefly: ignore[bad-argument-type]
         error_metrics=error_metrics,
         compare_fns=[validation_utils.mean_squared_difference],
     )
@@ -331,9 +331,9 @@ class ModelValidatorCompareTest(absltest.TestCase):
   def test_create_json_for_model_explorer_no_thresholds(self):
     error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     comparison_result = model_validator.compare_model(
-        self.reference_model,
-        self.target_model,
-        self.test_data,
+        self.reference_model,  # pyrefly: ignore[bad-argument-type]
+        self.target_model,  # pyrefly: ignore[bad-argument-type]
+        self.test_data,  # pyrefly: ignore[bad-argument-type]
         error_metrics=error_metrics,
         compare_fns=[validation_utils.mean_squared_difference],
     )
@@ -372,9 +372,9 @@ class ModelValidatorMultiSignatureModelTest(absltest.TestCase):
   def test_model_validator_compare_succeeds(self):
     error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     result = model_validator.compare_model(
-        self.reference_model,
-        self.target_model,
-        self.test_data,
+        self.reference_model,  # pyrefly: ignore[bad-argument-type]
+        self.target_model,  # pyrefly: ignore[bad-argument-type]
+        self.test_data,  # pyrefly: ignore[bad-argument-type]
         error_metrics=error_metrics,
         compare_fns=[validation_utils.mean_squared_difference],
     )
@@ -402,15 +402,15 @@ class ModelValidatorMultiSignatureModelTest(absltest.TestCase):
   def test_create_json_for_model_explorer(self):
     error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     comparison_result = model_validator.compare_model(
-        self.reference_model,
-        self.target_model,
-        self.test_data,
+        self.reference_model,  # pyrefly: ignore[bad-argument-type]
+        self.target_model,  # pyrefly: ignore[bad-argument-type]
+        self.test_data,  # pyrefly: ignore[bad-argument-type]
         error_metrics=error_metrics,
         compare_fns=[validation_utils.mean_squared_difference],
     )
     thresholds = [0, 1, 2, 3]
     mv_json = model_validator.create_json_for_model_explorer(
-        comparison_result, error_metrics[0], thresholds
+        comparison_result, error_metrics[0], thresholds  # pyrefly: ignore[bad-argument-type]
     )
     self.assertContainsSubset(
         '"thresholds": [{"value": 0, "bgColor": "rgb(200, 0, 0)"}, {"value":'
@@ -422,9 +422,9 @@ class ModelValidatorMultiSignatureModelTest(absltest.TestCase):
   def test_create_json_for_model_explorer_no_thresholds(self):
     error_metrics = [validation_utils.ValidationErrorMetric.MSE]
     comparison_result = model_validator.compare_model(
-        self.reference_model,
-        self.target_model,
-        self.test_data,
+        self.reference_model,  # pyrefly: ignore[bad-argument-type]
+        self.target_model,  # pyrefly: ignore[bad-argument-type]
+        self.test_data,  # pyrefly: ignore[bad-argument-type]
         error_metrics=error_metrics,
         compare_fns=[validation_utils.mean_squared_difference],
     )

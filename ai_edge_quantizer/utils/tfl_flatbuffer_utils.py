@@ -87,7 +87,7 @@ TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
 })
 
 TFL_OP_CODE_TO_NAME = immutabledict.immutabledict(
-    dict((reversed(item) for item in TFL_OP_NAME_TO_CODE.items()))
+    dict((reversed(item) for item in TFL_OP_NAME_TO_CODE.items()))  # pyrefly: ignore[no-matching-overload]
 )
 
 # Quantized dimension for per-channel quantization.

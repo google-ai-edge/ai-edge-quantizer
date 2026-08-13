@@ -117,7 +117,7 @@ def _check_unique_values(
     max_found = 0
     for i in range(tensor_content.shape[quantized_dimension]):
       slices = [slice(None)] * tensor_content.ndim
-      slices[quantized_dimension] = i
+      slices[quantized_dimension] = i  # pyrefly: ignore[unsupported-operation]
       vec = tensor_content[tuple(slices)]
       num_unique = np.unique(vec).size
       max_found = max(max_found, num_unique)

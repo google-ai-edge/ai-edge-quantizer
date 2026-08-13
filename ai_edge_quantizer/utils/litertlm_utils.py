@@ -42,7 +42,7 @@ T = TypeVar('T')
 
 
 # TODO: b/495756579 - Fix a mis-named function in the generated schema.
-schema.VDataCreator = schema.VdataCreator
+schema.VDataCreator = schema.VdataCreator  # pyrefly: ignore[missing-attribute]
 
 
 def _bytes_to_str(val: bytes | T) -> str | T:
@@ -63,7 +63,7 @@ def _from_key_value_pair(kvp: Any) -> litertlm_builder.Metadata:
     return litertlm_builder.Metadata(
         key=key, value=value, dtype=getattr(litertlm_builder, 'DType').STRING
     )
-  return litertlm_builder.Metadata(key=key, value=value)
+  return litertlm_builder.Metadata(key=key, value=value)  # pyrefly: ignore[missing-argument]
 
 
 class LiteRTLMFile:
@@ -223,7 +223,7 @@ class LiteRTLMFile:
     system_metadata.entries = [
         m.to_key_value_pair()
         for m in litertlm_builder.populate_system_metadata(
-            [_from_key_value_pair(kvp) for kvp in system_metadata.entries]
+            [_from_key_value_pair(kvp) for kvp in system_metadata.entries]  # pyrefly: ignore[not-iterable]
         )
     ]
 
@@ -274,7 +274,7 @@ class LiteRTLMFile:
       # Write the section data.
       if (section_data := section_data_overrides.get(section_id)) is None:
         section_data = self.get_section_buffer(section_id)
-      buff_offset += buff.write(section_data)
+      buff_offset += buff.write(section_data)  # pyrefly: ignore[bad-argument-type]
 
     # Close the output file/mmap.
     buff.close()

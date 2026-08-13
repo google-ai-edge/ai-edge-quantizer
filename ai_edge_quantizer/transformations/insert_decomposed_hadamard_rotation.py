@@ -36,7 +36,7 @@ def _to_flexbuffer(
 def _update_embedding_lookup_consumers(
     transformation: transformation_utils.TransformationInput,
     new_tensor_id: int,
-) -> bool:
+) -> bool:  # pyrefly: ignore[bad-return]
   """Updates the consumers of the embedding lookup op to use the new tensor.
 
   Args:

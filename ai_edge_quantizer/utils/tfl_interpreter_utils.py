@@ -55,14 +55,14 @@ def create_tfl_interpreter(
     A TFLite interpreter.
   """
   if isinstance(tflite_model, str):
-    tflite_model = mmap_utils.get_file_contents(tflite_model)
+    tflite_model = mmap_utils.get_file_contents(tflite_model)  # pyrefly: ignore[bad-assignment]
 
   if use_xnnpack:
     op_resolver = tfl.OpResolverType.BUILTIN
   else:
     op_resolver = tfl.OpResolverType.BUILTIN_WITHOUT_DEFAULT_DELEGATES
   tflite_interpreter = tfl.Interpreter(
-      model_content=bytes(tflite_model),
+      model_content=bytes(tflite_model),  # pyrefly: ignore[bad-argument-type]
       num_threads=num_threads,
       experimental_op_resolver_type=op_resolver,
       experimental_preserve_all_tensors=preserve_all_tensors,
@@ -408,7 +408,7 @@ def create_random_dataset(
     A list of dictionaries, each containing a sample of input data (for all
     signatures).
   """
-  rng = np.random.default_rng(random_seed)
+  rng = np.random.default_rng(random_seed)  # pyrefly: ignore[bad-argument-type]
   dataset = []
   for _ in range(num_samples):
     input_data = {}
@@ -421,7 +421,7 @@ def create_random_dataset(
         else:
           min_value, max_value = min_max_range
           new_data = _create_random_integers(
-              rng, shape, dtype, min_value, max_value
+              rng, shape, dtype, min_value, max_value  # pyrefly: ignore[bad-argument-type]
           )
       elif dtype in (np.float32, ml_dtypes.bfloat16):
         if min_max_range is None:

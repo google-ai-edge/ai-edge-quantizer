@@ -140,7 +140,7 @@ class RecipeManager:
       for existing_config in self._scope_configs[regex]:
         if existing_config.operation == config.operation:
           is_new_op = False
-          op_config = config
+          op_config = config  # pyrefly: ignore[bad-assignment]
           logging.warning(
               'Overwrite operation %s config under scope_regex %s with %s.',
               existing_config.operation,
@@ -148,7 +148,7 @@ class RecipeManager:
               config,
           )
         else:
-          op_config = existing_config
+          op_config = existing_config  # pyrefly: ignore[bad-assignment]
         configs.append(op_config)
       if is_new_op:
         configs.append(config)

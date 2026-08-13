@@ -286,7 +286,7 @@ def _get_tensor_transformation_params_wrapper(
       tensor_name,
       op_info,
       is_inbounding_tensor,
-      quant_params,
+      quant_params,  # pyrefly: ignore[bad-argument-type]
       is_constant,
   )
 
@@ -477,7 +477,7 @@ def _materialize_standard_op_with_same_as_input_scale(
   )
   op_tensor_params.append(input_tensor_params)
   # Use input quantization params for all output tensors.
-  input_quant_params = input_tensor_params.consumers[0].parameters
+  input_quant_params = input_tensor_params.consumers[0].parameters  # pyrefly: ignore[unsupported-operation]
   if not isinstance(input_quant_params, qtyping.UniformQuantParams):
     raise ValueError(
         "_materialize_standard_op_with_same_as_input_scale only supports"

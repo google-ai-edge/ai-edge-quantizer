@@ -69,7 +69,7 @@ def _register_testing_op(algorithm_key, tfl_op):
     return []
 
   algorithm_manager.register_op_quant_config_validation_func(
-      algorithm_key, _sample_check_op_config_func
+      algorithm_key, _sample_check_op_config_func  # pyrefly: ignore[bad-argument-type]
   )
   algorithm_manager.register_quantized_op(
       algorithm_key,

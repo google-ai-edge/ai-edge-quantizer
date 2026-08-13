@@ -192,9 +192,9 @@ for op_name, materialize_func in zip(
   register_quantized_op(
       AlgorithmName.FLOAT_CASTING,
       op_name,
-      float_casting.init_qsvs,
-      calibration_func=float_casting.calibrate,
-      materialize_func=materialize_func,
+      float_casting.init_qsvs,  # pyrefly: ignore[bad-argument-type]
+      calibration_func=float_casting.calibrate,  # pyrefly: ignore[bad-argument-type]
+      materialize_func=materialize_func,  # pyrefly: ignore[bad-argument-type]
   )
 
 ### DEQUANTIZED_WEIGHT_RECOVERY ###
@@ -221,8 +221,8 @@ for (
   register_quantized_op(
       algorithm_key=AlgorithmName.DEQUANTIZED_WEIGHT_RECOVERY,
       tfl_op_name=op_name,
-      init_qsv_func=dequantized_weight_recovery.init_qsvs,
-      calibration_func=dequantized_weight_recovery.calibrate,
+      init_qsv_func=dequantized_weight_recovery.init_qsvs,  # pyrefly: ignore[bad-argument-type]
+      calibration_func=dequantized_weight_recovery.calibrate,  # pyrefly: ignore[bad-argument-type]
       # Most of the materialize op functions are common for all algorithms
       # except for the function to get scale and zero point, i.e.,
       # get_tensor_quant_params. So we use functools.partial here to pass in the
@@ -347,7 +347,7 @@ for (
       op_name,
       naive_min_max_quantize.init_qsvs,
       calibration_func=naive_min_max_quantize.min_max_calibrate,
-      materialize_func=materialize_func,
+      materialize_func=materialize_func,  # pyrefly: ignore[bad-argument-type]
   )
 
 register_op_quant_config_validation_func(
@@ -377,7 +377,7 @@ for (
       op_name,
       naive_min_max_quantize.init_qsvs,
       calibration_func=naive_min_max_quantize.min_max_calibrate,
-      materialize_func=materialize_func,
+      materialize_func=materialize_func,  # pyrefly: ignore[bad-argument-type]
   )
 
 
@@ -440,10 +440,10 @@ for (
       AlgorithmName.GPTQ,
       op_name,
       naive_min_max_quantize.init_qsvs,
-      calibration_func=gptq.calibrate,
+      calibration_func=gptq.calibrate,  # pyrefly: ignore[bad-argument-type]
       materialize_func=functools.partial(
           materialize_func,
           gptq.get_tensor_quant_params,
       ),
-      update_qsv_func=qsv_utils.gptq_and_moving_average_update,
+      update_qsv_func=qsv_utils.gptq_and_moving_average_update,  # pyrefly: ignore[bad-argument-type]
   )

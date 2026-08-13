@@ -151,7 +151,7 @@ class ProgressReport:
     """Prints out the progress report."""
     # Collect the metrics.
     quantization_ratio = quantized_model_size / original_model_size
-    total_time = time.time() - self._start_time
+    total_time = time.time() - self._start_time  # pyrefly: ignore[unsupported-operation]
     mem_peak_bytes = self._capture_progress_end()
 
     # Print out the progress report.

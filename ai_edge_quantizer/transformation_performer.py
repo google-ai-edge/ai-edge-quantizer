@@ -238,9 +238,9 @@ class TransformationPerformer:
     Returns:
       None, update the transformation_inst & tflite_model in place
     """
-    instruction = transformation_inst.instructions[transformation_index]
+    instruction = transformation_inst.instructions[transformation_index]  # pyrefly: ignore[unsupported-operation]
     producer = self._get_updated_producer_id(
-        instruction.producer, transformation_inst.subgraph_id
+        instruction.producer, transformation_inst.subgraph_id  # pyrefly: ignore[bad-argument-type]
     )
     consumers = self._get_updated_consumer_ids(
         instruction.consumers, transformation_inst.subgraph_id
@@ -252,13 +252,13 @@ class TransformationPerformer:
             tflite_model.subgraphs[transformation_inst.subgraph_id],
             producer,
             consumers,
-            instruction.parameters,
+            instruction.parameters,  # pyrefly: ignore[bad-argument-type]
             self._buffer_origin,
         )
     )
     self._update_instructions(
         transformation_index,
-        transformation_inst.instructions,
+        transformation_inst.instructions,  # pyrefly: ignore[bad-argument-type]
         transformation_inst.subgraph_id,
         trans_info,
     )
@@ -269,7 +269,7 @@ class TransformationPerformer:
         # index instead.
         min(instruction.consumers)
         if min(instruction.consumers) >= 0
-        else instruction.producer + 1,
+        else instruction.producer + 1,  # pyrefly: ignore[unsupported-operation]
         trans_info.num_ops_added,
     )
 
@@ -293,13 +293,13 @@ class TransformationPerformer:
     """
     # pass 1: apply all the op insertion transformation, because op replacement
     # may remove consumer or producer of some tensors
-    for index, instruction in enumerate(transformation_inst.instructions):
+    for index, instruction in enumerate(transformation_inst.instructions):  # pyrefly: ignore[bad-argument-type]
       if instruction.transformation in self._op_insertion_transformations:
         self._apply_single_transformation(
             transformation_inst, index, tflite_model
         )
     # pass 2: apply all the op replacement transformation
-    for index, instruction in enumerate(transformation_inst.instructions):
+    for index, instruction in enumerate(transformation_inst.instructions):  # pyrefly: ignore[bad-argument-type]
       if instruction.transformation in self._op_replacement_transformations:
         self._apply_single_transformation(
             transformation_inst, index, tflite_model
@@ -329,13 +329,13 @@ class TransformationPerformer:
     self._create_op_id_map(tflite_model)
     self._buffer_origin = dict()
     if tensor_processing_order is None:
-      tensor_processing_order = transformation_instructions.keys()
+      tensor_processing_order = transformation_instructions.keys()  # pyrefly: ignore[bad-assignment]
     with progress_utils.ProgressBar(
-        total_steps=len(tensor_processing_order),
+        total_steps=len(tensor_processing_order),  # pyrefly: ignore[bad-argument-type]
         description="Applying Transformations to tensors:",
         enable=enable_progress_bar,
     ) as progress_bar:
-      for tensor_name in tensor_processing_order:
+      for tensor_name in tensor_processing_order:  # pyrefly: ignore[not-iterable]
         progress_bar.update_single_step()
         self._apply_transformations(
             transformation_instructions[tensor_name], tflite_model

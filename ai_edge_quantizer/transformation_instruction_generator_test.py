@@ -382,7 +382,7 @@ class InstructionGeneratorTest(parameterized.TestCase):
               transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
               tensor_id=1,
               producer=0,
-              consumers=[0, np.array([1]), 2],
+              consumers=[0, np.array([1]), 2],  # pyrefly: ignore[bad-argument-type]
               parameters=qtyping.UniformQuantParams(
                   8, None, np.array([1]), np.array([0])
               ),
@@ -403,7 +403,7 @@ class InstructionGeneratorTest(parameterized.TestCase):
                   transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
                   tensor_id=1,
                   producer=0,
-                  consumers=[0, np.array([1]), 2],
+                  consumers=[0, np.array([1]), 2],  # pyrefly: ignore[bad-argument-type]
                   parameters=qtyping.UniformQuantParams(
                       8, None, np.array([1]), np.array([0])
                   ),
@@ -425,7 +425,7 @@ class InstructionGeneratorTest(parameterized.TestCase):
               transformation=qtyping.QuantTransformation.ADD_DEQUANTIZE,
               tensor_id=1,
               producer=0,
-              consumers=[0, np.array([1]), 2],
+              consumers=[0, np.array([1]), 2],  # pyrefly: ignore[bad-argument-type]
               parameters=qtyping.UniformQuantParams(
                   8, None, np.array([1]), np.array([0])
               ),
@@ -1114,9 +1114,9 @@ class InstructionGeneratorTest(parameterized.TestCase):
     )
     self.assertLen(instructions, 1)
     instructions = instructions[test_tensor_name].instructions
-    self.assertGreater(len(instructions), 1)
-    self.assertEqual(instructions[0].transformation, _QTransf.DUPLICATE_BUFFER)
-    self.assertNotIn(_QTransf.DUPLICATE_BUFFER, instructions[1:])
+    self.assertGreater(len(instructions), 1)  # pyrefly: ignore[bad-argument-type]
+    self.assertEqual(instructions[0].transformation, _QTransf.DUPLICATE_BUFFER)  # pyrefly: ignore[unsupported-operation]
+    self.assertNotIn(_QTransf.DUPLICATE_BUFFER, instructions[1:])  # pyrefly: ignore[unsupported-operation]
 
   def _get_test_instruction(self, transformation, consumers=None):
     if consumers is None:
@@ -1154,7 +1154,7 @@ class InstructionGeneratorTest(parameterized.TestCase):
     ]
     got_transformations = [
         instruction.transformation
-        for instruction in tensor_instructions.instructions
+        for instruction in tensor_instructions.instructions  # pyrefly: ignore[not-iterable]
     ]
     self.assertEqual(got_transformations, expected_transformations)
 
@@ -1193,7 +1193,7 @@ class InstructionGeneratorTest(parameterized.TestCase):
     ]
     got_transformations = [
         instruction.transformation
-        for instruction in tensor_instructions.instructions
+        for instruction in tensor_instructions.instructions  # pyrefly: ignore[not-iterable]
     ]
     self.assertEqual(got_transformations, expected_transformations)
 
@@ -1377,7 +1377,7 @@ class EliminateUnnecessaryRequantizationTest(parameterized.TestCase):
     return qtyping.TransformationInst(
         transformation=transformation,
         producer=producer,
-        consumers=consumers,
+        consumers=consumers,  # pyrefly: ignore[bad-argument-type]
         parameters=qparams,
         # Dummy values below.
         tensor_id=0,
@@ -1536,7 +1536,7 @@ class EliminateUnnecessaryRequantizationTest(parameterized.TestCase):
     )
 
     self.assertLen(tensor_insts.instructions, 1)
-    result_inst = tensor_insts.instructions[0]
+    result_inst = tensor_insts.instructions[0]  # pyrefly: ignore[unsupported-operation]
     self.assertEqual(result_inst.transformation, _QTransf.QUANTIZE_TENSOR)
 
     result_params = result_inst.parameters

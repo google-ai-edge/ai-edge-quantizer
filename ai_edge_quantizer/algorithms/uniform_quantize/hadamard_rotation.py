@@ -417,19 +417,19 @@ def _materialize_embedding_lookup(
 
   if tensor_quant_params_cache is None or not (
       quant_params := tensor_quant_params_cache.lookup(
-          embedding_tensor.buffer, op_info.op_quant_config.weight_tensor_config
+          embedding_tensor.buffer, op_info.op_quant_config.weight_tensor_config  # pyrefly: ignore[bad-argument-type]
       )
   ):
     quant_params = get_tensor_quant_params(
         op_info,
-        op_info.op_quant_config.weight_tensor_config,
+        op_info.op_quant_config.weight_tensor_config,  # pyrefly: ignore[bad-argument-type]
         tensor_data,
         None,
     )
     if tensor_quant_params_cache:
       tensor_quant_params_cache.insert(
           embedding_tensor.buffer,
-          op_info.op_quant_config.weight_tensor_config,
+          op_info.op_quant_config.weight_tensor_config,  # pyrefly: ignore[bad-argument-type]
           quant_params,
       )
 

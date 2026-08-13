@@ -47,10 +47,10 @@ class RecipeTest(parameterized.TestCase):
     self.assertIsNone(qt._result.quantized_model)
     if qt.need_calibration:
       calibration_data = tfl_interpreter_utils.create_random_normal_input_data(
-          qt._float_model_buffer,
+          qt._float_model_buffer,  # pyrefly: ignore[bad-argument-type]
           num_samples=1,
       )
-      calibration_result = qt.calibrate(calibration_data)
+      calibration_result = qt.calibrate(calibration_data)  # pyrefly: ignore[bad-argument-type]
       quantization_result = qt.quantize(calibration_result)
     else:
       quantization_result = qt.quantize()
@@ -160,10 +160,10 @@ class RecipeTest(parameterized.TestCase):
     qt_json.load_quantization_recipe(recipe_name)
     if qt_json.need_calibration:
       calibration_data = tfl_interpreter_utils.create_random_normal_input_data(
-          qt_json._float_model_buffer,
+          qt_json._float_model_buffer,  # pyrefly: ignore[bad-argument-type]
           num_samples=1,
       )
-      calibration_result = qt_json.calibrate(calibration_data)
+      calibration_result = qt_json.calibrate(calibration_data)  # pyrefly: ignore[bad-argument-type]
       quant_result_from_json = qt_json.quantize(calibration_result)
     else:
       quant_result_from_json = qt_json.quantize()

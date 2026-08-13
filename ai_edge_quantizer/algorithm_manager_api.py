@@ -158,7 +158,7 @@ class QuantizedOperationInfo:
   init_qsv_func: InitQSVFunc
   calibration_func: CalibrationFunc
   materialize_func: MaterializeFunc
-  update_qsv_func: UpdateQSVFunc = qsv_utils.moving_average_update
+  update_qsv_func: UpdateQSVFunc = qsv_utils.moving_average_update  # pyrefly: ignore[bad-assignment]
 
 
 @dataclasses.dataclass
@@ -195,7 +195,7 @@ class AlgorithmManagerApi:
       init_qsv_func: InitQSVFunc,
       calibration_func: CalibrationFunc,
       materialize_func: MaterializeFunc,
-      update_qsv_func: UpdateQSVFunc = qsv_utils.moving_average_update,
+      update_qsv_func: UpdateQSVFunc = qsv_utils.moving_average_update,  # pyrefly: ignore[bad-function-definition]
   ):
     """Register functions to support a quantization operation.
 
@@ -294,7 +294,7 @@ class AlgorithmManagerApi:
     self._config_check_registry[quantization_algorithm](
         tfl_op_name,
         op_quantization_config,
-        self._config_check_policy_registry[quantization_algorithm],
+        self._config_check_policy_registry[quantization_algorithm],  # pyrefly: ignore[bad-argument-type]
     )
 
   def get_supported_ops(self, alg_key: str) -> list[qtyping.TFLOperationName]:

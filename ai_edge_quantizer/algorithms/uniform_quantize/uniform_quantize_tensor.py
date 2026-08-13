@@ -99,14 +99,14 @@ def _get_numpy_dtype(qtype: IntType) -> type[Any]:
 def assign_quantized_type(tensor: np.ndarray, qtype: IntType) -> np.ndarray:
   """Cast the tensor to the quantized type."""
   if qtype.num_bits <= 8:
-    qtype = np.int8 if qtype.signed else np.uint8
+    qtype = np.int8 if qtype.signed else np.uint8  # pyrefly: ignore[bad-assignment]
   elif qtype.num_bits <= 16:
-    qtype = np.int16 if qtype.signed else np.uint16
+    qtype = np.int16 if qtype.signed else np.uint16  # pyrefly: ignore[bad-assignment]
   elif qtype.num_bits <= 32:
-    qtype = np.int32 if qtype.signed else np.uint32
+    qtype = np.int32 if qtype.signed else np.uint32  # pyrefly: ignore[bad-assignment]
   else:
-    qtype = np.int64 if qtype.signed else np.uint64
-  return tensor.astype(qtype, copy=False)
+    qtype = np.int64 if qtype.signed else np.uint64  # pyrefly: ignore[bad-assignment]
+  return tensor.astype(qtype, copy=False)  # pyrefly: ignore[no-matching-overload]
 
 
 def fix_quantization_params_rank(
@@ -386,8 +386,8 @@ def uniform_dequantize(
           quantized_dimension=quantization_params.quantized_dimension + 1,
       )
     scale_shape = list(tensor_data.shape)
-    scale_shape[quantization_params.quantized_dimension] = (
-        scale_shape[quantization_params.quantized_dimension]
+    scale_shape[quantization_params.quantized_dimension] = (  # pyrefly: ignore[unsupported-operation]
+        scale_shape[quantization_params.quantized_dimension]  # pyrefly: ignore[bad-index]
         // quantization_params.block_size
     )
     quantization_params = dataclasses.replace(
@@ -626,11 +626,12 @@ def _is_valid_quantization_params(
     )
   if (
       quantization_params.block_size != 0
-      and tensor_data.shape[quantization_params.quantized_dimension]
+      and tensor_data.shape[quantization_params.quantized_dimension]  # pyrefly: ignore[bad-index]
       % quantization_params.block_size
       != 0
   ):
     raise ValueError(
+        # pyrefly: ignore[bad-index]
         "Tensor dimension must be divisible by block size. Got dimension:"
         f" {tensor_data.shape[quantization_params.quantized_dimension]} and"
         f" block size: {quantization_params.block_size}"

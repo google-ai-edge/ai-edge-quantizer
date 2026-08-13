@@ -108,7 +108,7 @@ class _DynamicHistogram1D:
     """Returns the bin edges of the histogram."""
     if not self.initialized:
       return np.array([self.lower_bound])
-    return self.lower_bound + np.arange(len(self.counts) + 1) * self.bin_width
+    return self.lower_bound + np.arange(len(self.counts) + 1) * self.bin_width  # pyrefly: ignore[unsupported-operation]
 
   def _initialize(self, d_min: float, d_max: float) -> None:
     """Initializes the bin width and lower bound based on the first data."""
@@ -154,7 +154,7 @@ class _DynamicHistogram1D:
     self._expand_to_fit(d_min, d_max)
 
     # Calculate bin indices
-    indices = np.floor((data - self.lower_bound) / self.bin_width).astype(
+    indices = np.floor((data - self.lower_bound) / self.bin_width).astype(  # pyrefly: ignore[unsupported-operation]
         np.int32
     )
     indices = np.clip(indices, 0, len(self.counts) - 1)
@@ -170,25 +170,25 @@ class _DynamicHistogram1D:
     for i, c in enumerate(other.counts):
       if c == 0:
         continue
-      l = other.lower_bound + i * other.bin_width
-      r = l + other.bin_width
+      l = other.lower_bound + i * other.bin_width  # pyrefly: ignore[unsupported-operation]
+      r = l + other.bin_width  # pyrefly: ignore[unsupported-operation]
 
-      start_idx = int(np.floor((l - self.lower_bound) / self.bin_width))
-      end_idx = int(np.ceil((r - self.lower_bound) / self.bin_width))
+      start_idx = int(np.floor((l - self.lower_bound) / self.bin_width))  # pyrefly: ignore[unsupported-operation]
+      end_idx = int(np.ceil((r - self.lower_bound) / self.bin_width))  # pyrefly: ignore[unsupported-operation]
 
       start_idx = max(0, start_idx)
       end_idx = min(len(self.counts), end_idx)
 
       for j in range(start_idx, end_idx):
-        sl = self.lower_bound + j * self.bin_width
-        sr = sl + self.bin_width
+        sl = self.lower_bound + j * self.bin_width  # pyrefly: ignore[unsupported-operation]
+        sr = sl + self.bin_width  # pyrefly: ignore[unsupported-operation]
 
         overlap_l = max(l, sl)
         overlap_r = min(r, sr)
 
         if overlap_l < overlap_r:
           overlap_w = overlap_r - overlap_l
-          frac = overlap_w / other.bin_width
+          frac = overlap_w / other.bin_width  # pyrefly: ignore[unsupported-operation]
           accum_counts[j] += c * frac
 
     self.counts = np.round(accum_counts).astype(np.int64)
@@ -405,15 +405,15 @@ class DynamicHistogram:
       data_flat = data.ravel()
       data_finite = data_flat[np.isfinite(data_flat)]
       if data_finite.size > 0:
-        self._impls[0].add(data_finite)
+        self._impls[0].add(data_finite)  # pyrefly: ignore[unsupported-operation]
     else:
-      num_channels = len(self._impls)
+      num_channels = len(self._impls)  # pyrefly: ignore[bad-argument-type]
       data_swapped = np.moveaxis(data, self.axis, 0)
       for i in range(num_channels):
         channel_data = data_swapped[i].ravel()
         channel_data_finite = channel_data[np.isfinite(channel_data)]
         if channel_data_finite.size > 0:
-          self._impls[i].add(channel_data_finite)
+          self._impls[i].add(channel_data_finite)  # pyrefly: ignore[unsupported-operation]
 
   def merge(self, other: 'DynamicHistogram') -> None:
     """Merges another DynamicHistogram into this one."""
@@ -455,7 +455,7 @@ class DynamicHistogram:
         'min': self.global_min,
         'max': self.global_max,
         'axis': self.axis,
-        'channels': [h.to_dict() for h in self._impls],
+        'channels': [h.to_dict() for h in self._impls],  # pyrefly: ignore[not-iterable]
     }
 
   @classmethod
