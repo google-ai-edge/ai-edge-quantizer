@@ -251,6 +251,28 @@ class TransformationUtilsTest(parameterized.TestCase):
     self.assertEqual(subgraph.tensors[-1].shape, [1, 1, 1, 1])
     self.assertEqual(subgraph.tensors[-1].shapeSignature, [1, -1, -1, 1])
 
+  def test_update_fully_connected_consumers(self):
+    subgraph = self.model.subgraphs[0]
+    transformation = transformation_utils.TransformationInput(
+        tensor_id=0,
+        model=self.model,
+        subgraph=subgraph,
+        producer=-1,
+        consumers=[0],
+        quant_params=qtyping.UniformQuantParams(
+            num_bits=8,
+            quantized_dimension=0,
+            scale=np.array([1.0], dtype=np.float32),
+            zero_point=np.array([0], dtype=np.int64),
+        ),
+    )
+    self.assertEqual(subgraph.operators[0].inputs[0], 0)
+    updated = transformation_utils.update_fully_connected_consumers(
+        transformation, new_tensor_id=99
+    )
+    self.assertTrue(updated)
+    self.assertEqual(subgraph.operators[0].inputs[0], 99)
+
 
 if __name__ == "__main__":
   absltest.main()

@@ -45,6 +45,8 @@ BuiltinOperator = flatbuffer_utils.BuiltinOperator
 BuiltinOptions = flatbuffer_utils.BuiltinOptions
 BuiltinOptions2 = flatbuffer_utils.BuiltinOptions2
 FullyConnectedOptionsT = flatbuffer_utils.FullyConnectedOptionsT
+MulOptions = flatbuffer_utils.schema_fb.MulOptions
+MulOptionsT = flatbuffer_utils.schema_fb.MulOptionsT
 Model = flatbuffer_utils.Model
 ModelT: TypeAlias = (
     flatbuffer_utils.ModelT
@@ -196,6 +198,8 @@ class QuantTransformation(enum.Enum):
   # Insert decomposed Hadamard rotation ops. This expresses the Hadamard
   # rotation as matrix multiplication with Hadamard matrices.
   INSERT_DECOMPOSED_HADAMARD_ROTATION = 8
+  # Insert elementwise multiply op for activation scaling.
+  INSERT_MULTIPLY = 9
 
 
 @dataclasses.dataclass(frozen=True)

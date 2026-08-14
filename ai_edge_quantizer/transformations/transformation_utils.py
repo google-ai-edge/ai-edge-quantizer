@@ -388,3 +388,32 @@ def get_schema_op_id(
   return transformation.model.operatorCodes[
       transformation.subgraph.operators[op_id].opcodeIndex
   ].builtinCode
+
+
+def update_fully_connected_consumers(
+    transformation: TransformationInput,
+    new_tensor_id: int,
+) -> bool:
+  """Updates the fully connected op(s) to use the new tensor.
+
+  Since the new tensor is inserted to the fully_connected's input, we need to
+  scan each consumer (in case of multiple fully_connected ops), and update
+  the input tensor to the new tensor.
+
+  Args:
+    transformation: The transformation input to update the consumers of.
+    new_tensor_id: The new tensor id to use as the input to the fully connected
+      consumers.
+
+  Returns:
+    True if the fully connected op(s) were updated to use the new tensor.
+  """
+  updated = False
+  for consumer in transformation.consumers:
+    if (
+        get_schema_op_id(transformation, consumer)
+        == qtyping.BuiltinOperator.FULLY_CONNECTED
+    ):
+      transformation.subgraph.operators[consumer].inputs[0] = new_tensor_id
+      updated = True
+  return updated
