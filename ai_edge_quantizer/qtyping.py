@@ -216,6 +216,8 @@ class UniformQuantParams:
       distributing) weights and activations into a more uniform distribution.
       This is particularly useful for low bits quantization. More technical
       details can be found in algorithms/uniform_quantize/hadamard_rotation.py.
+    custom_algorithm_param: Custom algorithm-specific parameters (e.g. for
+      experimental algorithms like OSCAR).
   """
 
   class HadamardRotationParams:
@@ -252,6 +254,7 @@ class UniformQuantParams:
   quantized_data: Optional[np.ndarray] = None
   block_size: int = 0
   hadamard: Optional[HadamardRotationParams] = None
+  custom_algorithm_param: Optional[dict[str, Any]] = None
 
   @classmethod
   def from_tfl_tensor_details(cls, tensor_detail) -> 'UniformQuantParams':
@@ -300,6 +303,9 @@ class UniformQuantParams:
         and _compare_array_or_none(self.quantized_data, other.quantized_data)
         and self.block_size == other.block_size
         and self.hadamard == other.hadamard
+        and _compare_custom_algorithm_param(
+            self.custom_algorithm_param, other.custom_algorithm_param
+        )
     )
 
 
@@ -650,6 +656,28 @@ def _compare_array_or_none(
   if id(obj1) == id(obj2) or obj1.data == obj2.data:
     return True
   return np.array_equal(obj1, obj2)
+
+
+def _is_equal(x: Any, y: Any) -> bool:
+  """Compares two values, handling numpy arrays, None, and general objects."""
+  if isinstance(x, np.ndarray) and isinstance(y, np.ndarray):
+    return np.array_equal(x, y)
+  if isinstance(x, np.ndarray) or isinstance(y, np.ndarray):
+    return False
+  return x == y
+
+
+def _compare_custom_algorithm_param(
+    param1: Optional[dict[str, Any]], param2: Optional[dict[str, Any]]
+) -> bool:
+  """Compares two custom_algorithm_param dicts or None."""
+  if param1 is None and param2 is None:
+    return True
+  if param1 is None or param2 is None:
+    return False
+  if param1.keys() != param2.keys():
+    return False
+  return all(_is_equal(val1, param2[key]) for key, val1 in param1.items())
 
 
 @dataclasses.dataclass(frozen=True)

@@ -22,27 +22,33 @@ import numpy as np
 from ai_edge_quantizer import qtyping
 
 
+def _create_dummy_uniform_quant_params(**kwargs) -> qtyping.UniformQuantParams:
+  default_params = dict(
+      num_bits=8,
+      quantized_dimension=1,
+      scale=np.array([[1.0]], dtype=np.float32),
+      zero_point=np.array([[0]], dtype=np.int64),
+      symmetric=False,
+      quantized_data=np.random.uniform(-127, 127, size=[10, 10]).astype(
+          np.uint8
+      ),
+      block_size=0,
+      hadamard=qtyping.UniformQuantParams.HadamardRotationParams(
+          random_binary_vector=np.random.uniform(0, 2, size=[10]).astype(
+              np.int32
+          ),
+          hadamard_size=10,
+      ),
+  )
+  default_params.update(kwargs)
+  return qtyping.UniformQuantParams(**default_params)
+
+
 class QtypingTest(absltest.TestCase):
 
   def test_uniform_quant_params_eq(self):
     # Create some random params.
-    quant_params = qtyping.UniformQuantParams(
-        num_bits=8,
-        quantized_dimension=1,
-        scale=np.array([[1.0]], dtype=np.float32),
-        zero_point=np.array([[0]], dtype=np.int64),
-        symmetric=False,
-        quantized_data=np.random.uniform(-127, 127, size=[10, 10]).astype(
-            np.uint8
-        ),
-        block_size=0,
-        hadamard=qtyping.UniformQuantParams.HadamardRotationParams(
-            random_binary_vector=np.random.uniform(0, 2, size=[10]).astype(
-                np.int32
-            ),
-            hadamard_size=10,
-        ),
-    )
+    quant_params = _create_dummy_uniform_quant_params()
     assert quant_params.quantized_data is not None
     assert quant_params.hadamard is not None
 
@@ -97,6 +103,81 @@ class QtypingTest(absltest.TestCase):
         ),
     )
     self.assertNotEqual(quant_params, other)
+
+  def test_compare_custom_algorithm_param_when_same_object_is_equal(self):
+    quant_params = _create_dummy_uniform_quant_params(
+        custom_algorithm_param={
+            "multiplier": np.array([1.0, 2.0]),
+            "str_key": "val",
+        }
+    )
+    self.assertEqual(quant_params, quant_params)
+
+  def test_compare_custom_algorithm_param_when_shallow_copy_is_equal(self):
+    quant_params = _create_dummy_uniform_quant_params(
+        custom_algorithm_param={
+            "multiplier": np.array([1.0, 2.0]),
+            "str_key": "val",
+        }
+    )
+    self.assertEqual(quant_params, copy.copy(quant_params))
+
+  def test_compare_custom_algorithm_param_when_deep_copy_is_equal(self):
+    quant_params = _create_dummy_uniform_quant_params(
+        custom_algorithm_param={
+            "multiplier": np.array([1.0, 2.0]),
+            "str_key": "val",
+        }
+    )
+    self.assertEqual(quant_params, copy.deepcopy(quant_params))
+
+  def test_compare_custom_algorithm_param_when_none_vs_dict_is_not_equal(self):
+    params_none = _create_dummy_uniform_quant_params(
+        custom_algorithm_param=None
+    )
+    params_dict = _create_dummy_uniform_quant_params(
+        custom_algorithm_param={"multiplier": np.array([1.0, 2.0])}
+    )
+    self.assertNotEqual(params_none, params_dict)
+
+  def test_compare_custom_algorithm_param_when_different_values_is_not_equal(
+      self,
+  ):
+    params1 = _create_dummy_uniform_quant_params(
+        custom_algorithm_param={
+            "multiplier": np.array([1.0, 2.0]),
+            "str_key": "val",
+        }
+    )
+    params2 = _create_dummy_uniform_quant_params(
+        custom_algorithm_param={
+            "multiplier": np.array([1.0, 3.0]),
+            "str_key": "val",
+        }
+    )
+    self.assertNotEqual(params1, params2)
+
+  def test_compare_custom_algorithm_param_when_different_keys_is_not_equal(
+      self,
+  ):
+    params1 = _create_dummy_uniform_quant_params(
+        custom_algorithm_param={"key_a": np.array([1.0, 2.0])}
+    )
+    params2 = _create_dummy_uniform_quant_params(
+        custom_algorithm_param={"key_b": np.array([1.0, 2.0])}
+    )
+    self.assertNotEqual(params1, params2)
+
+  def test_compare_custom_algorithm_param_when_different_types_is_not_equal(
+      self,
+  ):
+    params1 = _create_dummy_uniform_quant_params(
+        custom_algorithm_param={"val": np.array([1.0, 2.0])}
+    )
+    params2 = _create_dummy_uniform_quant_params(
+        custom_algorithm_param={"val": "not_an_array"}
+    )
+    self.assertNotEqual(params1, params2)
 
   def test_non_linear_quant_params_eq(self):
     # Create some random params.
