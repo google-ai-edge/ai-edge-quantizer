@@ -13,28 +13,20 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Implements OSCAR calibration: activation-aware optimal clipping for weight tensors.
+"""Implements OSCAR quantization: activation-aware scaling and optimal clipping.
 
 OSCAR (Optimal Scaling and Channel ARrangement) minimizes the
 activation-weighted weight error E||(Q(W) - W) x||^2 under a diagonal activation
-model, instead of plain weight range (min/max) or weight MSE.
+model.
 
-This module (`oscar.py`) is responsible for collecting the per-input-channel
-second moment mu2_j = E[x_j^2] -- exactly the diagonal of the Hessian that GPTQ
-collects, at O(d) memory instead of O(d^2) -- which is needed by the clipping
-bounds search.
+For each FULLY_CONNECTED op:
+1. `calibrate` collects per-input-channel activation second moments (mu2).
+2. `materialize_fully_connected` computes optimal per-channel scales s, scales
+   weights offline (W' = W * s), quantizes W' with activation-weighted optimal
+   clipping bounds, and inserts an elementwise MUL op (x' = x * (1/s)) on the
+   activation input.
 
-The OSCAR algorithm is implemented across 2 files:
-1. `oscar.py` (this file): Collects activation statistics (mu2) and computes the
-   optimal clipping bounds based on the stats.
-2. `quantization/transformations/oscar_conditioner.py`: The second part of
-   OSCAR (SmoothQuant-style equivalent transform). This is a whole-graph
-   conditioning pass that folds per-input-channel scales into upstream
-   producers, running *before* quantization.
-
-Scope: FULLY_CONNECTED only. FC dominates LLM parameter counts, and keeping a
-single op keeps the layout, the fold rules in the conditioner, and the test
-surface small.
+Scope: FULLY_CONNECTED only.
 """
 
 from collections.abc import MutableMapping, Sequence
@@ -58,6 +50,7 @@ _QuantTransformation = qtyping.QuantTransformation
 
 
 _EPS = 1e-12
+_SCALE_CLAMP = (1e-4, 1e4)
 
 
 def _floor_positive(mu2: np.ndarray) -> np.ndarray:
@@ -118,9 +111,7 @@ def _weight_layout(
 ) -> tuple[np.ndarray, np.ndarray, tuple[int, ...]]:
   """Views the FC weight as (rows, cols) and maps mu2 onto the columns.
 
-  OSCAR delibrately supports FULLY_CONNECTED only: FC dominates LLM parameter
-  counts, and is the only op whose input-channel scales have the simple
-  deployment story the conditioner relies on.
+  OSCAR supports FULLY_CONNECTED only.
 
   Args:
     op_name: The TFL op that consumes the weight.
@@ -177,6 +168,87 @@ def _check_blockwise_validity(
         f"Block size {block_size} must divide the reduction dimension "
         f"{reduction_dim} of {op_name} weights with shape {tensor_shape}."
     )
+
+
+def _channel_scale_objective(
+    w: np.ndarray,
+    s: np.ndarray,
+    mu2: np.ndarray,
+    block_size: int,
+) -> float:
+  """Computes total quantization proxy objective for scales s on weight w."""
+  m = mu2 / (s * s)
+  a = np.abs(w) * s
+  d = w.shape[1]
+  g = block_size if (block_size and d % block_size == 0) else d
+  total = 0.0
+  for gi in range(d // g):
+    cols = slice(gi * g, (gi + 1) * g)
+    mx = a[:, cols].max(1)
+    total += float((mx * mx).sum()) * float(m[cols].sum())
+  return total
+
+
+def _compute_channel_scales(
+    w: np.ndarray,
+    mu2: np.ndarray,
+    block_size: int = 0,
+    num_iters: int = 3,
+) -> tuple[np.ndarray | None, float]:
+  """Computes optimal per-input-channel scales s for a fully connected op.
+
+  Args:
+    w: The 2-D weight matrix of shape (out_ch, in_ch).
+    mu2: Per-input-channel activation second moments E[x_j^2] of shape (in_ch,).
+    block_size: Block size along the reduction dimension, or 0 for
+      tensor/channelwise.
+    num_iters: Number of alternating fixed-point iterations to run.
+
+  Returns:
+    A tuple (s, gain):
+      s: The optimal per-input-channel scale vector of shape (in_ch,), or None
+        if scaling does not improve over identity (s = 1).
+      gain: Ratio of identity objective to best objective achieved.
+  """
+  in_ch = mu2.size
+  mu2 = _floor_positive(mu2)
+  mu = np.sqrt(mu2)
+
+  def normalized(v):
+    v = v / np.exp(np.mean(np.log(v)))
+    return np.clip(v, *_SCALE_CLAMP)
+
+  a_base = (w * w).sum(0) + _EPS
+
+  identity_loss = _channel_scale_objective(w, np.ones(in_ch), mu2, block_size)
+  s = normalized(np.sqrt(mu / np.sqrt(a_base)))
+  best = (_channel_scale_objective(w, s, mu2, block_size), s)
+
+  # Alternating fixed-point optimization:
+  for _ in range(num_iters):
+    # 1. Estimate effective weight magnitude per channel (a_eff) based on
+    #    maximum scaled weight within each block/group.
+    a_eff = np.zeros(in_ch)
+    d = w.shape[1]
+    g = block_size if (block_size and d % block_size == 0) else d
+    ws_abs = np.abs(w) * s
+    rows = np.arange(w.shape[0])
+    for gi in range(d // g):
+      j_star = gi * g + np.argmax(ws_abs[:, gi * g : (gi + 1) * g], 1)
+      np.add.at(a_eff, j_star, w[rows, j_star] ** 2)
+    a_eff = np.maximum(a_eff, 0.25 * a_base)
+
+    # 2. Update scales s to balance activation deviation (sqrt(mu)) against
+    #    effective weight deviation (sqrt(a_eff)), damped via geometric mean.
+    s_cand = normalized(np.sqrt(mu / np.sqrt(a_eff)))
+    s = normalized(np.sqrt(s * s_cand))
+    loss = _channel_scale_objective(w, s, mu2, block_size)
+    if loss < best[0]:
+      best = (loss, s)
+
+  if best[0] >= identity_loss:
+    return None, 1.0
+  return best[1], identity_loss / max(best[0], _EPS)
 
 
 def calibrate(
@@ -292,6 +364,99 @@ def get_clip_bounds(
   raise ValueError(f"Unsupported granularity: {granularity}")
 
 
+def _extract_mu2(tensor_qsv: dict[str, Any] | None) -> np.ndarray | None:
+  """Extracts activation second moments (mu2) from tensor_qsv dictionary."""
+  if not tensor_qsv:
+    return None
+  if "mu2" in tensor_qsv:
+    return tensor_qsv["mu2"]
+  if (
+      "activation_tensor_qsv" in tensor_qsv
+      and tensor_qsv["activation_tensor_qsv"]
+  ):
+    return tensor_qsv["activation_tensor_qsv"].get("mu2")
+  return None
+
+
+def _compute_oscar_weight_quant_params(
+    op_info: qtyping.OpInfo,
+    tensor_quant_config: qtyping.TensorQuantizationConfig,
+    w: np.ndarray,
+    mu2: np.ndarray | None,
+) -> qtyping.UniformQuantParams:
+  """Computes OSCAR scales, scales weight, and quantizes with optimal bounds."""
+  _, in_ch = w.shape
+  granularity = tensor_quant_config.granularity
+  block_size = (
+      uniform_quantize_tensor.extract_block_size_from_granularity(granularity)
+      if uniform_quantize_tensor.is_blockwise(granularity)
+      else 0
+  )
+
+  if mu2 is not None:
+    mu2_arr = np.asarray(mu2, np.float64).ravel()
+    if mu2_arr.size != in_ch:
+      raise ValueError(
+          f"OSCAR: activation mu2 has {mu2_arr.size} channels but"
+          f" {op_info.op_name} weights of shape {w.shape} expect {in_ch}."
+      )
+    s, _ = _compute_channel_scales(w, mu2_arr, block_size)
+    if s is None:
+      s = np.ones(in_ch, dtype=np.float64)
+  else:
+    logging.warning(
+        "OSCAR: no activation second moments (mu2) found for op %s"
+        " (index %d); falling back to unscaled optimal clipping.",
+        op_info.op_name,
+        op_info.subgraph_op_index,
+    )
+    s = np.ones(in_ch, dtype=np.float64)
+
+  # Scale weight: W' = W * s
+  w_scaled = w * s
+  mu2_scaled = (
+      (np.asarray(mu2, np.float64).ravel() / (s * s))
+      if mu2 is not None
+      else None
+  )
+
+  # Compute optimal clip bounds on scaled weight.
+  bounds = get_clip_bounds(
+      op_info.op_name,
+      w_scaled,
+      mu2_scaled,
+      tensor_quant_config.num_bits,
+      granularity,
+  )
+  zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
+      -bounds,
+      bounds,
+      tensor_quant_config.num_bits,
+      tensor_quant_config.symmetric,
+      granularity,
+      None,
+  )
+  quantized_dim = common_utils.get_weight_quantized_dim(
+      op_info, w_scaled, granularity
+  )
+  multiplier = (1.0 / s).astype(np.float32)
+
+  base_quant_params = qtyping.UniformQuantParams(
+      scale=scale,
+      zero_point=zp,
+      num_bits=tensor_quant_config.num_bits,
+      symmetric=tensor_quant_config.symmetric,
+      quantized_dimension=quantized_dim,
+      block_size=block_size,
+      custom_algorithm_param={"multiplier": multiplier},
+  )
+  is_blockwise = uniform_quantize_tensor.is_blockwise(granularity)
+  quantized_vars = uniform_quantize_tensor.uniform_quantize(
+      w_scaled, base_quant_params, is_blockwise
+  )
+  return dataclasses.replace(base_quant_params, quantized_data=quantized_vars)
+
+
 def get_tensor_quant_params(
     op_info: qtyping.OpInfo,
     tensor_quant_config: qtyping.TensorQuantizationConfig,
@@ -312,9 +477,13 @@ def get_tensor_quant_params(
     tensor_content: The content of the tensor. None means the tensor is not
       a weight tensor.
     tensor_qsv: A dictionary containing the tensor QSVs. It may contain
-      "activation_tensor_qsv" with the "mu2" statistic collected by
+      "mu2" or "activation_tensor_qsv" with the "mu2" statistic collected by
       calibrate(); if absent, OSCAR degrades gracefully to uniform
       weighting (exact weight-MSE clipping) with a warning.
+
+  Returns:
+    UniformQuantParams with quantized weights and custom_algorithm_param
+    multiplier.
 
   Raises:
     ValueError: If asymmetric weight quantization is requested, or blockwise
@@ -323,9 +492,15 @@ def get_tensor_quant_params(
   """
   # Fallback to naive_min_max_quantize for non-weight tensors.
   if tensor_content is None:
-    return naive_min_max_quantize.get_tensor_quant_params(
+    res = naive_min_max_quantize.get_tensor_quant_params(
         op_info, tensor_quant_config, tensor_content, tensor_qsv
     )
+    if not isinstance(res, qtyping.UniformQuantParams):
+      raise TypeError(
+          "Expected UniformQuantParams for uniform quantize, got"
+          f" {type(res)}"
+      )
+    return res
 
   if not tensor_quant_config.symmetric:
     raise ValueError(
@@ -338,53 +513,170 @@ def get_tensor_quant_params(
         f"OSCAR supports FULLY_CONNECTED only, got: {op_info.op_name}"
     )
 
-  mu2 = None
-  if tensor_qsv:
-    activation_tensor_qsv = tensor_qsv.get("activation_tensor_qsv")
-    if activation_tensor_qsv:
-      mu2 = activation_tensor_qsv.get("mu2")
-  if mu2 is None:
-    logging.warning(
-        "OSCAR: no activation second moments (mu2) found for op %s"
-        " (index %d); falling back to activation-agnostic optimal clipping"
-        " (OCTAV equivalent) for this op. If the whole graph has no mu2,"
-        " consider using OCTAV instead.",
-        op_info.op_name,
-        op_info.subgraph_op_index,
+  mu2 = _extract_mu2(tensor_qsv)
+  w = np.asarray(tensor_content, np.float64)
+  return _compute_oscar_weight_quant_params(
+      op_info, tensor_quant_config, w, mu2
+  )
+
+
+def _get_or_compute_weight_quant_params(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_quant_params_cache: common_utils.TensorQuantParamsCache,
+    mu2: np.ndarray | None,
+) -> qtyping.UniformQuantParams:
+  """Gets cached or computes OSCAR weight quantization parameters."""
+  weight_config = op_info.op_quant_config.weight_tensor_config
+  if weight_config is None:
+    raise ValueError(
+        "Weight tensor quantization config is not provided for OSCAR"
+        " quantization."
+    )
+  weight_tensor = graph_info.subgraph_tensors[op_info.op.inputs[1]]
+  if quant_params := tensor_quant_params_cache.lookup(
+      weight_tensor.buffer, weight_config
+  ):
+    assert isinstance(quant_params, qtyping.UniformQuantParams)
+    return quant_params
+  tensor_data = tfl_flatbuffer_utils.get_tensor_data(
+      weight_tensor, graph_info.buffers
+  )
+  quant_params = get_tensor_quant_params(
+      op_info,
+      weight_config,
+      tensor_data,
+      tensor_qsv={"mu2": mu2},
+  )
+  tensor_quant_params_cache.insert(
+      weight_tensor.buffer,
+      weight_config,
+      quant_params,
+  )
+  return quant_params
+
+
+def _materialize_input_tensor(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    quant_params: qtyping.UniformQuantParams,
+) -> qtyping.TensorTransformationParams:
+  """Materializes the activation input tensor for INSERT_MULTIPLY."""
+  input_tensor = graph_info.subgraph_tensors[op_info.op.inputs[0]]
+  op2input_params = qtyping.OpToTensorParams(
+      subgraph_op_id=op_info.subgraph_op_index,
+      parameters=quant_params,
+      transformations=[qtyping.QuantTransformation.INSERT_MULTIPLY],
+  )
+  return qtyping.TensorTransformationParams(
+      tensor_name=tfl_flatbuffer_utils.get_tensor_name(input_tensor),
+      consumers=[op2input_params],
+  )
+
+
+def _materialize_weight_tensor(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    quant_params: qtyping.UniformQuantParams,
+) -> qtyping.TensorTransformationParams:
+  """Materializes the weight tensor for QUANTIZE_TENSOR."""
+  weight_tensor = graph_info.subgraph_tensors[op_info.op.inputs[1]]
+  op2weight_params = qtyping.OpToTensorParams(
+      subgraph_op_id=op_info.subgraph_op_index,
+      parameters=quant_params,
+      transformations=[qtyping.QuantTransformation.QUANTIZE_TENSOR],
+  )
+  return qtyping.TensorTransformationParams(
+      tensor_name=tfl_flatbuffer_utils.get_tensor_name(weight_tensor),
+      consumers=[op2weight_params],
+  )
+
+
+def _materialize_bias_tensor(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+) -> qtyping.TensorTransformationParams | None:
+  """Materializes the bias tensor if present."""
+  if len(op_info.op.inputs) <= 2 or op_info.op.inputs[2] < 0:
+    return None
+  bias_tensor = graph_info.subgraph_tensors[op_info.op.inputs[2]]
+  no_quant_params = qtyping.OpToTensorParams(
+      subgraph_op_id=op_info.subgraph_op_index,
+      transformations=[qtyping.QuantTransformation.NO_QUANTIZE],
+  )
+  return qtyping.TensorTransformationParams(
+      tensor_name=tfl_flatbuffer_utils.get_tensor_name(bias_tensor),
+      consumers=[no_quant_params],
+  )
+
+
+def _materialize_output_tensor(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+) -> qtyping.TensorTransformationParams:
+  """Materializes the output tensor with NO_QUANTIZE transformation."""
+  output_tensor = graph_info.subgraph_tensors[op_info.op.outputs[0]]
+  no_quant_params = qtyping.OpToTensorParams(
+      subgraph_op_id=op_info.subgraph_op_index,
+      transformations=[qtyping.QuantTransformation.NO_QUANTIZE],
+  )
+  return qtyping.TensorTransformationParams(
+      tensor_name=tfl_flatbuffer_utils.get_tensor_name(output_tensor),
+      producer=no_quant_params,
+  )
+
+
+def materialize_fully_connected(
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_quant_params_cache: common_utils.TensorQuantParamsCache,
+    tensor_name_to_qsv: dict[str, Any] | None = None,
+) -> list[qtyping.TensorTransformationParams]:
+  """Materializes the fully_connected op for OSCAR.
+
+  Inserts an elementwise multiplier transformation on the activation input
+  tensor and quantizes the scaled weight tensor.
+
+  Args:
+    op_info: Aggregated information about the op (e.g., quantization config).
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_quant_params_cache: Cache of already computed quantization
+      parameters.
+    tensor_name_to_qsv: A map of tensor name to quantization parameters.
+
+  Returns:
+    Quantization configuration for the tensors associated with the op.
+  """
+  if op_info.op_quant_config.weight_tensor_config is None:
+    raise ValueError(
+        "Weight tensor quantization config is not provided for OSCAR"
+        " quantization."
     )
 
-  granularity = tensor_quant_config.granularity
-  is_blockwise = uniform_quantize_tensor.is_blockwise(granularity)
+  if op_info.op_name != _TFLOpName.FULLY_CONNECTED:
+    raise ValueError(
+        f"OSCAR supports FULLY_CONNECTED only, got: {op_info.op_name}"
+    )
 
-  bounds = get_clip_bounds(
-      op_info.op_name,
-      tensor_content,
-      mu2,
-      tensor_quant_config.num_bits,
-      granularity,
+  input_tensor = graph_info.subgraph_tensors[op_info.op.inputs[0]]
+  input_tensor_name = tfl_flatbuffer_utils.get_tensor_name(input_tensor)
+  mu2 = None
+  if tensor_name_to_qsv and input_tensor_name in tensor_name_to_qsv:
+    mu2 = tensor_name_to_qsv[input_tensor_name].get("mu2")
+
+  quant_params = _get_or_compute_weight_quant_params(
+      op_info, graph_info, tensor_quant_params_cache, mu2
   )
-  zp, scale = uniform_quantize_tensor.tensor_zp_scale_from_min_max(
-      -bounds,
-      bounds,
-      tensor_quant_config.num_bits,
-      tensor_quant_config.symmetric,
-      granularity,
-      None,
-  )
-  quantized_dim = common_utils.get_weight_quantized_dim(
-      op_info, tensor_content, granularity
-  )
-  quant_params = qtyping.UniformQuantParams(
-      scale=scale,
-      zero_point=zp,
-      num_bits=tensor_quant_config.num_bits,
-      symmetric=tensor_quant_config.symmetric,
-      quantized_dimension=quantized_dim,
-      block_size=uniform_quantize_tensor.extract_block_size_from_granularity(
-          granularity
-      ),
-  )
-  quantized_vars = uniform_quantize_tensor.uniform_quantize(
-      tensor_content, quant_params, is_blockwise
-  )
-  return dataclasses.replace(quant_params, quantized_data=quantized_vars)
+
+  # TODO(b/542923497): Support upstream scale folding to fold multiplier into
+  # preceding operations instead of inserting runtime MUL ops. Please check out
+  # cl/962751575 for a pointer on how to do that.
+  op_tensor_params = [
+      _materialize_input_tensor(op_info, graph_info, quant_params),
+      _materialize_weight_tensor(op_info, graph_info, quant_params),
+  ]
+  if bias_params := _materialize_bias_tensor(op_info, graph_info):
+    op_tensor_params.append(bias_params)
+  op_tensor_params.append(_materialize_output_tensor(op_info, graph_info))
+
+  return op_tensor_params
