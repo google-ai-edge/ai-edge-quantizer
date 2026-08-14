@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 
-
 from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
@@ -179,6 +178,67 @@ class QsvUtilsTest(parameterized.TestCase):
 
     np.testing.assert_array_almost_equal(updated_qsv["hessian"], expected_h)
     self.assertEqual(updated_qsv["num_samples"], expected_ns)
+
+  def test_oscar_and_moving_average_update(self):
+    old_qsv = {
+        "min": np.array([-1.0]),
+        "max": np.array([2.0]),
+        "mu2": np.array([2.0, 4.0]),
+        "num_samples": 10,
+    }
+    new_qsv = {
+        "min": np.array([-2.0]),
+        "max": np.array([3.0]),
+        "mu2": np.array([4.0, 8.0]),
+        "num_samples": 10,
+    }
+    updated = qsv_utils.oscar_and_moving_average_update(old_qsv, new_qsv)
+    np.testing.assert_array_almost_equal(updated["mu2"], np.array([3.0, 6.0]))
+    self.assertEqual(updated["num_samples"], 20)
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="first_qsv_missing_mu2",
+          qsv1={"min": np.array([-1.0]), "max": np.array([2.0])},
+          qsv2={
+              "min": np.array([-2.0]),
+              "max": np.array([3.0]),
+              "mu2": np.array([4.0, 8.0]),
+              "num_samples": 10,
+          },
+          expected_mu2=np.array([4.0, 8.0]),
+          expected_samples=10,
+      ),
+      dict(
+          testcase_name="second_qsv_missing_mu2",
+          qsv1={
+              "min": np.array([-2.0]),
+              "max": np.array([3.0]),
+              "mu2": np.array([4.0, 8.0]),
+              "num_samples": 10,
+          },
+          qsv2={"min": np.array([-1.0]), "max": np.array([2.0])},
+          expected_mu2=np.array([4.0, 8.0]),
+          expected_samples=10,
+      ),
+      dict(
+          testcase_name="both_qsvs_missing_mu2",
+          qsv1={"min": np.array([-1.0]), "max": np.array([2.0])},
+          qsv2={"min": np.array([-2.0]), "max": np.array([3.0])},
+          expected_mu2=None,
+          expected_samples=0,
+      ),
+  )
+
+  def test_oscar_and_moving_average_update_missing_mu2(
+      self, qsv1, qsv2, expected_mu2, expected_samples
+  ):
+    updated = qsv_utils.oscar_and_moving_average_update(qsv1, qsv2)
+    if expected_mu2 is None:
+      self.assertIsNone(updated["mu2"])
+    else:
+      np.testing.assert_array_equal(updated["mu2"], expected_mu2)
+    self.assertEqual(updated["num_samples"], expected_samples)
 
 
 if __name__ == "__main__":

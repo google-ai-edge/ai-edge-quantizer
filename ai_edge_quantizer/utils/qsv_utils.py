@@ -120,3 +120,52 @@ def min_max_update(qsv: qtyping.QSV, new_qsv: qtyping.QSV) -> qtyping.QSV:
   updated_qsv["min"] = np.minimum(qsv["min"], new_qsv["min"])
   updated_qsv["max"] = np.maximum(qsv["max"], new_qsv["max"])
   return updated_qsv
+
+
+def _oscar_merge_mu2(qsv1: qtyping.QSV, qsv2: qtyping.QSV) -> tuple[Any, int]:
+  """Merges mu2 and num_samples from qsv1 and qsv2 for OSCAR.
+
+  Args:
+    qsv1: The first quantization state variable dict.
+    qsv2: The second quantization state variable dict.
+
+  Returns:
+    A tuple of (merged_mu2, total_samples), where merged_mu2 is the weighted
+    average of the second moment vectors and total_samples is the sum of sample
+    counts from both QSV dicts.
+  """
+  if "mu2" not in qsv1 and "mu2" not in qsv2:
+    return None, 0
+  if "mu2" not in qsv1:
+    return qsv2.get("mu2"), qsv2.get("num_samples", 0)
+  if "mu2" not in qsv2:
+    return qsv1.get("mu2"), qsv1.get("num_samples", 0)
+
+  curr_avg_mu2 = qsv1["mu2"]
+  new_avg_mu2 = qsv2["mu2"]
+  curr_samples = qsv1.get("num_samples", 0)
+  new_samples = qsv2.get("num_samples", 0)
+  total_samples = curr_samples + new_samples
+
+  if total_samples == 0:
+    return new_avg_mu2, 0
+
+  merged_mu2 = (
+      curr_avg_mu2 * curr_samples + new_avg_mu2 * new_samples
+  ) / total_samples
+
+  return merged_mu2, total_samples
+
+
+def oscar_and_moving_average_update(
+    qsv: qtyping.QSV, new_qsv: qtyping.QSV
+) -> qtyping.QSV:
+  """Update the QSV with OSCAR logic and moving average logic."""
+  if not qsv:
+    return new_qsv
+  updated_qsv = moving_average_update(qsv, new_qsv)
+
+  merged_mu2, total_samples = _oscar_merge_mu2(qsv, new_qsv)
+  updated_qsv["mu2"] = merged_mu2
+  updated_qsv["num_samples"] = total_samples
+  return updated_qsv

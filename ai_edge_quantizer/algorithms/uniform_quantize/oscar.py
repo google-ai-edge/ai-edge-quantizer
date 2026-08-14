@@ -37,15 +37,20 @@ single op keeps the layout, the fold rules in the conditioner, and the test
 surface small.
 """
 
+from collections.abc import MutableMapping, Sequence
 import dataclasses
 from typing import Any
+
 from absl import logging
 import numpy as np
+
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 from ai_edge_quantizer.algorithms.utils import common_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
+
 
 ALGORITHM_KEY = "OSCAR"
 _TFLOpName = qtyping.TFLOperationName
@@ -172,6 +177,60 @@ def _check_blockwise_validity(
         f"Block size {block_size} must divide the reduction dimension "
         f"{reduction_dim} of {op_name} weights with shape {tensor_shape}."
     )
+
+
+def calibrate(
+    tfl_op: qtyping.OperatorT,
+    graph_info: qtyping.GraphInfo,
+    tensor_content_map: MutableMapping[str, np.ndarray],
+    inputs_to_ignore: Sequence[int] | None = None,
+    outputs_to_ignore: Sequence[int] | None = None,
+    valid_range: tuple[float, float] = (-3e38, 3e38),
+) -> dict[str, qtyping.QSV]:
+  """Collects min/max plus per-channel activation second moments (mu2).
+
+  Mirrors gptq.calibrate, storing only the Hessian diagonal:
+  mu2 = mean(x*x) over all rows, per trailing-axis channel.
+
+  Args:
+    tfl_op: The tfl operation.
+    graph_info: Graph information needed to perform quantization for the op.
+    tensor_content_map: A map of tensor name to tensor content.
+    inputs_to_ignore: Input tensor indices to ignore.
+    outputs_to_ignore: Output tensor indices to ignore.
+    valid_range: The valid range for tensor content for min/max collection.
+
+  Returns:
+    A dictionary mapping tensor names to the collected QSVs.
+  """
+  op_qsvs = {}
+  min_val, max_val = valid_range
+
+  tensor_ids = common_quantize.get_tensor_indices_requiring_calibration(
+      tfl_op, graph_info, inputs_to_ignore, outputs_to_ignore
+  )
+  for tensor_idx in tensor_ids:
+    result = common_quantize.collect_activation_tensor_statistics(
+        tensor_idx,
+        graph_info,
+        tensor_content_map,
+        valid_float_range_min=min_val,
+        valid_float_range_max=max_val,
+    )
+    if result is None:
+      continue
+
+    tensor_name, tensor_content, tensor_qsvs = result
+
+    # Per-channel second moment over the trailing (channel) axis. This is
+    # the diagonal of GPTQ's Hessian (up to its factor 2) at O(d) memory.
+    x = np.asarray(tensor_content, np.float64).reshape(
+        [-1, tensor_content.shape[-1]]
+    )
+    tensor_qsvs["mu2"] = np.mean(x * x, axis=0)
+    op_qsvs[tensor_name] = tensor_qsvs
+
+  return op_qsvs
 
 
 def get_clip_bounds(

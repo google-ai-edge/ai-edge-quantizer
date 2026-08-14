@@ -16,12 +16,14 @@
 """Tests for the OSCAR algorithm, including reference equivalence."""
 
 from typing import Any, cast
+from unittest import mock
 
 from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
 
 from ai_edge_quantizer import qtyping
+from ai_edge_quantizer.algorithms.uniform_quantize import common_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import oscar
 from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
 
@@ -257,6 +259,51 @@ class OscarQuantParamsTest(parameterized.TestCase):
     )
     self.assertIsNone(quant_params.quantized_data)
 
+  def test_calibrate(self):
+    tensor_content = np.array([[-1.0, 2.0], [3.0, -4.0]])
+    mock_op = qtyping.OperatorT()
+    mock_info = mock.create_autospec(
+        qtyping.GraphInfo, instance=True, spec_set=True
+    )
+
+    self.enter_context(
+        mock.patch.object(
+            common_quantize,
+            'get_tensor_indices_requiring_calibration',
+            autospec=True,
+            spec_set=True,
+            return_value=[0, 1],
+        )
+    )
+    self.enter_context(
+        mock.patch.object(
+            common_quantize,
+            'collect_activation_tensor_statistics',
+            autospec=True,
+            spec_set=True,
+            side_effect=[
+                (
+                    'tensor_0',
+                    tensor_content,
+                    {'min': np.array([-1.0]), 'max': np.array([3.0])},
+                ),
+                None,  # simulate constant or ignored tensor
+            ],
+        )
+    )
+    result = oscar.calibrate(
+        tfl_op=mock_op,
+        graph_info=mock_info,
+        tensor_content_map={'tensor_0': tensor_content},
+    )
+    self.assertIn('tensor_0', result)
+    self.assertIn('mu2', result['tensor_0'])
+    # mu2 is mean(x*x, axis=0). x = [[-1, 2], [3, -4]]
+    # x*x = [[1, 4], [9, 16]]
+    # mean(x*x, axis=0) = [5.0, 10.0]
+    np.testing.assert_array_equal(result['tensor_0']['mu2'], [5.0, 10.0])
+
 
 if __name__ == '__main__':
   absltest.main()
+
