@@ -29,6 +29,7 @@ from ai_edge_quantizer.algorithms.uniform_quantize import hadamard_rotation
 from ai_edge_quantizer.algorithms.uniform_quantize import mse
 from ai_edge_quantizer.algorithms.uniform_quantize import naive_min_max_quantize
 from ai_edge_quantizer.algorithms.uniform_quantize import octav
+from ai_edge_quantizer.algorithms.uniform_quantize import oscar
 from ai_edge_quantizer.utils import qsv_utils
 
 
@@ -71,6 +72,7 @@ class AlgorithmName(str, enum.Enum):
   DECOMPOSED_HADAMARD_ROTATION = hadamard_rotation.DECOMPOSED_ALGORITHM_KEY
   MSE = mse.ALGORITHM_KEY
   GPTQ = gptq.ALGORITHM_KEY
+  OSCAR = oscar.ALGORITHM_KEY
 
 
 ### MIN/MAX_UNIFORM_QUANT ###
@@ -446,4 +448,33 @@ for (
           gptq.get_tensor_quant_params,
       ),
       update_qsv_func=qsv_utils.gptq_and_moving_average_update,  # pyrefly: ignore[bad-argument-type]
+  )
+
+# Register the OSCAR algorithm.
+register_op_quant_config_validation_func(
+    AlgorithmName.OSCAR,
+    common_quantize.check_op_quantization_config,
+)
+
+# Register a config check policy for the OSCAR algorithm.
+register_config_check_policy_func(
+    AlgorithmName.OSCAR,
+    default_policy.DEFAULT_CONFIG_CHECK_POLICY,
+)
+
+# Register specialized OSCAR materialize functions.
+_OSCAR_OP_NAME_MATERIALIZE_FUNC_DICT = immutabledict({
+    _TFLOpName.FULLY_CONNECTED: oscar.materialize_fully_connected,
+})
+for (
+    op_name,
+    materialize_func,
+) in _OSCAR_OP_NAME_MATERIALIZE_FUNC_DICT.items():
+  register_quantized_op(
+      AlgorithmName.OSCAR,
+      op_name,
+      naive_min_max_quantize.init_qsvs,
+      calibration_func=oscar.calibrate,  # pyrefly: ignore[bad-argument-type]
+      materialize_func=materialize_func,  # pyrefly: ignore[bad-argument-type]
+      update_qsv_func=qsv_utils.oscar_and_moving_average_update,  # pyrefly: ignore[bad-argument-type]
   )
