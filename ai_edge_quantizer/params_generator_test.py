@@ -715,7 +715,7 @@ class ParamsGeneratorTest(parameterized.TestCase):
     )
     model = tfl_flatbuffer_utils.read_model(model_path)
     pg = params_generator.ParamsGenerator(model)
-    
+
     sig1_fc1_regex = 'BatchMatMulV3;'
     sig1_fc2_regex = 'PartitionedCall:0;'
     recipe = []
@@ -1141,6 +1141,79 @@ class ParamsGeneratorTest(parameterized.TestCase):
             len(quantization_params.scale),
             len(quantization_params.zero_point),
         )
+
+  def test_generate_params_unsupported_custom_op_marked_no_quantize(self):
+    model_path = str(
+        pathlib.Path(TEST_DATA_PREFIX_PATH)
+        / 'tests/models/single_moe_multiaxis.tflite'
+    )
+    model = tfl_flatbuffer_utils.read_model(model_path)
+
+    # Add an unsupported custom opcode and operator to the model.
+    unsupported_opcode = qtyping.OperatorCodeT()
+    unsupported_opcode.builtinCode = qtyping.BuiltinOperator.CUSTOM
+    unsupported_opcode.customCode = 'unsupported_custom_op'
+    model.operatorCodes.append(unsupported_opcode)
+
+    dummy_in = qtyping.TensorT()
+    dummy_in.name = b'unsupported_in'
+    dummy_in.type = qtyping.TensorType.FLOAT32
+    dummy_in.shape = [1, 4]
+    model.subgraphs[0].tensors.append(dummy_in)
+    dummy_in_idx = len(model.subgraphs[0].tensors) - 1
+
+    dummy_out = qtyping.TensorT()
+    dummy_out.name = b'unsupported_out'
+    dummy_out.type = qtyping.TensorType.FLOAT32
+    dummy_out.shape = [1, 4]
+    model.subgraphs[0].tensors.append(dummy_out)
+    dummy_out_idx = len(model.subgraphs[0].tensors) - 1
+
+    dummy_op = qtyping.OperatorT()
+    dummy_op.opcodeIndex = len(model.operatorCodes) - 1
+    dummy_op.inputs = [dummy_in_idx]
+    dummy_op.outputs = [dummy_out_idx]
+    model.subgraphs[0].operators.append(dummy_op)
+
+    # Configure recipe to match CUSTOM_OP with multi-axis quantization.
+    self._recipe_manager.add_quantization_config(
+        regex='.*',
+        operation_name=qtyping.TFLOperationName.CUSTOM_OP,
+        op_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=qtyping.TensorQuantizationConfig(
+                num_bits=8,
+                symmetric=True,
+                dtype=qtyping.TensorDataType.INT,
+                granularity=qtyping.QuantGranularity.CHANNELWISE,
+                quantized_dimensions=[0, 1],
+            ),
+            compute_precision=qtyping.ComputePrecision.INTEGER,
+        ),
+    )
+
+    pg = params_generator.ParamsGenerator(model)
+    quant_params = pg.generate_quantization_parameters(self._recipe_manager)
+
+    # Unsupported custom op tensors are marked to be non-quantized.
+    with self.subTest('unsupported_custom_op'):
+      self.assertEqual(
+          quant_params['unsupported_in'].consumers[0].transformations,
+          [_QuantTransformation.NO_QUANTIZE],
+      )
+      self.assertEqual(
+          quant_params['unsupported_out'].producer.transformations,
+          [_QuantTransformation.NO_QUANTIZE],
+      )
+
+    # Supported MoE custom op weight tensor is marked for quantization.
+    moe_op = model.subgraphs[0].operators[0]
+    gate_weight_tensor = model.subgraphs[0].tensors[moe_op.inputs[3]]
+    gate_weight_name = tfl_flatbuffer_utils.get_tensor_name(gate_weight_tensor)
+    with self.subTest('supported_custom_op'):
+      self.assertEqual(
+          quant_params[gate_weight_name].consumers[0].transformations,
+          [_QuantTransformation.QUANTIZE_TENSOR],
+      )
 
 
 class ParamsGeneratorAlreadyQuantizedModelTest(absltest.TestCase):

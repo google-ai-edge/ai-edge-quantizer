@@ -320,5 +320,88 @@ class ModelModifierTestWithSignature(BaseModelModifierTest):
     self.assertIsNotNone(updated_model)
 
 
+class ModelModifierTestMoe(BaseModelModifierTest):
+
+  _model_path = str(
+      pathlib.Path(TEST_DATA_PREFIX_PATH)
+      / 'tests/models/single_moe_multiaxis.tflite'
+  )
+  _MOE_SUBGRAPH_INDEX = 0
+  _MOE_OP_INDEX = 0
+
+  def _set_multi_axis_quantization(
+      self,
+      tensor_idx: int,
+      scale_tensor_idx: int,
+  ) -> None:
+    """Configures a tensor as INT8 with MultiAxisQuantization scale details."""
+    tensor = self._model.subgraphs[self._MOE_SUBGRAPH_INDEX].tensors[
+        tensor_idx
+    ]
+    tensor.type = qtyping.TensorType.INT8
+    tensor.quantization = flatbuffer_utils.QuantizationParametersT()
+    tensor.quantization.detailsType = (
+        qtyping.QuantizationDetails.MultiAxisQuantization
+    )
+    multi_axis = qtyping.MultiAxisQuantizationT()
+    multi_axis.scales = scale_tensor_idx
+    tensor.quantization.details = multi_axis
+
+  def test_update_moe_custom_options(self):
+    subgraph = self._model.subgraphs[self._MOE_SUBGRAPH_INDEX]
+    op = subgraph.operators[self._MOE_OP_INDEX]
+    # Mark weights as INT8 with MultiAxisQuantization scale details.
+    (
+        src_idx,
+        top_weights_idx,
+        top_indices_idx,
+        gate_weight_idx,
+        ff1_weight_idx,
+        linear_weight_idx,
+        per_expert_scale_idx,
+    ) = op.inputs
+    gate_scale_idx, ff1_scale_idx, linear_scale_idx = (100, 101, 102)
+    self._set_multi_axis_quantization(gate_weight_idx, gate_scale_idx)
+    self._set_multi_axis_quantization(ff1_weight_idx, ff1_scale_idx)
+    self._set_multi_axis_quantization(linear_weight_idx, linear_scale_idx)
+
+    updated_model = self._model_modifier._update_moe_custom_options(self._model)
+    updated_op = updated_model.subgraphs[self._MOE_SUBGRAPH_INDEX].operators[0]
+
+    # Verify customOptions changed to int8.
+    self.assertIn(b'int8', bytes(updated_op.customOptions))
+    self.assertNotIn(b'fp32', bytes(updated_op.customOptions))
+
+    # Verify inputs expanded from 7 to 10 with scale tensor indices inserted.
+    self.assertEqual(
+        updated_op.inputs,
+        [
+            src_idx,
+            top_weights_idx,
+            top_indices_idx,
+            gate_weight_idx,
+            gate_scale_idx,
+            ff1_weight_idx,
+            ff1_scale_idx,
+            linear_weight_idx,
+            linear_scale_idx,
+            per_expert_scale_idx,
+        ],
+    )
+
+  def test_update_moe_custom_options_missing_multi_axis_raises_error(self):
+    # Mark gate weight as INT8 without MultiAxisQuantization scale details.
+    subgraph = self._model.subgraphs[self._MOE_SUBGRAPH_INDEX]
+    gate_weight_idx = subgraph.operators[self._MOE_OP_INDEX].inputs[3]
+    subgraph.tensors[gate_weight_idx].type = qtyping.TensorType.INT8
+
+    with self.assertRaisesRegex(
+        ValueError,
+        f"Weight tensor {gate_weight_idx} is missing MultiAxisQuantization"
+        r" quantization details\.",
+    ):
+      self._model_modifier._update_moe_custom_options(self._model)
+
+
 if __name__ == '__main__':
   absltest.main()
