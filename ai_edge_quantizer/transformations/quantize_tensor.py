@@ -147,6 +147,41 @@ def _perform_blockwise_quantization(
   return flatbuffer_quantization
 
 
+def _perform_multi_axis_quantization(
+    transformation_input: transformation_utils.TransformationInput,
+) -> qtyping.QuantizationParametersT:
+  """Perform multi-axis quantization and fill the quantization parameters."""
+  assert isinstance(
+      transformation_input.quant_params, qtyping.UniformQuantParams
+  )
+  assert transformation_input.quant_params.quantized_dimensions is not None
+  flatbuffer_quantization = qtyping.QuantizationParametersT()
+  flatbuffer_quantization.detailsType = (
+      qtyping.QuantizationDetails.MultiAxisQuantization
+  )
+  tensor = transformation_input.subgraph.tensors[transformation_input.tensor_id]
+
+  multi_axis_details = qtyping.MultiAxisQuantizationT()
+
+  scale_tensor_id = transformation_utils.add_new_constant_tensor(
+      tensor.name + b"_scales",
+      transformation_input.quant_params.scale.astype(np.float32),
+      qtyping.TensorType.FLOAT32,
+      transformation_input.subgraph,
+      transformation_input.model,
+  )
+  multi_axis_details.scales = scale_tensor_id
+  # Multi-axis quantization only supports symmetric quantization where zero
+  # points are 0, so this points to -1 (no separate zero-point tensor).
+  multi_axis_details.zeroPoints = -1
+  multi_axis_details.blockSize = transformation_input.quant_params.block_size
+  multi_axis_details.quantizedDimensions = (
+      transformation_input.quant_params.quantized_dimensions
+  )
+  flatbuffer_quantization.details = multi_axis_details
+  return flatbuffer_quantization
+
+
 def quantize_tensor(
     transformation_input: transformation_utils.TransformationInput,
 ) -> qtyping.TransformationInfo:
@@ -170,8 +205,8 @@ def quantize_tensor(
   # is not provided.
   if (
       buffer_id
-      and (quant_params := transformation_input.quant_params).quantized_data
-      is not None
+      and (quant_params := transformation_input.quant_params) is not None
+      and quant_params.quantized_data is not None
   ):
     if (
         origin := transformation_input.buffer_origin.get(buffer_id)
@@ -200,7 +235,11 @@ def quantize_tensor(
       )
 
   if isinstance(transformation_input.quant_params, qtyping.UniformQuantParams):
-    if transformation_input.quant_params.block_size == 0:
+    if transformation_input.quant_params.quantized_dimensions is not None:
+      flatbuffer_quantization = _perform_multi_axis_quantization(
+          transformation_input
+      )
+    elif transformation_input.quant_params.block_size == 0:
       flatbuffer_quantization = _perform_channelwise_quantization(
           transformation_input
       )
