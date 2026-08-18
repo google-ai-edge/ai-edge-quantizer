@@ -195,31 +195,31 @@ useful:
 
 The table below outlines the allowed configurations for available recipes.
 
-|     |     |     |     |     |     |    |    |    |    |
-| --- | --- | --- | --- | --- | --- |--- |--- |--- |--- |
-| **Config** | | DYNAMIC_WI8_AFP32 | DYNAMIC_WI4_AFP32 | STATIC_WI8_AI8 | STATIC_WI8_AI16 | STATIC_WI4_AI8 | STATIC_WI4_AI16 | WEIGHTONLY_WI8_AFP32 | WEIGHTONLY_WI4_AFP32 |
-|activation| num\_bits | None | None | 8 | 16 | 8 | 16 | None | None |
-| | symmetric |None | None | [TRUE, FALSE] | TRUE | [TRUE, FALSE] | TRUE | None | None |
-| | granularity |None | None | TENSORWISE | TENSORWISE | TENSORWISE | TENSORWISE | None | None |
-| | dtype| None | None |INT | INT | INT | INT | None | None |
-| weight | num\_bits | 8 | 4 | 8 | 8 | 4 | 4 | 8 | 4 |
-| | symmetric | TRUE | TRUE | TRUE | TRUE | TRUE | TRUE | [TRUE, FALSE] | [TRUE, FALSE] |
-| | granularity | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] |
-| | dtype | INT | INT | INT | INT | INT | INT | INT | INT |
-| explicit\_dequantize | | FALSE | FALSE | FALSE | FALSE | FALSE | FALSE | TRUE | TRUE |
-| compute\_precision || INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | FLOAT | FLOAT |
+|     |     |     |     |     |     |     |     |     |     |    |    |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |--- |--- |
+| **Config** | | DYNAMIC_WI8_AFP32 | DYNAMIC_WI4_AFP32 | DYNAMIC_WI4_AFP32_BLOCKWISE | DYNAMIC_WI2_AFP32_BLOCKWISE | STATIC_WI8_AI8 | STATIC_WI8_AI16 | STATIC_WI4_AI8 | STATIC_WI4_AI16 | WEIGHTONLY_WI8_AFP32 | WEIGHTONLY_WI4_AFP32 |
+|activation| num\_bits | None | None | None | None | 8 | 16 | 8 | 16 | None | None |
+| | symmetric |None | None | None | None | [TRUE, FALSE] | TRUE | [TRUE, FALSE] | TRUE | None | None |
+| | granularity |None | None | None | None | TENSORWISE | TENSORWISE | TENSORWISE | TENSORWISE | None | None |
+| | dtype| None | None | None | None | INT | INT | INT | INT | None | None |
+| weight | num\_bits | 8 | 4 | 4 | 2 | 8 | 8 | 4 | 4 | 8 | 4 |
+| | symmetric | TRUE | TRUE | TRUE | TRUE | TRUE | TRUE | TRUE | TRUE | [TRUE, FALSE] | [TRUE, FALSE] |
+| | granularity | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[BLOCKWISE_32, BLOCKWISE_64, BLOCKWISE_128, BLOCKWISE_256\] | \[BLOCKWISE_32, BLOCKWISE_64, BLOCKWISE_128, BLOCKWISE_256\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] | \[CHANNELWISE, TENSORWISE\] |
+| | dtype | INT | INT | INT | INT | INT | INT | INT | INT | INT | INT |
+| explicit\_dequantize | | FALSE | FALSE | FALSE | FALSE | FALSE | FALSE | FALSE | FALSE | TRUE | TRUE |
+| compute\_precision || INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | FLOAT | FLOAT |
 
 **Quantization Support for Operators with Weights**
 
-|     |     |     |     |     |     |    |    |    |
-| --- | --- | --- | --- | --- | --- |--- |--- |--- |
-| **Config** | DYNAMIC_WI8_AFP32 | DYNAMIC_WI4_AFP32 | STATIC_WI8_AI8 | STATIC_WI8_AI16 | STATIC_WI4_AI8 | STATIC_WI4_AI16 | WEIGHTONLY_WI8_AFP32 | WEIGHTONLY_WI4_AFP32 |
-|BATCH_MATMUL     |<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|    |     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|
-|CONV_2D          |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|
-|CONV_2D_TRANSPOSE|<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|    |     |<div align="center"> &check; </div>|    |
-|DEPTHWISE_CONV_2D|<div align="center"> &check; </div>|     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|    |     |<div align="center"> &check; </div>|    |
-|EMBEDDING_LOOKUP |<div align="center"> &check; </div>|<div align="center"> &check; </div>|     |     |    |     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|
-|FULLY_CONNECTED  |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|
+|     |     |     |     |     |     |     |     |     |    |    |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |--- |--- |
+| **Config** | DYNAMIC_WI8_AFP32 | DYNAMIC_WI4_AFP32 | DYNAMIC_WI4_AFP32_BLOCKWISE | DYNAMIC_WI2_AFP32_BLOCKWISE | STATIC_WI8_AI8 | STATIC_WI8_AI16 | STATIC_WI4_AI8 | STATIC_WI4_AI16 | WEIGHTONLY_WI8_AFP32 | WEIGHTONLY_WI4_AFP32 |
+|BATCH_MATMUL     |<div align="center"> &check; </div>|     |     |     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|    |     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|
+|CONV_2D          |<div align="center"> &check; </div>|<div align="center"> &check; </div>|     |     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|
+|CONV_2D_TRANSPOSE|<div align="center"> &check; </div>|     |     |     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|    |     |<div align="center"> &check; </div>|    |
+|DEPTHWISE_CONV_2D|<div align="center"> &check; </div>|     |     |     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|    |     |<div align="center"> &check; </div>|    |
+|EMBEDDING_LOOKUP |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|     |     |     |    |     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|
+|FULLY_CONNECTED  |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|
 
 **Quantization Support for Activations-Only Operators**
 
