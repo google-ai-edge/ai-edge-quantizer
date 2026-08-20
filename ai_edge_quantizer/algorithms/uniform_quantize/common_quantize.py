@@ -88,6 +88,7 @@ def check_op_quantization_config(
         op_name, op_quant_config, config_check_policy
     )
   common_utils.check_subchannel_config(op_name, op_quant_config)
+  common_utils.check_multi_axis_config(op_name, op_quant_config)
 
 
 def materialize_input(
@@ -1493,3 +1494,21 @@ def get_tensor_indices_requiring_calibration(
       if k not in outputs_to_ignore_set and tid != -1
   ]
   return tensor_ids
+
+
+def materialize_moe(
+    get_tensor_quant_params_fn: qtyping.GetTensorQuantParamsFuncSignature,
+    op_info: qtyping.OpInfo,
+    graph_info: qtyping.GraphInfo,
+    tensor_name_to_qsv: dict[str, Any],
+    tensor_quant_params_cache: _TensorQuantParamsCache,
+) -> list[_TensorTransformationParams]:
+  """Materialize tensors in the MoE CustomOp."""
+  return common_utils.materialize_standard_op(
+      op_info,
+      graph_info,
+      tensor_name_to_qsv,
+      get_tensor_quant_params_fn,
+      tensor_quant_params_cache=tensor_quant_params_cache,
+      inputs_to_ignore=[1, 2, 6],
+  )

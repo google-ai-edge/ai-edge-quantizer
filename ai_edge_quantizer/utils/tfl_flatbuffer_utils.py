@@ -79,6 +79,7 @@ TFL_OP_NAME_TO_CODE = immutabledict.immutabledict({
     _TFLOpName.MAXIMUM: qtyping.BuiltinOperator.MAXIMUM,
     _TFLOpName.PADV2: qtyping.BuiltinOperator.PADV2,
     _TFLOpName.REDUCE_MIN: qtyping.BuiltinOperator.REDUCE_MIN,
+    _TFLOpName.CUSTOM_OP: qtyping.BuiltinOperator.CUSTOM,
     _TFLOpName.EQUAL: qtyping.BuiltinOperator.EQUAL,
     _TFLOpName.NOT_EQUAL: qtyping.BuiltinOperator.NOT_EQUAL,
     _TFLOpName.MIRROR_PAD: qtyping.BuiltinOperator.MIRROR_PAD,
@@ -310,7 +311,10 @@ def is_float_model(flatbuffer_model: qtyping.ModelT) -> bool:
     for tensor in subgraph.tensors:
       if tensor.quantization is None:
         continue
-      if tensor.quantization.scale is not None:
+      if (
+          tensor.quantization.scale is not None
+          or tensor.quantization.detailsType != qtyping.QuantizationDetails.NONE
+      ):
         return False
   return True
 

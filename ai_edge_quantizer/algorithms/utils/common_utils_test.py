@@ -505,6 +505,40 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
             op_name, op_quant_config, _DEFAULT_CONFIG_CHECK_POLICY
         )
 
+  def test_check_multi_axis_config_custom_op_succeeds(self):
+    op_quant_config = qtyping.OpQuantizationConfig(
+        weight_tensor_config=qtyping.TensorQuantizationConfig(
+            num_bits=8,
+            symmetric=True,
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
+            quantized_dimensions=(0, 1),
+        ),
+        compute_precision=qtyping.ComputePrecision.INTEGER,
+        explicit_dequantize=False,
+    )
+    # Should not raise any exception.
+    common_utils.check_multi_axis_config(
+        qtyping.TFLOperationName.CUSTOM_OP, op_quant_config
+    )
+
+  def test_check_multi_axis_config_unsupported_op_raises_error(self):
+    op_quant_config = qtyping.OpQuantizationConfig(
+        weight_tensor_config=qtyping.TensorQuantizationConfig(
+            num_bits=8,
+            symmetric=True,
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
+            quantized_dimensions=(0, 1),
+        ),
+        compute_precision=qtyping.ComputePrecision.INTEGER,
+        explicit_dequantize=False,
+    )
+    with self.assertRaisesRegex(
+        ValueError, "only supported for CUSTOM_OP"
+    ):
+      common_utils.check_multi_axis_config(
+          qtyping.TFLOperationName.FULLY_CONNECTED, op_quant_config
+      )
+
   def test_materialize_op_with_output_activation_constraint_fails_for_multiple_output_op(
       self,
   ):
@@ -662,6 +696,54 @@ class CommonUtilsTest(parameterized.TestCase):
       common_utils.reshape_to_blocks(
           tensor, quantized_dimension=1, block_size=3
       )
+
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="none_dimension",
+          quantized_dim=None,
+          expected=None,
+      ),
+      dict(
+          testcase_name="single_dimension",
+          quantized_dim=1,
+          expected=(0, 2, 3),
+      ),
+      dict(
+          testcase_name="multi_axis_dimensions",
+          quantized_dim=(1, 2),
+          expected=(0, 3),
+      ),
+  )
+  def test_get_reduce_dims(self, quantized_dim, expected):
+    tensor_shape = (2, 3, 4, 5)
+    self.assertEqual(
+        common_utils.get_reduce_dims(quantized_dim, tensor_shape), expected
+    )
+
+  def test_get_weight_quantized_dim_multi_axis(self):
+    """Tests that configured multi-axis dimensions are returned for CUSTOM_OP."""
+    expected_quantized_dimensions = (0, 1)
+    weight_config = _TensorQuantConfig(
+        num_bits=8,
+        granularity=qtyping.QuantGranularity.CHANNELWISE,
+        quantized_dimensions=expected_quantized_dimensions,
+    )
+    op_info = qtyping.OpInfo(
+        op=qtyping.OperatorT(),
+        op_name=_TFLOpName.CUSTOM_OP,
+        subgraph_op_index=1,
+        op_quant_config=_OpQuantConfig(
+            weight_tensor_config=weight_config,
+        ),
+    )
+    self.assertEqual(
+        common_utils.get_weight_quantized_dim(
+            op_info=op_info,
+            tensor_data=np.array([]),
+            granularity=qtyping.QuantGranularity.CHANNELWISE,
+        ),
+        expected_quantized_dimensions,
+    )
 
 
 if __name__ == "__main__":

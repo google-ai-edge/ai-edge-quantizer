@@ -20,7 +20,7 @@ from collections.abc import MutableMapping
 import copy
 import dataclasses
 import enum
-from typing import Any, Callable, Mapping, Optional, TypeAlias, Union
+from typing import Any, Callable, Mapping, Optional, Sequence, TypeAlias, Union
 
 import immutabledict
 import numpy as np
@@ -37,6 +37,8 @@ ModelQuantizationRecipe = list[dict[str, Any]]
 # Types imported from `schema_py_generated`.
 ActivationFunctionType = flatbuffer_utils.ActivationFunctionType
 BlockwiseQuantizationT = flatbuffer_utils.BlockwiseQuantizationT
+MultiAxisQuantizationT = flatbuffer_utils.MultiAxisQuantizationT
+MultiAxisQuantization = flatbuffer_utils.MultiAxisQuantization
 Buffer = flatbuffer_utils.Buffer
 BufferT: TypeAlias = (
     flatbuffer_utils.BufferT
@@ -222,6 +224,8 @@ class UniformQuantParams:
       details can be found in algorithms/uniform_quantize/hadamard_rotation.py.
     custom_algorithm_param: Custom algorithm-specific parameters (e.g. for
       experimental algorithms like OSCAR).
+    quantized_dimensions: The dimensions to quantize for multi-axis
+      quantization.
   """
 
   class HadamardRotationParams:
@@ -259,6 +263,7 @@ class UniformQuantParams:
   block_size: int = 0
   hadamard: Optional[HadamardRotationParams] = None
   custom_algorithm_param: Optional[dict[str, Any]] = None
+  quantized_dimensions: Sequence[int] | None = None
 
   @classmethod
   def from_tfl_tensor_details(cls, tensor_detail) -> 'UniformQuantParams':
@@ -392,6 +397,8 @@ class TensorQuantizationConfig:
     granularity: Whether to perform per-tensor, per-channel or per-block
       quantization.
     dtype: The data type of the tensor.
+    quantized_dimensions: The dimensions to quantize for multi-axis
+      quantization.
     algorithm_key: The algorithm key to use for quantization.
     algorithm_params: Additional parameters for the quantization algorithm.
   """
@@ -400,11 +407,18 @@ class TensorQuantizationConfig:
   symmetric: bool = True
   granularity: QuantGranularity = QuantGranularity.TENSORWISE
   dtype: TensorDataType = TensorDataType.INT
+  quantized_dimensions: Sequence[int] | None = None
   algorithm_params: Mapping[str, Any] = dataclasses.field(
       default_factory=immutabledict.immutabledict
   )
 
   def __post_init__(self):
+    if self.quantized_dimensions is not None and not isinstance(
+        self.quantized_dimensions, tuple
+    ):
+      object.__setattr__(
+          self, 'quantized_dimensions', tuple(self.quantized_dimensions)
+      )
     if not isinstance(self.algorithm_params, immutabledict.immutabledict):
       object.__setattr__(
           self,
