@@ -1,8 +1,34 @@
 # AI Edge Quantizer
 
-A quantizer for advanced developers to quantize converted LiteRT models. It
-aims to facilitate advanced users to strive for optimal performance on resource
-demanding models (e.g., GenAI models).
+**AI Edge Quantizer (AEQ)** is a flexible, high-performance post-training
+quantization (PTQ) toolkit designed for
+[LiteRT](https://ai.google.dev/edge/litert) (formerly TensorFlow Lite) and
+[LiteRT-LM](https://ai.google.dev/edge/litert-lm). It enables developers
+to optimize resource-intensive models (vision models, LLMs, and GenAI
+pipelines) for edge deployment on mobile CPUs, GPUs, and NPUs.
+
+## Key Features
+
+* **Selective Quantization**: Target specific operations or layer subgraphs
+  using regex scopes (e.g., FullyConnected Ops in FeedForward layers and leaving
+  all other Ops as float).
+
+* **Mixed-Precision Quantization**: Mix precision schemes across layers (e.g.,
+  INT4 weights for FullyConnected in FeedForward layers but INT8 weights in
+  Attention layers).
+
+* **Advanced Quantization Algorithms**:
+  * **Blockwise Quantization** (Block sizes: 32, 64, 128, 256)
+  * **Hadamard Transformations** to suppress outlier activations and preserve
+    accuracy for INT4/INT2 schemes
+  * **GPTQ & OCTAV** optimization algorithms
+
+* **Full Integer Quantization (Static Range, SRQ)**: INT8/INT16 activations
+with INT8/INT4 weights, required for mobile hardware.
+
+* **Integrated Numerical Validation**: Built-in tensor-level distortion
+  analysis (MSE, SNR, Cosine Similarity, KL Divergence) compatible with
+  [Model Explorer](https://ai.google.dev/edge/model-explorer).
 
 ## Build Status
 
@@ -18,7 +44,7 @@ Nightly Colab      | [![Nightly Colab Status Badge](https://github.com/google-ai
 
  * Python versions: 3.10, 3.11, 3.12, 3.13
  * Operating system: Linux, MacOS
- * TensorFlow: [![tf-nightly](https://img.shields.io/badge/tf--nightly-latest-blue)](https://pypi.org/project/tf-nightly/)
+ * LiteRT: `ai-edge-litert-nightly`
 
 ### Install
 
@@ -28,49 +54,79 @@ Nightly PyPi package:
 pip install ai-edge-quantizer-nightly
 ```
 
-## API Usage
+## Quick Start
 
 The quantizer requires two inputs:
 
-1. An unquantized source LiteRT model (with FP32 data type in the FlatBuffer
-   format with `.tflite` extension)
+1. An unquantized source LiteRT (FP32 data type in the FlatBuffer
+   format with `.tflite` extension) / LiteRT-LM (with `.litertlm` extension)
+   model
 2. A quantization recipe (details below)
 
-and outputs a quantized LiteRT model that's ready for deployment on edge
-devices.
+and outputs a quantized LiteRT/LiteRT-LM model that's ready for deployment on
+edge devices.
 
-### Basic Usage
+### Command Line (`aeq`)
+Quantize a model directly from your terminal:
 
-In a nutshell, the quantizer works according to the following steps:
+```bash
+# Quantize standard .tflite model
+aeq --model_file="path/to/input.tflite" \
+    --recipe=dynamic_wi8_afp32 \
+    --output_dir="/path/to/output"
 
-1. Instantiate a `Quantizer` class. This is the entry point to the quantizer's
-   functionalities that the user accesses.
-2. Load a desired quantization recipe (details in subsection).
-3. Quantize (and save) the model. This is where most of the quantizer's
-   internal logic works.
+# Quantize a .litertlm LLM container
+aeq --model_file="path/to/gemma.litertlm" \
+    --recipe=gemma4_mixed48 \
+    --output_dir="/path/to/output"
+```
 
+### Python API
 ```python
 from ai_edge_quantizer import quantizer, recipe
 
-qt = quantizer.Quantizer("path/to/input/tflite")
-# Load a ready-to-use recipe (for example dynamic int8 quantization).
+# 1. Initialize quantizer
+qt = quantizer.Quantizer("path/to/model.tflite")
+# 2. Load a ready-to-use recipe (e.g., dynamic int8 weights with float32
+# activations).
 qt.load_quantization_recipe(recipe.dynamic_wi8_afp32())
-qt.quantize().export_model("/path/to/output/tflite")
+# Quantize and export.
+qt.quantize().export_model("path/to/quantized_model.tflite")
 ```
 
 Please see the [getting started colab](colabs/getting_started.ipynb) for the
-simplest quick start guide on those 3 steps, and the [selective quantization colab](colabs/selective_quantization_isnet.ipynb) with more details on advanced features.
+simplest quick start guide on those steps, and the
+[selective quantization colab](colabs/selective_quantization_isnet.ipynb) for
+more details on advanced features.
 
-#### LiteRT Model
+## Hardware & Recipe Decision Guide
 
-Please refer to the [LiteRT documentation](https://ai.google.dev/edge/litert) for ways to generate LiteRT models from Jax, PyTorch and TensorFlow. The input source model should be an FP32 (unquantized) model in the FlatBuffer format with `.tflite` extension.
+Generally, we recommend dynamic quantization for CPU/GPU deployment and static
+quantization for NPU deployment:
 
-#### Quantization Recipe
+| Target Hardware | Recommended Recipe | Precision | Activation Calibration? |
+| :--- | :--- | :---: | :---: |
+| **CPU/GPU** | `dynamic_wi8_afp32` | Int8 Weight / FP32 Act | **No** |
+| **NPU** | `static_wi8_ai8` / `static_wi8_ai16` | Int8 Weight / Int8 or Int16 Act | **Yes** (Requires calibration data, supported only via Python API) |
 
-The user needs to specify a quantization recipe using AI Edge Quantizer's API to
-apply to the source model. The quantization recipe encodes all information on
-how a model is to be quantized, such as number of bits, data type, symmetry,
-scope name, etc.
+## Quantization Concepts & Methods
+
+### LiteRT Model
+
+Please refer to the [LiteRT documentation](https://ai.google.dev/edge/litert)
+for ways to generate LiteRT models from Jax, PyTorch and TensorFlow. The input
+source model should be an FP32 (unquantized) model in the FlatBuffer format with
+`.tflite` extension.
+
+### LiteRT-LM Model
+
+Please refer to the
+[LiteRT-LM documentation](https://ai.google.dev/edge/litert-lm) for details.
+
+### Quantization Recipe
+
+A quantization recipe encodes all information on how a model is to be
+quantized, such as number of bits, data type, symmetry, scope name, etc.
 
 Essentially, a quantization recipe is defined as a collection of commands of the
 following type:
@@ -83,7 +139,13 @@ For example:
 _\"**Uniformly quantize** the **FullyConnected op** under scope **'dense1/'**
 with **INT8 symmetric with Dynamic Quantization**"._
 
-All the unspecified ops will be kept as FP32 (unquantized). The scope of an operator in TFLite is defined as the output tensor name of the op, which preserves the hierarchical model information from the source model (e.g., scope in TF). The best way to obtain scope name is by visualizing the model with [Model Explorer](https://ai.google.dev/edge/model-explorer).
+All the unspecified ops will be kept as FP32 (unquantized). The scope of an
+operator in TFLite is defined as the output tensor name of the op, which
+preserves the hierarchical model information from the source model (e.g., scope
+in TF). The best way to obtain scope name is by visualizing the model with
+[Model Explorer](https://ai.google.dev/edge/model-explorer).
+
+### Quantization Methods
 
 Currently, there are three ways to quantize an operator:
 
@@ -116,18 +178,143 @@ Currently, there are three ways to quantize an operator:
     parameters (derived from calibration) on runtime tensors can compromise
     quality.
 
-Generally, we recommend dynamic quantization for CPU/GPU deployment and static
-quantization for NPU deployment.
+We include commonly used recipes in [recipe.py](ai_edge_quantizer/recipe.py).
+This is demonstrated in the
+[getting started colab](colabs/getting_started.ipynb) example. Advanced users can
+build their own recipe through the quantizer API.
 
-We include commonly used recipes in [recipe.py](ai_edge_quantizer/recipe.py). This is demonstrated in the [getting started colab](colabs/getting_started.ipynb) example. Advanced users can build their own recipe through the quantizer API.
+## Quantization Workflow
 
-#### Model Validation & Accuracy Benchmarking
+Quantizing a model with AI Edge Quantizer follows a structured 7-step lifecycle:
+
+1. Load Model
+2. Load / Configure Recipe
+3. **[Static recipes only]** Calibrate
+4. Quantize & Export
+5. Validate Accuracy
+6. Visualize
+7. Deploy
+
+**Note on CLI Usage:** The `aeq` command-line tool executes
+**Steps 1, 2, and4** in a single command for recipes that do not require
+calibration (Dynamic Range, Weight-Only):
+
+```bash
+aeq --model_file="path/to/model.tflite" \
+    --recipe=dynamic_wi8_afp32 \
+    --output_dir="/path/to/output"
+```
+
+For Full-Integer Static Quantization requiring representative calibration
+datasets (**Step 3**), use the **Python API**.
+
+Detailed examples on **Steps 1-4** with **Python API** can be found in
+[quantize_toy_model.py](ai_edge_quantizer/examples/mnist/quantize_toy_model.py).
+
+### Step 1: Initialize Quantizer with Source Model
+
+Load an unquantized FP32 `.tflite` model or a `.litertlm` generative model
+bundle:
+
+```python
+from ai_edge_quantizer import quantizer
+
+qt = quantizer.Quantizer("path/to/model.tflite")
+```
+
+### Step 2: Choose & Load a Quantization Recipe
+
+Load a ready-to-use recipe (e.g., static int8 quantization) or custom recipe:
+
+```python
+from ai_edge_quantizer import recipe
+
+qt.load_quantization_recipe(recipe.static_wi8_ai8())
+```
+
+#### Supported Operators and Recipes
+
+Please refer to the [Operator Coverage](#operator-coverage) section for more
+details on supported operators and configurations for each recipe.
+
+#### Advanced Recipes & Customization
+
+There are many ways the user can configure and customize the quantization recipe
+beyond using a template in [recipe.py](ai_edge_quantizer/recipe.py). For example,
+the user can configure the recipe to achieve these features:
+
+* Selective quantization (exclude selected ops from being quantized)
+* Flexible mixed scheme quantization (mixture of different precision, compute
+  precision, scope, op, config, etc)
+* 4-bit weight quantization
+* Advanced algorithms (e.g., Hadamard Rotation, OCTAV)
+
+The [selective quantization colab](colabs/selective_quantization_isnet.ipynb)
+shows some of these more advanced features.
+
+For specifics of the recipe schema, please refer to the `OpQuantizationRecipe`
+in [recipe_manager.py](ai_edge_quantizer/recipe_manager.py).
+
+For advanced usage involving mixed quantization, the following API may be
+useful:
+
+* Use `Quantizer:load_quantization_recipe()` in
+  [quantizer.py](ai_edge_quantizer/quantizer.py) to load a custom recipe.
+* Use `Quantizer:update_quantization_recipe()` in
+  [quantizer.py](ai_edge_quantizer/quantizer.py) to extend or override
+  specific parts of the recipe.
+
+### Step 3: Calibrate with Representative Data (Static Quantization Only)
+
+Static range quantization (e.g., `static_wi8_ai8`, `static_wi8_ai16`) quantizes
+both weights and activations into integers, requiring a calibration phase with
+representative sample data to calculate quantization statistics values (QSVs).
+
+Calibration data is structured as a dictionary mapping signature keys (e.g.,
+`'serving_default'`) to lists of input sample dictionaries:
+
+```python
+from ai_edge_quantizer import quantizer, recipe
+import numpy as np
+
+qt = quantizer.Quantizer("path/to/model.tflite")
+qt.load_quantization_recipe(recipe.static_wi8_ai8())
+
+if qt.need_calibration:
+  # Provide representative calibration data matching the model signature inputs.
+  calibration_data = {
+      "serving_default": [
+          {
+              "input_tensor_name": np.random.uniform(
+                  -1.0, 1.0, size=(1, 28, 28, 1)
+              ).astype(np.float32)
+          }
+          for _ in range(256)
+      ]
+  }
+  calibration_result = qt.calibrate(calibration_data)
+  qt.quantize(calibration_result=calibration_result).export_model(
+      "/path/to/output/quantized_model.tflite"
+  )
+```
+
+### Step 4: Quantize & Export the Model
+
+Execute the quantization engine and export the resulting model:
+
+```python
+qt.quantize().export_model("/path/to/output/quantized_model.tflite")
+```
+
+### Step 5: Validate Numerical Accuracy
+
 Quantizing a model inherently introduces numerical noise. After calling
 `qt.quantize()`, you can verify the mathematical distortion between the float
 baseline and the quantized model using the built-in `validate()` method, which
 returns a single `ComparisonResult` object mapping nodes to their error metric
 values. You can print them or automatically save them to Model Explorer JSON
 files:
+
 ```python
 # 1. Default validation (evaluates MSE metric by default)
 comparison_results = qt.validate(test_data=sample_data)
@@ -143,57 +330,39 @@ comparison_results = qt.validate(
         quantizer.ValidationErrorMetric.MSE,
         quantizer.ValidationErrorMetric.SNR,
     ],
-    save_folder='/tmp/'
+    save_folder='/tmp/',
 )
 all_results = comparison_results.get_all_tensor_results()
 for tensor_name, metrics in all_results.items():
-    print(
-        f"Tensor: {tensor_name} "
-        f"- MSE: {metrics.get(quantizer.ValidationErrorMetric.MSE.value, 0.0):.6f} "
-        f"- SNR: {metrics.get(quantizer.ValidationErrorMetric.SNR.value, 0.0):.6f}"
-    )
+  print(
+      f"Tensor: {tensor_name} "
+      f"- MSE: {metrics.get(quantizer.ValidationErrorMetric.MSE.value, 0.0):.6f} "
+      f"- SNR: {metrics.get(quantizer.ValidationErrorMetric.SNR.value, 0.0):.6f}"
+  )
 ```
-More detailed examples can be found in [quantize_toy_model.py](ai_edge_quantizer/examples/mnist/quantize_toy_model.py).
 
-#### Visualizing Models with Model Explorer
-The best way to obtain exact operator scope names and visually compare tensor shapes and quantization scales between baseline float and quantized graphs is using [Model Explorer](https://ai.google.dev/edge/model-explorer).
+### Step 6: Visualize Models with Model Explorer
+
+The best way to obtain exact operator scope names and visually compare tensor
+shapes and quantization scales between baseline float and quantized graphs is
+using [Model Explorer](https://ai.google.dev/edge/model-explorer).
 
 To visualize two exported `.tflite` models side-by-side in your terminal, run:
+
 ```bash
 model_explorer --models \
   "/path/to/baseline_float.tflite,/path/to/quantized_model.tflite"
 ```
 
-#### Deployment
-Please refer to the [LiteRT deployment documentation](https://ai.google.dev/edge/litert/inference) for ways to deploy a quantized LiteRT model.
+### Step 7: Deploy on Edge Hardware
 
-### Advanced Recipes
+Please refer to the
+[LiteRT deployment documentation](https://ai.google.dev/edge/litert/inference)
+for ways to deploy a quantized LiteRT model.
 
-There are many ways the user can configure and customize the quantization recipe beyond using a template in [recipe.py](ai_edge_quantizer/recipe.py). For example, the user can configure the recipe to achieve these features:
+## Operator Coverage
 
-* Selective quantization (exclude selected ops from being quantized)
-* Flexible mixed scheme quantization (mixture of different precision, compute
-  precision, scope, op, config, etc)
-* 4-bit weight quantization
-
-The [selective quantization colab](colabs/selective_quantization_isnet.ipynb)
-shows some of these more advanced features.
-
-For specifics of the recipe schema, please refer to the `OpQuantizationRecipe`
-in [recipe_manager.py].
-
-For advanced usage involving mixed quantization, the following API may be
-useful:
-
-* Use `Quantizer:load_quantization_recipe()` in
-  [quantizer.py](ai_edge_quantizer/quantizer.py) to load a custom recipe.
-* Use `Quantizer:update_quantization_recipe()` in
-  [quantizer.py](ai_edge_quantizer/quantizer.py) to extend or override
-  specific parts of the recipe.
-
-### Operator coverage
-
-The table below outlines the allowed configurations for available recipes.
+### Allowed Configurations for Available recipes
 
 |     |     |     |     |     |     |     |     |     |     |    |    |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |--- |--- |
@@ -209,7 +378,7 @@ The table below outlines the allowed configurations for available recipes.
 | explicit\_dequantize | | FALSE | FALSE | FALSE | FALSE | FALSE | FALSE | FALSE | FALSE | TRUE | TRUE |
 | compute\_precision || INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | INTEGER | FLOAT | FLOAT |
 
-**Quantization Support for Operators with Weights**
+### Quantization Support for Operators with Weights
 
 |     |     |     |     |     |     |     |     |     |    |    |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |--- |--- |
@@ -221,7 +390,7 @@ The table below outlines the allowed configurations for available recipes.
 |EMBEDDING_LOOKUP |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|     |     |     |    |     |<div align="center"> &check; </div>|<div align="center"> &check; </div>|
 |FULLY_CONNECTED  |<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|<div align="center"> &check; </div>|
 
-**Quantization Support for Activations-Only Operators**
+### Quantization Support for Activations-Only Operators
 
 |     |     |     |
 | --- | --- | --- |
