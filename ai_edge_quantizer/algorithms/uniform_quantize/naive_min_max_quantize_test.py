@@ -51,11 +51,24 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     )
     self._tensor_name_to_qsv = {}
 
-  @parameterized.parameters(
-      (qtyping.QuantGranularity.TENSORWISE),
-      (qtyping.QuantGranularity.CHANNELWISE),
+  @parameterized.named_parameters(
+      dict(
+          testcase_name="tensorwise",
+          granularity=qtyping.QuantGranularity.TENSORWISE,
+          quantized_dimensions=None,
+      ),
+      dict(
+          testcase_name="channelwise",
+          granularity=qtyping.QuantGranularity.CHANNELWISE,
+          quantized_dimensions=None,
+      ),
+      dict(
+          testcase_name="multi_axis",
+          granularity=qtyping.QuantGranularity.CHANNELWISE,
+          quantized_dimensions=(0, 1),
+      ),
   )
-  def test_init_qsvs(self, granularity):
+  def test_init_qsvs(self, granularity, quantized_dimensions):
     # Read from Model Explorer.
     subgraph0 = self._test_model.subgraphs[0]
     subgraph_op_index = 3
@@ -69,6 +82,7 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
                 8,
                 symmetric=True,
                 granularity=granularity,
+                quantized_dimensions=quantized_dimensions,
             ),
         ),
     )
@@ -91,7 +105,9 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
 
     self.assertIn("arith.constant1", initial_qsvs)
     weight_tensor_qsv = initial_qsvs["arith.constant1"]
-    if granularity is qtyping.QuantGranularity.CHANNELWISE:
+    if quantized_dimensions is not None:
+      mins_maxs_shape = (32, 1568)
+    elif granularity is qtyping.QuantGranularity.CHANNELWISE:
       mins_maxs_shape = (32, 1)
     else:
       mins_maxs_shape = (1, 1)
@@ -203,6 +219,56 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     )
     self.assertEqual(quant_params.block_size, 32)
     self.assertEqual(quant_params.quantized_dimension, 1)
+
+  def test_get_tensor_quant_params_for_multi_axis_weight(self):
+    subgraph0 = self._test_model.subgraphs[0]
+    subgraph_op_index = 3
+    op = subgraph0.operators[subgraph_op_index]
+    quantized_dimensions = (0, 1)
+    reduced_axis = 2
+    tensor_shape = (2, 3, 4)
+    expected_scale_shape = (2, 3, 1)
+
+    weight_tensor_config = _TensorQuantConfig(
+        num_bits=4,
+        symmetric=True,
+        granularity=qtyping.QuantGranularity.CHANNELWISE,
+        quantized_dimensions=quantized_dimensions,
+    )
+    op_info = qtyping.OpInfo(
+        op=op,
+        op_name=_TFLOpName.CUSTOM_OP,
+        subgraph_op_index=subgraph_op_index,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            weight_tensor_config=weight_tensor_config,
+        ),
+    )
+    tensor_data = np.random.uniform(low=-10, high=10, size=tensor_shape).astype(
+        np.float32
+    )
+    quant_params = naive_min_max_quantize.get_tensor_quant_params(
+        op_info=op_info,
+        tensor_quant_config=weight_tensor_config,
+        tensor_content=tensor_data,
+    )
+    with self.subTest("quantized_dimensions"):
+      self.assertEqual(quant_params.quantized_dimensions, quantized_dimensions)
+      self.assertIsNone(quant_params.quantized_dimension)
+
+    zp = quant_params.zero_point
+    with self.subTest("zero_point"):
+      self.assertEqual(zp.shape, expected_scale_shape)
+      self.assertTrue(np.array_equal(zp, np.zeros(expected_scale_shape)))
+
+    expected_scales = (
+        np.amax(np.abs(tensor_data), axis=reduced_axis, keepdims=True)
+        / 7.0  # max quantized value for 4-bit symmetric quantization.
+    )
+    with self.subTest("scale"):
+      self.assertEqual(quant_params.scale.shape, expected_scale_shape)
+      self.assertTrue(
+          np.allclose(quant_params.scale, expected_scales, atol=1e-5)
+      )
 
   def test_calibrate_ignores_inf_min_max(self):
     """Tests that calibration ignores infinity values."""

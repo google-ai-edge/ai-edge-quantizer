@@ -209,6 +209,15 @@ class QtypingTest(absltest.TestCase):
     )
     self.assertNotEqual(quant_params, other)
 
+  def test_tensor_quantization_config_converts_list_to_tuple(self):
+    config = qtyping.TensorQuantizationConfig(
+        num_bits=4,
+        granularity=qtyping.QuantGranularity.CHANNELWISE,
+        quantized_dimensions=[0, 1],
+    )
+    self.assertIsInstance(config.quantized_dimensions, tuple)
+    self.assertEqual(config.quantized_dimensions, (0, 1))
+
 
 if __name__ == "__main__":
   absltest.main()
