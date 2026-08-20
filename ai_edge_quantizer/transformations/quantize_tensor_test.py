@@ -203,6 +203,46 @@ class QuantizeTensorTest(parameterized.TestCase):
     )
     self.assertEqual(quant_param.quantizedDimension, 3)
 
+  def test_quantize_tensor_with_multi_axis_quantization(self):
+    """test quantizing tensor with multi-axis quantization."""
+    subgraph = self._model.subgraphs[0]
+    model = self._model
+    scale_array = np.random.uniform(size=(2, 3, 1))
+    ret = quantize_tensor.quantize_tensor(
+        transformation_utils.TransformationInput(
+            tensor_id=4,
+            model=model,
+            subgraph=subgraph,
+            producer=1,
+            consumers=[3],
+            quant_params=qtyping.UniformQuantParams(
+                num_bits=8,
+                quantized_dimension=None,
+                quantized_dimensions=(0, 1),
+                scale=scale_array,
+                zero_point=np.zeros_like(scale_array),
+                block_size=0,
+            ),
+        )
+    )
+    self.assertEqual(ret.op_id, 0)
+    self.assertEqual(ret.num_ops_added, 0)
+    quant_param = subgraph.tensors[4].quantization
+    self.assertEqual(
+        quant_param.detailsType,
+        qtyping.QuantizationDetails.MultiAxisQuantization,
+    )
+    self.assertEqual(quant_param.quantizedDimension, 0)
+
+    details = quant_param.details
+    self.assertSequenceEqual(details.quantizedDimensions, (0, 1))
+    self.assertEqual(details.blockSize, 0)
+    self.assertGreater(details.scales, 0)
+    self.assertEqual(details.zeroPoints, -1)
+    # Verify the scales constant tensor.
+    scales_tensor = subgraph.tensors[details.scales]
+    self.assertEqual(scales_tensor.type, qtyping.TensorType.FLOAT32)
+
   def test_quantize_tensor_with_nonlinear_quantization(self):
     """test quantizing an activation tensor with non-linear quantization."""
     subgraph = self._model.subgraphs[0]
