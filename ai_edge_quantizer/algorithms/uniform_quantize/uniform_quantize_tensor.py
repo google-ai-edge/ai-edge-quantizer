@@ -331,8 +331,15 @@ def uniform_quantize(
     # dimensions.
     output_shape = tensor_data.shape
     tensor_data = tensor_data.reshape([-1, output_shape[-1]])
-    scales = np.broadcast_to(scales, tensor_data.shape)
-    zero_points = np.broadcast_to(zero_points, tensor_data.shape)
+    # Broadcast to the *original* shape first so per-channel scales (e.g.
+    # (O,1,1,1)) can broadcast correctly, then reshape to 2D.  The
+    # intermediate broadcast_to returns a view (zero-copy).
+    scales = np.broadcast_to(scales, output_shape).reshape(
+        [-1, output_shape[-1]]
+    )
+    zero_points = np.broadcast_to(zero_points, output_shape).reshape(
+        [-1, output_shape[-1]]
+    )
     ret = np.zeros(shape=tensor_data.shape, dtype=_get_numpy_dtype(qtype))
 
     # Use a chunk size corresponding to 32 MiB of input data.
