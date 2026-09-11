@@ -221,7 +221,7 @@ def resolve_litertlm_recipe_or_mapping(
         ' LiteRT-LM file.',
         recipe_name_or_path,
     )
-    return {'default': recipe}  # pyrefly: ignore[bad-return]
+    return {'default': recipe}  # pyrefly: ignore[bad-assignment, bad-return]
 
   if not _is_unresolved_recipe_mapping(recipe_or_mapping):
     raise ValueError(

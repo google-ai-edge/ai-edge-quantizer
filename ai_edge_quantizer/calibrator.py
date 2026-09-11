@@ -170,7 +170,7 @@ class CalibrationSignatureRunner:
     if self._mode == CalibrationMode.INFERENCE:
       return self._signature_runner(**kwargs)
     self._calibrator.calibrate(
-        calibration_dataset={self._signature_key: [kwargs]},  # pyrefly: ignore[bad-argument-type]
+        calibration_dataset={self._signature_key: [kwargs]},  # pyrefly: ignore[bad-argument-type, bad-assignment]
         model_recipe_manager=self._recipe_manager,
         cache_output=True,
     )

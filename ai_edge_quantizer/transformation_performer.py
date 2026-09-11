@@ -298,13 +298,13 @@ class TransformationPerformer:
     """
     # pass 1: apply all the op insertion transformation, because op replacement
     # may remove consumer or producer of some tensors
-    for index, instruction in enumerate(transformation_inst.instructions):  # pyrefly: ignore[bad-argument-type]
+    for index, instruction in enumerate(transformation_inst.instructions):  # pyrefly: ignore[bad-argument-type, not-iterable]
       if instruction.transformation in self._op_insertion_transformations:
         self._apply_single_transformation(
             transformation_inst, index, tflite_model
         )
     # pass 2: apply all the op replacement transformation
-    for index, instruction in enumerate(transformation_inst.instructions):  # pyrefly: ignore[bad-argument-type]
+    for index, instruction in enumerate(transformation_inst.instructions):  # pyrefly: ignore[bad-argument-type, not-iterable]
       if instruction.transformation in self._op_replacement_transformations:
         self._apply_single_transformation(
             transformation_inst, index, tflite_model
