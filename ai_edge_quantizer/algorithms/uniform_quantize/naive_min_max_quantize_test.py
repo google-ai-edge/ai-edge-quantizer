@@ -204,6 +204,108 @@ class NaiveMinMaxQuantizeTest(parameterized.TestCase):
     self.assertEqual(quant_params.block_size, 32)
     self.assertEqual(quant_params.quantized_dimension, 1)
 
+  def test_get_tensor_quant_params_for_uint8_activation(self):
+    subgraph0 = self._test_model.subgraphs[0]
+    subgraph_op_index = 3
+    fc_op = subgraph0.operators[subgraph_op_index]
+    activation_tensor_config = _TensorQuantConfig(
+        num_bits=8,
+        symmetric=False,
+        granularity=qtyping.QuantGranularity.TENSORWISE,
+        dtype=qtyping.TensorDataType.UINT,
+    )
+    op_info = qtyping.OpInfo(
+        op=fc_op,
+        op_name=_TFLOpName.FULLY_CONNECTED,
+        subgraph_op_index=subgraph_op_index,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            activation_tensor_config=activation_tensor_config,
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=8,
+                symmetric=True,
+                granularity=qtyping.QuantGranularity.TENSORWISE,
+            ),
+        ),
+    )
+    test_data = np.array([[0.0, 1.0, 2.5, 5.1, 25.5]]).astype(np.float32)
+    quant_params = naive_min_max_quantize.get_tensor_quant_params(
+        op_info=op_info,
+        tensor_quant_config=activation_tensor_config,
+        tensor_content=test_data,
+    )
+    self.assertEqual(quant_params.num_bits, 8)
+    self.assertFalse(quant_params.signed)
+    self.assertFalse(quant_params.symmetric)
+    # Golden values calculation:
+    # min = 0.0, max = 25.5
+    # scale = (max - min) / (qmax - qmin) = (25.5 - 0.0) / (255 - 0) = 0.1
+    # zero_point = round(-min / scale) + qmin = round(0.0) + 0 = 0
+    # quantized = round(test_data / scale) + zero_point = [0, 10, 25, 51, 255]
+    self.assertTrue(np.allclose(quant_params.scale, 0.1, atol=1e-6))
+    self.assertTrue(
+        np.array_equal(quant_params.zero_point, np.array([[0]], dtype=np.uint8))
+    )
+    self.assertIsNotNone(quant_params.quantized_data)
+    expected_quantized = np.array([[0, 10, 25, 51, 255]], dtype=np.uint8)
+    self.assertTrue(
+        np.array_equal(quant_params.quantized_data, expected_quantized)
+    )
+
+  def test_get_tensor_quant_params_for_uint8_activation_with_negative_values(
+      self,
+  ):
+    subgraph0 = self._test_model.subgraphs[0]
+    subgraph_op_index = 3
+    fc_op = subgraph0.operators[subgraph_op_index]
+    activation_tensor_config = _TensorQuantConfig(
+        num_bits=8,
+        symmetric=False,
+        granularity=qtyping.QuantGranularity.TENSORWISE,
+        dtype=qtyping.TensorDataType.UINT,
+    )
+    op_info = qtyping.OpInfo(
+        op=fc_op,
+        op_name=_TFLOpName.FULLY_CONNECTED,
+        subgraph_op_index=subgraph_op_index,
+        op_quant_config=qtyping.OpQuantizationConfig(
+            activation_tensor_config=activation_tensor_config,
+            weight_tensor_config=_TensorQuantConfig(
+                num_bits=8,
+                symmetric=True,
+                granularity=qtyping.QuantGranularity.TENSORWISE,
+            ),
+        ),
+    )
+    # Test data with negative values.
+    # min = -10.0, max = 15.5
+    test_data = np.array([[-10.0, -5.0, 0.0, 5.0, 15.5]]).astype(np.float32)
+    quant_params = naive_min_max_quantize.get_tensor_quant_params(
+        op_info=op_info,
+        tensor_quant_config=activation_tensor_config,
+        tensor_content=test_data,
+    )
+    self.assertEqual(quant_params.num_bits, 8)
+    self.assertFalse(quant_params.signed)
+    self.assertFalse(quant_params.symmetric)
+
+    # Golden values calculation:
+    # min = -10.0, max = 15.5
+    # scale = (max - min) / 255 = 25.5 / 255 = 0.1
+    # zero_point = round(-min / scale) = round(10.0 / 0.1) = 100
+    # quantized = round(test_data / scale) + zero_point
+    #            = [-100, -50, 0, 50, 155] + 100 = [0, 50, 100, 150, 255]
+    self.assertTrue(np.allclose(quant_params.scale, 0.1, atol=1e-6))
+    self.assertTrue(
+        np.array_equal(
+            quant_params.zero_point, np.array([[100]], dtype=np.uint8)
+        )
+    )
+    self.assertIsNotNone(quant_params.quantized_data)
+    expected_quantized = np.array([[0, 50, 100, 150, 255]], dtype=np.uint8)
+    self.assertTrue(
+        np.array_equal(quant_params.quantized_data, expected_quantized)
+    )
+
   def test_calibrate_ignores_inf_min_max(self):
     """Tests that calibration ignores infinity values."""
     # Sample input/output data for the fc op.

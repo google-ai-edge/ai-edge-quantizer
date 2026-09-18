@@ -140,6 +140,9 @@ def get_tensor_quant_params(
         op_info, tensor_quant_config, tensor_content, tensor_qsv
     )
 
+  if tensor_quant_config.dtype == qtyping.TensorDataType.UINT:
+    raise ValueError("Unsigned quantization is not supported by OCTAV.")
+
   if not tensor_quant_config.symmetric:
     raise ValueError(
         f"Unsupported symmetry: {tensor_quant_config.symmetric}. OCTAV"

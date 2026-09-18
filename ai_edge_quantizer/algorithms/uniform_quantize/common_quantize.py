@@ -1305,6 +1305,7 @@ def broadcast_scale_zp_for_blockwise(
       symmetric=quant_params.symmetric,
       quantized_dimension=quantized_dim,
       block_size=quant_params.block_size,
+      signed=quant_params.signed,
   )
 
 

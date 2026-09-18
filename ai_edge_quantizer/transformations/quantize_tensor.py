@@ -28,11 +28,13 @@ from ai_edge_quantizer.transformations import transformation_utils
 # TODO: b/335014051 - Support distinguishing INT, FLOAT & UINT, BFLOAT.
 def quant_params_to_tflite_type(
     bitwidth: int,
+    signed: bool = True,
 ) -> Optional[qtyping.TensorType]:
   """Returns the TFLite dtype for the given bit width.
 
   Args:
     bitwidth: Bit width from UniformQuantParams.
+    signed: Whether the tensor is signed.
 
   Returns:
     The corresponding TFLite tensor type.
@@ -43,7 +45,7 @@ def quant_params_to_tflite_type(
     case 4:
       return qtyping.TensorType.INT4
     case bits if 1 < bits <= 8:
-      return qtyping.TensorType.INT8
+      return qtyping.TensorType.INT8 if signed else qtyping.TensorType.UINT8
     case bits if 8 < bits <= 16:
       return qtyping.TensorType.INT16
     case bits if 16 < bits <= 32:
@@ -210,7 +212,8 @@ def quantize_tensor(
       )
     tensor.quantization = flatbuffer_quantization
     tensor.type = quant_params_to_tflite_type(
-        transformation_input.quant_params.num_bits
+        transformation_input.quant_params.num_bits,
+        transformation_input.quant_params.signed,
     )
   if isinstance(
       transformation_input.quant_params, qtyping.NonLinearQuantParams

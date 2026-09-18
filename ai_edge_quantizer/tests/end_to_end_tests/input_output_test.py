@@ -75,6 +75,8 @@ class InputOutputTest(parameterized.TestCase):
               granularity=_Granularity.TENSORWISE,
           ),
           op=_OpName.INPUT,
+          expected_input_tensor_type=qtyping.TensorType.INT8,
+          expected_output_tensor_type=qtyping.TensorType.FLOAT32,
       ),
       dict(
           testcase_name='INT8_output',
@@ -84,6 +86,8 @@ class InputOutputTest(parameterized.TestCase):
               granularity=_Granularity.TENSORWISE,
           ),
           op=_OpName.OUTPUT,
+          expected_input_tensor_type=qtyping.TensorType.FLOAT32,
+          expected_output_tensor_type=qtyping.TensorType.INT8,
       ),
       dict(
           testcase_name='INT16_input',
@@ -93,6 +97,8 @@ class InputOutputTest(parameterized.TestCase):
               granularity=_Granularity.TENSORWISE,
           ),
           op=_OpName.INPUT,
+          expected_input_tensor_type=qtyping.TensorType.INT16,
+          expected_output_tensor_type=qtyping.TensorType.FLOAT32,
       ),
       dict(
           testcase_name='INT16_output',
@@ -102,10 +108,40 @@ class InputOutputTest(parameterized.TestCase):
               granularity=_Granularity.TENSORWISE,
           ),
           op=_OpName.OUTPUT,
+          expected_input_tensor_type=qtyping.TensorType.FLOAT32,
+          expected_output_tensor_type=qtyping.TensorType.INT16,
+      ),
+      dict(
+          testcase_name='UINT8_input',
+          activation_tensor_config=_TensorQuantConfig(
+              num_bits=8,
+              symmetric=False,
+              granularity=_Granularity.TENSORWISE,
+              dtype=qtyping.TensorDataType.UINT,
+          ),
+          op=_OpName.INPUT,
+          expected_input_tensor_type=qtyping.TensorType.UINT8,
+          expected_output_tensor_type=qtyping.TensorType.FLOAT32,
+      ),
+      dict(
+          testcase_name='UINT8_output',
+          activation_tensor_config=_TensorQuantConfig(
+              num_bits=8,
+              symmetric=False,
+              granularity=_Granularity.TENSORWISE,
+              dtype=qtyping.TensorDataType.UINT,
+          ),
+          op=_OpName.OUTPUT,
+          expected_input_tensor_type=qtyping.TensorType.FLOAT32,
+          expected_output_tensor_type=qtyping.TensorType.UINT8,
       ),
   )
   def test_input_output_explicit_set_quantize(
-      self, activation_tensor_config, op
+      self,
+      activation_tensor_config,
+      op,
+      expected_input_tensor_type,
+      expected_output_tensor_type,
   ):
     self._quantizer.update_quantization_recipe(
         regex='.*',
@@ -134,23 +170,8 @@ class InputOutputTest(parameterized.TestCase):
     input_tensor = subgraph_tensors[subgraph.inputs[0]]
     output_tensor = subgraph_tensors[subgraph.outputs[0]]
     # Check input/output tensor type.
-    if op == _OpName.INPUT:
-      # See schema_py_generated.py for type code.
-      if activation_tensor_config is None:
-        self.assertEqual(input_tensor.type, 0)  # float32.
-      elif activation_tensor_config.num_bits == 8:
-        self.assertEqual(input_tensor.type, 9)  # int8.
-      elif activation_tensor_config.num_bits == 16:
-        self.assertEqual(input_tensor.type, 7)  # int16.
-      self.assertEqual(output_tensor.type, 0)
-    else:
-      self.assertEqual(input_tensor.type, 0)  # float32.
-      if activation_tensor_config is None:
-        self.assertEqual(output_tensor.type, 0)  # float32.
-      elif activation_tensor_config.num_bits == 8:
-        self.assertEqual(output_tensor.type, 9)  # int8.
-      elif activation_tensor_config.num_bits == 16:
-        self.assertEqual(output_tensor.type, 7)  # int16.
+    self.assertEqual(input_tensor.type, expected_input_tensor_type)
+    self.assertEqual(output_tensor.type, expected_output_tensor_type)
 
     # Check accuracy.
     comparison_result = self._quantizer.validate(
@@ -160,11 +181,20 @@ class InputOutputTest(parameterized.TestCase):
     self._check_comparison_result(comparison_result, output_tolerance=1e-4)
 
   @parameterized.parameters(
-      ('../../recipes/default_a8w8_recipe.json', 9),
-      ('../../recipes/default_a16w8_recipe.json', 7),
-      ('../../recipes/default_af32w8float_recipe.json', 0),
-      ('../../recipes/dynamic_wi8_afp32_recipe.json', 0),
-      ('../../recipes/dynamic_legacy_wi8_afp32_recipe.json', 0),
+      ('../../recipes/default_a8w8_recipe.json', qtyping.TensorType.INT8),
+      ('../../recipes/default_a16w8_recipe.json', qtyping.TensorType.INT16),
+      (
+          '../../recipes/default_af32w8float_recipe.json',
+          qtyping.TensorType.FLOAT32,
+      ),
+      (
+          '../../recipes/dynamic_wi8_afp32_recipe.json',
+          qtyping.TensorType.FLOAT32,
+      ),
+      (
+          '../../recipes/dynamic_legacy_wi8_afp32_recipe.json',
+          qtyping.TensorType.FLOAT32,
+      ),
   )
   def test_input_output_with_default_recipe(
       self, recipe_path, activation_type_code

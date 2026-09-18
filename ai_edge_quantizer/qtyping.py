@@ -162,6 +162,7 @@ class ComputePrecision(str, enum.Enum):
 
 class TensorDataType(str, enum.Enum):
   INT = 'INT'
+  UINT = 'UINT'
   FLOAT = 'FLOAT'
 
 
@@ -222,6 +223,7 @@ class UniformQuantParams:
       details can be found in algorithms/uniform_quantize/hadamard_rotation.py.
     custom_algorithm_param: Custom algorithm-specific parameters (e.g. for
       experimental algorithms like OSCAR).
+    signed: Whether the quantization is signed.
   """
 
   class HadamardRotationParams:
@@ -259,6 +261,7 @@ class UniformQuantParams:
   block_size: int = 0
   hadamard: Optional[HadamardRotationParams] = None
   custom_algorithm_param: Optional[dict[str, Any]] = None
+  signed: bool = True
 
   @classmethod
   def from_tfl_tensor_details(cls, tensor_detail) -> 'UniformQuantParams':
@@ -272,20 +275,14 @@ class UniformQuantParams:
     """
     quant_params = tensor_detail['quantization_parameters']
     data_type = tensor_detail['dtype']
-    if data_type == np.int8:
-      num_bits = 8
-    elif data_type == np.int16:
-      num_bits = 16
-    elif data_type == np.int32:
-      num_bits = 32
-    elif data_type == np.int64:
-      num_bits = 64
-    else:
+    if data_type not in (np.int8, np.uint8, np.int16, np.int32, np.int64):
       raise ValueError(
           f'Unsupported data type: {data_type}. Supported types are np.int8,'
-          ' np.int16, np.int32, np.int64.'
+          ' np.uint8, np.int16, np.int32, np.int64.'
       )
-    symmetric = sum(abs(quant_params['zero_points'])) == 0
+    num_bits = np.iinfo(data_type).bits
+    signed = np.issubdtype(data_type, np.signedinteger)
+    symmetric = signed and sum(abs(quant_params['zero_points'])) == 0
     return cls(
         quantized_dimension=quant_params['quantized_dimension'],
         num_bits=num_bits,
@@ -293,6 +290,7 @@ class UniformQuantParams:
         zero_point=quant_params['zero_points'],
         symmetric=symmetric,
         block_size=quant_params['block_size'],
+        signed=signed,
     )
 
   def __eq__(self, other):
@@ -310,6 +308,7 @@ class UniformQuantParams:
         and _compare_custom_algorithm_param(
             self.custom_algorithm_param, other.custom_algorithm_param
         )
+        and self.signed == other.signed
     )
 
 
