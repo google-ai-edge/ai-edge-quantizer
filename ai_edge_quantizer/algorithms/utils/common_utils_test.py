@@ -119,8 +119,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision=_ComputePrecision.FLOAT,
     )
     error_message = (
-        f"Quantization config for op: {op_name} with config:"
-        f" {op_quant_config} was not found in the policy."
+        f"Quantization config {op_quant_config} was not found in the policy."
     )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
@@ -165,8 +164,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision=_ComputePrecision.INTEGER,  # DRQ.
     )
     error_message = (
-        f"Quantization config for op: {op_name} with config:"
-        f" {op_quant_config} was not found in the policy."
+        f"Quantization config {op_quant_config} was not found in the policy."
     )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
@@ -185,8 +183,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision=_ComputePrecision.INTEGER,  # DRQ.
     )
     error_message = (
-        f"Quantization config for op: {op_name} with config:"
-        f" {op_quant_config} was not found in the policy."
+        f"Quantization config {op_quant_config} was not found in the policy."
     )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
@@ -206,8 +203,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision=_ComputePrecision.INTEGER,  # DRQ.
     )
     error_message = (
-        f"Quantization config for op: {op_name} with config:"
-        f" {op_quant_config} was not found in the policy."
+        f"Quantization config {op_quant_config} was not found in the policy."
     )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
@@ -311,8 +307,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     error_message = (
-        f"Quantization config for op: {_TFLOpName.FULLY_CONNECTED} with config:"
-        f" {op_quant_config} was not found in the policy."
+        f"Quantization config {op_quant_config} was not found in the policy."
     )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
@@ -335,8 +330,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     error_message = (
-        f"Quantization config for op: {_TFLOpName.FULLY_CONNECTED} with config:"
-        f" {op_quant_config} was not found in the policy."
+        f"Quantization config {op_quant_config} was not found in the policy."
     )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
@@ -359,8 +353,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     error_message = (
-        f"Quantization config for op: {_TFLOpName.FULLY_CONNECTED} with config:"
-        f" {op_quant_config} was not found in the policy."
+        f"Quantization config {op_quant_config} was not found in the policy."
     )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)
@@ -382,8 +375,7 @@ class MinMaxQuantizeUtilsTest(parameterized.TestCase):
         compute_precision=_ComputePrecision.INTEGER,  # SRQ.
     )
     error_message = (
-        f"Quantization config for op: {_TFLOpName.FULLY_CONNECTED} with config:"
-        f" {op_quant_config} was not found in the policy."
+        f"Quantization config {op_quant_config} was not found in the policy."
     )
     with self.assertRaisesWithPredicateMatch(
         ValueError, lambda err: error_message in str(err)

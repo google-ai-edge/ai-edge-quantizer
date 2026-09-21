@@ -135,6 +135,32 @@ class InputOutputTest(parameterized.TestCase):
           expected_input_tensor_type=qtyping.TensorType.FLOAT32,
           expected_output_tensor_type=qtyping.TensorType.UINT8,
       ),
+      dict(
+          testcase_name='UINT8_input_no_weight_config',
+          activation_tensor_config=_TensorQuantConfig(
+              num_bits=8,
+              symmetric=False,
+              granularity=_Granularity.TENSORWISE,
+              dtype=qtyping.TensorDataType.UINT,
+          ),
+          op=_OpName.INPUT,
+          expected_input_tensor_type=qtyping.TensorType.UINT8,
+          expected_output_tensor_type=qtyping.TensorType.FLOAT32,
+          use_default_weight_config=False,
+      ),
+      dict(
+          testcase_name='UINT8_output_no_weight_config',
+          activation_tensor_config=_TensorQuantConfig(
+              num_bits=8,
+              symmetric=False,
+              granularity=_Granularity.TENSORWISE,
+              dtype=qtyping.TensorDataType.UINT,
+          ),
+          op=_OpName.OUTPUT,
+          expected_input_tensor_type=qtyping.TensorType.FLOAT32,
+          expected_output_tensor_type=qtyping.TensorType.UINT8,
+          use_default_weight_config=False,
+      ),
   )
   def test_input_output_explicit_set_quantize(
       self,
@@ -142,17 +168,23 @@ class InputOutputTest(parameterized.TestCase):
       op,
       expected_input_tensor_type,
       expected_output_tensor_type,
+      use_default_weight_config=True,
   ):
+    if use_default_weight_config:
+      weight_config = _TensorQuantConfig(
+          num_bits=8,
+          symmetric=True,
+          granularity=_Granularity.TENSORWISE,
+      )
+    else:
+      weight_config = None
+
     self._quantizer.update_quantization_recipe(
         regex='.*',
         operation_name=op,
         op_config=_OpQuantConfig(
             activation_tensor_config=activation_tensor_config,
-            weight_tensor_config=_TensorQuantConfig(
-                num_bits=8,
-                symmetric=True,
-                granularity=_Granularity.TENSORWISE,
-            ),
+            weight_tensor_config=weight_config,
             compute_precision=_ComputePrecision.INTEGER,
         ),
     )

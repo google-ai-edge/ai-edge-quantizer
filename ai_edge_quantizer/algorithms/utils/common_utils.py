@@ -30,7 +30,7 @@ _IntType = uniform_quantize_tensor.IntType
 TensorQuantParamsCacheKey = tuple[Any, qtyping.TensorQuantizationConfig]
 
 
-_DRQ_OR_WEIGHT_ONLY_OPS = frozenset([
+DRQ_OR_WEIGHT_ONLY_OPS = frozenset([
     _TFLOpName.FULLY_CONNECTED,
     _TFLOpName.CONV_2D,
     _TFLOpName.BATCH_MATMUL,
@@ -116,51 +116,64 @@ def check_if_valid_op_config(
   Raises:
     ValueError: If the op quantization config is not valid.
   """
-  check_passed = False
-  error_msg = ""
+  def _build_error(msg: str) -> str:
+    return (
+        f"Unsupported op for {op_quant_config.compute_precision}: {op_name}."
+        f" Error: {msg}"
+    )
+
   # Check if find op_config in policy config_check_policy.
   if config_check_policy is None:
-    error_msg = "No policy was specified at all."
-  elif op_name not in config_check_policy.keys():
-    error_msg = (
-        f"No policy was specified for op: {op_name} with config:"
-        f" {op_quant_config}."
-    )
-  else:
-    # min_weight_elements and algorithm_params have to be ignored during
-    # policy check here because they can be any non-negative integer or dict,
-    # which means we can't list all possible values in the policy.
-    op_quant_config_to_check = dataclasses.replace(
-        op_quant_config, min_weight_elements=0
-    )
-    if op_quant_config_to_check.weight_tensor_config is not None:
-      op_quant_config_to_check = dataclasses.replace(
-          op_quant_config_to_check,
-          weight_tensor_config=dataclasses.replace(
-              op_quant_config_to_check.weight_tensor_config, algorithm_params={}
-          ),
-      )
-    if op_quant_config_to_check.activation_tensor_config is not None:
-      op_quant_config_to_check = dataclasses.replace(
-          op_quant_config_to_check,
-          activation_tensor_config=dataclasses.replace(
-              op_quant_config_to_check.activation_tensor_config,
-              algorithm_params={},
-          ),
-      )
-
-    if op_quant_config_to_check not in config_check_policy[op_name]:
-      error_msg = (
-          f"Quantization config for op: {op_name} with config:"
-          f" {op_quant_config!r} was not found in the policy."
-      )
-    else:
-      check_passed = True
-
-  if not check_passed:
+    raise ValueError(_build_error("No policy was specified at all."))
+  if op_name not in config_check_policy:
     raise ValueError(
-        f"Unsupported op for {op_quant_config.compute_precision}: {op_name}."
-        f" Error: {error_msg}"
+        _build_error(f"No policy was specified for config: {op_quant_config}.")
+    )
+
+  # min_weight_elements and algorithm_params have to be ignored during
+  # policy check here because they can be any non-negative integer or dict,
+  # which means we can't list all possible values in the policy.
+  op_quant_config_to_check = dataclasses.replace(
+      op_quant_config, min_weight_elements=0
+  )
+  if op_quant_config_to_check.weight_tensor_config is not None:
+    op_quant_config_to_check = dataclasses.replace(
+        op_quant_config_to_check,
+        weight_tensor_config=dataclasses.replace(
+            op_quant_config_to_check.weight_tensor_config, algorithm_params={}
+        ),
+    )
+  if op_quant_config_to_check.activation_tensor_config is not None:
+    op_quant_config_to_check = dataclasses.replace(
+        op_quant_config_to_check,
+        activation_tensor_config=dataclasses.replace(
+            op_quant_config_to_check.activation_tensor_config,
+            algorithm_params={},
+        ),
+    )
+
+  strip_weights = op_name not in DRQ_OR_WEIGHT_ONLY_OPS
+  cfg_to_compare = (
+      dataclasses.replace(op_quant_config_to_check, weight_tensor_config=None)
+      if strip_weights
+      else op_quant_config_to_check
+  )
+  match_found = any(
+      cfg_to_compare
+      == (
+          dataclasses.replace(policy, weight_tensor_config=None)
+          if strip_weights
+          else policy
+      )
+      for policy in config_check_policy[op_name]
+  )
+
+  if not match_found:
+    raise ValueError(
+        _build_error(
+            f"Quantization config {op_quant_config!r} was not found in the"
+            " policy."
+        )
     )
 
 
@@ -252,7 +265,7 @@ def _get_tensor_transformation_params_wrapper(
   tensor_quant_config = op_info.op_quant_config.activation_tensor_config
   is_constant = tensor_data is not None
   # Use weight configuration if it is supported.
-  if is_constant and op_info.op_name in _DRQ_OR_WEIGHT_ONLY_OPS:
+  if is_constant and op_info.op_name in DRQ_OR_WEIGHT_ONLY_OPS:
     tensor_quant_config = op_info.op_quant_config.weight_tensor_config
   # Get quant params.
   if quant_params is None and tensor_quant_config is not None:
