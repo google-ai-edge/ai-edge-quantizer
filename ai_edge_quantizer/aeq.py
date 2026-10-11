@@ -136,6 +136,8 @@ def quantize_litertlm(
       )
       continue
 
+    print(f"Processing section {section_id} with model_type '{model_type}'.")
+
     # Create a filename for the quantized TFLite model.
     output_filename = (
         f"{litertlm_basename}_{section_id:03d}_{model_type}_"
@@ -164,6 +166,8 @@ def quantize_litertlm(
   if not _verify_output_path(output_file_path, overwrite_outputs):
     logging.error("Aborting.")
     return 1
+
+  print("Serializing LiteRT-LM file.")
   output_file_size = litertlm_file.serialize(
       output_file_path, quantized_sections
   )
@@ -172,11 +176,12 @@ def quantize_litertlm(
   for path in temp_files:
     path.unlink(missing_ok=True)
 
+  print("\nSummary:")
   progress_report.generate_progress_report(
       os.path.getsize(litertlm_path), output_file_size
   )
 
-  print(f"Wrote quantized model to {output_file_path}.")
+  print(f"\nWrote quantized model to {output_file_path}.")
 
   return 0
 

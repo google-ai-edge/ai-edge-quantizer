@@ -15,8 +15,11 @@
 
 """Generate model tensor level quantization config."""
 
-from collections.abc import Sequence
+import collections
+from collections.abc import MutableMapping, Sequence
+import concurrent
 import copy
+import threading
 from typing import Any, Optional
 import warnings
 
@@ -52,6 +55,7 @@ class ParamsGenerator:
     )
     self.model_quant_results: dict[str, qtyping.TensorTransformationParams] = {}
     self._tensor_quant_params_cache = common_utils.TensorQuantParamsCache()
+    self._buffer_locks = collections.defaultdict(threading.Lock)
 
   def _get_total_operations(self) -> int:
     """Returns the total number of operations.
@@ -65,6 +69,65 @@ class ParamsGenerator:
         for subgraph in self.float_model.subgraphs
     )
     return total_ops
+
+  def _reclaim_op_inputs(
+      self,
+      op_info: qtyping.OpInfo,
+      graph_info: qtyping.GraphInfo,
+  ):
+    """Reclaims memory for op's tensors that have data."""
+    for tensor_idx in list(op_info.op.inputs):
+      if tensor_idx != -1:
+        buffer_idx = graph_info.subgraph_tensors[tensor_idx].buffer
+        if (buffer := self.float_model.buffers[buffer_idx]).data is not None:
+          mmap_utils.advise_dont_need(buffer.data)
+
+  def _get_quant_params(
+      self,
+      algorithm_name: algorithm_manager.AlgorithmName,
+      op_info: qtyping.OpInfo,
+      graph_info: qtyping.GraphInfo,
+      tensor_name_to_qsv: MutableMapping[str, qtyping.QSV],
+      progress_bar: progress_utils.ProgressBar,
+  ):
+    """Materializes the quantization parameters for the given op."""
+    materialize_func = algorithm_manager.get_quantization_func(
+        algorithm_name,
+        op_info.op_name,
+        qtyping.QuantizeMode.MATERIALIZE,
+    )
+
+    # Get the buffer IDs of the input tensors. Note that they are sorted in
+    # ascending order to prevent any "dining philosophers" nonsense.
+    input_buffer_ids = filter(
+        lambda bid: self.float_model.buffers[bid].data is not None,
+        [
+            graph_info.subgraph_tensors[tid].buffer
+            for tid in list(op_info.op.inputs)
+            if tid != -1
+        ],
+    )
+    input_buffer_ids = sorted(set(input_buffer_ids))
+
+    # Lock access to the input buffers.
+    for bid in input_buffer_ids:
+      self._buffer_locks[bid].acquire()
+
+    # Materialize the quantization parameters.
+    op_quant_results = materialize_func(
+        op_info=op_info,
+        graph_info=graph_info,
+        tensor_name_to_qsv=tensor_name_to_qsv,
+        tensor_quant_params_cache=self._tensor_quant_params_cache,
+    )
+
+    # Release access to the input buffers.
+    for bid in input_buffer_ids:
+      self._buffer_locks[bid].release()
+
+    self._reclaim_op_inputs(op_info, graph_info)
+    self._update_model_quant_results(op_quant_results)
+    progress_bar.update_single_step()
 
   def generate_quantization_parameters(
       self,
@@ -99,6 +162,8 @@ class ParamsGenerator:
 
     skip_subgraphs = set()
     op_codes = self.float_model.operatorCodes
+    self._buffer_locks.clear()
+    tasks = []
 
     total_ops = self._get_total_operations()
     with progress_utils.ProgressBar(
@@ -106,7 +171,7 @@ class ParamsGenerator:
         'Generating Quantization Parameters:',
         enable=enable_progress_bar,
         # Progress bar will be skipped for smaller models.
-    ) as progress_bar:
+    ) as progress_bar, concurrent.futures.ThreadPoolExecutor() as executor:
       for sg_ind, subgraph in enumerate(self.float_model.subgraphs):
 
         graph_info = qtyping.GraphInfo(
@@ -117,7 +182,6 @@ class ParamsGenerator:
             tfl_flatbuffer_utils.get_subgraph_input_output_operators(subgraph)
         )
         for subgraph_op_id, op in enumerate(subgraph_operators):
-          progress_bar.update_single_step()
           # Get the op key.
           if isinstance(op, qtyping.IOOperator):
             op_key = op.op_key
@@ -130,10 +194,11 @@ class ParamsGenerator:
                   subgraph_op_id, op, subgraph.tensors
               )
               self._update_model_quant_results(op_quant_results)
+              progress_bar.update_single_step()
               continue
             op_key = tfl_flatbuffer_utils.TFL_OP_CODE_TO_NAME[op_code]
 
-            # Step1: query the quantization_recipe to get op config.
+          # Step1: query the quantization_recipe to get op config.
           op_scope = tfl_flatbuffer_utils.get_op_scope(op, subgraph.tensors)
           algorithm_name, op_quant_config = (
               model_recipe_manager.get_quantization_configs(op_key, op_scope)
@@ -144,6 +209,7 @@ class ParamsGenerator:
           ):
             algorithm_name = algorithm_manager.AlgorithmName.NO_QUANTIZE
 
+          op_info = qtyping.OpInfo(op, op_key, subgraph_op_id, op_quant_config)
           if algorithm_name == algorithm_manager.AlgorithmName.NO_QUANTIZE:
             side_effect_subgraphs = (
                 tfl_flatbuffer_utils.get_op_side_effect_subgraphs(op)
@@ -153,34 +219,31 @@ class ParamsGenerator:
             op_quant_results = self._get_params_for_no_quant_op(
                 subgraph_op_id, op, subgraph.tensors
             )
+            self._reclaim_op_inputs(op_info, graph_info)
+
+            # Step3: update the results.
+            self._update_model_quant_results(op_quant_results)
+            progress_bar.update_single_step()
 
           else:
-            op_info = qtyping.OpInfo(
-                op, op_key, subgraph_op_id, op_quant_config
+            # Send the potentially compute-heavy task of materializing the
+            # quantization parameters to the executor.
+            tasks.append(
+                executor.submit(
+                    self._get_quant_params,
+                    algorithm_name,
+                    op_info,
+                    graph_info,
+                    model_qsvs,
+                    progress_bar,
+                )
             )
-            # Step2: query algorithm_manager to get/call the related function.
-            materialize_func = algorithm_manager.get_quantization_func(
-                algorithm_name,
-                op_key,
-                qtyping.QuantizeMode.MATERIALIZE,
-            )
-            op_quant_results = materialize_func(
-                op_info=op_info,
-                graph_info=graph_info,
-                tensor_name_to_qsv=model_qsvs,
-                tensor_quant_params_cache=self._tensor_quant_params_cache,
-            )
-          # Reclaim memory for op's tensors that have data.
-          for tensor_idx in list(op.inputs):
-            if tensor_idx != -1:
-              buffer_idx = subgraph.tensors[tensor_idx].buffer
-              if (
-                  buffer := self.float_model.buffers[buffer_idx]
-              ).data is not None:
-                mmap_utils.advise_dont_need(buffer.data)
 
-          # Step3: update the results.
-          self._update_model_quant_results(op_quant_results)
+    # Check for any task failures and re-raise them.
+    for task in concurrent.futures.as_completed(tasks):
+      if e := task.exception():
+        raise e
+
     self._post_process_results()
     return self.model_quant_results
 
