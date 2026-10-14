@@ -17,7 +17,7 @@
 
 import logging
 import mmap
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import numpy as np
 
@@ -26,6 +26,8 @@ from ai_edge_litert.tools import mmap_utils
 from ai_edge_quantizer import qtyping
 from ai_edge_quantizer import transformation_instruction_generator
 from ai_edge_quantizer import transformation_performer
+from ai_edge_quantizer.algorithms.uniform_quantize import uniform_quantize_tensor
+from ai_edge_quantizer.transformations import transformation_utils
 from ai_edge_quantizer.utils import tfl_flatbuffer_utils
 
 
@@ -38,19 +40,85 @@ def _round_up_16(offset: int) -> int:
   return (offset + 15) & ~15
 
 
+def _compute_packed_size(tensor_shape: list[int] | None, num_bits: int) -> int:
+  """Calculates the packed byte size for a quantized tensor."""
+  total_elements = 1
+  if tensor_shape is not None:
+    for dim in tensor_shape:
+      total_elements *= dim
+  if num_bits in (2, 4):
+    values_per_byte = 8 // num_bits
+    return (total_elements + values_per_byte - 1) // values_per_byte
+  elif num_bits == 8:
+    return total_elements
+  elif num_bits == 16:
+    return total_elements * 2
+  else:
+    return (total_elements * num_bits + 7) // 8
+
+
+def _quantize_and_pack_single_buffer(record: dict[str, Any]) -> np.ndarray:
+  """Quantizes and packs a single deferred buffer."""
+  tensor = record["tensor"]
+  quant_params = record["quant_params"]
+  source_data = record["source_data"]
+  source_type = record["source_type"]
+
+  if not isinstance(source_data, (bytes, bytearray, memoryview, np.ndarray)):
+    source_data = np.array(source_data, dtype=np.uint8)
+
+  dtype_name = tfl_flatbuffer_utils.TENSOR_CODE_TO_TYPE[source_type].lower()
+  if dtype_name == "bfloat16":
+    import ml_dtypes  # pylint: disable=g-import-not-at-top
+    raw_tensor = np.frombuffer(source_data, dtype=ml_dtypes.bfloat16)
+  else:
+    raw_tensor = np.frombuffer(source_data, dtype=dtype_name)
+  if tensor.shape is not None:
+    raw_tensor = np.reshape(raw_tensor, tensor.shape)
+
+  is_blockwise = (
+      quant_params.block_size > 0
+      if hasattr(quant_params, "block_size")
+      and quant_params.block_size is not None
+      else False
+  )
+  quantized_tensor = uniform_quantize_tensor.uniform_quantize(
+      raw_tensor, quant_params, is_blockwise_quant=is_blockwise
+  )
+  packed_bytes = transformation_utils.pack_data(
+      quant_params.num_bits,
+      np.ravel(np.asarray(quantized_tensor)).view(np.uint8),
+  )
+  return packed_bytes
+
+
 class _PackedBufferData:
   """Holds a `ModelT`'s buffer data for packing."""
 
   data_size: int
   packed_size: int
   data_for_buffer_id: dict[int, memoryview]
+  deferred_buffers: dict[int, dict[str, Any]]
 
   def __init__(self, model: qtyping.ModelT, min_size_bytes: int = 1024):
     self.data_for_buffer_id = {}
+    self.deferred_buffers = {}
     self.data_size = 0
     self.packed_size = 0
+    deferred_quant_buffers = getattr(model, "_deferred_quant_buffers", {})
+
     for buffer_id, buffer in enumerate(model.buffers):
-      if buffer.data is not None and min_size_bytes <= len(buffer.data):
+      if buffer_id in deferred_quant_buffers:
+        record = deferred_quant_buffers[buffer_id]
+        tensor = record["tensor"]
+        quant_params = record["quant_params"]
+        packed_bytes_size = _compute_packed_size(
+            tensor.shape, quant_params.num_bits
+        )
+        self.deferred_buffers[buffer_id] = record
+        self.data_size += packed_bytes_size
+        self.packed_size = _round_up_16(self.packed_size + packed_bytes_size)
+      elif buffer.data is not None and min_size_bytes <= len(buffer.data):
         # Convert the buffer data to a `memoryview` of its bytes.
         buffer_data = buffer.data
         if not isinstance(buffer_data, np.ndarray):
@@ -62,9 +130,10 @@ class _PackedBufferData:
         self.data_size += len(buffer_data)
         self.packed_size = _round_up_16(self.packed_size + len(buffer_data))
     logging.debug(
-        "Created _PackedBufferData with %d buffers, data_size=%d,"
-        " packed_size=%d.",
+        "Created _PackedBufferData with %d eager buffers, %d deferred buffers,"
+        " data_size=%d, packed_size=%d.",
         len(self.data_for_buffer_id),
+        len(self.deferred_buffers),
         self.data_size,
         self.packed_size,
     )
@@ -202,6 +271,10 @@ class ModelModifier:
     logging.info("Serializing model...")
     packed_buffer_data = _PackedBufferData(quantized_model)
     if packed_buffer_data.packed_size < 256 * 1024:
+      for buffer_id, record in packed_buffer_data.deferred_buffers.items():
+        quantized_model.buffers[buffer_id].data = (
+            _quantize_and_pack_single_buffer(record)
+        )
       serialized_quantized_model = self._serialize_small_model(quantized_model)
       if serialize_to_path:
         mmap_utils.set_file_contents(
@@ -307,7 +380,10 @@ class ModelModifier:
     # Clear the buffer data and set the offset and size to a non-zero value so
     # that they are still packed into the flatbuffer.
     for buffer_id, buffer in enumerate(quantized_model.buffers):
-      if buffer_id in packed_buffer_data.data_for_buffer_id:
+      if (
+          buffer_id in packed_buffer_data.data_for_buffer_id
+          or buffer_id in packed_buffer_data.deferred_buffers
+      ):
         buffer.data = None
         buffer.offset = 1
         buffer.size = 1
@@ -346,27 +422,61 @@ class ModelModifier:
 
     # Pack the buffer contents at the end of the model_buffer, setting the
     # correct sizes and offsets in the original quantized_model.
-    for buffer_id, buffer_data in packed_buffer_data.data_for_buffer_id.items():
-      # Update the packed buffer with the correct size and offset.
-      buffer = quantized_model.buffers[buffer_id]
-      buffer.offset = buffer_data_offset
-      buffer.size = len(buffer_data)
-      flatbuffer_utils.update_packed_buffer(
-          model_packed.Buffers(buffer_id),
-          offset=buffer.offset,
-          size=buffer.size,
-      )
+    all_buffer_ids = sorted(
+        set(packed_buffer_data.data_for_buffer_id.keys())
+        | set(packed_buffer_data.deferred_buffers.keys())
+    )
+    for buffer_id in all_buffer_ids:
+      if buffer_id in packed_buffer_data.deferred_buffers:
+        record = packed_buffer_data.deferred_buffers[buffer_id]
+        packed_bytes = _quantize_and_pack_single_buffer(record)
+        data_to_pack = memoryview(packed_bytes)
+        buffer_len = len(data_to_pack)
 
-      # Pack the buffer at the end of the model_buffer.
-      model_buffer[
-          buffer_data_offset : buffer_data_offset + len(buffer_data)
-      ] = memoryview(buffer_data)
+        buffer = quantized_model.buffers[buffer_id]
+        buffer.offset = buffer_data_offset
+        buffer.size = buffer_len
+        flatbuffer_utils.update_packed_buffer(
+            model_packed.Buffers(buffer_id),
+            offset=buffer.offset,
+            size=buffer.size,
+        )
 
-      # Increment the offset by the amount of data that we added, plus padding.
-      buffer_data_offset = _round_up_16(buffer_data_offset + len(buffer_data))
-      mmap_utils.advise_dont_need(buffer_data)
-      if isinstance(model_buffer, mmap.mmap):
-        mmap_utils.advise_dont_need(model_buffer, 0, buffer_data_offset)
+        model_buffer[
+            buffer_data_offset : buffer_data_offset + buffer_len
+        ] = data_to_pack
+
+        buffer_data_offset = _round_up_16(buffer_data_offset + buffer_len)
+        source_data = record.get("source_data")
+        if source_data is not None:
+          mmap_utils.advise_dont_need(source_data)
+        if isinstance(model_buffer, mmap.mmap):
+          mmap_utils.advise_dont_need(model_buffer, 0, buffer_data_offset)
+        del packed_bytes, data_to_pack
+      else:
+        buffer_data = packed_buffer_data.data_for_buffer_id[buffer_id]
+        buffer_len = len(buffer_data)
+
+        # Update the packed buffer with the correct size and offset.
+        buffer = quantized_model.buffers[buffer_id]
+        buffer.offset = buffer_data_offset
+        buffer.size = buffer_len
+        flatbuffer_utils.update_packed_buffer(
+            model_packed.Buffers(buffer_id),
+            offset=buffer.offset,
+            size=buffer.size,
+        )
+
+        # Pack the buffer at the end of the model_buffer.
+        model_buffer[
+            buffer_data_offset : buffer_data_offset + buffer_len
+        ] = memoryview(buffer_data)
+
+        # Increment the offset by the amount of data that we added, plus padding.
+        buffer_data_offset = _round_up_16(buffer_data_offset + buffer_len)
+        mmap_utils.advise_dont_need(buffer_data)
+        if isinstance(model_buffer, mmap.mmap):
+          mmap_utils.advise_dont_need(model_buffer, 0, buffer_data_offset)
 
     # Clean up and write the buffer to a file if requested/needed.
     if isinstance(model_buffer, mmap.mmap):
