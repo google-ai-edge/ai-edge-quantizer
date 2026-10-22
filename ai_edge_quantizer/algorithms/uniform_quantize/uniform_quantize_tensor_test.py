@@ -514,6 +514,27 @@ class TensorUtilsTest(parameterized.TestCase):
     with self.subTest(name="CheckScaleValue"):
       self.assertEqual(scale[0], expected_scale)
 
+  def test_uniform_quantize_large_4d_blockwise_tensor(self):
+    # > 32 MiB 4D tensor (65 * 16 * 1 * 8192 * 4 bytes > 32 MiB)
+    shape = (65, 16, 1, 8192)
+    block_size = 32
+    tensor = np.ones(shape, dtype=np.float32)
+    scale_shape = (65, 16, 1, 8192 // block_size)
+    quant_params = qtyping.UniformQuantParams(
+        num_bits=4,
+        scale=np.ones(scale_shape, dtype=np.float32),
+        zero_point=np.zeros(scale_shape, dtype=np.int32),
+        symmetric=True,
+        quantized_dimension=3,
+        block_size=block_size,
+    )
+    quantized = uniform_quantize_tensor.uniform_quantize(
+        tensor, quant_params, is_blockwise_quant=True
+    )
+    self.assertEqual(quantized.shape, shape)
+    self.assertEqual(quantized.dtype, np.int8)
+    np.testing.assert_array_equal(quantized, np.ones(shape, dtype=np.int8))
+
 
 if __name__ == "__main__":
   absltest.main()
