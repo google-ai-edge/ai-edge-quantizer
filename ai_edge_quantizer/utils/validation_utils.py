@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""A library of comparator function to be used by validation function."""
+"""A library of comparator functions to be used by validation functions."""
 
 
 import enum
@@ -116,8 +116,8 @@ def median_diff_ratio(
   if data1.size == 0:
     return float(0)
   diff = abs(data1 - data2)
-  demoninator = abs(data2) + tolerance_threshold
-  median_ratio = np.median(diff / demoninator)
+  denominator = abs(data2) + tolerance_threshold
+  median_ratio = np.median(diff / denominator)
   return median_ratio
 
 

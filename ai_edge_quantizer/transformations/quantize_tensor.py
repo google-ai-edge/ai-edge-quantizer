@@ -53,7 +53,7 @@ def quant_params_to_tflite_type(
     case bits if 32 < bits <= 64:
       return qtyping.TensorType.INT64
     case _:
-      raise ValueError(f"Unsupported bitwidth {bitwidth}.I")
+      raise ValueError(f"Unsupported bitwidth {bitwidth}.")
 
 
 def nonlinear_quant_params_to_tflite_type(
@@ -168,7 +168,7 @@ def quantize_tensor(
       transformation_input.tensor_id
   ]
   buffer_id = tensor.buffer
-  # TODO: b/336385820 - Suppport quantize buffer directly when quantized_data
+  # TODO: b/336385820 - Support quantize buffer directly when quantized_data
   # is not provided.
   if (
       buffer_id

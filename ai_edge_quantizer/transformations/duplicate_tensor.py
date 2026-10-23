@@ -44,7 +44,7 @@ def duplicate_tensor(
       force_duplicate_buffer=True,
   )
   # Update the tensor name to avoid name collision in case when tensor is
-  # duplicated mulitple times.
+  # duplicated multiple times.
   subgraph.tensors[new_tensor_id].name += f'_{new_tensor_id}'
 
   # Update the consumers' input tensor id to the duplicated tensor id.
