@@ -15,5 +15,16 @@
 
 """Init file for the AI Edge quantizer package."""
 
+import warnings
+
 # pylint: disable=unused-import
 from .quantizer import Quantizer
+
+warnings.warn(
+    "ai-edge-quantizer is deprecated and will not receive further updates. It"
+    " is now LiteRT Quantizer: install `litert-quantizer` and import"
+    " `litert_quantizer` instead. See"
+    " https://github.com/google-ai-edge/LiteRT/tree/main/litert_quantizer",
+    DeprecationWarning,
+    stacklevel=2,
+)

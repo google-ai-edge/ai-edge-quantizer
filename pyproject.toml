@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-edge-quantizer"
-description = "A quantizer for advanced developers to quantize converted AI Edge models."
+description = "Deprecated: renamed to litert-quantizer. A quantizer for advanced developers to quantize converted AI Edge models."
 dynamic = ["version"]
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 7 - Inactive",
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
     "Intended Audience :: Science/Research",

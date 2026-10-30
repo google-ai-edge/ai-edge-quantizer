@@ -1,5 +1,21 @@
 # AI Edge Quantizer
 
+> **AI Edge Quantizer is now LiteRT Quantizer.** Development continues in
+> [google-ai-edge/LiteRT/litert_quantizer](https://github.com/google-ai-edge/LiteRT/tree/main/litert_quantizer).
+> This repository is no longer maintained, and `ai-edge-quantizer` will not
+> receive further updates. Existing releases remain installable.
+>
+> To migrate, switch to the new package. Apart from the names, the API is
+> unchanged:
+>
+> ```bash
+> pip uninstall ai-edge-quantizer
+> pip install litert-quantizer
+> ```
+>
+> Imports change from `ai_edge_quantizer` to `litert_quantizer`, and the
+> command-line tool from `aeq` to `litert-quantizer`.
+
 **AI Edge Quantizer (AEQ)** is a flexible, high-performance post-training
 quantization (PTQ) toolkit designed for
 [LiteRT](https://ai.google.dev/edge/litert) (formerly TensorFlow Lite) and
