@@ -168,7 +168,7 @@ def quantize_tensor(
       transformation_input.tensor_id
   ]
   buffer_id = tensor.buffer
-  # TODO: b/336385820 - Suppport quantize buffer directly when quantized_data
+  # Support quantizing buffer directly via streaming when quantized_data
   # is not provided.
   if (
       buffer_id
@@ -200,6 +200,27 @@ def quantize_tensor(
               np.ravel(np.asarray(quant_params.quantized_data)).view(np.uint8),
           )
       )
+  elif (
+      buffer_id
+      and (quant_params := transformation_input.quant_params).quantized_data
+      is None
+  ):
+    buffer = transformation_input.model.buffers[buffer_id]
+    if buffer.data is not None or (
+        hasattr(transformation_input.model, "_deferred_quant_buffers")
+        and buffer_id in transformation_input.model._deferred_quant_buffers
+    ):
+      if not hasattr(transformation_input.model, "_deferred_quant_buffers"):
+        transformation_input.model._deferred_quant_buffers = {}
+      if buffer_id not in transformation_input.model._deferred_quant_buffers:
+        transformation_input.model._deferred_quant_buffers[buffer_id] = {
+            "tensor": tensor,
+            "quant_params": quant_params,
+            "source_data": buffer.data,
+            "source_type": tensor.type,
+        }
+        transformation_input.buffer_origin[buffer_id] = quant_params
+        buffer.data = None
 
   if isinstance(transformation_input.quant_params, qtyping.UniformQuantParams):
     if transformation_input.quant_params.block_size == 0:
